@@ -244,41 +244,56 @@ When(
 )
 
 // Sets the selection directly via the Monaco API instead of a physical mouse
-// drag (contrast `selectRangeBetween`). The "keeps its own shape" scenario
-// only cares that the *shape* of an already-continuous selection survives an
-// octave shift, not that a drag gesture produced it — and the pixel-
-// coordinate drag this file's other steps use (`selectRangeBetween`) has a
-// documented pre-existing flake (see `HANDOFF-selection-octave-toolbar.md`)
-// that occasionally lands the selection a character or more off, which would
-// make this invariant's pass/fail depend on drag-accuracy luck rather than
-// the thing actually under test.
+// drag (contrast `selectRangeBetween`). For scenarios that only care about
+// what an action does with a given selection, not that a drag gesture
+// produced it — the pixel-coordinate drag this file's other steps use
+// (`selectRangeBetween`) has a documented pre-existing flake (see
+// `HANDOFF-selection-octave-toolbar.md`), worse under parallel load, that
+// occasionally lands the selection a character or more off, which would
+// make pass/fail depend on drag-accuracy luck rather than the thing
+// actually under test.
+async function selectPreciselyBetween(
+  page: import('@playwright/test').Page,
+  startNeedle: string,
+  endNeedle: string,
+) {
+  await page.evaluate(
+    ({ startNeedle, endNeedle }) => {
+      const ed = window.monaco?.editor.getEditors()[0]
+      const model = ed?.getModel()
+      const monacoApi = window.monaco
+      if (!ed || !model || !monacoApi) throw new Error('editor not mounted')
+      const text = model.getValue()
+      const dataLinesStart = text.indexOf('[')
+      const startIndex = text.indexOf(startNeedle, dataLinesStart)
+      const endIndex = text.indexOf(endNeedle, startIndex) + endNeedle.length
+      const startPos = model.getPositionAt(startIndex)
+      const endPos = model.getPositionAt(endIndex)
+      ed.setSelection(
+        new monacoApi.Selection(
+          startPos.lineNumber,
+          startPos.column,
+          endPos.lineNumber,
+          endPos.column,
+        ),
+      )
+      ed.focus()
+    },
+    { startNeedle, endNeedle },
+  )
+}
+
 When(
   'I precisely select from {string} to {string} spanning the two measures',
   async ({ page }, startNeedle: string, endNeedle: string) => {
-    await page.evaluate(
-      ({ startNeedle, endNeedle }) => {
-        const ed = window.monaco?.editor.getEditors()[0]
-        const model = ed?.getModel()
-        const monacoApi = window.monaco
-        if (!ed || !model || !monacoApi) throw new Error('editor not mounted')
-        const text = model.getValue()
-        const dataLinesStart = text.indexOf('[')
-        const startIndex = text.indexOf(startNeedle, dataLinesStart)
-        const endIndex = text.indexOf(endNeedle, startIndex) + endNeedle.length
-        const startPos = model.getPositionAt(startIndex)
-        const endPos = model.getPositionAt(endIndex)
-        ed.setSelection(
-          new monacoApi.Selection(
-            startPos.lineNumber,
-            startPos.column,
-            endPos.lineNumber,
-            endPos.column,
-          ),
-        )
-        ed.focus()
-      },
-      { startNeedle, endNeedle },
-    )
+    await selectPreciselyBetween(page, startNeedle, endNeedle)
+  },
+)
+
+When(
+  'I precisely select from {string} on the Melody line to {string} on the Bass line',
+  async ({ page }, startNeedle: string, endNeedle: string) => {
+    await selectPreciselyBetween(page, startNeedle, endNeedle)
   },
 )
 

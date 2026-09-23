@@ -1,4 +1,4 @@
-use crate::ast::parsed::ScoreEvent;
+use crate::ast::parsed::{ParsedSlurGroup, ScoreEvent};
 use crate::error::{Span, Warning};
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -8,12 +8,16 @@ pub struct GroupStack {
     /// used to resolve `r`/bare `_`/`=` repeat atoms. Persists across measures and lines,
     /// like ties/slurs already do.
     pub last_pitched_event: Option<ScoreEvent>,
+    /// Every `(…)` group closed so far on this track, in closing order.
+    pub closed_groups: Vec<ParsedSlurGroup>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GroupFrame {
     pub note_count: usize,
     pub segment_start: usize,
+    /// Source span of this group's opening `(`.
+    pub open_paren_span: Span,
 }
 
 impl GroupStack {
@@ -21,15 +25,22 @@ impl GroupStack {
         !self.frames.is_empty()
     }
 
-    pub fn push(&mut self, segment_start: usize) {
+    pub fn push(&mut self, segment_start: usize, open_paren_span: Span) {
         self.frames.push(GroupFrame {
             note_count: 0,
             segment_start,
+            open_paren_span,
         });
     }
 
-    pub fn pop(&mut self) -> Option<GroupFrame> {
-        self.frames.pop()
+    /// Pops the innermost frame, closing it with the `)` at `close_paren_span`.
+    pub fn close(&mut self, close_paren_span: Span) -> Option<GroupFrame> {
+        let frame = self.frames.pop()?;
+        self.closed_groups.push(ParsedSlurGroup {
+            open_paren_span: frame.open_paren_span,
+            close_paren_span,
+        });
+        Some(frame)
     }
 
     pub fn increment_note_count(&mut self) {

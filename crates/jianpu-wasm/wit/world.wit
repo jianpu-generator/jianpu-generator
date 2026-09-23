@@ -692,19 +692,19 @@ world jianpu-wasm {
     // multicursor selection (e.g. clicking a part label, which selects that
     // part's notes across every measure in its system) surfaces as several
     // disjoint `byte-range`s rather than one contiguous span — see
-    // `shift-range-octave` below.
+    // `shift-range-octave`/`toggle-range-slur` below.
     record byte-range {
         start-byte: u32,
         end-byte: u32,
     }
 
-    // `shift-range-octave`'s return value: the rewritten source, plus the
-    // *new* (post-edit) byte range of every note that got shifted, in
-    // source order — see `source_edit::ShiftRangeOctaveResult`'s doc
-    // comment for why the caller (the editor toolbar's "shift selection"
-    // action) needs these instead of just re-applying its own pre-edit
-    // ranges to restore the selection afterward.
-    record shift-range-octave-response {
+    // A selection-scoped editor toolbar action's return value
+    // (`shift-range-octave`, `toggle-range-slur`): the rewritten source, plus
+    // the caller's own input ranges remapped onto the new source — see
+    // `source_edit::RangeEditResult`'s doc comment for why the caller needs
+    // these instead of just re-applying its own pre-edit ranges to restore
+    // the selection afterward.
+    record range-edit-response {
         source: string,
         ranges: list<byte-range>,
     }
@@ -715,7 +715,13 @@ world jianpu-wasm {
     // ranges, not one pair, because a multicursor selection is generally
     // disjoint — collapsing it to a single min/max span would sweep in
     // unrelated notes/parts sitting between the disjoint pieces.
-    export shift-range-octave: func(source: string, ranges: list<byte-range>, delta: s32) -> shift-range-octave-response;
+    export shift-range-octave: func(source: string, ranges: list<byte-range>, delta: s32) -> range-edit-response;
+
+    // The "Slur/Unslur" editor toolbar action (see
+    // `source_edit::toggle_range_slur`): removes every `(…)` group the
+    // selection touches, or — if it touches none — wraps each part's
+    // selected notes in a new group.
+    export toggle-range-slur: func(source: string, ranges: list<byte-range>) -> range-edit-response;
 
     export format-score: func(source: string) -> string;
 

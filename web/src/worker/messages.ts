@@ -9,6 +9,7 @@ import type {
   PartDeclaration,
   PartInfo,
   PartMode,
+  RangeEditOperation,
   SectionRange,
   SequenceEntry,
 } from '../types'
@@ -185,7 +186,7 @@ export type WorkerRequest =
       id: number
     }
   | {
-      type: 'shiftRangeOctave'
+      type: 'editRange'
       source: string
       // A disjoint set of ranges, not one min/max span — a multicursor
       // selection (e.g. clicking a part label, which selects that part's
@@ -194,7 +195,7 @@ export type WorkerRequest =
       // sitting between the disjoint pieces (see
       // `source_edit::shift_range_octave`'s doc comment).
       ranges: EditorSelection[]
-      delta: number
+      operation: RangeEditOperation
       id: number
     }
 
@@ -290,11 +291,11 @@ export type WorkerResponse =
   | { type: 'scoreFormatted'; id: number; source: string }
   | { type: 'partOctaveShifted'; id: number; source: string }
   | {
-      type: 'rangeOctaveShifted'
+      type: 'rangeEdited'
       id: number
       source: string
-      /** The shifted note spans' own byte ranges in the *new* `source`,
-       * synchronously computed by `source_edit::shift_range_octave` — lets
+      /** The request's own ranges remapped onto the *new* `source`,
+       * synchronously computed by `source_edit::RangeEditResult` — lets
        * the caller restore the editor selection in the same tick it applies
        * the new source, closing a race where an async re-derivation could
        * lose to a second click landing first (see

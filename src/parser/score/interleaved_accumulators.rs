@@ -4,6 +4,7 @@ use crate::ast::parsed::{
     ParsedLyrics, ParsedTimedTrack, ParsedTrack, PartDecl, PartKind, ScoreLineRole, ScoreLineSlot,
 };
 use crate::error::{IrrecoverableError, Span};
+use crate::parser::score::token_parser::GroupStack;
 
 pub(super) fn build_slot_actions(slots: &[ScoreLineSlot]) -> Vec<SlotAction> {
     slots
@@ -47,8 +48,9 @@ pub(super) fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulat
 pub(super) fn build_parse_result(
     declarations: &[PartDecl],
     accumulators: Vec<TrackAccumulator>,
+    group_states: Vec<GroupStack>,
 ) -> Result<Vec<ParsedTrack>, IrrecoverableError> {
-    if declarations.len() != accumulators.len() {
+    if declarations.len() != accumulators.len() || declarations.len() != group_states.len() {
         return Err(invariant(
             Span::new(0, 0),
             "internal error: declaration/accumulator count mismatch",
@@ -58,7 +60,8 @@ pub(super) fn build_parse_result(
     declarations
         .iter()
         .zip(accumulators)
-        .map(|(decl, acc)| {
+        .zip(group_states)
+        .map(|((decl, acc), group_state)| {
             let TrackAccumulator::Timed {
                 measure_slots,
                 syllables,
@@ -89,6 +92,7 @@ pub(super) fn build_parse_result(
                 per_measure_chord_errors,
                 per_measure_lex_errors,
                 per_measure_lyrics_errors,
+                slur_groups: group_state.closed_groups,
             }))
         })
         .collect()

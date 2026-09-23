@@ -25,6 +25,7 @@ import {
   set_layout_fonts,
   shift_part_octave,
   shift_range_octave,
+  toggle_range_slur,
   update_part_declaration,
 } from '../jianpuWasm'
 import type { PartDeclaration } from '../types'
@@ -201,10 +202,13 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     return
   }
 
-  if (msg.type === 'shiftRangeOctave') {
-    const result = shift_range_octave(msg.source, msg.ranges, msg.delta)
+  if (msg.type === 'editRange') {
+    const result =
+      msg.operation.kind === 'shiftOctave'
+        ? shift_range_octave(msg.source, msg.ranges, msg.operation.delta)
+        : toggle_range_slur(msg.source, msg.ranges)
     postMessage({
-      type: 'rangeOctaveShifted',
+      type: 'rangeEdited',
       id: msg.id,
       source: result.source,
       ranges: result.ranges,

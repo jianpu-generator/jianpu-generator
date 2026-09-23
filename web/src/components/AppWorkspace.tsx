@@ -9,6 +9,7 @@ import { Editor } from './Editor'
 import { EditorToolbarButton } from './EditorToolbarButton'
 import { EditPartsModal } from './EditPartsModal'
 import { Preview } from './Preview'
+import { SlurIcon } from './SlurIcon'
 
 export function AppWorkspace({
   editorCollapsed,
@@ -19,7 +20,7 @@ export function AppWorkspace({
   source,
   handleSourceChange,
   handleFormatScore,
-  handleShiftSelectionOctave,
+  handleEditSelection,
   readOnly,
   diagnostics,
   diagnosticViewZones,
@@ -140,7 +141,10 @@ export function AppWorkspace({
                       disabled={selectionByteRanges === null}
                       onClick={() => {
                         if (selectionByteRanges === null) return
-                        handleShiftSelectionOctave(selectionByteRanges, 1)
+                        handleEditSelection(selectionByteRanges, {
+                          kind: 'shiftOctave',
+                          delta: 1,
+                        })
                       }}
                     />
                     <EditorToolbarButton
@@ -149,7 +153,21 @@ export function AppWorkspace({
                       disabled={selectionByteRanges === null}
                       onClick={() => {
                         if (selectionByteRanges === null) return
-                        handleShiftSelectionOctave(selectionByteRanges, -1)
+                        handleEditSelection(selectionByteRanges, {
+                          kind: 'shiftOctave',
+                          delta: -1,
+                        })
+                      }}
+                    />
+                    <EditorToolbarButton
+                      label="Slur/Unslur"
+                      icon={<SlurIcon size={14} />}
+                      disabled={selectionByteRanges === null}
+                      onClick={() => {
+                        if (selectionByteRanges === null) return
+                        handleEditSelection(selectionByteRanges, {
+                          kind: 'toggleSlur',
+                        })
                       }}
                     />
                   </Tooltip.Provider>

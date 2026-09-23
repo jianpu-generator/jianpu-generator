@@ -10,6 +10,7 @@ import type {
   PartDeclaration,
   PartInfo,
   PartMode,
+  RangeEditOperation,
   SectionRange,
   SequenceEntry,
 } from '../types'
@@ -24,14 +25,14 @@ export interface TextRequestTracker {
   pendingRequestsRef: RefObject<Map<number, (source: string) => void>>
 }
 
-/** Same tracking scheme as `TextRequestTracker`, but for
- * "shift selection octave" round trips, which resolve with the rewritten
- * source *and* the shifted notes' own byte ranges in that new source (see
- * `source_edit::shift_range_octave`) rather than just a plain string — the
+/** Same tracking scheme as `TextRequestTracker`, but for selection-scoped
+ * edit round trips (octave shift, slur toggle), which resolve with the
+ * rewritten source *and* the selection's ranges remapped onto that new source
+ * (see `source_edit::RangeEditResult`) rather than just a plain string — the
  * caller needs both to restore the editor selection synchronously alongside
  * the new source, closing the race described in
  * `HANDOFF-octave-toolbar-part-label-selection-bug.md`. */
-export interface RangeOctaveShiftRequestTracker {
+export interface RangeEditRequestTracker {
   requestIdRef: RefObject<number>
   latestIdRef: RefObject<number>
   pendingRequestsRef: RefObject<
@@ -202,22 +203,23 @@ export interface JianpuWorkerState {
    */
   shiftPartOctave: (abbreviation: string, delta: number) => Promise<string>
   /**
-   * Rewrites the `'`/`,` octave marker on every note whose span overlaps
-   * any of `ranges` by `delta` octaves (see
-   * `source_edit::shift_range_octave`) — the editor toolbar's "shift
-   * selection" octave-up/down action, scoped to the current selection
-   * rather than a whole part. `ranges` is a disjoint set, not one min/max
-   * span, so a multicursor selection (e.g. a clicked part label's notes
-   * spanning every measure in its system) shifts every one of its pieces
-   * without also sweeping in unrelated notes/parts sitting between them.
-   * Resolves with the updated source and the shifted notes' own byte ranges
-   * in that new source (see `source_edit::shift_range_octave`), so the
-   * editor selection can be restored synchronously alongside the new
+   * Applies a selection-scoped editor toolbar action to every note whose
+   * span overlaps any of `ranges`: `shiftOctave` rewrites each note's
+   * `'`/`,` octave marker by `delta` octaves (see
+   * `source_edit::shift_range_octave`), `toggleSlur` removes the `(…)`
+   * groups the selection touches or wraps each part's selected notes in a
+   * new one (see `source_edit::toggle_range_slur`). `ranges` is a disjoint
+   * set, not one min/max span, so a multicursor selection (e.g. a clicked
+   * part label's notes spanning every measure in its system) edits every
+   * one of its pieces without also sweeping in unrelated notes/parts
+   * sitting between them. Resolves with the updated source and `ranges`
+   * remapped onto that new source (see `source_edit::RangeEditResult`), so
+   * the editor selection can be restored synchronously alongside the new
    * source instead of racing an async re-derivation.
    */
-  shiftRangeOctave: (
+  editRange: (
     ranges: EditorSelection[],
-    delta: number,
+    operation: RangeEditOperation,
   ) => Promise<{ source: string; ranges: EditorSelection[] }>
   /**
    * Recovers the `.jianpu` source embedded in a previously exported SVG/PDF

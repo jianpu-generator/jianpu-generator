@@ -71,16 +71,32 @@ pub(super) fn shift_range_octave(
     source: String,
     ranges: Vec<ByteRange>,
     delta: i32,
-) -> ShiftRangeOctaveResponse {
-    let ranges: Vec<jianpu_generator::source_edit::ByteRange> = ranges
+) -> RangeEditResponse {
+    let ranges = to_source_edit_ranges(ranges);
+    let result = jianpu_generator::source_edit::shift_range_octave(&source, &ranges, delta as i8);
+    to_range_edit_response(result)
+}
+
+pub(super) fn toggle_range_slur(source: String, ranges: Vec<ByteRange>) -> RangeEditResponse {
+    let ranges = to_source_edit_ranges(ranges);
+    let result = jianpu_generator::source_edit::toggle_range_slur(&source, &ranges);
+    to_range_edit_response(result)
+}
+
+fn to_source_edit_ranges(ranges: Vec<ByteRange>) -> Vec<jianpu_generator::source_edit::ByteRange> {
+    ranges
         .into_iter()
         .map(|range| jianpu_generator::source_edit::ByteRange {
             start_byte: range.start_byte,
             end_byte: range.end_byte,
         })
-        .collect();
-    let result = jianpu_generator::source_edit::shift_range_octave(&source, &ranges, delta as i8);
-    ShiftRangeOctaveResponse {
+        .collect()
+}
+
+fn to_range_edit_response(
+    result: jianpu_generator::source_edit::RangeEditResult,
+) -> RangeEditResponse {
+    RangeEditResponse {
         source: result.source,
         ranges: result
             .ranges

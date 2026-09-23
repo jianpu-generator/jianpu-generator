@@ -106,6 +106,18 @@ pub struct ParsedTimedTrack {
     pub per_measure_lex_errors: Vec<Option<RecoverableError>>,
     /// Per-measure recoverable error on the lyrics line (e.g. empty lyrics line).
     pub per_measure_lyrics_errors: Vec<Option<RecoverableError>>,
+    /// Every closed `(…)` tie/slur group on this track, in closing order.
+    /// Unclosed groups are omitted.
+    pub slur_groups: Vec<ParsedSlurGroup>,
+}
+
+/// Source spans of one closed `(…)` tie/slur group's parentheses — lets
+/// source edits (e.g. the editor's "Slur/Unslur" toolbar action) locate the
+/// group's delimiters without re-scanning the raw text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ParsedSlurGroup {
+    pub open_paren_span: Span,
+    pub close_paren_span: Span,
 }
 
 /// One `[Abbrev]` key-prefix reference to a part or group abbreviation in the

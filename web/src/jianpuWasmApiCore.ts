@@ -306,16 +306,16 @@ export function shift_part_octave(
   return root().shiftPartOctave(source, abbreviation, delta)
 }
 
-export function shift_range_octave(
-  source: string,
-  ranges: Array<{ start: number; end: number }>,
-  delta: number,
-): { source: string; ranges: Array<{ start: number; end: number }> } {
-  const resp = root().shiftRangeOctave(
-    source,
-    ranges.map((range) => ({ startByte: range.start, endByte: range.end })),
-    delta,
-  )
+type SelectionRange = { start: number; end: number }
+
+function toWasmByteRanges(ranges: SelectionRange[]) {
+  return ranges.map((range) => ({ startByte: range.start, endByte: range.end }))
+}
+
+function fromRangeEditResponse(resp: {
+  source: string
+  ranges: Array<{ startByte: number; endByte: number }>
+}): { source: string; ranges: SelectionRange[] } {
   return {
     source: resp.source,
     ranges: resp.ranges.map((range) => ({
@@ -323,6 +323,25 @@ export function shift_range_octave(
       end: range.endByte,
     })),
   }
+}
+
+export function shift_range_octave(
+  source: string,
+  ranges: SelectionRange[],
+  delta: number,
+): { source: string; ranges: SelectionRange[] } {
+  return fromRangeEditResponse(
+    root().shiftRangeOctave(source, toWasmByteRanges(ranges), delta),
+  )
+}
+
+export function toggle_range_slur(
+  source: string,
+  ranges: SelectionRange[],
+): { source: string; ranges: SelectionRange[] } {
+  return fromRangeEditResponse(
+    root().toggleRangeSlur(source, toWasmByteRanges(ranges)),
+  )
 }
 
 export function format_score(source: string): string {

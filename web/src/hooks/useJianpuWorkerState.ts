@@ -13,7 +13,7 @@ import type {
 } from '../types'
 import type {
   PendingDownload,
-  RangeOctaveShiftRequestTracker,
+  RangeEditRequestTracker,
   TextRequestTracker,
 } from './useJianpuWorkerTypes'
 import {
@@ -111,7 +111,7 @@ export function useJianpuWorkerState(
     latestIdRef: useRef(0),
     pendingRequestsRef: useRef(new Map<number, (source: string) => void>()),
   }
-  const shiftRangeOctaveTracker: RangeOctaveShiftRequestTracker = {
+  const editRangeTracker: RangeEditRequestTracker = {
     requestIdRef: useRef(0),
     latestIdRef: useRef(0),
     pendingRequestsRef: useRef(
@@ -313,7 +313,7 @@ export function useJianpuWorkerState(
     latestFormatScoreIdRef,
     pendingFormatScoreRequestsRef,
     shiftPartOctaveTracker,
-    shiftRangeOctaveTracker,
+    editRangeTracker,
     importRequestIdRef,
     pendingImportsRef,
     renderRequestIdRef,

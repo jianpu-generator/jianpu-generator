@@ -1,5 +1,9 @@
 mod octave_shift;
-pub use octave_shift::{shift_part_octave, shift_range_octave, ByteRange, ShiftRangeOctaveResult};
+mod range_edit;
+mod slur_toggle;
+pub use octave_shift::{shift_part_octave, shift_range_octave};
+pub use range_edit::{ByteRange, RangeEditResult};
+pub use slur_toggle::toggle_range_slur;
 
 use crate::parser::parts_parser::SourcePartMode;
 

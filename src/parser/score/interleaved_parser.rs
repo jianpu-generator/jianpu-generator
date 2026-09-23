@@ -191,7 +191,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         &mut extra_document_errors,
     );
 
-    let tracks = build_parse_result(declarations, accumulators)?;
+    let tracks = build_parse_result(declarations, accumulators, group_states)?;
     let mut per_group_desugar_errors = per_group_desugar_errors;
     for (slot, directive_error) in per_group_desugar_errors
         .iter_mut()

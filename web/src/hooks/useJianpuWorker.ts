@@ -156,7 +156,7 @@ export function useJianpuWorker(
     updatePartDeclaration: actions.updatePartDeclaration,
     formatScore: actions.formatScore,
     shiftPartOctave: actions.shiftPartOctave,
-    shiftRangeOctave: actions.shiftRangeOctave,
+    editRange: actions.editRange,
     importFromFile: actions.importFromFile,
   }
 }

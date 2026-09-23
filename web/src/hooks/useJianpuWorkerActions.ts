@@ -1,6 +1,7 @@
 import type { RefObject } from 'react'
 import { useInstrumentPreview } from './useInstrumentPreview'
 import { useJianpuWorkerAudioActions } from './useJianpuWorkerAudioActions'
+import { useJianpuWorkerEditRange } from './useJianpuWorkerEditRange'
 import { useJianpuWorkerExports } from './useJianpuWorkerExports'
 import { useJianpuWorkerFormat } from './useJianpuWorkerFormat'
 import { useJianpuWorkerImport } from './useJianpuWorkerImport'
@@ -8,7 +9,6 @@ import { useJianpuWorkerLifecycle } from './useJianpuWorkerLifecycle'
 import { useJianpuWorkerPartDeclaration } from './useJianpuWorkerPartDeclaration'
 import { useJianpuWorkerRenderRequests } from './useJianpuWorkerRenderRequests'
 import { useJianpuWorkerShiftOctave } from './useJianpuWorkerShiftOctave'
-import { useJianpuWorkerShiftRangeOctave } from './useJianpuWorkerShiftRangeOctave'
 import type { useJianpuWorkerState } from './useJianpuWorkerState'
 import { useMeasureAudioPlayback } from './useMeasureAudioPlayback'
 
@@ -123,7 +123,7 @@ export function useJianpuWorkerActions({
     latestFormatScoreIdRef: state.latestFormatScoreIdRef,
     pendingFormatScoreRequestsRef: state.pendingFormatScoreRequestsRef,
     shiftPartOctaveTracker: state.shiftPartOctaveTracker,
-    shiftRangeOctaveTracker: state.shiftRangeOctaveTracker,
+    editRangeTracker: state.editRangeTracker,
     latestPdfIdRef: state.latestPdfIdRef,
     setPdfExporting: state.setPdfExporting,
     activeFileRef: state.activeFileRef,
@@ -270,10 +270,10 @@ export function useJianpuWorkerActions({
     shiftPartOctaveTracker: state.shiftPartOctaveTracker,
   })
 
-  const { shiftRangeOctave } = useJianpuWorkerShiftRangeOctave({
+  const { editRange } = useJianpuWorkerEditRange({
     workerRef: state.workerRef,
     sourceRef: state.sourceRef,
-    shiftRangeOctaveTracker: state.shiftRangeOctaveTracker,
+    editRangeTracker: state.editRangeTracker,
   })
 
   const { importFromFile } = useJianpuWorkerImport({
@@ -304,7 +304,7 @@ export function useJianpuWorkerActions({
     updatePartDeclaration,
     formatScore,
     shiftPartOctave,
-    shiftRangeOctave,
+    editRange,
     importFromFile,
     previewInstrument,
     previewPercussion,

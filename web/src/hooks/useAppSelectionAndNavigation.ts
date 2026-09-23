@@ -7,6 +7,7 @@ import type {
   MeasureSpan,
   NoteSpan,
   PartInfo,
+  RangeEditOperation,
   SectionRange,
   SequenceEntry,
 } from '../types'
@@ -48,13 +49,13 @@ export function useAppSelectionAndNavigation(
     selectedPartNames: string[],
     selectedCells: NoteCell[],
   ) => void,
-  /** The "shift selection octave" worker call (see
-   * `source_edit::shift_range_octave`) and the source-change setter it
-   * resolves into — threaded through so `handleShiftSelectionOctave` below
+  /** The selection-scoped edit worker call (octave shift / slur toggle, see
+   * `source_edit::RangeEditResult`) and the source-change setter it
+   * resolves into — threaded through so `handleEditSelection` below
    * can re-derive and restore the note selection afterward. */
-  shiftRangeOctave: (
+  editRange: (
     ranges: EditorSelection[],
-    delta: number,
+    operation: RangeEditOperation,
   ) => Promise<{ source: string; ranges: EditorSelection[] }>,
   handleSourceChange: (value: string) => void,
   /** Owned by the caller (`useAppController`), same reasoning as
@@ -159,7 +160,7 @@ export function useAppSelectionAndNavigation(
     [lyricSelectionCells, measureRangeLyricCells],
   )
 
-  // The "Octave up"/"Octave down" toolbar action. A byte-offset selection
+  // The "Octave up"/"Octave down"/"Slur/Unslur" toolbar actions. A byte-offset selection
   // can't be blindly restored across this edit the way `Editor.tsx`'s
   // generic post-edit restore does for ordinary typing: a multicursor
   // selection (e.g. one from clicking a part label, which selects every
@@ -170,10 +171,12 @@ export function useAppSelectionAndNavigation(
   // that's exactly what collapsed a whole-system selection down to (part
   // of) its first measure after one octave shift.
   //
+  // (Likewise a slur toggle inserts/removes `(`/`)` characters.)
+  //
   // The fix has to be synchronous: `source_edit::shift_range_octave` already
   // knows, byte-for-byte, exactly which spans it rewrote and by how much
   // each replacement grew/shrank, so it hands the new ranges straight back
-  // alongside the new source (see `ShiftRangeOctaveResult` and
+  // alongside the new source (see `RangeEditResult` and
   // `HANDOFF-octave-toolbar-part-label-selection-bug.md`). `editorRef.current.replaceContentWithSelections`
   // then applies the new text *and* selects those ranges in one
   // uninterrupted synchronous call, so `Editor.tsx`'s own `value`-triggered
@@ -192,7 +195,8 @@ export function useAppSelectionAndNavigation(
   // still the *old* source's spans. Overlap-testing new-source ranges against
   // old-source spans produces garbage (the SVG selection collapsing/shifting
   // to the wrong notes). Since an octave shift only rewrites `'`/`,` marker
-  // runs — never adds/removes/reorders notes — the selected `(sourcePartIndex,
+  // runs, and a slur toggle only inserts/removes `(`/`)` — neither ever
+  // adds/removes/reorders notes — the selected `(sourcePartIndex,
   // noteId)` cells themselves are unaffected by the shift, so the fix is to
   // just keep them as-is: `applyNoteSelectionSilently` re-commits the same
   // cells/runs and arms the same suppression counter `handleRangeSelect`
@@ -222,9 +226,9 @@ export function useAppSelectionAndNavigation(
   // skipping `setSelections`, and `handleSourceChange` doesn't produce a real
   // `value` change either. Suppressing a fixed 3 there would over-suppress
   // and silently eat the *next* real, unrelated selection-change too.
-  const handleShiftSelectionOctave = useCallback(
-    (ranges: EditorSelection[], delta: number) => {
-      void shiftRangeOctave(ranges, delta).then(
+  const handleEditSelection = useCallback(
+    (ranges: EditorSelection[], operation: RangeEditOperation) => {
+      void editRange(ranges, operation).then(
         ({ source, ranges: newRanges }) => {
           if (noteSelectionCells.length > 0) {
             applyNoteSelectionSilently(
@@ -239,7 +243,7 @@ export function useAppSelectionAndNavigation(
       )
     },
     [
-      shiftRangeOctave,
+      editRange,
       handleSourceChange,
       editorRef,
       noteSelectionCells,
@@ -273,6 +277,6 @@ export function useAppSelectionAndNavigation(
     selectedLyricCells,
     handleMeasureRangeSelect,
     handlePlayNoteSelection,
-    handleShiftSelectionOctave,
+    handleEditSelection,
   }
 }

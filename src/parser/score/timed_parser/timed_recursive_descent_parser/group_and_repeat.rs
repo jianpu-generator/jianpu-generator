@@ -81,10 +81,11 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
     }
     /// Handle `(` — push a new frame and recurse into the inner atom sequence.
     pub(super) fn open_group(&mut self) -> Result<(), IrrecoverableError> {
+        let lparen_span = self.current_span();
         self.bump(); // consume LParen
 
         let segment_start = self.staging.len();
-        self.stack.push(segment_start);
+        self.stack.push(segment_start, lparen_span);
 
         // Parse inner atoms until `)` or end of token stream.
         self.parse_atoms(StopAt::RParen)?;
@@ -96,7 +97,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
                 let rparen_span = self.current_span();
                 self.bump();
 
-                let frame = self.stack.pop().ok_or_else(|| {
+                let frame = self.stack.close(rparen_span).ok_or_else(|| {
                     IrrecoverableError::new(IrrecoverableErrorKind::internal_invariant(
                         rparen_span,
                         "open_group: stack empty after push",
@@ -125,7 +126,7 @@ impl<'a, H: TimedUnitHead> TimedRecursiveDescentParser<'a, H> {
         let rparen_span = self.current_span();
         self.bump(); // consume RParen
 
-        let Some(frame) = self.stack.pop() else {
+        let Some(frame) = self.stack.close(rparen_span) else {
             self.chord_errors.push(Diagnostic::Error(RecoverableError {
                 span: rparen_span,
                 kind: crate::error::RecoverableErrorKind::GroupUnexpectedCloseParen,
