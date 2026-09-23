@@ -27,6 +27,14 @@ export function useJianpuWorker(
     entryStartIndex: number
     entryEndIndex: number
   } | null>,
+  /**
+   * Owned by the caller (`useAppController`) for the same reason as
+   * `selectedSequenceRangeRef` above — `useMeasureAudioPlayback` needs it
+   * before `useAppSelectionAndNavigation`'s `useMeasureRangeSelection` (which
+   * derives it) can run. See `useAppSelectionAndNavigation`'s matching
+   * parameter doc comment.
+   */
+  measureRangeSelectedPartNamesRef: RefObject<string[] | undefined>,
   debounceMs = 300,
 ): JianpuWorkerState {
   const state = useJianpuWorkerState(
@@ -78,6 +86,7 @@ export function useJianpuWorker(
   const actions = useJianpuWorkerActions({
     state,
     selectedSequenceRangeRef,
+    measureRangeSelectedPartNamesRef,
     source,
     activeFile,
     soundfontBytes,

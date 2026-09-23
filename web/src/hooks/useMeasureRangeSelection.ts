@@ -1,7 +1,13 @@
 import type { RefObject } from 'react'
 import { useCallback, useState } from 'react'
 import type { LyricCell, NoteCell } from '../components/previewSelection'
-import type { EditorHandle, LyricSpan, MeasureSpan, NoteSpan } from '../types'
+import type {
+  EditorHandle,
+  LyricSpan,
+  MeasureSpan,
+  NoteSpan,
+  PartInfo,
+} from '../types'
 import {
   groupSelectedLyricsIntoContiguousRuns,
   lyricRunByteRange,
@@ -30,6 +36,18 @@ export interface UseMeasureRangeSelectionResult {
    * wrong here). */
   measureRangeNoteCells: NoteCell[]
   measureRangeLyricCells: LyricCell[]
+  /** The visible-part abbreviations touched by the most recent
+   * no-mounted-editor measure/bar-line/part-label selection — `[]` once an
+   * editor is mounted (that path derives its own part names via
+   * `useNoteSelection`'s `selectedNoteRangePlaybackInfo` instead), or when
+   * the selection covers every visible part (no restriction to apply). Fed
+   * into `useMeasureAudioPlayback.playSelectedMeasures` via
+   * `measureRangeSelectedPartNamesRef` so a viewer's part-label range-select
+   * mutes every other part on playback the same way the editor's "play
+   * selection" already does — without flipping `notePlaybackSelectionActive`
+   * (and so without hijacking the play-measure button's "Measures N–M"
+   * label into "Selection"; see the note below). */
+  measureRangeSelectedPartNames: string[]
   /** Resets `measureRangeNoteCells`/`measureRangeLyricCells` back to empty —
    * for a caller that needs to drop a stale no-mounted-editor measure/
    * bar-line highlight this hook is still holding (e.g. a section/sequence
@@ -74,6 +92,13 @@ export function useMeasureRangeSelection(
     endLine: number,
     isEmpty: boolean,
   ) => void,
+  parts: PartInfo[],
+  /** Same `enabledTracks` filter `useNoteSelection` takes — needed to
+   * compact `parts` down to the visible-parts-only index space `noteRuns`/
+   * `lyricRuns`' `sourcePartIndex` is already in (see
+   * `useNoteSelection.selectedNoteRangePlaybackInfo`'s doc comment).
+   * `undefined` means every part is enabled. */
+  enabledTracks: string[] | undefined,
 ): UseMeasureRangeSelectionResult {
   const [measureRangeNoteCells, setMeasureRangeNoteCells] = useState<
     NoteCell[]
@@ -81,6 +106,8 @@ export function useMeasureRangeSelection(
   const [measureRangeLyricCells, setMeasureRangeLyricCells] = useState<
     LyricCell[]
   >([])
+  const [measureRangeSelectedPartNames, setMeasureRangeSelectedPartNames] =
+    useState<string[]>([])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: editorRef is a ref object with a stable identity across renders (standard React convention); listing editorRef.current/.setSelections would stale-capture the ref's value at callback-creation time instead of reading it live on each call.
   const handleMeasureRangeSelect = useCallback(
@@ -125,7 +152,34 @@ export function useMeasureRangeSelection(
           ...noteRuns.map((run) => run.measureIndex),
           ...lyricRuns.map((run) => run.measureIndex),
         ]
-        if (measureIndices.length === 0) return
+        if (measureIndices.length === 0) {
+          setMeasureRangeSelectedPartNames([])
+          return
+        }
+        // Mirrors `useNoteSelection.selectedNoteRangePlaybackInfo`'s own
+        // part-name resolution, so a viewer's part-label/measure/bar-line
+        // selection mutes the same parts an equivalent editor selection
+        // would (see `measureRangeSelectedPartNames`'s doc comment).
+        const partIndices = new Set([
+          ...noteRuns.map((run) => run.sourcePartIndex),
+          ...lyricRuns.map((run) => run.sourcePartIndex),
+        ])
+        const visibleParts = enabledTracks
+          ? parts.filter((part) => enabledTracks.includes(part.abbreviation))
+          : parts
+        const selectedPartNames = Array.from(partIndices)
+          .map((partIndex) => visibleParts[partIndex]?.abbreviation)
+          .filter(
+            (abbreviation): abbreviation is string => abbreviation != null,
+          )
+        // A selection touching every visible part is equivalent to no
+        // restriction at all — leave it empty so the playback override
+        // below is skipped rather than redundantly re-specifying every part.
+        setMeasureRangeSelectedPartNames(
+          selectedPartNames.length < visibleParts.length
+            ? selectedPartNames
+            : [],
+        )
         const startSpan = measureSpans[Math.min(...measureIndices)]
         const endSpan = measureSpans[Math.max(...measureIndices)]
         if (startSpan && endSpan) {
@@ -153,18 +207,22 @@ export function useMeasureRangeSelection(
       notifySelection,
       applyNoteSelectionSilently,
       applyLyricSelectionSilently,
+      parts,
+      enabledTracks,
     ],
   )
 
   const clearMeasureRangeSelection = useCallback(() => {
     setMeasureRangeNoteCells([])
     setMeasureRangeLyricCells([])
+    setMeasureRangeSelectedPartNames([])
   }, [])
 
   return {
     handleMeasureRangeSelect,
     measureRangeNoteCells,
     measureRangeLyricCells,
+    measureRangeSelectedPartNames,
     clearMeasureRangeSelection,
   }
 }

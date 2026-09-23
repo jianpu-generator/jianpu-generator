@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import type {
   EditorHandle,
   EditorSelection,
@@ -57,6 +57,13 @@ export function useAppSelectionAndNavigation(
     delta: number,
   ) => Promise<{ source: string; ranges: EditorSelection[] }>,
   handleSourceChange: (value: string) => void,
+  /** Owned by the caller (`useAppController`), same reasoning as
+   * `selectedSequenceRangeRef` above — `useMeasureAudioPlayback` (built
+   * inside `useJianpuWorker`, ahead of this hook) needs it, but this hook is
+   * the one that derives it. Synced via a `useEffect` below rather than
+   * threaded back as a return value, since `playSelectedMeasures` reads it
+   * at click time, not render time. */
+  measureRangeSelectedPartNamesRef: RefObject<string[] | undefined>,
 ) {
   const {
     handleNoteRangeSelect,
@@ -80,6 +87,7 @@ export function useAppSelectionAndNavigation(
     handleMeasureRangeSelect,
     measureRangeNoteCells,
     measureRangeLyricCells,
+    measureRangeSelectedPartNames,
     clearMeasureRangeSelection,
   } = useMeasureRangeSelection(
     editorRef,
@@ -89,7 +97,21 @@ export function useAppSelectionAndNavigation(
     applyLyricSelectionSilently,
     measureSpans,
     notifySelection,
+    parts,
+    enabledTracks,
   )
+
+  // `measureRangeSelectedPartNames` is only read at click time by
+  // `useMeasureAudioPlayback.playSelectedMeasures` (via this ref) — synced
+  // the same way `selectedSequenceRangeRef` is (see that param's doc
+  // comment in `useJianpuWorker.ts`), since `useMeasureAudioPlayback` is
+  // built earlier in the hook tree than this hook runs.
+  useEffect(() => {
+    measureRangeSelectedPartNamesRef.current =
+      measureRangeSelectedPartNames.length > 0
+        ? measureRangeSelectedPartNames
+        : undefined
+  }, [measureRangeSelectedPartNames, measureRangeSelectedPartNamesRef])
 
   // Fed to `useSectionNavigation`/`useSequenceNavigation` below — a section
   // or sequence jump replaces whatever a prior no-mounted-editor (Synced/

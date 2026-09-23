@@ -78,6 +78,9 @@ export function useAppController() {
     entryStartIndex: number
     entryEndIndex: number
   } | null>(null)
+  const measureRangeSelectedPartNamesRef = useRef<string[] | undefined>(
+    undefined,
+  )
   const soundfont = useAssetLoader('/fonts/GeneralUser_GS.sf2')
   const fonts = useFontsLoader()
   const wasm = useWasmLoader()
@@ -168,6 +171,7 @@ export function useAppController() {
     soundfont.bytes,
     fonts.fonts,
     selectedSequenceRangeRef,
+    measureRangeSelectedPartNamesRef,
   )
   usePartTogglePruning(
     parts,
@@ -250,6 +254,7 @@ export function useAppController() {
     playNoteSelection,
     shiftRangeOctave,
     handleSourceChange,
+    measureRangeSelectedPartNamesRef,
   )
 
   const noPartsSelected = computeNoPartsSelected(

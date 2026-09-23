@@ -20,6 +20,7 @@ interface UseJianpuWorkerActionsParams {
     entryStartIndex: number
     entryEndIndex: number
   } | null>
+  measureRangeSelectedPartNamesRef: RefObject<string[] | undefined>
   source: string
   activeFile: string
   soundfontBytes: Uint8Array | null
@@ -44,6 +45,7 @@ interface UseJianpuWorkerActionsParams {
 export function useJianpuWorkerActions({
   state,
   selectedSequenceRangeRef,
+  measureRangeSelectedPartNamesRef,
   source,
   activeFile,
   soundfontBytes,
@@ -85,6 +87,7 @@ export function useJianpuWorkerActions({
     enabledTracksRef: state.enabledTracksRef,
     selectedMeasureRange: state.selectedMeasureRange,
     selectedSequenceRangeRef,
+    measureRangeSelectedPartNamesRef,
     totalMeasures: state.measureSpans.length,
   })
 

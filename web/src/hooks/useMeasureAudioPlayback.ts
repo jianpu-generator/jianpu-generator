@@ -21,6 +21,14 @@ interface UseMeasureAudioPlaybackParams {
     entryStartIndex: number
     entryEndIndex: number
   } | null>
+  /** The visible-part abbreviations a no-mounted-editor (Synced/shared
+   * viewer) measure/bar-line/part-label selection touched — `undefined`
+   * when there's no such restriction to apply (an editor is mounted, no
+   * selection has been made, or the selection covers every visible part).
+   * Read at click time by `playSelectedMeasures`, same reasoning as
+   * `selectedSequenceRangeRef` above — see
+   * `useAppSelectionAndNavigation`'s matching parameter doc comment. */
+  measureRangeSelectedPartNamesRef: RefObject<string[] | undefined>
   /** Total measures in the score (`measureSpans.length`), used by `playAll`
    * to span from the first measure through the last written one. */
   totalMeasures: number
@@ -33,6 +41,7 @@ export function useMeasureAudioPlayback({
   enabledTracksRef,
   selectedMeasureRange,
   selectedSequenceRangeRef,
+  measureRangeSelectedPartNamesRef,
   totalMeasures,
 }: UseMeasureAudioPlaybackParams) {
   const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
@@ -131,6 +140,7 @@ export function useMeasureAudioPlayback({
     [],
   )
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: measureRangeSelectedPartNamesRef is a stable ref read at call time, not a reactive dependency
   const playSelectedMeasures = useCallback(() => {
     if (selectedMeasureRange === null) return
     // Exact range: stop at the end measure's first occurrence, so a
@@ -139,11 +149,23 @@ export function useMeasureAudioPlayback({
     // # sequence/D.C./D.S. entirely, so "play current measure" always plays
     // exactly what is written, regardless of any part omission a # sequence
     // entry might apply to this measure's occurrence(s).
+    //
+    // `enabledTracksOverride` mutes every part outside a no-mounted-editor
+    // (Synced/shared viewer) part-label/measure/bar-line selection, the same
+    // way the editor's "play selection" mutes every part outside a note
+    // range-select (see `playNoteSelection` below) — without switching this
+    // button over to that "Selection" flow, since a viewer's selection never
+    // flips `notePlaybackSelectionActive` (see
+    // `measureRangeSelectedPartNames`'s doc comment in
+    // `useMeasureRangeSelection.ts`).
     playMeasureRange(
       selectedMeasureRange.start,
       selectedMeasureRange.end,
       false,
       false,
+      undefined,
+      undefined,
+      measureRangeSelectedPartNamesRef.current,
     )
   }, [selectedMeasureRange, playMeasureRange])
 
