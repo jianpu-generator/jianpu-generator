@@ -1,3 +1,4 @@
+import type { PublicFile } from '../src/generated/live-share-worker/protocol'
 import { syncedShareIdentityTokenFor } from './mockGithubIdentity.mjs'
 
 // Seeds/mutates real rows in the local `wrangler dev` worker's D1 database
@@ -14,16 +15,6 @@ import { syncedShareIdentityTokenFor } from './mockGithubIdentity.mjs'
  * at -- see that file's `webServer` entry for `wrangler dev --port 8797`
  * (deliberately not `just dev`'s 8787, see that entry's comment). */
 export const CLOUD_WORKER_ORIGIN = 'http://localhost:8797'
-
-/** Wire shape of `crate::files::PublicFile` (`camelCase`), same shape
- * `cloudBackend.ts`'s own `PublicFileWire` mirrors. */
-export interface CloudFileWire {
-  id: string
-  name: string
-  content: string
-  revision: number
-  trashedAt: number | null
-}
 
 function postToWorkerRaw(path: string, body: object): Promise<Response> {
   return fetch(`${CLOUD_WORKER_ORIGIN}${path}`, {
@@ -76,7 +67,7 @@ export async function seedCloudFile(
   login: string,
   name: string,
   content: string = DEFAULT_CLOUD_FILE_CONTENT,
-): Promise<CloudFileWire> {
+): Promise<PublicFile> {
   const identityToken = syncedShareIdentityTokenFor(login)
   const response = await postToWorkerRaw('/files', {
     identityToken,
@@ -85,7 +76,7 @@ export async function seedCloudFile(
     content,
   })
   if (response.ok) {
-    return (await response.json()) as CloudFileWire
+    return (await response.json()) as PublicFile
   }
   if (response.status === 409) {
     return await reseedExistingFile(login, name, content)
@@ -104,10 +95,10 @@ async function reseedExistingFile(
   login: string,
   name: string,
   content: string,
-): Promise<CloudFileWire> {
+): Promise<PublicFile> {
   const identityToken = syncedShareIdentityTokenFor(login)
   const listed = (await postToWorker('/files/list', { identityToken })) as {
-    files: CloudFileWire[]
+    files: PublicFile[]
   }
   const existing = listed.files.find((file) => file.name === name)
   if (!existing) {
@@ -161,7 +152,7 @@ export async function seedTrashedCloudFile(
   login: string,
   name: string,
   content: string = DEFAULT_CLOUD_FILE_CONTENT,
-): Promise<CloudFileWire> {
+): Promise<PublicFile> {
   const file = await seedCloudFile(login, name, content)
   await trashCloudFile(login, file.id)
   return file

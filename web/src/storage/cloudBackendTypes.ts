@@ -41,23 +41,3 @@ export interface CloudBackend extends StorageBackend {
    */
   forceOverwrite(state: FileStoreState): Promise<void>
 }
-
-/** Wire shape of `crate::files::PublicFile` (`camelCase`, per
- * `protocol.rs`'s convention) -- hand-mirrored here rather than added to
- * `web/src/syncedShare/protocol.ts` for this additive-only commit; folding
- * it into that shared mirror file is a later commit's concern. */
-export interface PublicFileWire {
-  id: string
-  name: string
-  content: string
-  revision: number
-  trashedAt: number | null
-}
-
-export interface ListFilesResponseWire {
-  files: PublicFileWire[]
-}
-
-export interface UpdateFileContentResponseWire {
-  revision: number
-}

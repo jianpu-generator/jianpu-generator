@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type {
+  FileShareRequest,
+  FileShareResponse,
+  ShareStatusResponse,
+} from '../generated/live-share-worker/protocol'
 import { useAccountAuth } from '../storage/accountAuth'
 import {
   openSyncedShareGithubSignInPopup,
@@ -11,11 +16,6 @@ import {
   type SyncedShareFailure,
   type SyncedShareOperation,
 } from '../syncedShare/errors'
-import type {
-  FileShareRequest,
-  FileShareResponse,
-  ShareStatusResponse,
-} from '../syncedShare/protocol'
 import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
 import { buildSyncedShareUrl } from '../syncedShareUrl'
 

@@ -531,7 +531,8 @@ consent screen.
   device sees the same live/stopped state and link; `startSync` calls
   `POST /files/:id/share` and `stopSync` `POST /files/:id/share/stop`
   (`FileShareRequest`/`FileShareResponse`/`ShareStatusResponse` in
-  `web/src/syncedShare/protocol.ts`), each carrying only `identityToken`,
+  `web/src/generated/live-share-worker/protocol.ts`, generated from
+  `crates/live-share-worker/src/protocol.rs` by ts-rs), each carrying only `identityToken`,
   set to this connection's token. It never sends content. While synced and
   connected, `ShareModal`'s Synced-link tab shows a small "Synced as
   @username" identity row, sourced from the cached `login`.

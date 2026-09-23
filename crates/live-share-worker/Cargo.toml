@@ -36,6 +36,9 @@ backoff = { version = "0.4", default-features = false, features = [
 # grant-revocation call, which -- unlike the token exchange -- needs HTTP
 # Basic auth (`client_id:client_secret`) rather than a JSON body field.
 base64 = "0.22"
+# Generates `web/`'s TS types for `src/protocol.rs`'s wire types (exported
+# by `cargo test`, see `.cargo/config.toml`), so the two can't drift.
+ts-rs = "12.0.1"
 
 # `sqlx` is deliberately NOT a normal `[dependencies]` entry here, even
 # though task breakdown item 2 calls for "worker + sqlx deps". Reasoning:

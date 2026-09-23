@@ -14,6 +14,7 @@
 //! real conflict semantics to get right.
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// Mirrors a `files` row (see `live-share-worker/migrations/0003_files.sql`).
 /// `owner_user_id` is an internal, provider-agnostic `users.id`, never sent back to a client -- see
@@ -33,8 +34,9 @@ pub struct StoredFile {
 /// The public shape of a `files` row -- strips `owner_user_id` and the
 /// timestamps before a file goes back over the wire, same reasoning as
 /// `crate::share::to_public_doc`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct PublicFile {
     pub id: String,
     pub name: String,

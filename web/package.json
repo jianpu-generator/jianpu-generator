@@ -6,9 +6,10 @@
   "packageManager": "pnpm@10.12.1",
   "scripts": {
     "build:wasm-component": "cargo component build --manifest-path ../crates/jianpu-wasm/Cargo.toml --profile release-wasm --no-default-features --features wav,mp3,pdf,midi --target wasm32-unknown-unknown && jco transpile ../target/wasm32-unknown-unknown/release-wasm/jianpu_wasm.wasm --instantiation async -o ../crates/jianpu-wasm/pkg-component",
-    "predev": "pnpm run build:wasm-component",
+    "build:worker-types": "rm -rf src/generated/live-share-worker && cargo test -q -p live-share-worker --lib export_bindings",
+    "predev": "pnpm run build:wasm-component && pnpm run build:worker-types",
     "dev": "vite",
-    "prebuild": "pnpm run build:wasm-component",
+    "prebuild": "pnpm run build:wasm-component && pnpm run build:worker-types",
     "build": "tsc -b && vite build",
     "check": "knip --include files,dependencies",
     "lint": "biome check .",

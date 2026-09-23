@@ -12,6 +12,7 @@ import {
   restoreFile as pureRestoreFile,
   updateActiveContent as pureUpdateActiveContent,
 } from '../fileStore'
+import type * as Wire from '../generated/live-share-worker/protocol'
 import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
 import {
   HttpStatusError,
@@ -28,8 +29,6 @@ import type {
   CloudBackend,
   CloudBackendConfig,
   CloudBackendError,
-  ListFilesResponseWire,
-  UpdateFileContentResponseWire,
 } from './cloudBackendTypes'
 import type { SaveStatus } from './types'
 
@@ -62,9 +61,10 @@ export type {
  *
  * Request framing (`request`/`NetworkFailure`/`HttpStatusError`), the
  * `409 {code: "name_taken"}` retry (`withNameCollisionRetry` and friends),
- * and the wire/public types live in `cloudBackendHttp.ts`,
+ * and the public types live in `cloudBackendHttp.ts`,
  * `cloudBackendNaming.ts`, and `cloudBackendTypes.ts` respectively -- split
- * out of this file to stay under this repo's 400-line cap.
+ * out of this file to stay under this repo's 400-line cap. Wire types are
+ * generated from the worker's Rust types (`generated/live-share-worker`).
  */
 export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
   const { token } = config
@@ -118,7 +118,10 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
     })
   }
 
-  function post(path: string, body: object): Promise<unknown> {
+  function post<Request extends { identityToken: string }>(
+    path: string,
+    body: Omit<Request, 'identityToken'>,
+  ): Promise<unknown> {
     return request(origin, path, { identityToken: token, ...body })
   }
 
@@ -180,11 +183,14 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
     const expectedRevision = revisionByFileId.get(id) ?? 0
     status = 'saving'
     try {
-      const json = await post(`/files/${id}/content`, {
-        content: fileContent(state, state.active),
-        expectedRevision,
-      })
-      const response = json as UpdateFileContentResponseWire
+      const json = await post<Wire.UpdateFileContentRequest>(
+        `/files/${id}/content`,
+        {
+          content: fileContent(state, state.active),
+          expectedRevision,
+        },
+      )
+      const response = json as Wire.UpdateFileContentResponse
       revisionByFileId.set(id, response.revision)
       status = 'idle'
       lastError = null
@@ -225,12 +231,38 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
     return next
   }
 
+  /** Persists the file `nextState` added relative to `state` (create,
+   * import, duplicate), renaming it if the server reports a name collision. */
+  async function createRemoteFile(
+    state: FileStoreState,
+    nextState: FileStoreState,
+  ): Promise<FileStoreState> {
+    const name = addedName(state, nextState)
+    if (!name) return nextState
+    const id = fileIdForName(nextState, name)
+    const content = nextState.userFiles[name] ?? ''
+    const finalName = await runOp(() =>
+      withNameCollisionRetry(name, state, (attemptName) =>
+        post<Wire.CreateFileRequest>('/files', {
+          id,
+          name: attemptName,
+          content,
+        }),
+      ),
+    )
+    revisionByFileId.set(id, 0)
+    activeIdByName.set(finalName, id)
+    return finalName === name
+      ? nextState
+      : withRenamedKey(nextState, name, finalName)
+  }
+
   return {
     kind: 'cloud',
 
     async load(): Promise<FileStoreState> {
-      const json = await post('/files/list', {})
-      const response = json as ListFilesResponseWire
+      const json = await post<Wire.ListFilesRequest>('/files/list', {})
+      const response = json as Wire.ListFilesResponse
       const userFiles: Record<string, string> = {}
       const bin: Record<string, string> = {}
       const fileIds: Record<string, string> = {}
@@ -257,63 +289,12 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
       return { active: DEMO_FILE_NAMES[0] ?? '', userFiles, bin, fileIds }
     },
 
-    async createFile(state: FileStoreState): Promise<FileStoreState> {
-      const nextState = pureCreateFile(state)
-      const name = addedName(state, nextState)
-      if (!name) return nextState
-      const id = fileIdForName(nextState, name)
-      const content = nextState.userFiles[name] ?? ''
-      const finalName = await runOp(() =>
-        withNameCollisionRetry(name, state, (attemptName) =>
-          post('/files', { id, name: attemptName, content }),
-        ),
-      )
-      revisionByFileId.set(id, 0)
-      activeIdByName.set(finalName, id)
-      return finalName === name
-        ? nextState
-        : withRenamedKey(nextState, name, finalName)
-    },
+    createFile: (state) => createRemoteFile(state, pureCreateFile(state)),
 
-    async importFile(
-      state: FileStoreState,
-      filename: string,
-      content: string,
-    ): Promise<FileStoreState> {
-      const nextState = pureImportSharedFile(state, filename, content)
-      const name = addedName(state, nextState)
-      if (!name) return nextState
-      const id = fileIdForName(nextState, name)
-      const fileContentToSend = nextState.userFiles[name] ?? ''
-      const finalName = await runOp(() =>
-        withNameCollisionRetry(name, state, (attemptName) =>
-          post('/files', { id, name: attemptName, content: fileContentToSend }),
-        ),
-      )
-      revisionByFileId.set(id, 0)
-      activeIdByName.set(finalName, id)
-      return finalName === name
-        ? nextState
-        : withRenamedKey(nextState, name, finalName)
-    },
+    importFile: (state, filename, content) =>
+      createRemoteFile(state, pureImportSharedFile(state, filename, content)),
 
-    async duplicateFile(state: FileStoreState): Promise<FileStoreState> {
-      const nextState = pureDuplicateFile(state)
-      const name = addedName(state, nextState)
-      if (!name) return nextState
-      const id = fileIdForName(nextState, name)
-      const content = nextState.userFiles[name] ?? ''
-      const finalName = await runOp(() =>
-        withNameCollisionRetry(name, state, (attemptName) =>
-          post('/files', { id, name: attemptName, content }),
-        ),
-      )
-      revisionByFileId.set(id, 0)
-      activeIdByName.set(finalName, id)
-      return finalName === name
-        ? nextState
-        : withRenamedKey(nextState, name, finalName)
-    },
+    duplicateFile: (state) => createRemoteFile(state, pureDuplicateFile(state)),
 
     async renameFile(
       state: FileStoreState,
@@ -326,7 +307,9 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
       const id = activeFileId(state, from)
       const finalName = await runOp(() =>
         withNameCollisionRetry(newName, state, (attemptName) =>
-          post(`/files/${id}/rename`, { name: attemptName }),
+          post<Wire.RenameFileRequest>(`/files/${id}/rename`, {
+            name: attemptName,
+          }),
         ),
       )
       activeIdByName.delete(from)
@@ -343,7 +326,7 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
       const nextState = pureDeleteFile(state, name)
       if (nextState === state) return nextState
       const id = activeFileId(state, name)
-      await runOp(() => post(`/files/${id}/delete`, {}))
+      await runOp(() => post<Wire.DeleteFileRequest>(`/files/${id}/delete`, {}))
       activeIdByName.delete(name)
       trashedIdByName.set(name, id)
       return nextState
@@ -359,7 +342,9 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
       const id = trashedFileId(state, name)
       const finalName = await runOp(() =>
         withNameCollisionRetry(newName, state, (attemptName) =>
-          post(`/files/${id}/restore`, { name: attemptName }),
+          post<Wire.RestoreFileRequest>(`/files/${id}/restore`, {
+            name: attemptName,
+          }),
         ),
       )
       trashedIdByName.delete(name)

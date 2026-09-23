@@ -1,14 +1,14 @@
-//! Wire types for the Synced Share worker's HTTP API. Ported from the old
-//! TS `live-share-worker/src/protocol.ts` (mirrored, not shared via a
-//! workspace package, with `web/src/syncedShare/protocol.ts` -- keep the
-//! two in sync by hand when either changes, same constraint as the file
-//! this was ported from).
+//! Wire types for the Synced Share worker's HTTP API. These are the single
+//! source of truth: `#[ts(export)]` generates the TS types `web/` imports
+//! (`web/src/generated/live-share-worker/protocol.ts`, via `web`'s
+//! `build:worker-types` script) -- never hand-mirror them in TS.
 //!
 //! JSON field names use `camelCase` on the wire (matching the old TS
 //! convention, e.g. `identityToken`), even though Rust field names stay
 //! `snake_case`.
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// What `GET /shares/:share_id` returns. `filename`/`content`/`revision`
 /// are the pointed-at `files` row's current `name`/`content`/`revision` --
@@ -23,8 +23,9 @@ use serde::{Deserialize, Serialize};
 /// name, not an internal id) is exposed here specifically so the
 /// viewer-facing `SyncedShareBanner` can show "Shared by @login"; it's
 /// `None` when the owner has no cached login (task 10).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct SyncedDoc {
     pub ended: bool,
     pub filename: String,
@@ -37,32 +38,36 @@ pub struct SyncedDoc {
 /// /files/:id/share/status` -- all three only need the caller's identity;
 /// the file is named by the path, and ownership is checked server-side
 /// against the resolved identity (never the client's own claim).
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct FileShareRequest {
     pub identity_token: String,
 }
 
 /// Response of `POST /files/:id/share` -- the file's one share id, the same
 /// one every time the file is shared (`shares.file_id` is unique).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct FileShareResponse {
     pub share_id: String,
 }
 
 /// Response of `POST /files/:id/share/status` -- `share` is `None` when the
 /// caller has never shared this file.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct ShareStatusResponse {
     pub share: Option<ShareStatus>,
 }
 
 /// A file's share as its owner sees it: the link's id and whether it's been
 /// stopped.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct ShareStatus {
     pub share_id: String,
     pub ended: bool,
@@ -82,8 +87,9 @@ pub struct ShareStatus {
 // every request body below, same convention as `FileShareRequest` above.
 
 /// Body of `POST /files/list`.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct ListFilesRequest {
     pub identity_token: String,
 }
@@ -92,8 +98,9 @@ pub struct ListFilesRequest {
 /// owned by the resolved caller; the client partitions this by
 /// `trashedAt` into its file list vs. bin (see `cloudBackend.ts`'s
 /// `load()`).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct ListFilesResponse {
     pub files: Vec<crate::files::PublicFile>,
 }
@@ -105,8 +112,9 @@ pub struct ListFilesResponse {
 /// `crate::files::PublicFile` itself; a name collision against the
 /// caller's other files (active or trashed) is instead reported as `409
 /// {code: "name_taken"}`, distinct from this module's `ConflictResponse`.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct CreateFileRequest {
     pub identity_token: String,
     pub id: String,
@@ -117,8 +125,9 @@ pub struct CreateFileRequest {
 /// Body of `POST /files/:id/content` -- the atomic CAS content save. See
 /// `crate::files::classify_content_write` for how `expected_revision` gates
 /// the write.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct UpdateFileContentRequest {
     pub identity_token: String,
     pub content: String,
@@ -126,8 +135,9 @@ pub struct UpdateFileContentRequest {
 }
 
 /// `200` response of `POST /files/:id/content`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct UpdateFileContentResponse {
     pub revision: i64,
 }
@@ -136,8 +146,9 @@ pub struct UpdateFileContentResponse {
 /// the caller last saw it -- feeds the existing "Overwrite mine"/"Discard
 /// mine" UI. Distinct in shape from the `409 {code: "name_taken"}` name-
 /// collision response (create/rename/restore).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct ConflictResponse {
     pub current_revision: i64,
 }
@@ -146,8 +157,9 @@ pub struct ConflictResponse {
 /// conflict semantics (matches the old GitHub backend's actual behavior,
 /// decision #3). `404` on zero rows affected; a name collision maps to
 /// `409 {code: "name_taken"}`, same as `CreateFileRequest`.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct RenameFileRequest {
     pub identity_token: String,
     pub name: String,
@@ -155,8 +167,9 @@ pub struct RenameFileRequest {
 
 /// Body of `POST /files/:id/delete` -- moves the file to the bin
 /// (`trashed_at`). No revision gate; `404` on zero rows affected.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct DeleteFileRequest {
     pub identity_token: String,
 }
@@ -166,8 +179,9 @@ pub struct DeleteFileRequest {
 /// `uniqueName`/`reservedNames`) -- can still race into a `409 {code:
 /// "name_taken"}`, same as `CreateFileRequest`/`RenameFileRequest`. `404` on
 /// zero rows affected (no such trashed file for this caller).
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "protocol.ts")]
 pub struct RestoreFileRequest {
     pub identity_token: String,
     pub name: String,

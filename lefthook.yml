@@ -102,8 +102,8 @@ pre-commit:
             run: cd web && pnpm run lint:ast-grep
 
     - name: web-typecheck
-      glob: "{crates/jianpu-wasm/**,web/**}"
-      run: cd web && pnpm run build:wasm-component && python3 ../scripts/check-wasm-size.py && pnpm exec tsc -b
+      glob: "{crates/jianpu-wasm/**,crates/live-share-worker/**,web/**}"
+      run: cd web && pnpm run build:wasm-component && pnpm run build:worker-types && python3 ../scripts/check-wasm-size.py && pnpm exec tsc -b
 
     - name: e2e-tests
       glob: "{web/src/**,web/e2e/**,crates/**,src/**}"

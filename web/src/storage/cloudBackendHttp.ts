@@ -1,3 +1,5 @@
+import type { ConflictResponse } from '../generated/live-share-worker/protocol'
+
 /** Thrown by `request()` when `fetch` itself rejects (offline, DNS failure,
  * aborted request) -- distinct from a successful fetch that resolved to a
  * non-2xx status (`HttpStatusError` below). */
@@ -18,9 +20,7 @@ export class HttpStatusError extends Error {
   }
 }
 
-export function isConflictBody(
-  body: unknown,
-): body is { currentRevision: number } {
+export function isConflictBody(body: unknown): body is ConflictResponse {
   return (
     typeof body === 'object' &&
     body !== null &&

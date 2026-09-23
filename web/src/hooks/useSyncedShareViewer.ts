@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
+import type { SyncedDoc } from '../generated/live-share-worker/protocol'
 import type { SharePayload } from '../shareUrl'
 import type { StorageBackend } from '../storage/types'
-import type { SyncedDoc } from '../syncedShare/protocol'
 import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
 import {
   clearSyncedShareHash,
