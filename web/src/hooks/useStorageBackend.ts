@@ -15,6 +15,7 @@ import {
   readInitialStoreSync,
 } from '../storage/localBackend'
 import type { SaveStatus, StorageBackend } from '../storage/types'
+import { useCloudStoreLoader } from './useCloudStoreLoader'
 
 /**
  * Idle interval at which a changed active file's content is flushed to the
@@ -217,7 +218,7 @@ export function useStorageBackend(): UseStorageBackendResult {
     STORAGE_BACKEND_PREFERENCE_KEY,
     DEFAULT_PREFERENCE,
   )
-  const [accountAuth] = useAccountAuth()
+  const [accountAuth, setAccountAuth] = useAccountAuth()
 
   const [localStore, setLocalStore] = useLocalStorage<FileStoreState>(
     FILE_STORE_KEY,
@@ -238,21 +239,13 @@ export function useStorageBackend(): UseStorageBackendResult {
     return localBackend
   }, [preference, accountAuth])
 
-  // (Re)loads the cloud listing whenever the backend identity changes (kind
-  // or token) — exactly when a fresh listing is needed. `localBackend`'s
-  // state instead lives in `localStore` above, seeded synchronously, so no
-  // such effect is needed for it.
-  useEffect(() => {
-    if (backend.kind !== 'cloud') return
-    let cancelled = false
-    setCloudStore(null)
-    backend.load().then((state) => {
-      if (!cancelled) setCloudStore(state)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [backend])
+  // `localBackend`'s state instead lives in `localStore` above, seeded
+  // synchronously, so no loader is needed for it.
+  const clearAccountAuth = useCallback(
+    () => setAccountAuth(null),
+    [setAccountAuth],
+  )
+  useCloudStoreLoader(backend, setCloudStore, clearAccountAuth)
 
   useEffect(() => {
     setSaveStatus(backend.status())
