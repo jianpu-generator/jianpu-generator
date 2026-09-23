@@ -1,5 +1,13 @@
 const SYNCED_HASH_PREFIX = '#synced='
 
+// Mirrors the hash payload in a query param too. A crawler that generates a
+// link preview (WhatsApp, Slack, ...) never runs JS and never sends the URL
+// fragment to the server, so `functions/index.ts` -- which needs the share
+// id to fetch the real title before the crawler ever sees the HTML -- reads
+// this instead. The hash remains the only thing the client itself reads;
+// this param exists purely for server-side consumption.
+const SHARE_QUERY_PARAM = 's'
+
 const FILENAME_EXTENSION = '.jianpu'
 
 // Base64url encoding of 8 random bytes (64 bits) is *always* exactly this
@@ -39,7 +47,9 @@ export function buildSyncedShareUrl(
     ? filename.slice(0, -FILENAME_EXTENSION.length)
     : filename
   const namePart = bareName ? `${FILENAME_SEPARATOR}${bareName}` : ''
-  return `${base.href}${SYNCED_HASH_PREFIX}${shareId}${namePart}`
+  const payload = `${shareId}${namePart}`
+  base.searchParams.set(SHARE_QUERY_PARAM, payload)
+  return `${base.href}${SYNCED_HASH_PREFIX}${payload}`
 }
 
 export function parseSyncedShareFromHash(
@@ -59,5 +69,25 @@ export function parseSyncedShareFromHash(
 export function clearSyncedShareHash(): void {
   const url = new URL(window.location.href)
   url.hash = ''
-  history.replaceState(null, '', `${url.pathname}${url.search}`)
+  url.searchParams.delete(SHARE_QUERY_PARAM)
+  const search = url.searchParams.toString()
+  history.replaceState(null, '', `${url.pathname}${search ? `?${search}` : ''}`)
+}
+
+/** Removes the `?s=` param (added purely for a link-preview crawler's
+ * pre-JS request, see `SHARE_QUERY_PARAM` above) from the address bar once
+ * client JS has parsed it, leaving the `#synced=` hash untouched -- unlike
+ * `clearSyncedShareHash`, the viewer is still using the hash for its
+ * session. Keeps the URL a viewer sees tidy without affecting anything the
+ * server already handled. */
+export function stripShareQueryParam(): void {
+  const url = new URL(window.location.href)
+  if (!url.searchParams.has(SHARE_QUERY_PARAM)) return
+  url.searchParams.delete(SHARE_QUERY_PARAM)
+  const search = url.searchParams.toString()
+  history.replaceState(
+    null,
+    '',
+    `${url.pathname}${search ? `?${search}` : ''}${url.hash}`,
+  )
 }

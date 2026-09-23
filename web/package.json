@@ -51,6 +51,7 @@
     "@ast-grep/cli": "^0.45.3",
     "@biomejs/biome": "^2.4.16",
     "@bytecodealliance/jco": "^1.32.1",
+    "@cloudflare/workers-types": "^5.20260923.1",
     "@playwright/test": "^1.60.0",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",

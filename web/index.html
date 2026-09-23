@@ -5,6 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>簡譜</title>
+    <!-- Default link-preview tags for the bare app URL. A shared-score URL
+         (`?s=<shareId>...`) gets these overridden server-side with the
+         score's real title -- see `functions/index.ts`. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="簡譜" />
+    <meta
+      property="og:description"
+      content="Jianpu (numbered musical notation) score editor"
+    />
+    <meta name="twitter:card" content="summary" />
   </head>
   <body>
     <div id="root"></div>

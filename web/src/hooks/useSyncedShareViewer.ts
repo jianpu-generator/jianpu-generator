@@ -7,6 +7,7 @@ import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
 import {
   clearSyncedShareHash,
   parseSyncedShareFromHash,
+  stripShareQueryParam,
 } from '../syncedShareUrl'
 import { useImportToStorage } from './useImportToStorage'
 
@@ -76,6 +77,7 @@ export function useSyncedShareViewer(
     const host = import.meta.env.VITE_SYNCED_SHARE_HOST
     if (!host) return
 
+    stripShareQueryParam()
     setEditorCollapsed(true)
 
     let cancelled = false

@@ -93,6 +93,9 @@ importers:
       '@bytecodealliance/jco':
         specifier: ^1.32.1
         version: 1.32.1
+      '@cloudflare/workers-types':
+        specifier: ^5.20260923.1
+        version: 5.20260923.1
       '@playwright/test':
         specifier: ^1.60.0
         version: 1.61.0
@@ -474,6 +477,9 @@ packages:
     resolution: {integrity: sha512-ziWmovyu1jQl9TsKlfC2bwuUZwxVPFHlX4fOqTzxhgS76jITIo45nzODEwPgU+jjmOr8F3YX2V2wAChC5NKujg==}
     engines: {node: '>=16'}
     hasBin: true
+
+  '@cloudflare/workers-types@5.20260923.1':
+    resolution: {integrity: sha512-zuOqyxfhzhN2LlxxcpnAS79aGVm9ku3ZcWKyvVLHyjPV6oHsuHSFidzSHhHE9ho9UTcUxU1IdtpdVuFXluKB+g==}
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -3902,6 +3908,8 @@ snapshots:
       '@bytecodealliance/wizer-linux-s390x': 10.0.0
       '@bytecodealliance/wizer-linux-x64': 10.0.0
       '@bytecodealliance/wizer-win32-x64': 10.0.0
+
+  '@cloudflare/workers-types@5.20260923.1': {}
 
   '@colors/colors@1.5.0':
     optional: true
