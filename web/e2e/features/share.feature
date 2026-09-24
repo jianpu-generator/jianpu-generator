@@ -43,6 +43,12 @@ Feature: Share links
     Then the tapped note is highlighted, as seen in share
     And the measure highlight is not shown, as seen in share
 
+  Scenario: Tapping a note in a shared preview on a mobile viewport does not bring up the keyboard
+    Given local storage is cleared on a mobile viewport
+    When I open a shared preview with a valid tappable note, as seen in share
+    When I tap the first note, as seen in share
+    Then no editable element gains focus, as seen in share
+
   Scenario: Clicking a section label in a shared preview highlights that section
     Given local storage is cleared, as seen in share
     When I open a shared preview with a two-section score, as seen in share

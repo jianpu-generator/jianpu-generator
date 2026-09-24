@@ -249,6 +249,27 @@ Then(
   },
 )
 
+// Regression guard for a mobile bug report: tapping a note in a shared
+// (read-only, no-mounted-editor) preview must never focus an editable
+// element — on a phone, focusing one is exactly what pops the on-screen
+// keyboard over the score. `hideEditor` (see `App.tsx`) unmounts Monaco
+// entirely for a `#share=` link, so `.monaco-editor` shouldn't even exist
+// in the DOM, and `document.activeElement` should stay on `<body>` (or
+// whatever non-editable element the tap landed on).
+Then('no editable element gains focus, as seen in share', async ({ page }) => {
+  await expect(page.locator('.monaco-editor')).toHaveCount(0)
+  const activeElementInfo = await page.evaluate(() => {
+    const el = document.activeElement
+    return {
+      tagName: el?.tagName ?? null,
+      isContentEditable: el instanceof HTMLElement && el.isContentEditable,
+    }
+  })
+  expect(activeElementInfo.tagName).not.toBe('INPUT')
+  expect(activeElementInfo.tagName).not.toBe('TEXTAREA')
+  expect(activeElementInfo.isContentEditable).toBe(false)
+})
+
 // Mirrors `section-jump-select.steps.ts`'s two-section fixture, used there
 // to cover the same section-label click against a mounted editor — this
 // covers the no-mounted-editor (shared-preview) counterpart, where a
