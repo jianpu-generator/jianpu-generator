@@ -7,6 +7,15 @@ pub enum ArcKind {
     Tie,
 }
 
+/// How a bar line is drawn. `Final` is the thin-then-thick double bar that
+/// closes the whole score — only ever the last measure's closing bar line
+/// on the last page (see `grid_layout::layout::mark_final_bar_line`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum BarLineKind {
+    Single,
+    Final,
+}
+
 /// Column width (in grid-layout columns) reserved for a collapsed
 /// `MultiMeasureRest` block, regardless of how many source measures it
 /// represents — wide enough to read visually as "more than one measure",

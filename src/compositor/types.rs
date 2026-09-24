@@ -1,5 +1,5 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
-use crate::compiler::types::ArcKind;
+use crate::compiler::types::{ArcKind, BarLineKind};
 
 #[derive(Debug, Clone)]
 pub struct AbsolutePage {
@@ -66,6 +66,7 @@ pub enum AbsoluteContent {
     },
     BarLine {
         height: f32,
+        kind: BarLineKind,
     },
     HorizontalLine {
         width: f32,

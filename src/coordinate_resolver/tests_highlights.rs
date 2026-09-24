@@ -1,6 +1,13 @@
+use crate::compiler::types::BarLineKind;
 use crate::compositor::types::{AbsoluteContent, FontFamily};
 use crate::coordinate_resolver::resolve::{
     resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
+};
+
+/// Factored out to keep `playback_cursor_reaches_final_bar_line_of_its_measure` under clippy's line-count cap.
+const SINGLE_BAR_LINE: GridContent = GridContent::BarLine {
+    height_pt: 24.0,
+    kind: BarLineKind::Single,
 };
 
 /// Shared default padding used across this file's `ResolveFontSizes` literals, factored out to keep each test under clippy's line-count cap.
@@ -237,7 +244,7 @@ fn playback_cursor_reaches_final_bar_line_of_its_measure() {
                 column_span: 1,
                 halign: HAlign::End,
                 valign: VAlign::Top,
-                content: GridContent::BarLine { height_pt: 24.0 },
+                content: SINGLE_BAR_LINE,
             }],
         }],
         measure_highlights: vec![],

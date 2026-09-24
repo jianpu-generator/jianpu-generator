@@ -1,7 +1,7 @@
 //! Lyric verse row expansion — split out of `expand.rs` to keep it under the
 //! max-file-lines lint.
 
-use crate::compiler::types::{ElementContent, MeasureBlock};
+use crate::compiler::types::{BarLineKind, ElementContent, MeasureBlock};
 use crate::coordinate_resolver::LyricFontSizes;
 use crate::grid_layout::layout::{
     block_column_width, lyric_row_height, lyric_row_verse, LyricSizing, LABEL_COLS, MUSIC_START_COL,
@@ -92,6 +92,7 @@ fn push_leading_bar_line(row: &mut GridRow, part_idx: usize, draw_bar_line: bool
         valign: VAlign::Top,
         content: GridContent::BarLine {
             height_pt: bar_height,
+            kind: BarLineKind::Single,
         },
     });
 }
@@ -162,6 +163,7 @@ pub(crate) fn expand_lyric_part(system: &[MeasureBlock], params: &LyricPartParam
                             valign: VAlign::Top,
                             content: GridContent::BarLine {
                                 height_pt: bar_height,
+                                kind: BarLineKind::Single,
                             },
                         });
                     }

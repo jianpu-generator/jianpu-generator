@@ -1,10 +1,10 @@
-use crate::compiler::types::{CompileResult, ElementContent, MeasureBlock};
+use crate::compiler::types::{BarLineKind, CompileResult, ElementContent, MeasureBlock};
 use crate::error::{Diagnostic, Span, Warning};
 use crate::grid_layout::slur_placement::{build_measure_placements, resolve_slur_spans};
 use crate::grid_layout::tuplet_placement::resolve_tuplet_spans;
 use crate::grid_layout::types::Header;
 use crate::grid_layout::types::{
-    GridElement, GridPage, GridRow, MeasureColumnLayout, MeasureRange,
+    GridContent, GridElement, GridPage, GridRow, HAlign, MeasureColumnLayout, MeasureRange,
 };
 use crate::render_config::RenderConfig;
 use std::collections::{HashMap, HashSet};
@@ -114,6 +114,22 @@ fn system_overflow_diagnostic(
     )))
 }
 
+/// Turns the score's closing bar line into a [`BarLineKind::Final`] double
+/// bar. `rows` must be the expanded rows of the score's last system, whose
+/// only `HAlign::End` bar line is its last measure's closing one (every other
+/// closing bar line is `HAlign::Center`, and the system's leading one is
+/// `HAlign::Start` — see `expand_elements::MeasureRenderParams::is_last_block`).
+pub(crate) fn mark_final_bar_line(rows: &mut [GridRow]) {
+    rows.iter_mut()
+        .flat_map(|row| row.elements.iter_mut())
+        .filter(|e| e.halign == HAlign::End)
+        .for_each(|e| {
+            if let GridContent::BarLine { kind, .. } = &mut e.content {
+                *kind = BarLineKind::Final;
+            }
+        });
+}
+
 #[derive(Clone, Copy)]
 struct PageRowsParams<'a> {
     systems: &'a [Vec<MeasureBlock>],
@@ -123,6 +139,7 @@ struct PageRowsParams<'a> {
     tuplet_bracket_map: &'a HashMap<(usize, usize), Vec<GridElement>>,
     abs_system_index_start: usize,
     is_first_page: bool,
+    is_last_page: bool,
     page_width_pt: f32,
 }
 
@@ -142,6 +159,7 @@ fn build_page_rows(params: &PageRowsParams<'_>) -> PageRowsResult {
         tuplet_bracket_map,
         abs_system_index_start,
         is_first_page,
+        is_last_page,
         page_width_pt,
     } = *params;
     let base = config.row_height as f32;
@@ -185,14 +203,18 @@ fn build_page_rows(params: &PageRowsParams<'_>) -> PageRowsResult {
                     .map(|brackets| (consolidated_idx, brackets.clone()))
             })
             .collect();
-        rows.extend(expand_system_to_rows(
+        let mut system_rows = expand_system_to_rows(
             system,
             base,
             &system_arcs,
             &system_tuplet_brackets,
             &measure_layout,
             config.lyric_sizing(),
-        ));
+        );
+        if is_last_page && sys_idx + 1 == systems.len() {
+            mark_final_bar_line(&mut system_rows);
+        }
+        rows.extend(system_rows);
     }
     PageRowsResult { rows, diagnostics }
 }
@@ -306,6 +328,7 @@ pub fn layout(
             tuplet_bracket_map: &tuplet_bracket_map,
             abs_system_index_start,
             is_first_page: page_idx == 0,
+            is_last_page: page_idx as u32 + 1 == total_pages,
             page_width_pt,
         });
         diagnostics.extend(page_diagnostics);

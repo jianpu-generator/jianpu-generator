@@ -1,4 +1,4 @@
-use crate::compiler::types::{MeasureBlock, MeasureRow};
+use crate::compiler::types::{BarLineKind, MeasureBlock, MeasureRow};
 use crate::grid_layout::layout::{
     block_column_width, chord_part_sub_row_heights, compute_bar_height, has_lyrics,
     is_chord_only_row, is_lyric_row, note_part_sub_row_heights, LyricSizing, LABEL_COLS,
@@ -140,6 +140,7 @@ pub(crate) fn expand_note_part(
                 valign: VAlign::Top,
                 content: GridContent::BarLine {
                     height_pt: bar_height,
+                    kind: BarLineKind::Single,
                 },
             });
         }

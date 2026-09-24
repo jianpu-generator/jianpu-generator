@@ -1,4 +1,4 @@
-use crate::compiler::types::{ElementContent, MeasureRow, MULTI_MEASURE_REST_WIDTH};
+use crate::compiler::types::{BarLineKind, ElementContent, MeasureRow, MULTI_MEASURE_REST_WIDTH};
 use crate::grid_layout::layout::MUSIC_START_COL;
 use crate::grid_layout::types::{GridContent, GridElement, GridRow, HAlign, VAlign};
 
@@ -62,6 +62,7 @@ fn push_bar_line(sub_rows: &mut [GridRow], column: u32, bar_height: f32, halign:
             column,
             GridContent::BarLine {
                 height_pt: bar_height,
+                kind: BarLineKind::Single,
             },
             halign,
             VAlign::Top,

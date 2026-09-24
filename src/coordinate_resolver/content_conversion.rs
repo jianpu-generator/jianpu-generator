@@ -239,9 +239,10 @@ pub(super) fn grid_to_absolute(
             width: span_width,
             level: *level,
         }),
-        PostArcGridContent::BarLine { height_pt } => {
-            Some(AbsoluteContent::BarLine { height: *height_pt })
-        }
+        PostArcGridContent::BarLine { height_pt, kind } => Some(AbsoluteContent::BarLine {
+            height: *height_pt,
+            kind: *kind,
+        }),
         PostArcGridContent::LyricSyllable {
             text,
             source_part_index,

@@ -1,4 +1,5 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
+use crate::compiler::types::BarLineKind;
 use crate::compositor::types::FontFamily;
 
 use crate::grid_layout::types::SequenceEntryInfo;
@@ -42,6 +43,7 @@ pub enum PostArcGridContent {
     },
     BarLine {
         height_pt: f32,
+        kind: BarLineKind,
     },
     HorizontalLine,
     RowLabel(String),
