@@ -275,7 +275,7 @@ fn render_simple_glyph(
         AbsoluteContent::TupletBracket { label, width } => {
             render_tuplet_bracket(elem, label, *width, row_height, notes_font_size)
         }
-        AbsoluteContent::BarLine { height } => render_bar_line(elem, height),
+        AbsoluteContent::BarLine { height, kind } => render_bar_line(elem, height, kind),
         AbsoluteContent::HorizontalLine { width } => render_horizontal_line(elem, width),
         // See the matching comment in `render_note_glyph`: `render_element`'s
         // outer match exhaustively routes this fixed set of variants here.

@@ -64,8 +64,9 @@ pub(super) fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridCo
 fn to_post_arc_text_content(content: &GridContent) -> Option<PostArcGridContent> {
     match content {
         GridContent::Underline { level } => Some(PostArcGridContent::Underline { level: *level }),
-        GridContent::BarLine { height_pt } => Some(PostArcGridContent::BarLine {
+        GridContent::BarLine { height_pt, kind } => Some(PostArcGridContent::BarLine {
             height_pt: *height_pt,
+            kind: *kind,
         }),
         GridContent::HorizontalLine => Some(PostArcGridContent::HorizontalLine),
         GridContent::RowLabel(s) => Some(PostArcGridContent::RowLabel(s.clone())),

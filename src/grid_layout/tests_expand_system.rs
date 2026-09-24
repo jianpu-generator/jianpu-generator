@@ -84,7 +84,7 @@ fn bar_line_element_has_positive_height_pt() {
         .flat_map(|r| r.elements.iter())
         .find(|e| matches!(e.content, GridContent::BarLine { .. }));
     let bar = bar.expect("should have a BarLine element");
-    if let GridContent::BarLine { height_pt } = bar.content {
+    if let GridContent::BarLine { height_pt, .. } = bar.content {
         assert!(height_pt > 0.0, "height_pt={height_pt}");
     }
 }
@@ -174,7 +174,7 @@ fn bar_line_height_includes_lyric_rows() {
         .flat_map(|r| r.elements.iter())
         .find(|e| matches!(e.content, GridContent::BarLine { .. }))
         .expect("should have a BarLine element");
-    let GridContent::BarLine { height_pt } = bar.content else {
+    let GridContent::BarLine { height_pt, .. } = bar.content else {
         panic!("expected BarLine content");
     };
     assert!(

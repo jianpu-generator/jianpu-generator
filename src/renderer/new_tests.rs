@@ -1,11 +1,11 @@
 use crate::ast::parsed::{JianPuPitch, Offset};
-use crate::compiler::types::ArcKind;
+use crate::compiler::types::{ArcKind, BarLineKind};
 use crate::compositor::types::{
     AbsoluteContent, AbsoluteElement, AbsolutePage, TextAnchor, TextSpan,
 };
 use crate::render_config::RenderConfig;
 use crate::renderer::new_renderer::render_new;
-use crate::renderer::new_types::{SvgKind, SvgVariant};
+use crate::renderer::new_types::{SvgElement, SvgKind, SvgVariant};
 
 pub(super) fn cfg() -> RenderConfig {
     RenderConfig {
@@ -84,13 +84,35 @@ fn note_head_produces_text_element() {
 
 #[test]
 fn bar_line_produces_vertical_line() {
-    let page = make_page(AbsoluteContent::BarLine { height: 60.0 });
+    let page = make_page(AbsoluteContent::BarLine {
+        height: 60.0,
+        kind: BarLineKind::Single,
+    });
     let docs = render_new(&[page], &cfg());
     let has_line = docs[0]
         .elements
         .iter()
         .any(|e| matches!(e.kind, SvgKind::Line { .. }));
     assert!(has_line);
+}
+
+#[test]
+fn final_bar_line_produces_thin_then_thick_line_ending_at_x() {
+    let page = make_page(AbsoluteContent::BarLine {
+        height: 60.0,
+        kind: BarLineKind::Final,
+    });
+    let x = page.elements[0].x;
+    let docs = render_new(&[page], &cfg());
+    let stroke_width = |e: &SvgElement| match e.kind {
+        SvgKind::Line { stroke_width, .. } => stroke_width,
+        _ => panic!("expected only lines, got {e:?}"),
+    };
+    let [thin, thick] = &docs[0].elements[..] else {
+        panic!("expected two lines, got {:?}", docs[0].elements);
+    };
+    assert!(thin.x < thick.x && stroke_width(thin) < stroke_width(thick));
+    assert!((thick.x + stroke_width(thick) / 2.0 - x).abs() < 0.01);
 }
 
 #[test]

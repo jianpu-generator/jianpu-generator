@@ -1,4 +1,5 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
+use crate::compiler::types::BarLineKind;
 use crate::compositor::types::AbsoluteElement;
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
 use crate::font_metrics;
@@ -370,17 +371,53 @@ pub(super) fn render_tie_or_slur(
 mod tuplet_bracket;
 pub(super) use tuplet_bracket::render_tuplet_bracket;
 
-pub(super) fn render_bar_line(elem: &AbsoluteElement, height: &f32) -> Vec<SvgElement> {
-    vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
+const BAR_LINE_STROKE_WIDTH: f32 = 0.5;
+/// Stroke of the thick right-hand line of a [`BarLineKind::Final`] bar.
+const FINAL_BAR_LINE_THICK_STROKE_WIDTH: f32 = 2.0;
+/// Gap between the thin and thick lines of a [`BarLineKind::Final`] bar,
+/// measured between their facing edges.
+const FINAL_BAR_LINE_GAP: f32 = 1.5;
+
+fn vertical_line(x: f32, y: f32, height: f32, stroke_width: f32) -> SvgElement {
+    SvgElement {
+        x,
+        y,
         variant: Some(SvgVariant::BarLine),
         kind: SvgKind::Line {
-            x2: elem.x,
-            y2: elem.y + height,
-            stroke_width: 0.5,
+            x2: x,
+            y2: y + height,
+            stroke_width,
         },
-    }]
+    }
+}
+
+/// A `Final` bar is drawn thin-then-thick, with the thick line's right edge
+/// flush at `elem.x` (the score's right margin, since the closing bar line
+/// is `HAlign::End`).
+pub(super) fn render_bar_line(
+    elem: &AbsoluteElement,
+    height: &f32,
+    kind: &BarLineKind,
+) -> Vec<SvgElement> {
+    match kind {
+        BarLineKind::Single => vec![vertical_line(
+            elem.x,
+            elem.y,
+            *height,
+            BAR_LINE_STROKE_WIDTH,
+        )],
+        BarLineKind::Final => {
+            let thick_x = elem.x - FINAL_BAR_LINE_THICK_STROKE_WIDTH / 2.0;
+            let thin_x = elem.x
+                - FINAL_BAR_LINE_THICK_STROKE_WIDTH
+                - FINAL_BAR_LINE_GAP
+                - BAR_LINE_STROKE_WIDTH / 2.0;
+            vec![
+                vertical_line(thin_x, elem.y, *height, BAR_LINE_STROKE_WIDTH),
+                vertical_line(thick_x, elem.y, *height, FINAL_BAR_LINE_THICK_STROKE_WIDTH),
+            ]
+        }
+    }
 }
 
 #[path = "glyph_renderers_lyric.rs"]

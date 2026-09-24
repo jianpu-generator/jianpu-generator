@@ -1,5 +1,5 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
-use crate::compiler::types::ArcKind;
+use crate::compiler::types::{ArcKind, BarLineKind};
 
 #[path = "click_target_types.rs"]
 mod click_target_types;
@@ -199,6 +199,7 @@ pub enum GridContent {
     /// Vertical bar line. `height_pt` baked in by grid layout layer.
     BarLine {
         height_pt: f32,
+        kind: BarLineKind,
     },
     /// Full-width horizontal system separator.
     HorizontalLine,

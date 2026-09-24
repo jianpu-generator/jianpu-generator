@@ -2,6 +2,8 @@ use super::*;
 
 #[path = "tests_chord_bass_note_width.rs"]
 mod tests_chord_bass_note_width;
+#[path = "tests_final_bar_line.rs"]
+mod tests_final_bar_line;
 #[path = "tests_lyric_label_click_targets.rs"]
 mod tests_lyric_label_click_targets;
 #[path = "tests_part_kind_x_alignment.rs"]
