@@ -60,7 +60,11 @@ pub(super) fn flush_left_padding(content: &GridContent, config: RowResolveConfig
             ),
         ),
         GridContent::ChordSymbol { text, .. } => {
-            let leading_char = text.chars().next().unwrap_or_default();
+            // The anchor is the degree's, not the leading accidental's: the
+            // accidental hangs into the column's accidental lead ahead of it
+            // (see `render_chord_symbol`).
+            let accidental = crate::font_metrics::chord_leading_accidental(text);
+            let leading_char = text[accidental.len()..].chars().next().unwrap_or_default();
             (
                 config.paddings.chords,
                 crate::font_metrics::glyph_left_bearing_for_family(

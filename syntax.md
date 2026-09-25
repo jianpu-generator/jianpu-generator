@@ -696,7 +696,7 @@ Parsing checks longest suffix first (`M7` before `7`; `sus2`/`sus4` before bare 
 | `17` | I dominant 7th |
 | `1M7` | I major 7th |
 | `1m7` | I minor 7th |
-| `1#m7` | I♯ minor 7th |
+| `1#m7` | ♯I minor 7th (rendered `♯1m⁷`) |
 | `3b` | ♭III major |
 | `1/5` | I major, 5 in bass (e.g. C/G) |
 | `6m/5` | vi minor, 5 in bass (e.g. Am/G) |

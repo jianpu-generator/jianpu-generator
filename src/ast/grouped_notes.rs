@@ -139,7 +139,10 @@ impl GroupedChordNote {
             Some(Extension::MajorSeventh) => "△⁷",
             None => "",
         };
-        let mut result = format!("{degree}{accidental}{triad}{extension}");
+        // Accidentals lead their degree (`♯1m`, not `1♯m`), matching note
+        // heads — see `render_chord_symbol`, which hangs the leading
+        // accidental into the column's accidental lead.
+        let mut result = format!("{accidental}{degree}{triad}{extension}");
 
         if let Some(bass) = &self.bass {
             let bass_degree = match bass.degree {
@@ -157,8 +160,8 @@ impl GroupedChordNote {
                 Accidental::Natural => "",
             };
             result.push('/');
-            result.push(bass_degree);
             result.push_str(bass_acc);
+            result.push(bass_degree);
         }
 
         result

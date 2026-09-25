@@ -192,6 +192,10 @@ pub(super) use note_dash::render_note_dash;
 mod rest;
 pub(super) use rest::render_rest;
 
+#[path = "glyph_renderers_chord_symbol.rs"]
+mod chord_symbol;
+pub(super) use chord_symbol::render_chord_symbol;
+
 /// Standard multi-bar-rest engraving: a thick horizontal bar with short vertical
 /// ticks at both ends, and the collapsed measure count printed centered above it.
 pub(super) fn render_multi_measure_rest(
@@ -273,51 +277,6 @@ pub(super) fn render_percussion_hit(
             underline: style.underline,
         },
     }]
-}
-
-pub(super) fn render_chord_symbol(
-    elem: &AbsoluteElement,
-    s: &str,
-    dots: &DotState,
-    base_font_size: &f32,
-    style: GlyphStyle,
-) -> Vec<SvgElement> {
-    // `elem.x` is already corrected for this chord's own root character's
-    // left-side bearing (see
-    // `coordinate_resolver::resolve::flush_left_padding`), so the string can
-    // draw flush-left at `elem.x` directly, exactly like `render_lyric` —
-    // no renderer-side recentering needed. The augmentation dot(s), if any,
-    // are drawn separately as circles (see `augmentation_dot_glyphs`) rather
-    // than appended onto the chord text itself.
-    let mut results = vec![SvgElement {
-        x: elem.x,
-        y: elem.y,
-        variant: Some(SvgVariant::ChordSymbol),
-        kind: SvgKind::Text {
-            content: s.to_string(),
-            font_size: *base_font_size,
-            anchor: TextAnchor::Start,
-            baseline: DominantBaseline::Middle,
-            font: style.font_family,
-            weight: glyph_weight(style.bold),
-            italic: style.italic,
-            underline: style.underline,
-        },
-    }];
-
-    results.extend(augmentation_dot_glyphs(
-        &AugmentationDotParams {
-            x: elem.x,
-            y: elem.y,
-            base_content: s,
-            font_size: *base_font_size,
-            family: style.font_family,
-            variant: SvgVariant::ChordSymbol,
-        },
-        dots,
-    ));
-
-    results
 }
 
 pub(super) fn render_horizontal_line(elem: &AbsoluteElement, width: &f32) -> Vec<SvgElement> {

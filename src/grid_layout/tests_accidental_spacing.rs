@@ -200,3 +200,52 @@ fn glyph_left_anchor_x_shifts_right_by_the_column_s_accidental_lead() {
         geometry.x_start(bar_col) + padding
     );
 }
+
+fn make_block_with_chord(text: &str) -> MeasureBlock {
+    MeasureBlock {
+        rows: vec![MeasureRow {
+            absorbed_rows: Vec::new(),
+            id: RowId("C".to_string()),
+            label: "C".to_string(),
+            elements: vec![
+                ColumnElement {
+                    column: 0,
+                    content: ElementContent::ChordSymbol {
+                        text: text.to_string(),
+                        dotted: false,
+                        double_dotted: false,
+                    },
+                    note_id: None,
+                },
+                ColumnElement {
+                    column: 1,
+                    content: ElementContent::BarLine,
+                    note_id: None,
+                },
+            ],
+            source_part_index: 0,
+        }],
+        ..make_block_with_accidental_note("S", Accidental::Natural, 1)
+    }
+}
+
+#[test]
+fn a_chord_symbol_s_leading_accidental_becomes_its_column_s_accidental_lead() {
+    // A chord's root sharp/flat draws left of its degree (see
+    // `render_chord_symbol`), so its column reserves that glyph's width as
+    // a lead, exactly like a sharp note head. A bass-note accidental
+    // (`1/♯4`) sits mid-text and needs no lead.
+    let config = test_config();
+    let leading = build_measure_column_layout(&[make_block_with_chord("\u{266F}1m")], &config);
+    let bass_only = build_measure_column_layout(&[make_block_with_chord("1/\u{266F}4")], &config);
+    let chord_col = leading[0].column_rods.len() - 2;
+    let sharp_width = font_metrics::text_width_for_family(
+        config.glyph_font_families.chords,
+        "\u{266F}",
+        config.chords_font_size(),
+    );
+
+    assert!(sharp_width > 0.0);
+    assert_eq!(leading[0].column_accidental_leads[chord_col], sharp_width);
+    assert_eq!(bass_only[0].column_accidental_leads[chord_col], 0.0);
+}

@@ -217,6 +217,29 @@ pub(crate) fn accidental_width_for_family(
     text_width_for_family(family, accidental_symbol(accidental), font_size)
 }
 
+/// The sharp/flat glyph a chord symbol's text leads with (see
+/// `GroupedChordNote::format_symbol`), or `""` when its root has none.
+pub(crate) fn chord_leading_accidental(text: &str) -> &str {
+    text.chars()
+        .next()
+        .filter(|c| matches!(c, '\u{266F}' | '\u{266D}'))
+        .map_or("", |c| &text[..c.len_utf8()])
+}
+
+/// Real rendered width (in points) of `text`'s leading accidental (see
+/// [`chord_leading_accidental`]) in `family`'s pinned font — shared by the
+/// layout pass (which reserves it as the column's accidental lead, see
+/// `grid_layout::layout_spacing`) and `render_chord_symbol` (which hangs the
+/// accidental into that room), so the chord's degree lines up with every
+/// other part's note digit on the same beat.
+pub(crate) fn chord_leading_accidental_width_for_family(
+    family: FontFamily,
+    text: &str,
+    font_size: f32,
+) -> f32 {
+    text_width_for_family(family, chord_leading_accidental(text), font_size)
+}
+
 /// Left-side bearing (in points) of one character in `family`'s pinned font
 /// at `font_size`, used to compensate a centered/flush-left glyph's anchor
 /// for its own leading character's built-in inset — the `notes`/`chords`/

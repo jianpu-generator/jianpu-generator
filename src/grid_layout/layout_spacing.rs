@@ -100,11 +100,19 @@ pub(crate) struct ColumnSizing {
 /// accidental — `render_note_head` draws the accidental immediately before
 /// the digit, so every flush-left glyph in the column is pushed right by the
 /// column's widest such lead (see `ColumnGeometry::glyph_left_anchor_x`),
-/// keeping every part's digits vertically aligned on the same beat. `0.0`
-/// for anything but an accidental-carrying `NoteHead`.
+/// keeping every part's digits vertically aligned on the same beat. A chord
+/// symbol whose root carries a sharp/flat (`♯1m`) leads with it the same
+/// way (see `render_chord_symbol`). `0.0` for anything else.
 fn accidental_lead(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
         ElementContent::NoteHead { accidental, .. } => accidental_extra_weight(accidental, config),
+        ElementContent::ChordSymbol { text, .. } => {
+            crate::font_metrics::chord_leading_accidental_width_for_family(
+                config.glyph_font_families.chords,
+                text,
+                config.chords_font_size(),
+            )
+        }
         _ => 0.0,
     }
 }

@@ -180,6 +180,49 @@ fn sharp_accidental_renders_left_of_the_digit_in_the_note_s_own_text_run() {
 }
 
 #[test]
+fn chord_symbol_s_leading_accidental_hangs_left_of_its_degree() {
+    // Like a note head, a chord symbol leading with a sharp/flat starts its
+    // text run one accidental-width before `elem.x`, so its degree lands on
+    // the anchor, aligned with other parts' note digits on the same beat.
+    let page = make_page(AbsoluteContent::ChordSymbol {
+        text: "\u{266D}3m".to_string(),
+        dotted: false,
+        double_dotted: false,
+    });
+    let chord_x = 100.0_f32;
+    let config = cfg();
+    let docs = render_new(&[page], &config);
+    let chord = docs[0]
+        .elements
+        .iter()
+        .find(|e| e.variant == Some(SvgVariant::ChordSymbol))
+        .expect("chord symbol element should be present");
+    let flat_width = crate::font_metrics::text_width_for_family(
+        config.glyph_font_families.chords,
+        "\u{266D}",
+        config.chords_font_size(),
+    );
+    assert!(flat_width > 0.0);
+    assert!((chord.x - (chord_x - flat_width)).abs() < 0.001);
+}
+
+#[test]
+fn chord_symbol_without_leading_accidental_draws_at_its_anchor() {
+    let page = make_page(AbsoluteContent::ChordSymbol {
+        text: "1/\u{266F}4".to_string(),
+        dotted: false,
+        double_dotted: false,
+    });
+    let docs = render_new(&[page], &cfg());
+    let chord = docs[0]
+        .elements
+        .iter()
+        .find(|e| e.variant == Some(SvgVariant::ChordSymbol))
+        .expect("chord symbol element should be present");
+    assert_eq!(chord.x, 100.0);
+}
+
+#[test]
 fn note_dash_renders_at_its_own_font_size_not_notes_font_size() {
     // note_dash and notes are configured with distinct font sizes here so
     // the assertion can't pass by coincidence: the dash must use
