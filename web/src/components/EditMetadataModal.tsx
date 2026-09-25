@@ -1,19 +1,17 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useState } from 'react'
+import type {
+  MetadataEdit,
+  MetadataFields,
+  TextStyleComponentValue,
+  TextStyleDefaults,
+  TextStyleKind,
+} from '../jianpuWasm'
 import {
   loadMetadataDefaults,
   type MetadataDefaults,
-  type TextStyleDefaultFields,
-  type TextStyleDefaults,
-  textStyleDefaultFields,
 } from '../utils/metadataDefaults'
 import { metadataFieldHelp } from '../utils/metadataFieldHelp'
-import type {
-  MetadataFieldKey,
-  ParsedMetadataFields,
-  TextStyleComponent,
-  TextStyleKind,
-} from '../utils/metadataSource'
 import { useFontSizeDefaults } from '../utils/useFontSizeDefaults'
 import { FieldHelpModal } from './FieldHelpModal'
 import { MetadataFieldsTableBody } from './MetadataFieldsTableBody'
@@ -23,11 +21,49 @@ import { MetadataStylesTable } from './MetadataStylesTable'
 export interface EditMetadataModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  metadata: ParsedMetadataFields
-  onFieldChange: (key: MetadataFieldKey, value: string | null) => void
+  /** `null` until the wasm-side parse is available (see
+   * `useMetadataFields`); the modal shows no fields until then. */
+  metadata: MetadataFields | null
+  onFieldChange: (edit: MetadataEdit) => void
   /** Element to confine the modal to (e.g. the editor pane), so it doesn't
    * cover the preview pane. Falls back to viewport-centered when null. */
   container?: HTMLElement | null
+}
+
+const styleRowLabels: Record<TextStyleKind, string> = {
+  title: 'Title Style',
+  subtitle: 'Subtitle Style',
+  author: 'Author Style',
+  sequence: 'Sequence Style',
+  'part-legend': 'Part Legend Style',
+  'measure-number': 'Measure Number Style',
+  'section-label': 'Section Label Style',
+  'part-label': 'Part Label Style',
+  'page-number': 'Page Number Style',
+  lyrics: 'Lyrics Style',
+  notes: 'Notes Style',
+  chords: 'Chords Style',
+  'note-dash': 'Note Dash Style',
+}
+
+function styleDefaultsByKind(
+  d: MetadataDefaults,
+): Record<TextStyleKind, TextStyleDefaults> {
+  return {
+    title: d.title,
+    subtitle: d.subtitle,
+    author: d.author,
+    sequence: d.sequence,
+    'part-legend': d.partLegend,
+    'measure-number': d.measureNumber,
+    'section-label': d.sectionLabel,
+    'part-label': d.partLabel,
+    'page-number': d.pageNumber,
+    lyrics: d.lyrics,
+    notes: d.notes,
+    chords: d.chords,
+    'note-dash': d.noteDash,
+  }
 }
 
 const thStyle: React.CSSProperties = {
@@ -59,7 +95,7 @@ export function EditMetadataModal({
     loadMetadataDefaults().then(setDefaults)
   }, [])
 
-  const effectiveRowHeight = metadata.row_height ?? defaults?.rowHeight ?? null
+  const effectiveRowHeight = metadata?.rowHeight ?? defaults?.rowHeight ?? null
   const {
     lyricsFontSizeDefault,
     titleFontSizeDefault,
@@ -70,6 +106,8 @@ export function EditMetadataModal({
   } = useFontSizeDefaults(effectiveRowHeight)
 
   const d = defaults
+  const styleOf = (kind: TextStyleKind) =>
+    metadata?.styles.find((entry) => entry.kind === kind)?.fields
 
   // notes/chords styles' font_size default to the *effective* lyrics font
   // size — either the explicit override or its own row_height-derived
@@ -77,138 +115,46 @@ export function EditMetadataModal({
   // font size, one level further down the cascade (see `syntax.md`'s
   // "Text styles" defaults table).
   const effectiveLyricsFontSize =
-    metadata.styles.lyrics.font_size ?? lyricsFontSizeDefault
+    styleOf('lyrics')?.fontSize ?? lyricsFontSizeDefault
   const effectiveNotesFontSize =
-    metadata.styles.notes.font_size ?? effectiveLyricsFontSize
+    styleOf('notes')?.fontSize ?? effectiveLyricsFontSize
 
-  const setText = (key: MetadataFieldKey) => (value: string) =>
-    onFieldChange(key, value === '' ? null : value)
-
-  const setNumber = (key: MetadataFieldKey) => (value: string) =>
-    onFieldChange(key, value === '' ? null : value)
-
-  const setYesNo =
-    (key: MetadataFieldKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
-      onFieldChange(key, e.target.checked ? 'yes' : 'no')
-
-  const setStyle =
-    (kind: TextStyleKind) =>
-    (component: TextStyleComponent) =>
-    (value: string) =>
-      onFieldChange(`${kind}.${component}`, value === '' ? null : value)
-
-  const numOrUndef = (n: number | null | undefined): string | undefined =>
-    n != null ? String(n) : undefined
-
-  // Overrides one kind's static `d?.<kind>` default with a live,
-  // `row_height`- (or `lyrics_font_size`-) aware `font_size`, for the kinds
-  // whose real default isn't a flat constant (see `useFontSizeDefaults`
-  // above). Falls back to the static snapshot (or `null`) when the live
-  // value isn't known yet.
-  const stylePlaceholder = (
-    base: TextStyleDefaults | undefined,
-    liveFontSize?: number | null,
-  ): TextStyleDefaultFields | null => {
-    if (!base) return null
-    const fields = textStyleDefaultFields(base)
-    return liveFontSize == null
-      ? fields
-      : { ...fields, font_size: liveFontSize }
+  // The kinds whose real `font_size` default isn't a flat constant but
+  // depends on `row_height` (or on `lyrics`' font size) — these override
+  // the static `d.<kind>` snapshot with a live value (see
+  // `useFontSizeDefaults` above), falling back to the snapshot while the
+  // live value isn't known yet.
+  const liveFontSizeDefaults: Partial<Record<TextStyleKind, number | null>> = {
+    title: titleFontSizeDefault,
+    subtitle: subtitleFontSizeDefault,
+    author: authorFontSizeDefault,
+    'part-legend': partLegendFontSizeDefault,
+    'page-number': pageNumberFontSizeDefault,
+    lyrics: lyricsFontSizeDefault,
+    notes: effectiveLyricsFontSize,
+    chords: effectiveLyricsFontSize,
+    'note-dash': effectiveNotesFontSize,
   }
 
-  const styleRows: StyleRowSpec[] = [
-    {
-      kind: 'title',
-      label: 'Title Style',
-      help: metadataFieldHelp.title,
-      value: metadata.styles.title,
-      placeholder: stylePlaceholder(d?.title, titleFontSizeDefault),
-    },
-    {
-      kind: 'subtitle',
-      label: 'Subtitle Style',
-      help: metadataFieldHelp.subtitle,
-      value: metadata.styles.subtitle,
-      placeholder: stylePlaceholder(d?.subtitle, subtitleFontSizeDefault),
-    },
-    {
-      kind: 'author',
-      label: 'Author Style',
-      help: metadataFieldHelp.author,
-      value: metadata.styles.author,
-      placeholder: stylePlaceholder(d?.author, authorFontSizeDefault),
-    },
-    {
-      kind: 'sequence',
-      label: 'Sequence Style',
-      help: metadataFieldHelp.sequence,
-      value: metadata.styles.sequence,
-      placeholder: stylePlaceholder(d?.sequence),
-    },
-    {
-      kind: 'part_legend',
-      label: 'Part Legend Style',
-      help: metadataFieldHelp.part_legend,
-      value: metadata.styles.part_legend,
-      placeholder: stylePlaceholder(d?.partLegend, partLegendFontSizeDefault),
-    },
-    {
-      kind: 'measure_number',
-      label: 'Measure Number Style',
-      help: metadataFieldHelp.measure_number,
-      value: metadata.styles.measure_number,
-      placeholder: stylePlaceholder(d?.measureNumber),
-    },
-    {
-      kind: 'section_label',
-      label: 'Section Label Style',
-      help: metadataFieldHelp.section_label,
-      value: metadata.styles.section_label,
-      placeholder: stylePlaceholder(d?.sectionLabel),
-    },
-    {
-      kind: 'part_label',
-      label: 'Part Label Style',
-      help: metadataFieldHelp.part_label,
-      value: metadata.styles.part_label,
-      placeholder: stylePlaceholder(d?.partLabel),
-    },
-    {
-      kind: 'page_number',
-      label: 'Page Number Style',
-      help: metadataFieldHelp.page_number,
-      value: metadata.styles.page_number,
-      placeholder: stylePlaceholder(d?.pageNumber, pageNumberFontSizeDefault),
-    },
-    {
-      kind: 'lyrics',
-      label: 'Lyrics Style',
-      help: metadataFieldHelp.lyrics,
-      value: metadata.styles.lyrics,
-      placeholder: stylePlaceholder(d?.lyrics, lyricsFontSizeDefault),
-    },
-    {
-      kind: 'notes',
-      label: 'Notes Style',
-      help: metadataFieldHelp.notes,
-      value: metadata.styles.notes,
-      placeholder: stylePlaceholder(d?.notes, effectiveLyricsFontSize),
-    },
-    {
-      kind: 'chords',
-      label: 'Chords Style',
-      help: metadataFieldHelp.chords,
-      value: metadata.styles.chords,
-      placeholder: stylePlaceholder(d?.chords, effectiveLyricsFontSize),
-    },
-    {
-      kind: 'note_dash',
-      label: 'Note Dash Style',
-      help: metadataFieldHelp.note_dash,
-      value: metadata.styles.note_dash,
-      placeholder: stylePlaceholder(d?.noteDash, effectiveNotesFontSize),
-    },
-  ]
+  const stylePlaceholder = (kind: TextStyleKind): TextStyleDefaults | null => {
+    if (!d) return null
+    const base = styleDefaultsByKind(d)[kind]
+    const liveFontSize = liveFontSizeDefaults[kind]
+    return liveFontSize == null ? base : { ...base, fontSize: liveFontSize }
+  }
+
+  const styleRows: StyleRowSpec[] = (metadata?.styles ?? []).map(
+    ({ kind, fields }) => ({
+      kind,
+      label: styleRowLabels[kind],
+      help: metadataFieldHelp[kind],
+      value: fields,
+      placeholder: stylePlaceholder(kind),
+    }),
+  )
+
+  const setStyle = (kind: TextStyleKind) => (value: TextStyleComponentValue) =>
+    onFieldChange({ tag: 'style', val: { kind, value } })
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange} modal={false}>
@@ -271,43 +217,41 @@ export function EditMetadataModal({
               ×
             </Dialog.Close>
           </div>
-          <div style={{ overflowY: 'auto', flex: 1 }}>
-            <div style={{ overflowX: 'auto' }}>
-              <MetadataStylesTable
-                rows={styleRows}
-                showHelp={showHelp}
-                onChange={setStyle}
-              />
+          {metadata && (
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              <div style={{ overflowX: 'auto' }}>
+                <MetadataStylesTable
+                  rows={styleRows}
+                  showHelp={showHelp}
+                  onChange={setStyle}
+                />
+              </div>
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  tableLayout: 'fixed',
+                }}
+              >
+                <colgroup>
+                  <col style={{ width: '40%' }} />
+                  <col style={{ width: '60%' }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Field</th>
+                    <th style={thStyle}>Value</th>
+                  </tr>
+                </thead>
+                <MetadataFieldsTableBody
+                  metadata={metadata}
+                  defaults={d}
+                  showHelp={showHelp}
+                  onFieldChange={onFieldChange}
+                />
+              </table>
             </div>
-            <table
-              style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                tableLayout: 'fixed',
-              }}
-            >
-              <colgroup>
-                <col style={{ width: '40%' }} />
-                <col style={{ width: '60%' }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Field</th>
-                  <th style={thStyle}>Value</th>
-                </tr>
-              </thead>
-              <MetadataFieldsTableBody
-                metadata={metadata}
-                defaults={d}
-                showHelp={showHelp}
-                onTitleChange={(value) => onFieldChange('title', value)}
-                setText={setText}
-                setNumber={setNumber}
-                setYesNo={setYesNo}
-                numOrUndef={numOrUndef}
-              />
-            </table>
-          </div>
+          )}
           <FieldHelpModal
             content={helpContent}
             onOpenChange={(open) => !open && setHelpContent(null)}

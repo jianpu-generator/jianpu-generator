@@ -1,7 +1,11 @@
+mod metadata_edit;
 mod octave_shift;
 mod range_edit;
 mod slur_toggle;
 mod tie_toggle;
+pub use metadata_edit::{
+    parse_metadata_fields, update_metadata_field, MetadataEdit, MetadataFields,
+};
 pub use octave_shift::{shift_part_octave, shift_range_octave};
 pub use range_edit::{ByteRange, RangeEditResult};
 pub use slur_toggle::toggle_range_slur;

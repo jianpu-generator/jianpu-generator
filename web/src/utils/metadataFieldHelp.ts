@@ -1,25 +1,21 @@
-import type { TextStyleKind } from './metadataSource'
+import type {
+  MetadataEdit,
+  MetadataFlagKey,
+  MetadataNumberKey,
+  TextStyleKind,
+} from '../jianpuWasm'
 
-/** Markdown help text shown in the field-help modal. Keyed by the text
- * content fields (`title`/`subtitle`/`author`), the 13 `TextStyleKind`s
- * (shared by both the content row and its style row, for the three that
- * have both), the scalar fields, and the checkbox fields — describing
- * precisely which rendering/layout aspects each Edit Metadata field
- * affects. */
+/** Markdown help text shown in the field-help modal, keyed by the generated
+ * wasm key types: the 13 `TextStyleKind`s (shared by both the content row
+ * and its style row, for `title`/`subtitle`/`author`, which have both), the
+ * numeric fields, the checkbox fields, and `directive-row-offset` —
+ * describing precisely which rendering/layout aspects each Edit Metadata
+ * field affects. */
 export const metadataFieldHelp: Record<
-  | 'title'
-  | 'subtitle'
-  | 'author'
   | TextStyleKind
-  | 'row_height'
-  | 'max_measures_per_system'
-  | 'note_number_width'
-  | 'parts_list_columns'
-  | 'part_label_width_pt'
-  | 'merge_duplicate_measures_across_parts'
-  | 'hide_resting_parts'
-  | 'hide_system_dividers'
-  | 'directive_row_offset',
+  | MetadataNumberKey
+  | MetadataFlagKey
+  | Extract<MetadataEdit['tag'], 'directive-row-offset'>,
   string
 > = {
   title: `Rendered as the large heading at the top of the score's first page.
@@ -38,27 +34,27 @@ Its style row's **Font Size** defaults to \`row_height × 0.6\`.`,
 
 **Font Size** defaults to 12.`,
 
-  part_legend: `Style of the part-name legend entries shown in the header.
+  'part-legend': `Style of the part-name legend entries shown in the header.
 
 **Font Size** defaults to \`row_height × 0.6\`.`,
 
-  measure_number: `Style of each measure's bar number.
+  'measure-number': `Style of each measure's bar number.
 
 **Font Size** defaults to 10.`,
 
-  section_label: `Style of an inline section label (the \`label="..."\` on a measure's directive line).
+  'section-label': `Style of an inline section label (the \`label="..."\` on a measure's directive line).
 
 **Font Size** defaults to 12.`,
 
-  part_label: `Style of a part's row label (e.g. "Soprano"), shown at the start of each system row.
+  'part-label': `Style of a part's row label (e.g. "Soprano"), shown at the start of each system row.
 
 **Font Size** defaults to 12. See **Part Label Width** below for the column's reserved width.`,
 
-  part_label_width_pt: `Fixed width (points) of the part-label column at the start of each system, shared by every system in the score regardless of how many measures/columns that system's music needs.
+  'part-label-width-pt': `Fixed width (points) of the part-label column at the start of each system, shared by every system in the score regardless of how many measures/columns that system's music needs.
 
 Default: 40.`,
 
-  page_number: `Style of the page number shown in the footer.
+  'page-number': `Style of the page number shown in the footer.
 
 **Font Size** defaults to \`row_height × 0.6\`. **V. Padding** pushes the page number upward from the page's bottom edge, without moving anything else.`,
 
@@ -74,11 +70,11 @@ Default: 40.`,
 
 **Font Size** defaults to \`lyrics.font_size\` and also affects the width allotted to a chord symbol's column, measured against its own font (Monospace by default, but **Font** below can override it). **H. Padding** defaults to 4.`,
 
-  note_dash: `Style of a note dash (the sustain-beat \`-\` extension).
+  'note-dash': `Style of a note dash (the sustain-beat \`-\` extension).
 
 **Font Size** defaults to \`notes.font_size\` and scales the rendered dash's width, measured against its own font (Monospace by default, but **Font** below can override it). **H. Padding** defaults to 4.`,
 
-  row_height: `Vertical spacing (points) of one part row.
+  'row-height': `Vertical spacing (points) of one part row.
 
 Affects:
 - Note heads and rests
@@ -87,9 +83,9 @@ Affects:
 - Bar-line and multi-measure-rest thickness
 - The default \`lyrics\` style's font size (unless set explicitly), as \`row_height × 0.6\``,
 
-  max_measures_per_system: `Maximum number of measures placed on one system (row) before wrapping to a new system line.`,
+  'max-measures-per-system': `Maximum number of measures placed on one system (row) before wrapping to a new system line.`,
 
-  note_number_width: `Offset (points) used to:
+  'note-number-width': `Offset (points) used to:
 - Place an accidental (♯/♭) away from its note head
 - Place a duration dot away from its note head
 - Set the width of the underline drawn beneath eighth/sixteenth notes
@@ -98,21 +94,21 @@ Affects:
 
 Does **not** change the spacing between note columns — that comes from the available page width instead.`,
 
-  parts_list_columns: `Number of columns used to lay out the part-name legend shown in the header.`,
+  'parts-list-columns': `Number of columns used to lay out the part-name legend shown in the header.`,
 
-  merge_duplicate_measures_across_parts: `When on, measures with identical content across different parts are drawn as a single merged row instead of one row per part.
+  'merge-duplicate-measures-across-parts': `When on, measures with identical content across different parts are drawn as a single merged row instead of one row per part.
 
 Can be overridden from a specific measure onward with a
 \`merge_duplicate_measures_across_parts=yes\`/\`no\` directive line.`,
 
-  hide_resting_parts: `When on, a part that is entirely rests in a measure is omitted from that measure's system whenever at least one other part has real content.
+  'hide-resting-parts': `When on, a part that is entirely rests in a measure is omitted from that measure's system whenever at least one other part has real content.
 
 Can be overridden from a specific measure onward with a
 \`hide_resting_parts=yes\`/\`no\` directive line.`,
 
-  hide_system_dividers: `When on, the horizontal divider line normally drawn between consecutive systems (rows of measures) is omitted.`,
+  'hide-system-dividers': `When on, the horizontal divider line normally drawn between consecutive systems (rows of measures) is omitted.`,
 
-  directive_row_offset: `Translation (points, \`"x y"\`) applied to every rendered directive row — bar number, section label, key, bpm, and time signature.
+  'directive-row-offset': `Translation (points, \`"x y"\`) applied to every rendered directive row — bar number, section label, key, bpm, and time signature.
 
 Moves that row's text without affecting the layout or spacing of anything else on the page.
 

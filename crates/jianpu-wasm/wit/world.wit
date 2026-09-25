@@ -640,7 +640,7 @@ world jianpu-wasm {
 
     // ==================== metadata_types.rs ====================
 
-    enum font-family-default {
+    enum font-family-choice {
         serif,
         sans-serif,
         monospace,
@@ -653,7 +653,7 @@ world jianpu-wasm {
         bold: bool,
         italic: bool,
         underline: bool,
-        font-family: font-family-default,
+        font-family: font-family-choice,
     }
 
     record metadata-defaults {
@@ -678,9 +678,129 @@ world jianpu-wasm {
         merge-duplicate-measures-across-parts: bool,
         hide-resting-parts: bool,
         hide-system-dividers: bool,
-        directive-row-offset-x: s32,
-        directive-row-offset-y: s32,
+        // Spelled the way `directive_row_offset = x y` writes it.
+        directive-row-offset: string,
     }
+
+    // ==================== `# metadata` fields (source_edit::metadata_edit) ====================
+
+    // Every text kind that takes a `<kind> = { ... }` style object, in
+    // canonical order (`jianpu_generator::ast::parsed::TextStyleKind`).
+    enum text-style-kind {
+        title,
+        subtitle,
+        author,
+        sequence,
+        part-legend,
+        measure-number,
+        section-label,
+        part-label,
+        page-number,
+        lyrics,
+        notes,
+        chords,
+        note-dash,
+    }
+
+    // One kind's style object as written in the source; unset components are `none`.
+    record text-style-fields {
+        font-size: option<u32>,
+        horizontal-padding-pt: option<u32>,
+        vertical-padding-pt: option<u32>,
+        bold: option<bool>,
+        italic: option<bool>,
+        underline: option<bool>,
+        font-family: option<font-family-choice>,
+    }
+
+    record text-style-entry {
+        kind: text-style-kind,
+        fields: text-style-fields,
+    }
+
+    // The `# metadata` section's values as written; unset fields are `none`.
+    record metadata-fields {
+        title: option<string>,
+        subtitle: option<string>,
+        author: option<string>,
+        row-height: option<u32>,
+        max-measures-per-system: option<u32>,
+        note-number-width: option<u32>,
+        parts-list-columns: option<u32>,
+        part-label-width-pt: option<u32>,
+        merge-duplicate-measures-across-parts: option<bool>,
+        hide-resting-parts: option<bool>,
+        hide-system-dividers: option<bool>,
+        // Verbatim, even when it doesn't parse (see `MetadataFields`).
+        directive-row-offset: option<string>,
+        // One entry per `text-style-kind`, in that enum's order.
+        styles: list<text-style-entry>,
+    }
+
+    enum metadata-text-key {
+        title,
+        subtitle,
+        author,
+    }
+
+    enum metadata-number-key {
+        row-height,
+        max-measures-per-system,
+        note-number-width,
+        parts-list-columns,
+        part-label-width-pt,
+    }
+
+    enum metadata-flag-key {
+        merge-duplicate-measures-across-parts,
+        hide-resting-parts,
+        hide-system-dividers,
+    }
+
+    variant text-style-component-value {
+        font-size(option<u32>),
+        horizontal-padding-pt(option<u32>),
+        vertical-padding-pt(option<u32>),
+        bold(option<bool>),
+        italic(option<bool>),
+        underline(option<bool>),
+        font-family(option<font-family-choice>),
+    }
+
+    record metadata-text-edit {
+        key: metadata-text-key,
+        value: option<string>,
+    }
+
+    record metadata-number-edit {
+        key: metadata-number-key,
+        value: option<u32>,
+    }
+
+    record metadata-flag-edit {
+        key: metadata-flag-key,
+        value: option<bool>,
+    }
+
+    record metadata-style-edit {
+        kind: text-style-kind,
+        value: text-style-component-value,
+    }
+
+    // One Edit Metadata form edit; a `none` value removes the field.
+    variant metadata-edit {
+        text(metadata-text-edit),
+        number(metadata-number-edit),
+        flag(metadata-flag-edit),
+        directive-row-offset(option<string>),
+        style(metadata-style-edit),
+    }
+
+    export parse-metadata-fields: func(source: string) -> metadata-fields;
+
+    // Applies one edit and rewrites the `# metadata` section in canonical
+    // order; returns `source` unchanged when it has no such section.
+    export update-metadata-field: func(source: string, edit: metadata-edit) -> string;
 
     // Phase 3, group 7 of PLAN-wit-bindgen-migration.md. Plain
     // value-returning exports, no response-shaped wrapper — `get-metadata-

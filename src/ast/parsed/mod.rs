@@ -1,8 +1,11 @@
 use crate::error::{Diagnostic, RecoverableError, Span, Spanned, Warning};
 
 mod events;
+mod metadata_access;
+mod metadata_keys;
 mod pitch;
 pub use events::*;
+pub use metadata_keys::*;
 pub use pitch::*;
 
 #[derive(Debug)]
@@ -155,16 +158,17 @@ pub struct ParsedDocument {
     pub sequence_parse_errors: Vec<RecoverableError>,
 }
 
-/// A `font_family` text-style value: which of the three globally-embedded
-/// font roles (see `crate::compositor::types::FontFamily`) a text kind's
-/// glyphs render in. Kept as its own parse-level type rather than reusing
-/// `compositor::types::FontFamily` directly, to preserve the parser/compositor
-/// layering — `resolve_text_style` maps it 1:1 onto the compositor enum.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FontFamilyChoice {
-    Serif,
-    SansSerif,
-    Monospace,
+keyword_enum! {
+    /// A `font_family` text-style value: which of the three globally-embedded
+    /// font roles (see `crate::compositor::types::FontFamily`) a text kind's
+    /// glyphs render in. Kept as its own parse-level type rather than reusing
+    /// `compositor::types::FontFamily` directly, to preserve the parser/compositor
+    /// layering — `resolve_text_style` maps it 1:1 onto the compositor enum.
+    pub enum FontFamilyChoice {
+        Serif => "serif",
+        SansSerif => "sans_serif",
+        Monospace => "monospace",
+    }
 }
 
 /// Parsed (all-optional) form of the three-component style object a single

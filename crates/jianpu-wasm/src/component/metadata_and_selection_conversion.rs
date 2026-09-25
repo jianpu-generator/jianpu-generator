@@ -2,11 +2,11 @@ use super::*;
 
 pub(super) fn font_family_default_to_wit(
     family: crate::metadata_types::FontFamilyDefaultOut,
-) -> FontFamilyDefault {
+) -> FontFamilyChoice {
     match family {
-        crate::metadata_types::FontFamilyDefaultOut::Serif => FontFamilyDefault::Serif,
-        crate::metadata_types::FontFamilyDefaultOut::SansSerif => FontFamilyDefault::SansSerif,
-        crate::metadata_types::FontFamilyDefaultOut::Monospace => FontFamilyDefault::Monospace,
+        crate::metadata_types::FontFamilyDefaultOut::Serif => FontFamilyChoice::Serif,
+        crate::metadata_types::FontFamilyDefaultOut::SansSerif => FontFamilyChoice::SansSerif,
+        crate::metadata_types::FontFamilyDefaultOut::Monospace => FontFamilyChoice::Monospace,
     }
 }
 
@@ -54,8 +54,7 @@ pub(super) fn metadata_defaults_to_wit(
         merge_duplicate_measures_across_parts: defaults.merge_duplicate_measures_across_parts,
         hide_resting_parts: defaults.hide_resting_parts,
         hide_system_dividers: defaults.hide_system_dividers,
-        directive_row_offset_x: defaults.directive_row_offset_x,
-        directive_row_offset_y: defaults.directive_row_offset_y,
+        directive_row_offset: defaults.directive_row_offset.clone(),
     }
 }
 

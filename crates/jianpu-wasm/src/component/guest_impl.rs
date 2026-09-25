@@ -264,6 +264,14 @@ impl Guest for Component {
         get_metadata_defaults()
     }
 
+    fn parse_metadata_fields(source: String) -> MetadataFields {
+        parse_metadata_fields(source)
+    }
+
+    fn update_metadata_field(source: String, edit: MetadataEdit) -> String {
+        update_metadata_field(source, edit)
+    }
+
     fn get_default_lyrics_font_size(row_height: u32) -> u32 {
         get_default_lyrics_font_size(row_height)
     }

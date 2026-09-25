@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
+import { jianpuWasm, type MetadataEdit } from '../jianpuWasm'
 import type { PartMode, SoundfontValue } from '../types'
-import type { MetadataFieldKey } from '../utils/metadataSource'
-import { parseMetadata, updateMetadataField } from '../utils/metadataSource'
+import { useMetadataFields } from './useMetadataFields'
 
 /** Open/closed state for the edit-parts, edit-metadata, storage-settings,
  * and bin panels, plus the handlers that route their edits back to the
@@ -52,11 +52,13 @@ export function useAppPanels(
     [shiftPartOctave, handleSourceChange],
   )
 
-  const parsedMetadata = useMemo(() => parseMetadata(source), [source])
+  const parsedMetadata = useMetadataFields(source, editMetadataOpen)
 
+  // Only reachable from the Edit Metadata modal, which renders its fields
+  // once `parsedMetadata` is non-null, i.e. once the wasm is ready.
   const handleMetadataFieldChange = useCallback(
-    (key: MetadataFieldKey, value: string | null) => {
-      handleSourceChange(updateMetadataField(source, key, value))
+    (edit: MetadataEdit) => {
+      handleSourceChange(jianpuWasm().updateMetadataField(source, edit))
     },
     [source, handleSourceChange],
   )

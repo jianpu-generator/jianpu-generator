@@ -1,107 +1,33 @@
-use crate::ast::parsed::TextStyle;
+use crate::ast::parsed::{TextStyle, TextStyleComponent, TextStyleComponentValue};
 use crate::error::{RecoverableError, Span};
 
-use super::{parse_bool_field, parse_font_family_field, parse_numeric_field};
+use super::{parse_bool, parse_font_family, parse_positive_u32};
 
-/// The `<kind> = { field: value, ... }` field names [`apply_text_style_field`]
-/// recognizes, kept in one place so the cross-boundary test in
-/// `text_style_field_names_tests.rs` can check them against the hand-mirrored
-/// list in `web/src/utils/textStyleFields.ts` — see item 4 of
-/// `TODO-cross-boundary-invariants.md`. Must be kept in sync with the `match`
-/// arms in [`apply_text_style_field`] below (that test also catches the two
-/// going out of sync with each other, not just with the TS side).
-#[cfg(test)]
-pub(crate) const TEXT_STYLE_FIELD_NAMES: [&str; 7] = [
-    "font_size",
-    "horizontal_padding_pt",
-    "vertical_padding_pt",
-    "bold",
-    "italic",
-    "underline",
-    "font_family",
-];
-
-/// Bundles [`apply_text_style_field`]'s per-field-pair context — split out
-/// once the plain argument list pushed that function's signature over
-/// clippy's `too_many_arguments` limit.
-#[derive(Clone, Copy)]
-struct TextStyleFieldContext<'a> {
-    qualified_field: &'a str,
-    key_span: Span,
-    field_value: &'a str,
-    value_span: &'a Span,
-}
-
-/// Dispatches one `field_name: field_value` pair from a `<kind> = { ... }`
-/// object literal to the matching component of `target` — split out of
-/// `parse_text_style_object` to keep it under clippy's line-count limit.
-fn apply_text_style_field(
-    target: &mut TextStyle,
-    field_name: &str,
-    ctx: TextStyleFieldContext,
-    errors: &mut Vec<RecoverableError>,
-) {
-    let TextStyleFieldContext {
-        qualified_field,
-        key_span,
-        field_value,
-        value_span,
-    } = ctx;
-    match field_name {
-        "font_size" => parse_numeric_field(
-            &mut target.font_size,
-            qualified_field,
-            field_value,
-            value_span,
-            errors,
-        ),
-        "horizontal_padding_pt" => parse_numeric_field(
-            &mut target.horizontal_padding_pt,
-            qualified_field,
-            field_value,
-            value_span,
-            errors,
-        ),
-        "vertical_padding_pt" => parse_numeric_field(
-            &mut target.vertical_padding_pt,
-            qualified_field,
-            field_value,
-            value_span,
-            errors,
-        ),
-        "bold" => parse_bool_field(
-            &mut target.bold,
-            qualified_field,
-            field_value,
-            value_span,
-            errors,
-        ),
-        "italic" => parse_bool_field(
-            &mut target.italic,
-            qualified_field,
-            field_value,
-            value_span,
-            errors,
-        ),
-        "underline" => parse_bool_field(
-            &mut target.underline,
-            qualified_field,
-            field_value,
-            value_span,
-            errors,
-        ),
-        "font_family" => parse_font_family_field(
-            &mut target.font_family,
-            qualified_field,
-            field_value,
-            value_span,
-            errors,
-        ),
-        _ => errors.push(RecoverableError::metadata_unknown_field(
-            key_span,
-            qualified_field,
+/// Parses one `component: value` pair of a `<kind> = { ... }` object literal.
+/// `qualified_field` (`<kind>.<component>`) names the field in errors.
+fn parse_component_value(
+    component: TextStyleComponent,
+    qualified_field: &str,
+    field_value: &str,
+    value_span: Span,
+) -> Result<TextStyleComponentValue, RecoverableError> {
+    let number = || parse_positive_u32(qualified_field, field_value, value_span).map(Some);
+    let flag = || parse_bool(qualified_field, field_value, value_span).map(Some);
+    Ok(match component {
+        TextStyleComponent::FontSize => TextStyleComponentValue::FontSize(number()?),
+        TextStyleComponent::HorizontalPaddingPt => {
+            TextStyleComponentValue::HorizontalPaddingPt(number()?)
+        }
+        TextStyleComponent::VerticalPaddingPt => {
+            TextStyleComponentValue::VerticalPaddingPt(number()?)
+        }
+        TextStyleComponent::Bold => TextStyleComponentValue::Bold(flag()?),
+        TextStyleComponent::Italic => TextStyleComponentValue::Italic(flag()?),
+        TextStyleComponent::Underline => TextStyleComponentValue::Underline(flag()?),
+        TextStyleComponent::FontFamily => TextStyleComponentValue::FontFamily(Some(
+            parse_font_family(qualified_field, field_value, value_span)?,
         )),
-    }
+    })
 }
 
 /// Parses a `{ field: value, field: value, ... }` object literal into `target`'s
@@ -115,51 +41,44 @@ pub(super) fn parse_text_style_object(
     value_span: &Span,
     errors: &mut Vec<RecoverableError>,
 ) {
-    let trimmed = value.trim();
-    if !trimmed.starts_with('{') || !trimmed.ends_with('}') || trimmed.len() < 2 {
+    let Some(inner) = value
+        .trim()
+        .strip_prefix('{')
+        .and_then(|rest| rest.strip_suffix('}'))
+    else {
         errors.push(RecoverableError::metadata_malformed_line(
             *value_span,
             value,
         ));
         return;
-    }
-    let inner = &trimmed[1..trimmed.len() - 1];
-    for part in inner.split(',') {
-        let part = part.trim();
-        if part.is_empty() {
-            continue;
-        }
-        let Some((field_name, field_value)) = part.split_once(':') else {
+    };
+    for part in inner
+        .split(',')
+        .map(str::trim)
+        .filter(|part| !part.is_empty())
+    {
+        let Some((field_name, field_value)) = part
+            .split_once(':')
+            .map(|(name, value)| (name.trim(), value.trim()))
+            .filter(|(_, value)| !value.is_empty())
+        else {
             errors.push(RecoverableError::metadata_malformed_line(
                 *value_span,
                 value,
             ));
             continue;
         };
-        let field_name = field_name.trim();
-        let field_value = field_value.trim();
-        if field_value.is_empty() {
-            errors.push(RecoverableError::metadata_malformed_line(
-                *value_span,
-                value,
+        let qualified_field = format!("{key}.{field_name}");
+        let Some(component) = TextStyleComponent::from_keyword(field_name) else {
+            errors.push(RecoverableError::metadata_unknown_field(
+                key_span,
+                &qualified_field,
             ));
             continue;
+        };
+        match parse_component_value(component, &qualified_field, field_value, *value_span) {
+            Ok(component_value) => target.set_component(component_value),
+            Err(error) => errors.push(error),
         }
-        let qualified_field = format!("{key}.{field_name}");
-        apply_text_style_field(
-            target,
-            field_name,
-            TextStyleFieldContext {
-                qualified_field: &qualified_field,
-                key_span,
-                field_value,
-                value_span,
-            },
-            errors,
-        );
     }
 }
-
-#[cfg(test)]
-#[path = "text_style_field_names_tests.rs"]
-mod text_style_field_names_tests;

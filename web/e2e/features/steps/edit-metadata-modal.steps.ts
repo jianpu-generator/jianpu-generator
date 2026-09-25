@@ -239,6 +239,21 @@ When(
 )
 
 When(
+  'I choose {string} in the {string} dropdown',
+  async ({ page }, optionLabel: string, ariaLabel: string) => {
+    const modal = editMetadataModal(page)
+    await modal
+      .getByLabel(ariaLabel, { exact: true })
+      .selectOption({ label: optionLabel })
+  },
+)
+
+When('I press the {string} toggle', async ({ page }, ariaLabel: string) => {
+  const modal = editMetadataModal(page)
+  await modal.getByLabel(ariaLabel, { exact: true }).click()
+})
+
+When(
   'I fill the directive_row_offset field with {string}',
   async ({ page }, value: string) => {
     const modal = editMetadataModal(page)

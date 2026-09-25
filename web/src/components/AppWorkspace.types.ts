@@ -1,5 +1,10 @@
 import type { RefObject } from 'react'
-import type { NoteTiming, SvgDocument } from '../jianpuWasm'
+import type {
+  MetadataEdit,
+  MetadataFields,
+  NoteTiming,
+  SvgDocument,
+} from '../jianpuWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -15,10 +20,6 @@ import type {
   RangeEditOperation,
   SoundfontValue,
 } from '../types'
-import type {
-  MetadataFieldKey,
-  ParsedMetadataFields,
-} from '../utils/metadataSource'
 import type { LyricCell, NoteCell } from './Preview'
 
 export interface MeasureRange {
@@ -106,11 +107,8 @@ export interface AppWorkspaceProps {
   stopPreviewInstrument: () => void
   previewAudioPlaying: boolean
   editMetadataOpen: boolean
-  parsedMetadata: ParsedMetadataFields
-  handleMetadataFieldChange: (
-    key: MetadataFieldKey,
-    value: string | null,
-  ) => void
+  parsedMetadata: MetadataFields | null
+  handleMetadataFieldChange: (edit: MetadataEdit) => void
   documents: SvgDocument[]
   highlightedDocuments: SvgDocument[]
   rendering: boolean

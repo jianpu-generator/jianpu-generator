@@ -7,6 +7,9 @@
 #![forbid(clippy::wildcard_imports)]
 #![forbid(clippy::type_complexity)]
 
+#[macro_use]
+mod keyword_enum;
+
 pub mod ast;
 mod audio_source;
 #[cfg(feature = "cli")]

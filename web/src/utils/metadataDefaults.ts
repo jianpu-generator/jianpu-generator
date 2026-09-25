@@ -1,47 +1,7 @@
-import {
-  type FontFamilyDefault,
-  jianpuWasm,
-  type MetadataDefaults,
-  type TextStyleDefaults,
-} from '../jianpuWasm'
+import { jianpuWasm, type MetadataDefaults } from '../jianpuWasm'
 import { ensureWasmInit } from '../wasmInit'
-import type {
-  FontFamilyValue,
-  TextStyleComponent,
-  TextStyleFields,
-} from './textStyleFields'
 
 export type { MetadataDefaults, TextStyleDefaults } from '../jianpuWasm'
-
-/** A kind's fully-resolved default style, in the `.jianpu` metadata
- * syntax's own component vocabulary (`TextStyleFields`) — what the metadata
- * editor shows as each unset component's placeholder. */
-export type TextStyleDefaultFields = {
-  [Component in TextStyleComponent]: NonNullable<TextStyleFields[Component]>
-}
-
-const FONT_FAMILY_VALUE_FROM_DEFAULT: Record<
-  FontFamilyDefault,
-  FontFamilyValue
-> = {
-  serif: 'serif',
-  'sans-serif': 'sans_serif',
-  monospace: 'monospace',
-}
-
-export function textStyleDefaultFields(
-  defaults: TextStyleDefaults,
-): TextStyleDefaultFields {
-  return {
-    font_size: defaults.fontSize,
-    horizontal_padding_pt: defaults.horizontalPaddingPt,
-    vertical_padding_pt: defaults.verticalPaddingPt,
-    bold: defaults.bold,
-    italic: defaults.italic,
-    underline: defaults.underline,
-    font_family: FONT_FAMILY_VALUE_FROM_DEFAULT[defaults.fontFamily],
-  }
-}
 
 let cached: Promise<MetadataDefaults> | null = null
 

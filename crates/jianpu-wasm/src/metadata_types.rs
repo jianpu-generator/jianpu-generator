@@ -10,6 +10,7 @@ use jianpu_generator::ast::grouped::{
     DEFAULT_PART_LABEL_WIDTH_PT, DEFAULT_ROW_HEIGHT, DEFAULT_SECTION_LABEL_FONT_SIZE,
     DEFAULT_SEQUENCE_FONT_SIZE,
 };
+use jianpu_generator::parser::metadata_parser::format_offset;
 use serde::Serialize;
 
 /// One text-style kind's default component values — mirrors
@@ -75,8 +76,8 @@ pub struct MetadataDefaultsOut {
     pub merge_duplicate_measures_across_parts: bool,
     pub hide_resting_parts: bool,
     pub hide_system_dividers: bool,
-    pub directive_row_offset_x: i32,
-    pub directive_row_offset_y: i32,
+    /// Spelled the way `directive_row_offset = x y` writes it.
+    pub directive_row_offset: String,
 }
 
 /// Builds one kind's `TextStyleDefaultsOut`, defaulting `horizontal_padding_pt`/
@@ -153,8 +154,7 @@ impl Default for MetadataDefaultsOut {
             merge_duplicate_measures_across_parts: DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
             hide_resting_parts: DEFAULT_HIDE_RESTING_PARTS,
             hide_system_dividers: DEFAULT_HIDE_SYSTEM_DIVIDERS,
-            directive_row_offset_x: DEFAULT_DIRECTIVE_ROW_OFFSET.x,
-            directive_row_offset_y: DEFAULT_DIRECTIVE_ROW_OFFSET.y,
+            directive_row_offset: format_offset(DEFAULT_DIRECTIVE_ROW_OFFSET),
         }
     }
 }

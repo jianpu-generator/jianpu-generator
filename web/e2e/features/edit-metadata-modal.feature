@@ -111,6 +111,20 @@ Feature: Edit Metadata modal
     And I close the metadata modal with Escape
     Then the editor source and stored source both contain "lyrics = { vertical_padding_pt: 20 }"
 
+  Scenario: Choosing a style's Font Family writes its source keyword
+    Given the edit-metadata-modal test fixture is loaded
+    When I open the Edit Metadata modal
+    And I choose "Sans Serif" in the "Title Style Font Family" dropdown
+    And I close the metadata modal with Escape
+    Then the editor source and stored source both contain "title = { font_family: sans_serif }"
+
+  Scenario: Pressing a style's Underline toggle writes = yes to the source
+    Given the edit-metadata-modal test fixture is loaded
+    When I open the Edit Metadata modal
+    And I press the "Section Label Style Underline" toggle
+    And I close the metadata modal with Escape
+    Then the editor source and stored source both contain "section_label = { underline: yes }"
+
   Scenario: Editing directive_row_offset writes "x y" to the source
     Given the edit-metadata-modal test fixture is loaded
     When I open the Edit Metadata modal

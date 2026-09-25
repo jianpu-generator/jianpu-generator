@@ -1,9 +1,12 @@
+import type {
+  MetadataEdit,
+  MetadataFields,
+  MetadataFlagKey,
+  MetadataNumberKey,
+  MetadataTextKey,
+} from '../jianpuWasm'
 import type { MetadataDefaults } from '../utils/metadataDefaults'
 import { metadataFieldHelp } from '../utils/metadataFieldHelp'
-import type {
-  MetadataFieldKey,
-  ParsedMetadataFields,
-} from '../utils/metadataSource'
 import {
   CheckboxFieldRow,
   NumberFieldRow,
@@ -11,17 +14,26 @@ import {
 } from './MetadataFieldRows'
 
 export interface MetadataFieldsTableBodyProps {
-  metadata: ParsedMetadataFields
+  metadata: MetadataFields
   defaults: MetadataDefaults | null
   showHelp: (label: string, help: string) => void
-  onTitleChange: (value: string) => void
-  setText: (key: MetadataFieldKey) => (value: string) => void
-  setNumber: (key: MetadataFieldKey) => (value: string) => void
-  setYesNo: (
-    key: MetadataFieldKey,
-  ) => (e: React.ChangeEvent<HTMLInputElement>) => void
-  numOrUndef: (n: number | null | undefined) => string | undefined
+  onFieldChange: (edit: MetadataEdit) => void
 }
+
+/** An input's text as an optional value: empty clears the field. */
+export function optionalText(value: string): string | undefined {
+  return value === '' ? undefined : value
+}
+
+/** A number input's text as an optional value: empty (or unparseable)
+ * clears the field. */
+export function optionalNumber(value: string): number | undefined {
+  const parsed = Number.parseInt(value, 10)
+  return Number.isNaN(parsed) ? undefined : parsed
+}
+
+const numOrUndef = (n: number | null | undefined): string | undefined =>
+  n != null ? String(n) : undefined
 
 /** The `<tbody>` of `EditMetadataModal`'s plain (non-text-style) field
  * table — split out to keep that file under the repo's max-file-lines cap.
@@ -31,20 +43,24 @@ export function MetadataFieldsTableBody({
   metadata,
   defaults: d,
   showHelp,
-  onTitleChange,
-  setText,
-  setNumber,
-  setYesNo,
-  numOrUndef,
+  onFieldChange,
 }: MetadataFieldsTableBodyProps) {
+  const setText = (key: MetadataTextKey) => (value: string) =>
+    onFieldChange({ tag: 'text', val: { key, value: optionalText(value) } })
+  const setNumber = (key: MetadataNumberKey) => (value: string) =>
+    onFieldChange({ tag: 'number', val: { key, value: optionalNumber(value) } })
+  const setFlag =
+    (key: MetadataFlagKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
+      onFieldChange({ tag: 'flag', val: { key, value: e.target.checked } })
+
   return (
     <tbody>
       <TextFieldRow
         label="Title *"
         help={metadataFieldHelp.title}
         onShowHelp={showHelp}
-        value={metadata.title}
-        onChange={onTitleChange}
+        value={metadata.title ?? ''}
+        onChange={setText('title')}
       />
       <TextFieldRow
         label="Subtitle"
@@ -62,80 +78,81 @@ export function MetadataFieldsTableBody({
       />
       <NumberFieldRow
         label="Row Height"
-        help={metadataFieldHelp.row_height}
+        help={metadataFieldHelp['row-height']}
         onShowHelp={showHelp}
-        value={metadata.row_height ?? ''}
+        value={metadata.rowHeight ?? ''}
         placeholder={numOrUndef(d?.rowHeight)}
-        onChange={setNumber('row_height')}
+        onChange={setNumber('row-height')}
       />
       <NumberFieldRow
         label="Max Measures Per System"
-        help={metadataFieldHelp.max_measures_per_system}
+        help={metadataFieldHelp['max-measures-per-system']}
         onShowHelp={showHelp}
-        value={metadata.max_measures_per_system ?? ''}
+        value={metadata.maxMeasuresPerSystem ?? ''}
         placeholder={numOrUndef(d?.maxMeasuresPerSystem)}
-        onChange={setNumber('max_measures_per_system')}
+        onChange={setNumber('max-measures-per-system')}
       />
       <NumberFieldRow
         label="Note Number Width"
-        help={metadataFieldHelp.note_number_width}
+        help={metadataFieldHelp['note-number-width']}
         onShowHelp={showHelp}
-        value={metadata.note_number_width ?? ''}
+        value={metadata.noteNumberWidth ?? ''}
         placeholder={numOrUndef(d?.noteNumberWidth)}
-        onChange={setNumber('note_number_width')}
+        onChange={setNumber('note-number-width')}
       />
       <NumberFieldRow
         label="Parts List Columns"
-        help={metadataFieldHelp.parts_list_columns}
+        help={metadataFieldHelp['parts-list-columns']}
         onShowHelp={showHelp}
-        value={metadata.parts_list_columns ?? ''}
+        value={metadata.partsListColumns ?? ''}
         placeholder={numOrUndef(d?.partsListColumns)}
-        onChange={setNumber('parts_list_columns')}
+        onChange={setNumber('parts-list-columns')}
       />
       <NumberFieldRow
         label="Part Label Width"
-        help={metadataFieldHelp.part_label_width_pt}
+        help={metadataFieldHelp['part-label-width-pt']}
         onShowHelp={showHelp}
-        value={metadata.part_label_width_pt ?? ''}
+        value={metadata.partLabelWidthPt ?? ''}
         placeholder={numOrUndef(d?.partLabelWidthPt)}
-        onChange={setNumber('part_label_width_pt')}
+        onChange={setNumber('part-label-width-pt')}
       />
       <CheckboxFieldRow
         label="Merge Duplicate Measures Across Parts"
-        help={metadataFieldHelp.merge_duplicate_measures_across_parts}
+        help={metadataFieldHelp['merge-duplicate-measures-across-parts']}
         onShowHelp={showHelp}
         checked={
-          metadata.merge_duplicate_measures_across_parts ??
+          metadata.mergeDuplicateMeasuresAcrossParts ??
           d?.mergeDuplicateMeasuresAcrossParts ??
           true
         }
-        onChange={setYesNo('merge_duplicate_measures_across_parts')}
+        onChange={setFlag('merge-duplicate-measures-across-parts')}
       />
       <CheckboxFieldRow
         label="Hide Resting Parts"
-        help={metadataFieldHelp.hide_resting_parts}
+        help={metadataFieldHelp['hide-resting-parts']}
         onShowHelp={showHelp}
-        checked={metadata.hide_resting_parts ?? d?.hideRestingParts ?? true}
-        onChange={setYesNo('hide_resting_parts')}
+        checked={metadata.hideRestingParts ?? d?.hideRestingParts ?? true}
+        onChange={setFlag('hide-resting-parts')}
       />
       <CheckboxFieldRow
         label="Hide System Dividers"
-        help={metadataFieldHelp.hide_system_dividers}
+        help={metadataFieldHelp['hide-system-dividers']}
         onShowHelp={showHelp}
-        checked={
-          metadata.hide_system_dividers ?? d?.hideSystemDividers ?? false
-        }
-        onChange={setYesNo('hide_system_dividers')}
+        checked={metadata.hideSystemDividers ?? d?.hideSystemDividers ?? false}
+        onChange={setFlag('hide-system-dividers')}
       />
       <TextFieldRow
         label="Directive Row Offset (x y)"
-        help={metadataFieldHelp.directive_row_offset}
+        help={metadataFieldHelp['directive-row-offset']}
         onShowHelp={showHelp}
-        value={metadata.directive_row_offset ?? ''}
-        placeholder={
-          d ? `${d.directiveRowOffsetX} ${d.directiveRowOffsetY}` : undefined
+        value={metadata.directiveRowOffset ?? ''}
+        placeholder={d?.directiveRowOffset}
+        onChange={(value) =>
+          onFieldChange({
+            tag: 'directive-row-offset',
+            val: optionalText(value),
+          })
         }
-        onChange={setText('directive_row_offset')}
       />
     </tbody>
   )

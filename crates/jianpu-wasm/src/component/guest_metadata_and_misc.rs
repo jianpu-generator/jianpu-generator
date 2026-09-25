@@ -22,6 +22,16 @@ pub(super) fn get_metadata_defaults() -> MetadataDefaults {
     metadata_defaults_to_wit(&crate::metadata_types::MetadataDefaultsOut::default())
 }
 
+pub(super) fn parse_metadata_fields(source: String) -> MetadataFields {
+    metadata_fields_to_wit(jianpu_generator::source_edit::parse_metadata_fields(
+        &source,
+    ))
+}
+
+pub(super) fn update_metadata_field(source: String, edit: MetadataEdit) -> String {
+    jianpu_generator::source_edit::update_metadata_field(&source, metadata_edit_from_wit(edit))
+}
+
 pub(super) fn get_default_lyrics_font_size(row_height: u32) -> u32 {
     jianpu_generator::ast::grouped::default_lyrics_font_size(row_height)
 }

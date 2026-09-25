@@ -361,7 +361,7 @@ fn parses_font_family_on_lyrics() {
     assert!(errors.is_empty());
     assert_eq!(
         meta.lyrics_style.font_family,
-        Some(crate::ast::parsed::FontFamilyChoice::SansSerif)
+        Some(FontFamilyChoice::SansSerif)
     );
 }
 
