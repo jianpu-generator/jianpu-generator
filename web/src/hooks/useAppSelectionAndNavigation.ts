@@ -88,6 +88,7 @@ export function useAppSelectionAndNavigation(
     handleMeasureRangeSelect,
     measureRangeNoteCells,
     measureRangeLyricCells,
+    measureRangeNoteByteRanges,
     measureRangeSelectedPartNames,
     clearMeasureRangeSelection,
   } = useMeasureRangeSelection(
@@ -273,6 +274,7 @@ export function useAppSelectionAndNavigation(
     handleEditorSelectionChange,
     selectedNoteRangePlaybackInfo,
     selectedNoteCells,
+    selectedNoteByteRanges: measureRangeNoteByteRanges,
     handleLyricRangeSelect,
     handleLyricEditorSelectionChange,
     selectedLyricCells,

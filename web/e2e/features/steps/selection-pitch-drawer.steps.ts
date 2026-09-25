@@ -5,6 +5,7 @@ import {
   clickThenStableClick,
   stableBoundingBox,
 } from '../../rangeSelectHelpers'
+import { gotoShareUrl } from '../../shareUrlHelper'
 import { Given, Then, When } from './fixtures'
 
 // Each scenario builds its own score inline, so remember its data lines to
@@ -133,6 +134,30 @@ Given(
   'a score in key {word} with {string} is loaded',
   async ({ page }, key: string, body: string) => {
     await loadBody(page, key, 'Melody [M] = notes', body)
+  },
+)
+
+Given(
+  'a shared link to a score in key {word} with {string} is opened',
+  async ({ page }, key: string, body: string) => {
+    rememberLines(body)
+    await page.addInitScript(() => {
+      localStorage.clear()
+    })
+    await gotoShareUrl(
+      page,
+      'pitch-drawer-test.jianpu',
+      scoreSource(key, 'Melody [M] = notes', body),
+    )
+    await expect(page.getByText('Import this score')).toBeVisible({
+      timeout: 15_000,
+    })
+    await expect(
+      page.locator('rect[data-variant="note-click-target-rect"]').first(),
+    ).toBeVisible({ timeout: 10_000 })
+    // No editor to prime the worker round-trip through, so just give
+    // `listNoteSpans` time to land before hit-testing.
+    await page.waitForTimeout(1_000)
   },
 )
 

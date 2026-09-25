@@ -61,6 +61,7 @@ export function AppWorkspace({
   handleNoteRangeSelect,
   handleEditorSelectionChange,
   selectedNoteCells,
+  selectedNoteByteRanges,
   noteSpans,
   handleLyricRangeSelect,
   handleLyricEditorSelectionChange,
@@ -93,7 +94,13 @@ export function AppWorkspace({
   >(null)
   const [previewSelectionPending, setPreviewSelectionPending] = useState(false)
   const describedSelection = useSelectionPitchDescription(
-    selectionByteRanges,
+    // Synced/shared views never mount the editor, so its selection never
+    // reports in; fall back to the preview's own note selection there.
+    hideEditor
+      ? selectedNoteByteRanges.length === 0
+        ? null
+        : selectedNoteByteRanges
+      : selectionByteRanges,
     previewSelectionPending,
     describeSelection,
   )

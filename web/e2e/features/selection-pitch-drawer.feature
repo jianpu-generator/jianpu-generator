@@ -121,3 +121,9 @@ Feature: Show the selected note/chord's letter names in a bottom drawer
     When I click-and-click select the note "1" on the M line
     And I click-and-click select the note "3" on the M line
     Then the pitch drawer shows the letter names "E"
+
+  Scenario: Selecting a single note in a shared link's preview shows its letter name
+    Given a shared link to a score in key G4 with "[M] 7 1 2 3" is opened
+    When I click-and-click select the note "7" on the M line
+    Then the pitch drawer slides up
+    And the pitch drawer shows the letter names "F#"

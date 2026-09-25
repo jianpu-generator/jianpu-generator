@@ -144,6 +144,7 @@ export default function App() {
     handleEditorSelectionChange,
     selectedNoteRangePlaybackInfo,
     selectedNoteCells,
+    selectedNoteByteRanges,
     handleLyricRangeSelect,
     handleLyricEditorSelectionChange,
     selectedLyricCells,
@@ -342,6 +343,7 @@ export default function App() {
         handleNoteRangeSelect={handleNoteRangeSelect}
         handleEditorSelectionChange={handleEditorSelectionChange}
         selectedNoteCells={selectedNoteCells}
+        selectedNoteByteRanges={selectedNoteByteRanges}
         noteSpans={noteSpans}
         handleLyricRangeSelect={handleLyricRangeSelect}
         handleLyricEditorSelectionChange={handleLyricEditorSelectionChange}

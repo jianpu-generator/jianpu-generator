@@ -122,6 +122,11 @@ export interface AppWorkspaceProps {
    * `handleNoteRangeSelect`. */
   handleEditorSelectionChange: (ranges: EditorSelection[]) => void
   selectedNoteCells: NoteCell[]
+  /** The byte ranges behind a no-mounted-editor preview selection, read in
+   * place of the editor's selection when `hideEditor` leaves no Monaco
+   * selection to report one (see `useMeasureRangeSelection`'s
+   * `measureRangeNoteByteRanges`). */
+  selectedNoteByteRanges: EditorSelection[]
   /** Per-note/rest `(source_part_index, note_id) → measure_index` mapping,
    * used to resolve a measure click into every note cell it contains
    * (see `Preview.tsx`'s `noteCellsInMeasureRange`) without relying on

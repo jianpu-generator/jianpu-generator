@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react'
 import type { LyricCell, NoteCell } from '../components/previewSelection'
 import type {
   EditorHandle,
+  EditorSelection,
   LyricSpan,
   MeasureSpan,
   NoteSpan,
@@ -36,6 +37,11 @@ export interface UseMeasureRangeSelectionResult {
    * wrong here). */
   measureRangeNoteCells: NoteCell[]
   measureRangeLyricCells: LyricCell[]
+  /** The byte ranges behind `measureRangeNoteCells` — the no-mounted-editor
+   * stand-in for the Monaco selection an editor would otherwise report, for
+   * e.g. the pitch drawer's `describeSelection` query. `[]` once an editor
+   * is mounted, same as `measureRangeNoteCells`. */
+  measureRangeNoteByteRanges: EditorSelection[]
   /** The visible-part abbreviations touched by the most recent
    * no-mounted-editor measure/bar-line/part-label selection — `[]` once an
    * editor is mounted (that path derives its own part names via
@@ -106,6 +112,9 @@ export function useMeasureRangeSelection(
   const [measureRangeLyricCells, setMeasureRangeLyricCells] = useState<
     LyricCell[]
   >([])
+  const [measureRangeNoteByteRanges, setMeasureRangeNoteByteRanges] = useState<
+    EditorSelection[]
+  >([])
   const [measureRangeSelectedPartNames, setMeasureRangeSelectedPartNames] =
     useState<string[]>([])
 
@@ -148,6 +157,7 @@ export function useMeasureRangeSelection(
           groupSelectedNotesIntoContiguousRuns(noteCells, noteSpans),
           groupSelectedLyricsIntoContiguousRuns(lyricCells, lyricSpans),
         ])
+        setMeasureRangeNoteByteRanges(noteRuns.map(noteRunByteRange))
         const measureIndices = [
           ...noteRuns.map((run) => run.measureIndex),
           ...lyricRuns.map((run) => run.measureIndex),
@@ -215,6 +225,7 @@ export function useMeasureRangeSelection(
   const clearMeasureRangeSelection = useCallback(() => {
     setMeasureRangeNoteCells([])
     setMeasureRangeLyricCells([])
+    setMeasureRangeNoteByteRanges([])
     setMeasureRangeSelectedPartNames([])
   }, [])
 
@@ -222,6 +233,7 @@ export function useMeasureRangeSelection(
     handleMeasureRangeSelect,
     measureRangeNoteCells,
     measureRangeLyricCells,
+    measureRangeNoteByteRanges,
     measureRangeSelectedPartNames,
     clearMeasureRangeSelection,
   }
