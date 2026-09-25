@@ -1,39 +1,80 @@
-import type { PublicFile } from '../src/generated/live-share-worker/protocol'
+import type { Route } from '@playwright/test'
+import createClient from 'openapi-fetch'
+import type {
+  components,
+  paths,
+} from '../src/generated/live-share-worker/schema'
 import { syncedShareIdentityTokenFor } from './mockGithubIdentity.mjs'
+
+export type WorkerSchemas = components['schemas']
+type PublicFile = WorkerSchemas['PublicFile']
+type ApiError = WorkerSchemas['ApiError']
+type WorkerPath = keyof paths
 
 // Seeds/mutates real rows in the local `wrangler dev` worker's D1 database
 // (see `playwright.config.ts`'s `webServer` array) by calling its `/files/*`
 // routes directly from Node -- the e2e equivalent of "this file already
 // existed in the cloud before the page under test ever loaded". Unlike the
 // deleted `github-contents-mock.ts`, there is no `page.route()` interception
-// here at all: `/files/*` is entirely worker+D1 mediated, so a plain `fetch`
-// against the real worker is both simpler and more faithful (see
-// `crates/live-share-worker/src/handlers.rs`'s actual route shapes, which
-// this file's request bodies mirror exactly).
+// here at all: `/files/*` is entirely worker+D1 mediated, so calling the
+// real worker (through the same generated client the app uses) is both
+// simpler and more faithful. Also home to the helpers every step file
+// uses to intercept a worker route (`workerRouteGlob`/`matchWorkerRoute`)
+// or fake its failure (`fulfillWithApiError`), so route paths and error
+// bodies are always the generated ones, never hand-typed.
 
 /** Same origin `playwright.config.ts` points the app's own `VITE_SYNCED_SHARE_HOST`
  * at -- see that file's `webServer` entry for `wrangler dev --port 8797`
  * (deliberately not `just dev`'s 8787, see that entry's comment). */
 export const CLOUD_WORKER_ORIGIN = 'http://localhost:8797'
 
-function postToWorkerRaw(path: string, body: object): Promise<Response> {
-  return fetch(`${CLOUD_WORKER_ORIGIN}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
+const worker = createClient<paths>({ baseUrl: CLOUD_WORKER_ORIGIN })
+
+/** A `page.route` glob for one of the worker's routes, each `{param}` as
+ * `*`. */
+export function workerRouteGlob(path: WorkerPath): string {
+  return `${CLOUD_WORKER_ORIGIN}${path.replace(/\{[^}]+\}/g, '*')}`
 }
 
-async function postToWorker(path: string, body: object): Promise<unknown> {
-  const response = await postToWorkerRaw(path, body)
-  if (response.status === 204) return null
+/** `url`'s path params if it's a request to `path`, else `null`. */
+export function matchWorkerRoute(
+  path: WorkerPath,
+  url: string,
+): Record<string, string> | null {
+  const names = [...path.matchAll(/\{([^}]+)\}/g)].map((match) => match[1])
+  const pattern = new RegExp(
+    `^${CLOUD_WORKER_ORIGIN}${path.replace(/\{[^}]+\}/g, '([^/]+)')}$`,
+  )
+  const values = pattern.exec(new URL(url).href.replace(/\?.*$/, ''))
+  if (!values) return null
+  return Object.fromEntries(
+    names.map((name, index) => [name, values[index + 1] ?? '']),
+  )
+}
+
+/** Fakes a worker failure, its body checked against the generated
+ * `ApiError` union. */
+export async function fulfillWithApiError(
+  route: Route,
+  status: number,
+  error: ApiError,
+): Promise<void> {
+  await route.fulfill({ status, json: error })
+}
+
+/** Unwraps a worker call made from Node, failing the step loudly on any
+ * error response. */
+async function expectOk<Data>(
+  what: string,
+  pending: Promise<{ data?: Data; error?: unknown; response: Response }>,
+): Promise<Data> {
+  const { data, error, response } = await pending
   if (!response.ok) {
-    const text = await response.text().catch(() => '')
     throw new Error(
-      `cloudFileHelpers: POST ${path} failed with ${response.status}: ${text}`,
+      `cloudFileHelpers: ${what} failed with ${response.status}: ${JSON.stringify(error)}`,
     )
   }
-  return await response.json()
+  return data as Data
 }
 
 /** Deterministic default seed content -- distinct enough to tell apart from
@@ -61,7 +102,7 @@ export const DEFAULT_CLOUD_FILE_CONTENT = [
  * flakes.mjs` reruns a still-failing scenario against the very same
  * already-running `wrangler dev` + local D1 instance (see
  * `playwright.config.ts`'s `reuseExistingServer`), so a plain `POST /files`
- * would 409 (`name_taken`) on any rerun once the first attempt's row is
+ * would fail with `name_taken` on any rerun once the first attempt's row is
  * already sitting there under this exact name -- see `reseedExistingFile`. */
 export async function seedCloudFile(
   login: string,
@@ -69,21 +110,15 @@ export async function seedCloudFile(
   content: string = DEFAULT_CLOUD_FILE_CONTENT,
 ): Promise<PublicFile> {
   const identityToken = syncedShareIdentityTokenFor(login)
-  const response = await postToWorkerRaw('/files', {
-    identityToken,
-    id: crypto.randomUUID(),
-    name,
-    content,
+  const { data, error, response } = await worker.POST('/files', {
+    body: { identityToken, id: crypto.randomUUID(), name, content },
   })
-  if (response.ok) {
-    return (await response.json()) as PublicFile
-  }
-  if (response.status === 409) {
+  if (data) return data
+  if (error?.code === 'name_taken') {
     return await reseedExistingFile(login, name, content)
   }
-  const text = await response.text().catch(() => '')
   throw new Error(
-    `cloudFileHelpers: POST /files failed with ${response.status}: ${text}`,
+    `cloudFileHelpers: POST /files failed with ${response.status}: ${JSON.stringify(error)}`,
   )
 }
 
@@ -97,26 +132,32 @@ async function reseedExistingFile(
   content: string,
 ): Promise<PublicFile> {
   const identityToken = syncedShareIdentityTokenFor(login)
-  const listed = (await postToWorker('/files/list', { identityToken })) as {
-    files: PublicFile[]
-  }
+  const listed = await expectOk(
+    'POST /files/list',
+    worker.POST('/files/list', { body: { identityToken } }),
+  )
   const existing = listed.files.find((file) => file.name === name)
   if (!existing) {
     throw new Error(
-      `cloudFileHelpers: seedCloudFile got a 409 for ${JSON.stringify(name)} but /files/list has no matching row`,
+      `cloudFileHelpers: seedCloudFile got name_taken for ${JSON.stringify(name)} but /files/list has no matching row`,
     )
   }
   if (existing.trashedAt !== null) {
-    await postToWorker(`/files/${existing.id}/restore`, {
-      identityToken,
-      name,
-    })
+    await expectOk(
+      'POST /files/{id}/restore',
+      worker.POST('/files/{id}/restore', {
+        params: { path: { id: existing.id } },
+        body: { identityToken, name },
+      }),
+    )
   }
-  const updated = (await postToWorker(`/files/${existing.id}/content`, {
-    identityToken,
-    content,
-    expectedRevision: existing.revision,
-  })) as { revision: number }
+  const updated = await expectOk(
+    'POST /files/{id}/content',
+    worker.POST('/files/{id}/content', {
+      params: { path: { id: existing.id } },
+      body: { identityToken, content, expectedRevision: existing.revision },
+    }),
+  )
   return {
     id: existing.id,
     name,
@@ -128,9 +169,13 @@ async function reseedExistingFile(
 
 /** Moves a previously seeded file to the bin, by its real D1 id. */
 export async function trashCloudFile(login: string, id: string): Promise<void> {
-  await postToWorker(`/files/${id}/delete`, {
-    identityToken: syncedShareIdentityTokenFor(login),
-  })
+  await expectOk(
+    'POST /files/{id}/delete',
+    worker.POST('/files/{id}/delete', {
+      params: { path: { id } },
+      body: { identityToken: syncedShareIdentityTokenFor(login) },
+    }),
+  )
 }
 
 /** Restores a previously trashed file out of the bin under `name`, by its
@@ -140,10 +185,13 @@ export async function restoreCloudFile(
   id: string,
   name: string,
 ): Promise<void> {
-  await postToWorker(`/files/${id}/restore`, {
-    identityToken: syncedShareIdentityTokenFor(login),
-    name,
-  })
+  await expectOk(
+    'POST /files/{id}/restore',
+    worker.POST('/files/{id}/restore', {
+      params: { path: { id } },
+      body: { identityToken: syncedShareIdentityTokenFor(login), name },
+    }),
+  )
 }
 
 /** Convenience: seeds a file and immediately trashes it, for scenarios that
@@ -169,12 +217,27 @@ export async function updateCloudFileContent(
   content: string,
   expectedRevision: number,
 ): Promise<{ revision: number }> {
-  const result = (await postToWorker(`/files/${id}/content`, {
-    identityToken: syncedShareIdentityTokenFor(login),
-    content,
-    expectedRevision,
-  })) as { revision: number } | null
-  if (!result)
-    throw new Error('updateCloudFileContent: worker returned no body')
-  return result
+  return await expectOk(
+    'POST /files/{id}/content',
+    worker.POST('/files/{id}/content', {
+      params: { path: { id } },
+      body: {
+        identityToken: syncedShareIdentityTokenFor(login),
+        content,
+        expectedRevision,
+      },
+    }),
+  )
+}
+
+/** Fetches a share the way an anonymous viewer would. */
+export async function fetchSyncedDoc(
+  shareId: string,
+): Promise<WorkerSchemas['SyncedDoc']> {
+  return await expectOk(
+    'GET /shares/{share_id}',
+    worker.GET('/shares/{share_id}', {
+      params: { path: { share_id: shareId } },
+    }),
+  )
 }

@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { CLOUD_WORKER_ORIGIN } from '../../cloudFileHelpers'
+import { fulfillWithApiError, workerRouteGlob } from '../../cloudFileHelpers'
 import {
   fileSwitcherTrigger,
   fileTabByExactName,
@@ -24,17 +24,14 @@ Given(
     // `'offline'`, matching a real offline `fetch`. One-shot: every request
     // after this falls through to the real worker.
     let contentSaveCount = 0
-    await page.route(
-      `${CLOUD_WORKER_ORIGIN}/files/*/content`,
-      async (route) => {
-        contentSaveCount += 1
-        if (contentSaveCount === 1) {
-          await route.abort('failed')
-          return
-        }
-        await route.continue()
-      },
-    )
+    await page.route(workerRouteGlob('/files/{id}/content'), async (route) => {
+      contentSaveCount += 1
+      if (contentSaveCount === 1) {
+        await route.abort('failed')
+        return
+      }
+      await route.continue()
+    })
   },
 )
 
@@ -44,21 +41,19 @@ Given(
     // Same one-shot pattern, but a `401` -- the token-revoked/expired shape
     // `classifyError` maps to `{kind: 'auth'}`.
     let contentSaveCount = 0
-    await page.route(
-      `${CLOUD_WORKER_ORIGIN}/files/*/content`,
-      async (route) => {
-        contentSaveCount += 1
-        if (contentSaveCount === 1) {
-          await route.fulfill({
-            status: 401,
-            contentType: 'application/json',
-            body: '{}',
-          })
-          return
-        }
-        await route.continue()
-      },
-    )
+    await page.route(workerRouteGlob('/files/{id}/content'), async (route) => {
+      contentSaveCount += 1
+      if (contentSaveCount === 1) {
+        await fulfillWithApiError(route, 401, {
+          code: 'unauthorized',
+          reason: 'GitHub verification failed',
+          failedAt: Date.now(),
+          attempts: 3,
+        })
+        return
+      }
+      await route.continue()
+    })
   },
 )
 

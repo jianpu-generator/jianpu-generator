@@ -1,4 +1,4 @@
-import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
+import { createWorkerClient } from '../syncedShare/workerClient'
 
 /**
  * Fire-and-forget call to the Worker's `POST /auth/github/revoke`
@@ -19,10 +19,8 @@ export async function revokeSyncedShareGithubGrant(options: {
   identityToken: string
 }): Promise<void> {
   try {
-    await fetch(`${syncedShareWorkerOrigin(options.host)}/auth/github/revoke`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identityToken: options.identityToken }),
+    await createWorkerClient(options.host).POST('/auth/github/revoke', {
+      body: { identityToken: options.identityToken },
     })
   } catch {
     // Best-effort: see the doc comment above.

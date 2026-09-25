@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test'
 import {
-  CLOUD_WORKER_ORIGIN,
+  fetchSyncedDoc,
   restoreCloudFile,
   seedCloudFile,
   trashCloudFile,
@@ -104,7 +104,7 @@ When('the shared cloud file is restored from the bin', async () => {
   )
 })
 
-// Reads the worker's anonymous `GET /shares/:share_id` directly rather
+// Reads the worker's anonymous `GET /shares/{share_id}` directly rather
 // than through a viewer page -- the viewer UI hides an ended share's score
 // either way, but the point here is that the content never leaves the
 // server at all once the owner stops sharing.
@@ -115,12 +115,7 @@ Then(
     if (!link) throw new Error('originalSyncedLink was not captured yet')
     const shareId = /#synced=([0-9A-Za-z_-]{11})/.exec(link)?.[1]
     if (!shareId) throw new Error(`not a synced share link: ${link}`)
-    const response = await fetch(`${CLOUD_WORKER_ORIGIN}/shares/${shareId}`)
-    expect(response.ok).toBe(true)
-    const doc = (await response.json()) as {
-      filename: string
-      content: string
-    }
+    const doc = await fetchSyncedDoc(shareId)
     expect(doc.filename).toBe('')
     expect(doc.content).toBe('')
   },

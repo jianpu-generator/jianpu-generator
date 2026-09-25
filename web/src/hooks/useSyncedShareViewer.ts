@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
-import type { SyncedDoc } from '../generated/live-share-worker/protocol'
 import type { SharePayload } from '../shareUrl'
 import type { StorageBackend } from '../storage/types'
-import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
+import { callWorker, createWorkerClient } from '../syncedShare/workerClient'
 import {
   clearSyncedShareHash,
   parseSyncedShareFromHash,
@@ -81,14 +80,12 @@ export function useSyncedShareViewer(
     setEditorCollapsed(true)
 
     let cancelled = false
-    void fetch(`${syncedShareWorkerOrigin(host)}/shares/${parsed.shareId}`, {
-      cache: 'no-store',
-    })
-      .then((response) => {
-        if (!response.ok)
-          throw new Error(`Unexpected status ${response.status}`)
-        return response.json() as Promise<SyncedDoc>
-      })
+    void callWorker(
+      createWorkerClient(host).GET('/shares/{share_id}', {
+        params: { path: { share_id: parsed.shareId } },
+        cache: 'no-store',
+      }),
+    )
       .then((doc) => {
         if (cancelled) return
         setSyncedShareViewerOwnerLogin(doc.ownerLogin ?? null)

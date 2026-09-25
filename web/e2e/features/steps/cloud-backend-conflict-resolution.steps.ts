@@ -1,8 +1,9 @@
 import { expect, type Page } from '@playwright/test'
 import {
-  CLOUD_WORKER_ORIGIN,
+  fulfillWithApiError,
   seedCloudFile,
   updateCloudFileContent,
+  workerRouteGlob,
 } from '../../cloudFileHelpers'
 import {
   fileSwitcherTrigger,
@@ -68,7 +69,7 @@ async function setUpConflictingEdit(
   conflictTracker = installContentSaveTracking(page)
 
   let contentSaveCount = 0
-  await page.route(`${CLOUD_WORKER_ORIGIN}/files/*/content`, async (route) => {
+  await page.route(workerRouteGlob('/files/{id}/content'), async (route) => {
     contentSaveCount += 1
     if (contentSaveCount === 1) {
       // `seeded.revision` (not a hardcoded `0`): `seedCloudFile` is
@@ -80,10 +81,9 @@ async function setUpConflictingEdit(
       // realign-then-retry lands for real against the real worker on the
       // very next attempt instead of colliding with a *second*, real
       // conflict.
-      await route.fulfill({
-        status: 409,
-        contentType: 'application/json',
-        body: JSON.stringify({ currentRevision: seeded.revision }),
+      await fulfillWithApiError(route, 409, {
+        code: 'revision_conflict',
+        currentRevision: seeded.revision,
       })
       return
     }

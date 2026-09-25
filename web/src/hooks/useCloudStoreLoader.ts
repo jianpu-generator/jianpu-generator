@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { FileStoreState } from '../fileStore'
-import { HttpStatusError } from '../storage/cloudBackendHttp'
 import type { StorageBackend } from '../storage/types'
+import { WorkerRequestError } from '../syncedShare/workerClient'
 
 const INITIAL_RETRY_DELAY_MS = 1_000
 const MAX_RETRY_DELAY_MS = 30_000
@@ -14,11 +14,14 @@ export function cloudLoadRetryDelayMs(attempt: number): number {
 }
 
 /** True when the worker rejected the stored identity token itself (its
- * `VerificationFailure` `401` -- e.g. the GitHub grant was revoked by a
+ * `unauthorized` `ApiError` -- e.g. the GitHub grant was revoked by a
  * sign-out elsewhere), as opposed to a transient network/server failure.
  * Retrying such a token can never succeed. */
 export function isAuthRejection(error: unknown): boolean {
-  return error instanceof HttpStatusError && error.httpStatus === 401
+  return (
+    error instanceof WorkerRequestError &&
+    error.apiError?.code === 'unauthorized'
+  )
 }
 
 /**

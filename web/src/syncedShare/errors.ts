@@ -3,11 +3,13 @@
 // Implements task 9 in TODO-synced-share-rust-d1-migration.md: errors here
 // are meant to be maximally verbose (per §0) EXCEPT for one hard exception --
 // the GitHub OAuth token and its stored hash must never appear. The worker's
-// `401` `VerificationFailure` body (`crates/live-share-worker/src/verification.rs`)
+// `unauthorized` `ApiError` (a `VerificationFailure`, `crates/live-share-worker/src/verification.rs`)
 // has no field for either by construction, so the common case is already
 // safe by the time it reaches here; `redactSecrets` below is a defensive
 // backstop for any other failure shape (a raw non-2xx body, a thrown network
 // error) that might somehow echo one back.
+
+import { WorkerRequestError } from './workerClient'
 
 export type SyncedShareOperation = 'start' | 'stop' | 'status'
 
@@ -17,24 +19,16 @@ export interface SyncedShareFailure {
   /** Milliseconds since the epoch. From the worker's `VerificationFailure`
    * when available, otherwise the time this client observed the failure. */
   failedAt: number
-  /** Present only for a parsed `VerificationFailure` (a `401`). */
+  /** Present only for the worker's `unauthorized` `ApiError`. */
   attempts?: number
+  /** The worker rejected the identity token itself (`unauthorized`), so
+   * resending it can never succeed. */
+  authRejected: boolean
   httpStatus?: number
   httpStatusText?: string
   /** Redacted (see `redactSecrets`) raw response body, kept only for
    * failure shapes this client doesn't specifically recognize. */
   rawResponseBody?: string
-}
-
-/** Mirrors the Rust worker's `verification::VerificationFailure` JSON body
- * (reason/failedAt/attempts, `#[serde(rename_all = "camelCase")]`) --
- * returned as a `401` when GitHub verification fails after retries. That
- * struct has no token/hash field by construction (see its doc comment), so
- * a value of this shape is safe to render in full. */
-interface SyncedShareVerificationFailureBody {
-  reason: string
-  failedAt: number
-  attempts: number
 }
 
 const REDACTED = '[redacted]'
@@ -62,52 +56,42 @@ export function redactSecrets(text: string): string {
     .replace(HEX_HASH_PATTERN, REDACTED)
 }
 
-function isVerificationFailureBody(
-  value: unknown,
-): value is SyncedShareVerificationFailureBody {
-  if (value === null || typeof value !== 'object') return false
-  const record = value as Record<string, unknown>
-  return (
-    typeof record.reason === 'string' &&
-    typeof record.failedAt === 'number' &&
-    typeof record.attempts === 'number'
-  )
-}
-
-async function safeReadText(response: Response): Promise<string> {
-  try {
-    return await response.text()
-  } catch {
-    return ''
-  }
+function describeRawBody(body: unknown): string {
+  if (typeof body === 'string') return body
+  return JSON.stringify(body) ?? ''
 }
 
 /**
- * Builds structured, dialog-ready failure info from a non-ok `Response` to a
- * Synced Share write. Recognizes the worker's `401` `VerificationFailure`
- * body; falls back to the raw status/body (redacted) for any other failure
- * shape, so the dialog stays useful even for a status this client doesn't
- * specifically know about (per §0's "maximally verbose" decision).
+ * Builds structured, dialog-ready failure info from whatever a Synced Share
+ * request threw (`callWorker`'s `WorkerRequestError`/`NetworkFailure`).
+ * Renders the worker's `unauthorized` `ApiError` verbosely; falls back to
+ * the raw status/body (redacted) for any other failure, so the dialog stays
+ * useful even for one this client doesn't specifically know about (per
+ * §0's "maximally verbose" decision).
  */
-export async function buildSyncedShareResponseFailure(
+export function buildSyncedShareFailure(
   operation: SyncedShareOperation,
-  response: Response,
-): Promise<SyncedShareFailure> {
-  const rawBody = await safeReadText(response)
-  let parsed: unknown = null
-  try {
-    parsed = rawBody ? JSON.parse(rawBody) : null
-  } catch {
-    parsed = null
-  }
-  if (isVerificationFailureBody(parsed)) {
+  error: unknown,
+): SyncedShareFailure {
+  if (!(error instanceof WorkerRequestError)) {
+    const message = error instanceof Error ? error.message : String(error)
     return {
       operation,
-      reason: redactSecrets(parsed.reason),
-      failedAt: parsed.failedAt,
-      attempts: parsed.attempts,
+      reason: redactSecrets(`Network error: ${message}`),
+      failedAt: Date.now(),
+      authRejected: false,
+    }
+  }
+  const { apiError, response } = error
+  if (apiError?.code === 'unauthorized') {
+    return {
+      operation,
+      reason: redactSecrets(apiError.reason),
+      failedAt: apiError.failedAt,
+      attempts: apiError.attempts,
       httpStatus: response.status,
       httpStatusText: response.statusText,
+      authRejected: true,
     }
   }
   return {
@@ -116,20 +100,7 @@ export async function buildSyncedShareResponseFailure(
     failedAt: Date.now(),
     httpStatus: response.status,
     httpStatusText: response.statusText,
-    rawResponseBody: redactSecrets(rawBody),
-  }
-}
-
-/** Builds failure info for a network-level error (fetch rejecting: offline,
- * DNS, CORS, etc.) rather than an HTTP error response. */
-export function buildSyncedShareNetworkFailure(
-  operation: SyncedShareOperation,
-  error: unknown,
-): SyncedShareFailure {
-  const message = error instanceof Error ? error.message : String(error)
-  return {
-    operation,
-    reason: redactSecrets(`Network error: ${message}`),
-    failedAt: Date.now(),
+    rawResponseBody: redactSecrets(describeRawBody(error.rawBody)),
+    authRejected: false,
   }
 }

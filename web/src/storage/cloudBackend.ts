@@ -12,14 +12,12 @@ import {
   restoreFile as pureRestoreFile,
   updateActiveContent as pureUpdateActiveContent,
 } from '../fileStore'
-import type * as Wire from '../generated/live-share-worker/protocol'
-import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
 import {
-  HttpStatusError,
-  isConflictBody,
+  callWorker,
+  createWorkerClient,
   NetworkFailure,
-  request,
-} from './cloudBackendHttp'
+  WorkerRequestError,
+} from '../syncedShare/workerClient'
 import {
   addedName,
   withNameCollisionRetry,
@@ -59,16 +57,16 @@ export type {
  * - A file's id is the real, durable D1 row id straight from the server
  *   (`load()`'s response) -- no more localStorage name -> UUID shim.
  *
- * Request framing (`request`/`NetworkFailure`/`HttpStatusError`), the
- * `409 {code: "name_taken"}` retry (`withNameCollisionRetry` and friends),
- * and the public types live in `cloudBackendHttp.ts`,
- * `cloudBackendNaming.ts`, and `cloudBackendTypes.ts` respectively -- split
- * out of this file to stay under this repo's 400-line cap. Wire types are
- * generated from the worker's Rust types (`generated/live-share-worker`).
+ * Requests go through the worker's generated client (`workerClient.ts` --
+ * paths, bodies and the `ApiError` failure union all come from the Rust
+ * handlers). The `name_taken` retry (`withNameCollisionRetry` and friends)
+ * and the public types live in `cloudBackendNaming.ts` and
+ * `cloudBackendTypes.ts` -- split out of this file to stay under this
+ * repo's 400-line cap.
  */
 export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
-  const { token } = config
-  const origin = syncedShareWorkerOrigin(config.workerHost)
+  const identityToken = config.token
+  const client = createWorkerClient(config.workerHost)
 
   let status: SaveStatus = 'idle'
   let lastError: CloudBackendError | null = null
@@ -118,13 +116,6 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
     })
   }
 
-  function post<Request extends { identityToken: string }>(
-    path: string,
-    body: Omit<Request, 'identityToken'>,
-  ): Promise<unknown> {
-    return request(origin, path, { identityToken: token, ...body })
-  }
-
   /** Classifies a thrown error into the `CloudBackendError`/`SaveStatus`
    * pair it should surface. Returns the pair rather than mutating `status`
    * directly, same reasoning as the deleted GitHub backend's
@@ -136,18 +127,18 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
     if (error instanceof NetworkFailure) {
       return { status: 'offline', error: { kind: 'network' } }
     }
-    if (error instanceof HttpStatusError) {
-      if (error.httpStatus === 409 && isConflictBody(error.body)) {
-        return {
-          status: 'error',
-          error: {
-            kind: 'conflict',
-            currentRevision: error.body.currentRevision,
-          },
-        }
-      }
-      if (error.httpStatus === 401) {
-        return { status: 'error', error: { kind: 'auth' } }
+    if (error instanceof WorkerRequestError) {
+      switch (error.apiError?.code) {
+        case 'revision_conflict':
+          return {
+            status: 'error',
+            error: {
+              kind: 'conflict',
+              currentRevision: error.apiError.currentRevision,
+            },
+          }
+        case 'unauthorized':
+          return { status: 'error', error: { kind: 'auth' } }
       }
     }
     return {
@@ -183,23 +174,24 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
     const expectedRevision = revisionByFileId.get(id) ?? 0
     status = 'saving'
     try {
-      const json = await post<Wire.UpdateFileContentRequest>(
-        `/files/${id}/content`,
-        {
-          content: fileContent(state, state.active),
-          expectedRevision,
-        },
+      const response = await callWorker(
+        client.POST('/files/{id}/content', {
+          params: { path: { id } },
+          body: {
+            identityToken,
+            content: fileContent(state, state.active),
+            expectedRevision,
+          },
+        }),
       )
-      const response = json as Wire.UpdateFileContentResponse
       revisionByFileId.set(id, response.revision)
       status = 'idle'
       lastError = null
       pendingRetryState = null
     } catch (error) {
       if (
-        error instanceof HttpStatusError &&
-        error.httpStatus === 409 &&
-        isConflictBody(error.body)
+        error instanceof WorkerRequestError &&
+        error.apiError?.code === 'revision_conflict'
       ) {
         // Deliberately does not rethrow, unlike every other failure here --
         // see `CloudBackend.forceOverwrite`'s doc comment. The revision map
@@ -208,7 +200,7 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
         status = 'error'
         lastError = {
           kind: 'conflict',
-          currentRevision: error.body.currentRevision,
+          currentRevision: error.apiError.currentRevision,
         }
         return
       }
@@ -243,11 +235,11 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
     const content = nextState.userFiles[name] ?? ''
     const finalName = await runOp(() =>
       withNameCollisionRetry(name, state, (attemptName) =>
-        post<Wire.CreateFileRequest>('/files', {
-          id,
-          name: attemptName,
-          content,
-        }),
+        callWorker(
+          client.POST('/files', {
+            body: { identityToken, id, name: attemptName, content },
+          }),
+        ),
       ),
     )
     revisionByFileId.set(id, 0)
@@ -261,8 +253,9 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
     kind: 'cloud',
 
     async load(): Promise<FileStoreState> {
-      const json = await post<Wire.ListFilesRequest>('/files/list', {})
-      const response = json as Wire.ListFilesResponse
+      const response = await callWorker(
+        client.POST('/files/list', { body: { identityToken } }),
+      )
       const userFiles: Record<string, string> = {}
       const bin: Record<string, string> = {}
       const fileIds: Record<string, string> = {}
@@ -307,9 +300,12 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
       const id = activeFileId(state, from)
       const finalName = await runOp(() =>
         withNameCollisionRetry(newName, state, (attemptName) =>
-          post<Wire.RenameFileRequest>(`/files/${id}/rename`, {
-            name: attemptName,
-          }),
+          callWorker(
+            client.POST('/files/{id}/rename', {
+              params: { path: { id } },
+              body: { identityToken, name: attemptName },
+            }),
+          ),
         ),
       )
       activeIdByName.delete(from)
@@ -326,7 +322,14 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
       const nextState = pureDeleteFile(state, name)
       if (nextState === state) return nextState
       const id = activeFileId(state, name)
-      await runOp(() => post<Wire.DeleteFileRequest>(`/files/${id}/delete`, {}))
+      await runOp(() =>
+        callWorker(
+          client.POST('/files/{id}/delete', {
+            params: { path: { id } },
+            body: { identityToken },
+          }),
+        ),
+      )
       activeIdByName.delete(name)
       trashedIdByName.set(name, id)
       return nextState
@@ -342,9 +345,12 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
       const id = trashedFileId(state, name)
       const finalName = await runOp(() =>
         withNameCollisionRetry(newName, state, (attemptName) =>
-          post<Wire.RestoreFileRequest>(`/files/${id}/restore`, {
-            name: attemptName,
-          }),
+          callWorker(
+            client.POST('/files/{id}/restore', {
+              params: { path: { id } },
+              body: { identityToken, name: attemptName },
+            }),
+          ),
         ),
       )
       trashedIdByName.delete(name)

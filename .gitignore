@@ -7,7 +7,7 @@ package-lock.json
 /crates/jianpu-wasm/pkg-component
 /crates/jianpu-wasm/src/bindings.rs
 
-# ts-rs bindings generated from crates/live-share-worker (see .cargo/config.toml).
+# OpenAPI spec + typed client generated from crates/live-share-worker (see web's build:worker-types).
 /web/src/generated
 
 # Shadow SQLite DB for live-share-worker's sqlx build-time query checking

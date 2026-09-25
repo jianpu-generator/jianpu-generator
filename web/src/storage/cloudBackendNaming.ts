@@ -3,7 +3,7 @@ import {
   type FileStoreState,
   generateFileId,
 } from '../fileStore'
-import { isNameTakenError } from './cloudBackendHttp'
+import { WorkerRequestError } from '../syncedShare/workerClient'
 
 /** The single name added to `userFiles` between two `FileStoreState`s --
  * recovers which file a pure `fileStore.ts` transform just created, renamed
@@ -17,7 +17,7 @@ export function addedName(
   )
 }
 
-/** Recomputes a fresh name for a `409 {code: "name_taken"}` retry --
+/** Recomputes a fresh name for a `name_taken` retry --
  * mirrors the increment-suffix half of `fileStore.ts`'s private (not
  * exported) `uniqueName`, duplicated here for the same reason as
  * `addedName` above. Always treats `rejectedName` as taken (the whole point
@@ -64,8 +64,8 @@ export function withRenamedKey(
   }
 }
 
-/** Runs `attempt(name)` with `name` first, and on a `409 {code:
- * "name_taken"}` response, retries once with a freshly recomputed unique
+/** Runs `attempt(name)` with `name` first, and on a `name_taken` response,
+ * retries once with a freshly recomputed unique
  * name -- transparent to the caller (no error surfaced for this specific,
  * rare race). A second collision in a row is not retried again; it
  * propagates to `runOp`'s normal classification, which falls through to
@@ -82,7 +82,11 @@ export async function withNameCollisionRetry(
     await attempt(name)
     return name
   } catch (error) {
-    if (!isNameTakenError(error)) throw error
+    if (
+      !(error instanceof WorkerRequestError) ||
+      error.apiError?.code !== 'name_taken'
+    )
+      throw error
     const retryName = nextNameAfterCollision(name, state)
     await attempt(retryName)
     return retryName

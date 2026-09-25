@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test'
+import { fulfillWithApiError, workerRouteGlob } from '../../cloudFileHelpers'
 import { Given, Then, When } from './fixtures'
 import {
   openSyncedTab,
@@ -193,7 +194,7 @@ Given(
   'the Synced Share worker returns an unparseable body from the next GitHub token exchange',
   async ({ context }) => {
     await context.route(
-      'http://localhost:8797/auth/github/callback',
+      workerRouteGlob('/auth/github/callback'),
       async (route) => {
         await route.fulfill({
           status: 200,
@@ -239,13 +240,10 @@ Then(
 let lastRevokeRequestBody: { identityToken?: string } | null = null
 
 Given('the GitHub grant-revocation endpoint is mocked', async ({ page }) => {
-  await page.route(
-    'http://localhost:8797/auth/github/revoke',
-    async (route) => {
-      lastRevokeRequestBody = route.request().postDataJSON()
-      await route.fulfill({ status: 200, body: '' })
-    },
-  )
+  await page.route(workerRouteGlob('/auth/github/revoke'), async (route) => {
+    lastRevokeRequestBody = route.request().postDataJSON()
+    await route.fulfill({ status: 204 })
+  })
 })
 
 Then(
@@ -266,19 +264,16 @@ Then(
 Given(
   'the Synced Share worker rejects the next start-share request with a verification failure',
   async ({ page }) => {
-    await page.route(/\/files\/[^/]+\/share$/, async (route) => {
+    await page.route(workerRouteGlob('/files/{id}/share'), async (route) => {
       if (route.request().method() !== 'POST') {
         await route.continue()
         return
       }
-      await route.fulfill({
-        status: 401,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          reason: 'GitHub verification failed',
-          failedAt: Date.now(),
-          attempts: 2,
-        }),
+      await fulfillWithApiError(route, 401, {
+        code: 'unauthorized',
+        reason: 'GitHub verification failed',
+        failedAt: Date.now(),
+        attempts: 2,
       })
     })
   },

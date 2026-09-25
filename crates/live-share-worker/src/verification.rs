@@ -20,7 +20,8 @@ use std::time::Duration;
 
 use backoff::backoff::Backoff;
 use backoff::ExponentialBackoffBuilder;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// `oauth_sessions.verified_at` TTL, per the schema comment in
 /// `migrations/0001_init.sql` ("~1hr TTL checked in app code").
@@ -111,7 +112,7 @@ where
 /// one hard exception from that same decision: this must never carry the
 /// token or its hash, which is enforced by construction here since neither
 /// ever exists as a field.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VerificationFailure {
     pub reason: String,

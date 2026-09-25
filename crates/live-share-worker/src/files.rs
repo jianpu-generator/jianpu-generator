@@ -14,7 +14,7 @@
 //! real conflict semantics to get right.
 
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
+use utoipa::ToSchema;
 
 /// Mirrors a `files` row (see `live-share-worker/migrations/0003_files.sql`).
 /// `owner_user_id` is an internal, provider-agnostic `users.id`, never sent back to a client -- see
@@ -34,9 +34,8 @@ pub struct StoredFile {
 /// The public shape of a `files` row -- strips `owner_user_id` and the
 /// timestamps before a file goes back over the wire, same reasoning as
 /// `crate::share::to_public_doc`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-#[ts(export, export_to = "protocol.ts")]
 pub struct PublicFile {
     pub id: String,
     pub name: String,
@@ -68,8 +67,9 @@ pub enum ContentWriteAttempt {
 }
 
 /// The outcome `crate::handlers`'s content-save route turns into an HTTP
-/// response: `Applied` -> 200, `Conflict` -> 409 (existing "Overwrite mine" /
-/// "Discard mine" UI), `NotFound` -> 404.
+/// response: `Applied` -> 200, `Conflict` -> `ApiError::RevisionConflict`
+/// (existing "Overwrite mine"/"Discard mine" UI), `NotFound` ->
+/// `ApiError::NotFound`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContentWriteOutcome {
     Applied { new_revision: i64 },

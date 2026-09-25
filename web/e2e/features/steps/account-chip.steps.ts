@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test'
-import { CLOUD_WORKER_ORIGIN } from '../../cloudFileHelpers'
+import { workerRouteGlob } from '../../cloudFileHelpers'
 import { fileTabByExactName, openFileList } from '../../fileSwitcherHelpers'
 import { attemptEditAndForceSave } from './account-sign-in.steps'
 import { Given, Then, When } from './fixtures'
@@ -182,13 +182,10 @@ When(
   'the app loads the cloud-backed file list for the account chip flow',
   async ({ page }) => {
     contentSaveRequests = []
-    await page.route(
-      `${CLOUD_WORKER_ORIGIN}/files/*/content`,
-      async (route) => {
-        contentSaveRequests.push(route.request().url())
-        await route.continue()
-      },
-    )
+    await page.route(workerRouteGlob('/files/{id}/content'), async (route) => {
+      contentSaveRequests.push(route.request().url())
+      await route.continue()
+    })
     await page.goto('/')
     await openFileList(page)
     const tab = fileTabByExactName(page, 'song')

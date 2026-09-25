@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { CLOUD_WORKER_ORIGIN } from '../../cloudFileHelpers'
+import { workerRouteGlob } from '../../cloudFileHelpers'
 import {
   fileSwitcherTrigger,
   fileTabByExactName,
@@ -21,12 +21,11 @@ Given(
     // retried create), so the real worker behaves normally once this
     // one-shot failure has fired. The body content here is never surfaced --
     // unlike the deleted GitHub backend (whose Octokit error carried GitHub's
-    // JSON body's own `message` straight through), `cloudBackend.ts`'s
-    // `HttpStatusError` always reports a generic
-    // "cloud storage request failed with status ${httpStatus}" message
-    // regardless of the response body.
+    // JSON body's own `message` straight through), a non-`ApiError` body
+    // like this one surfaces as `workerClient.ts`'s generic
+    // "worker request failed with status ${status}" message.
     let createCount = 0
-    await page.route(`${CLOUD_WORKER_ORIGIN}/files`, async (route) => {
+    await page.route(workerRouteGlob('/files'), async (route) => {
       createCount += 1
       if (createCount === 1) {
         await route.fulfill({ status: 500, body: 'Internal Server Error' })

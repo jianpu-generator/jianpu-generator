@@ -2,12 +2,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { DEMO_FILE_NAMES, type FileStoreState } from '../fileStore'
 import { createCloudBackend } from './cloudBackend'
 import {
+  apiErrorResponse,
+  callAt,
   config,
   emptyResponse,
   fetchMock,
   jsonResponse,
   lastCall,
-  parsedBody,
 } from './cloudBackendTestHelpers'
 
 // forceOverwrite/single-flight/offline-retry/name-collision-retry coverage
@@ -25,7 +26,9 @@ describe('createCloudBackend: forceOverwrite()', () => {
       fileIds: { 'a.jianpu': 'id-a' },
     }
 
-    fetchMock.mockResolvedValueOnce(jsonResponse(409, { currentRevision: 9 }))
+    fetchMock.mockResolvedValueOnce(
+      apiErrorResponse(409, { code: 'revision_conflict', currentRevision: 9 }),
+    )
     await backend.saveContent(state)
     expect(backend.lastError()).toEqual({
       kind: 'conflict',
@@ -35,7 +38,7 @@ describe('createCloudBackend: forceOverwrite()', () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(200, { revision: 10 }))
     await backend.forceOverwrite(state)
 
-    expect(parsedBody(lastCall().init)).toMatchObject({ expectedRevision: 9 })
+    expect((await lastCall()).body).toMatchObject({ expectedRevision: 9 })
     expect(backend.status()).toBe('idle')
     expect(backend.lastError()).toBeNull()
   })
@@ -88,7 +91,7 @@ describe('createCloudBackend: offline retry-on-reconnect', () => {
     }
 
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
-    await expect(backend.saveContent(state)).rejects.toThrow('fetch failed')
+    await expect(backend.saveContent(state)).rejects.toThrow('Failed to fetch')
     expect(backend.status()).toBe('offline')
     expect(backend.lastError()).toEqual({ kind: 'network' })
 
@@ -97,7 +100,7 @@ describe('createCloudBackend: offline retry-on-reconnect', () => {
     await vi.waitFor(() => expect(backend.status()).toBe('idle'))
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(parsedBody(lastCall().init)).toMatchObject({
+    expect((await lastCall()).body).toMatchObject({
       content: 'new content',
     })
 
@@ -108,7 +111,7 @@ describe('createCloudBackend: offline retry-on-reconnect', () => {
 describe('createCloudBackend: name-collision retry (create/rename/restore)', () => {
   it('retries createFile once with a freshly recomputed name after a 409 name_taken response', async () => {
     fetchMock
-      .mockResolvedValueOnce(jsonResponse(409, { code: 'name_taken' }))
+      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
       .mockResolvedValueOnce(
         jsonResponse(200, {
           id: 'new-id',
@@ -129,8 +132,8 @@ describe('createCloudBackend: name-collision retry (create/rename/restore)', () 
     const nextState = await backend.createFile(state)
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
-    const firstBody = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string)
-    const secondBody = JSON.parse(fetchMock.mock.calls[1]?.[1].body as string)
+    const firstBody = (await callAt(0)).body
+    const secondBody = (await callAt(1)).body
     expect(firstBody.name).toBe('untitled.jianpu')
     expect(secondBody.name).toBe('untitled 2.jianpu')
     expect(secondBody.id).toBe(firstBody.id)
@@ -144,7 +147,7 @@ describe('createCloudBackend: name-collision retry (create/rename/restore)', () 
 
   it('retries renameFile once, transparently, on a single name_taken collision', async () => {
     fetchMock
-      .mockResolvedValueOnce(jsonResponse(409, { code: 'name_taken' }))
+      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
       .mockResolvedValueOnce(emptyResponse(204))
 
     const backend = createCloudBackend(config)
@@ -157,11 +160,11 @@ describe('createCloudBackend: name-collision retry (create/rename/restore)', () 
     const nextState = await backend.renameFile(state, 'a.jianpu', 'b.jianpu')
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
-    const firstBody = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string)
-    const secondBody = JSON.parse(fetchMock.mock.calls[1]?.[1].body as string)
+    const firstBody = (await callAt(0)).body
+    const secondBody = (await callAt(1)).body
     expect(firstBody.name).toBe('b.jianpu')
     expect(secondBody.name).toBe('b 2.jianpu')
-    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+    expect((await callAt(0)).url).toBe(
       'http://localhost:8787/files/id-a/rename',
     )
 
@@ -170,8 +173,8 @@ describe('createCloudBackend: name-collision retry (create/rename/restore)', () 
 
   it('degrades to an unknown error after a second consecutive name_taken collision', async () => {
     fetchMock
-      .mockResolvedValueOnce(jsonResponse(409, { code: 'name_taken' }))
-      .mockResolvedValueOnce(jsonResponse(409, { code: 'name_taken' }))
+      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
+      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
 
     const backend = createCloudBackend(config)
     const state: FileStoreState = {
@@ -190,7 +193,7 @@ describe('createCloudBackend: name-collision retry (create/rename/restore)', () 
 
   it('retries restoreFile once on a name_taken collision against an active file', async () => {
     fetchMock
-      .mockResolvedValueOnce(jsonResponse(409, { code: 'name_taken' }))
+      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
       .mockResolvedValueOnce(emptyResponse(204))
 
     const backend = createCloudBackend(config)
@@ -203,11 +206,11 @@ describe('createCloudBackend: name-collision retry (create/rename/restore)', () 
     const nextState = await backend.restoreFile(state, 'binned.jianpu')
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+    expect((await callAt(0)).url).toBe(
       'http://localhost:8787/files/id-binned/restore',
     )
-    const firstBody = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string)
-    const secondBody = JSON.parse(fetchMock.mock.calls[1]?.[1].body as string)
+    const firstBody = (await callAt(0)).body
+    const secondBody = (await callAt(1)).body
     expect(firstBody.name).toBe('binned.jianpu')
     expect(secondBody.name).toBe('binned 2.jianpu')
 

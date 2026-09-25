@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { DEMO_FILE_NAMES, type FileStoreState } from '../fileStore'
 import { createCloudBackend } from './cloudBackend'
 import {
+  apiErrorResponse,
   config,
   fetchMock,
   jsonResponse,
   lastCall,
-  parsedBody,
 } from './cloudBackendTestHelpers'
 
 // See also `cloudBackendRetry.test.ts` for forceOverwrite/single-flight/
@@ -39,10 +39,10 @@ describe('createCloudBackend: load()', () => {
     const backend = createCloudBackend(config)
     const state = await backend.load()
 
-    const { url, init } = lastCall()
+    const { url, method, body } = await lastCall()
     expect(url).toBe('http://localhost:8787/files/list')
-    expect(init.method).toBe('POST')
-    expect(parsedBody(init)).toEqual({ identityToken: 'test-token' })
+    expect(method).toBe('POST')
+    expect(body).toEqual({ identityToken: 'test-token' })
 
     expect(state.userFiles).toEqual({ 'a.jianpu': '1 2 3' })
     expect(state.bin).toEqual({ 'b.jianpu': 'x' })
@@ -71,9 +71,8 @@ describe('createCloudBackend: createFile()', () => {
     }
     const nextState = await backend.createFile(state)
 
-    const { url, init } = lastCall()
+    const { url, body } = await lastCall()
     expect(url).toBe('http://localhost:8787/files')
-    const body = parsedBody(init)
     expect(body.identityToken).toBe('test-token')
     expect(body.name).toBe('untitled.jianpu')
     expect(typeof body.id).toBe('string')
@@ -118,9 +117,9 @@ describe('createCloudBackend: saveContent()', () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(200, { revision: 4 }))
     await backend.saveContent(seededState())
 
-    const { url, init } = lastCall()
+    const { url, body } = await lastCall()
     expect(url).toBe('http://localhost:8787/files/id-a/content')
-    expect(parsedBody(init)).toEqual({
+    expect(body).toEqual({
       identityToken: 'test-token',
       content: 'new content',
       expectedRevision: 3,
@@ -130,7 +129,7 @@ describe('createCloudBackend: saveContent()', () => {
     // A second save should now send the advanced revision.
     fetchMock.mockResolvedValueOnce(jsonResponse(200, { revision: 5 }))
     await backend.saveContent(seededState())
-    expect(parsedBody(lastCall().init)).toMatchObject({ expectedRevision: 4 })
+    expect((await lastCall()).body).toMatchObject({ expectedRevision: 4 })
   })
 
   it('defaults expectedRevision to 0 for a file never seen via load()', async () => {
@@ -139,14 +138,16 @@ describe('createCloudBackend: saveContent()', () => {
 
     await backend.saveContent(seededState())
 
-    expect(parsedBody(lastCall().init)).toMatchObject({ expectedRevision: 0 })
+    expect((await lastCall()).body).toMatchObject({ expectedRevision: 0 })
   })
 
   it('on a 409 revision-conflict response, sets lastError without throwing and leaves the revision unadvanced', async () => {
     const backend = createCloudBackend(config)
     await loadWithRevision(backend, 3)
 
-    fetchMock.mockResolvedValueOnce(jsonResponse(409, { currentRevision: 7 }))
+    fetchMock.mockResolvedValueOnce(
+      apiErrorResponse(409, { code: 'revision_conflict', currentRevision: 7 }),
+    )
 
     await expect(backend.saveContent(seededState())).resolves.toBeUndefined()
 
@@ -160,12 +161,19 @@ describe('createCloudBackend: saveContent()', () => {
     // going through forceOverwrite) still uses the pre-conflict revision.
     fetchMock.mockResolvedValueOnce(jsonResponse(200, { revision: 4 }))
     await backend.saveContent(seededState())
-    expect(parsedBody(lastCall().init)).toMatchObject({ expectedRevision: 3 })
+    expect((await lastCall()).body).toMatchObject({ expectedRevision: 3 })
   })
 
   it('401 classifies as an auth error and rejects', async () => {
     const backend = createCloudBackend(config)
-    fetchMock.mockResolvedValueOnce(jsonResponse(401, { reason: 'expired' }))
+    fetchMock.mockResolvedValueOnce(
+      apiErrorResponse(401, {
+        code: 'unauthorized',
+        reason: 'expired',
+        failedAt: 0,
+        attempts: 3,
+      }),
+    )
 
     await expect(backend.saveContent(seededState())).rejects.toThrow()
 

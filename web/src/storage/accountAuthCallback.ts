@@ -1,4 +1,11 @@
-import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
+import {
+  callWorker,
+  createWorkerClient,
+  NetworkFailure,
+  UnreadableResponse,
+  WorkerRequestError,
+  type WorkerSchemas,
+} from '../syncedShare/workerClient'
 import { writeStoredSyncedShareGithubAuth } from './accountAuth'
 import {
   clearPendingSyncedShareGithubSignIn,
@@ -21,11 +28,6 @@ export interface CompleteSyncedShareGithubSignInFromCallbackOptions {
   host: string
   /** Defaults to `window.location.search`; overridable for tests. */
   search?: string
-}
-
-interface GithubOauthCallbackResponse {
-  accessToken: string
-  login?: string
 }
 
 /**
@@ -83,44 +85,21 @@ async function runSyncedShareGithubCallback(
     }
   }
 
-  let response: Response
+  let body: WorkerSchemas['GithubOauthCallbackResponse']
   try {
-    response = await fetch(
-      `${syncedShareWorkerOrigin(options.host)}/auth/github/callback`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    body = await callWorker(
+      createWorkerClient(options.host).POST('/auth/github/callback', {
+        body: {
           code,
           codeVerifier: pending.codeVerifier,
           redirectUri: pending.redirectUri,
-        }),
-      },
+        },
+      }),
     )
   } catch (error) {
-    return {
-      ok: false,
-      reason: 'error',
-      error: `Could not reach the Synced Share worker: ${error instanceof Error ? error.message : String(error)}`,
-    }
-  }
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => '')
-    return {
-      ok: false,
-      reason: 'error',
-      error: `GitHub token exchange failed: status=${response.status}, body=${body}`,
-    }
-  }
-
-  let body: GithubOauthCallbackResponse
-  try {
-    body = (await response.json()) as GithubOauthCallbackResponse
-  } catch (error) {
-    // A `2xx` response with a body that isn't valid JSON (e.g. a truncated
-    // response from a worker restarting mid-request, or a proxy's HTML error
-    // page served with a `200`) must not throw out of this function -- see
+    // Every failure, including a `2xx` whose body isn't valid JSON (e.g. a
+    // truncated response from a worker restarting mid-request), must
+    // resolve rather than throw out of this function -- see
     // `completeSyncedShareGithubSignInFromCallback`'s caller
     // (`SyncedShareGithubCallbackPage`), which has no `.catch` on this
     // promise and would otherwise leave the popup stuck on "Signing in with
@@ -129,7 +108,7 @@ async function runSyncedShareGithubCallback(
     return {
       ok: false,
       reason: 'error',
-      error: `GitHub token exchange returned an unreadable response: ${error instanceof Error ? error.message : String(error)}`,
+      error: describeTokenExchangeFailure(error),
     }
   }
   const login = body.login ?? ''
@@ -177,4 +156,22 @@ function relayResultViaStorage(result: SyncedShareGithubAuthResult): void {
     // `relayResultToOpener` above or the opener's `.closed` poll are the
     // remaining fallbacks if this write fails.
   }
+}
+
+function describeTokenExchangeFailure(error: unknown): string {
+  if (error instanceof WorkerRequestError) {
+    const detail =
+      error.apiError?.code === 'upstream_failed'
+        ? error.apiError.message
+        : JSON.stringify(error.rawBody)
+    return `GitHub token exchange failed: status=${error.response.status}, body=${detail}`
+  }
+  if (error instanceof UnreadableResponse) {
+    return `GitHub token exchange returned an unreadable response: ${error.message}`
+  }
+  const message =
+    error instanceof NetworkFailure || error instanceof Error
+      ? error.message
+      : String(error)
+  return `Could not reach the Synced Share worker: ${message}`
 }

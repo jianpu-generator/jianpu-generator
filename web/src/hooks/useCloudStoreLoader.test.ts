@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { HttpStatusError, NetworkFailure } from '../storage/cloudBackendHttp'
+import {
+  type ApiError,
+  NetworkFailure,
+  WorkerRequestError,
+} from '../syncedShare/workerClient'
 import { cloudLoadRetryDelayMs, isAuthRejection } from './useCloudStoreLoader'
 
 describe('cloudLoadRetryDelayMs', () => {
@@ -14,13 +18,28 @@ describe('cloudLoadRetryDelayMs', () => {
   })
 })
 
+function workerError(status: number, body: ApiError): WorkerRequestError {
+  return new WorkerRequestError(new Response(null, { status }), body)
+}
+
 describe('isAuthRejection', () => {
-  it('treats a 401 as a rejected token', () => {
-    expect(isAuthRejection(new HttpStatusError(401, null))).toBe(true)
+  it('treats an unauthorized ApiError as a rejected token', () => {
+    expect(
+      isAuthRejection(
+        workerError(401, {
+          code: 'unauthorized',
+          reason: 'revoked',
+          failedAt: 0,
+          attempts: 3,
+        }),
+      ),
+    ).toBe(true)
   })
 
   it('treats server errors and network failures as transient', () => {
-    expect(isAuthRejection(new HttpStatusError(500, null))).toBe(false)
+    expect(
+      isAuthRejection(workerError(500, { code: 'internal', message: 'boom' })),
+    ).toBe(false)
     expect(isAuthRejection(new NetworkFailure('fetch failed'))).toBe(false)
   })
 })

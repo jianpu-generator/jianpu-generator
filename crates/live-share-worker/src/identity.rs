@@ -1,5 +1,5 @@
 //! Account identity resolution shared by both file storage (`/files/*`) and
-//! the Synced Share owner routes (`/files/:id/share*`), plus the hashed-token cache + backoff-wrapped
+//! the Synced Share owner routes (`/files/{id}/share*`), plus the hashed-token cache + backoff-wrapped
 //! verification wiring that sits in front of it
 //! (`TODO-synced-share-rust-d1-migration.md` §0/§6, task 7).
 //!

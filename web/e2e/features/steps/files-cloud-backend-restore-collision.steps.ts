@@ -1,8 +1,9 @@
 import { expect } from '@playwright/test'
 import {
-  CLOUD_WORKER_ORIGIN,
   seedCloudFile,
   trashCloudFile,
+  type WorkerSchemas,
+  workerRouteGlob,
 } from '../../cloudFileHelpers'
 import {
   fileTabByExactName,
@@ -64,11 +65,9 @@ Given(
     )
     await trashCloudFile(login, trashSource.id)
 
-    await page.route(`${CLOUD_WORKER_ORIGIN}/files/list`, async (route) => {
+    await page.route(workerRouteGlob('/files/list'), async (route) => {
       const response = await route.fetch()
-      const json = (await response.json()) as {
-        files: { id: string; name: string; trashedAt: number | null }[]
-      }
+      const json = (await response.json()) as WorkerSchemas['ListFilesResponse']
       for (const file of json.files) {
         // Only while still trashed -- this route stays registered across
         // the post-restore reload too (`page.route` handlers are

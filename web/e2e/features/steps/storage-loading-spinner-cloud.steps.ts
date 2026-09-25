@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { CLOUD_WORKER_ORIGIN } from '../../cloudFileHelpers'
+import { workerRouteGlob } from '../../cloudFileHelpers'
 import { openFileActions } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -8,7 +8,7 @@ Given(
   async ({ page }) => {
     // Delays the `/files/list` request `backend.load()` issues so the
     // spinner has a window to be observed before the listing resolves.
-    await page.route(`${CLOUD_WORKER_ORIGIN}/files/list`, async (route) => {
+    await page.route(workerRouteGlob('/files/list'), async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 1000))
       await route.continue()
     })

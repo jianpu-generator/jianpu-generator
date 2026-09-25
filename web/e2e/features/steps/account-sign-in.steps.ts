@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test'
-import { CLOUD_WORKER_ORIGIN } from '../../cloudFileHelpers'
+import { workerRouteGlob } from '../../cloudFileHelpers'
 import {
   fileTabByExactName,
   focusEditor,
@@ -64,13 +64,10 @@ When(
     // Registered before navigating so it's in place for the whole scenario,
     // including the post-disconnect edit attempt at the very end -- see
     // "no content request is sent to the worker after disconnecting" below.
-    await page.route(
-      `${CLOUD_WORKER_ORIGIN}/files/*/content`,
-      async (route) => {
-        contentSaveRequests.push(route.request().url())
-        await route.continue()
-      },
-    )
+    await page.route(workerRouteGlob('/files/{id}/content'), async (route) => {
+      contentSaveRequests.push(route.request().url())
+      await route.continue()
+    })
     await gotoCloudApp(page)
     await openFileList(page)
     const tab = fileTabByExactName(page, 'song')

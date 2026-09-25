@@ -1,6 +1,6 @@
 import type { Browser, Page } from '@playwright/test'
 import { expect } from '@playwright/test'
-import { CLOUD_WORKER_ORIGIN, seedCloudFile } from '../../cloudFileHelpers'
+import { seedCloudFile, workerRouteGlob } from '../../cloudFileHelpers'
 import {
   fileSwitcherTrigger,
   fileTabByExactName,
@@ -102,7 +102,7 @@ async function mockCloudFileListWithForeignFile(
   fileId: string,
   tabName: string,
 ): Promise<void> {
-  await page.route(`${CLOUD_WORKER_ORIGIN}/files/list`, async (route) => {
+  await page.route(workerRouteGlob('/files/list'), async (route) => {
     await route.fulfill({
       status: 200,
       json: {

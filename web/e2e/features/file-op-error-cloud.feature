@@ -17,7 +17,7 @@ Feature: File-op failure handling for the cloud storage backend
     When the app loads the cloud-backed file list for a failing create
     And I remember the currently active tab name
     And I click the "New" button to create a file that will fail
-    Then the error modal is shown with message "Could not create file" containing "cloud storage request failed with status 500"
+    Then the error modal is shown with message "Could not create file" containing "worker request failed with status 500"
     When I close the error modal
     Then the new-file button spinner clears and its label resets to "New"
     And no "untitled" tab exists

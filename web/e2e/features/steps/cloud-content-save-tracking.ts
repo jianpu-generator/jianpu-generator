@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test'
+import { matchWorkerRoute, type WorkerSchemas } from '../../cloudFileHelpers'
 
 // Shared observation helper for the cloud backend's content-save requests,
 // used by several `.steps.ts` files (`files-cloud-backend`,
@@ -50,20 +51,20 @@ export function installContentSaveTracking(page: Page): ContentSaveTracker {
 
   page.on('request', (request) => {
     if (request.method() !== 'POST') return
-    const match = /\/files\/([^/]+)\/content$/.exec(request.url())
-    if (!match?.[1]) return
+    const id = matchWorkerRoute('/files/{id}/content', request.url())?.id
+    if (!id) return
     const body = request.postDataJSON() as { content?: unknown } | null
     if (!body || typeof body.content !== 'string') return
-    tracker.records.push({ id: match[1], content: body.content })
+    tracker.records.push({ id, content: body.content })
   })
 
   page.on('response', (response) => {
     if (response.request().method() !== 'POST') return
-    if (!response.url().endsWith('/files/list')) return
+    if (!matchWorkerRoute('/files/list', response.url())) return
     void response
       .json()
-      .then((json: { files?: { id: string; name: string }[] }) => {
-        for (const file of json.files ?? []) {
+      .then((json: WorkerSchemas['ListFilesResponse']) => {
+        for (const file of json.files) {
           tracker.nameForId.set(file.id, file.name)
         }
       })

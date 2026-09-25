@@ -1,9 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type {
-  FileShareRequest,
-  FileShareResponse,
-  ShareStatusResponse,
-} from '../generated/live-share-worker/protocol'
 import { useAccountAuth } from '../storage/accountAuth'
 import {
   openSyncedShareGithubSignInPopup,
@@ -11,12 +6,11 @@ import {
 } from '../storage/accountAuthPopup'
 import { revokeSyncedShareGithubGrant } from '../storage/accountAuthRevoke'
 import {
-  buildSyncedShareNetworkFailure,
-  buildSyncedShareResponseFailure,
+  buildSyncedShareFailure,
   type SyncedShareFailure,
   type SyncedShareOperation,
 } from '../syncedShare/errors'
-import { syncedShareWorkerOrigin } from '../syncedShare/workerUrl'
+import { callWorker, createWorkerClient } from '../syncedShare/workerClient'
 import { buildSyncedShareUrl } from '../syncedShareUrl'
 
 /** Public Synced Share GitHub OAuth App client id -- a dedicated app,
@@ -29,22 +23,6 @@ import { buildSyncedShareUrl } from '../syncedShareUrl'
  * secret: it's visible in every authorization request the browser sends. */
 const SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID =
   import.meta.env.VITE_SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID ?? ''
-
-/** The worker path suffix (under `/files/:id/share`) for each owner-side
- * operation. */
-const OPERATION_PATH: Record<SyncedShareOperation, string> = {
-  start: '',
-  stop: '/stop',
-  status: '/status',
-}
-
-function fileShareEndpointUrl(
-  host: string,
-  fileId: string,
-  operation: SyncedShareOperation,
-): string {
-  return `${syncedShareWorkerOrigin(host)}/files/${encodeURIComponent(fileId)}/share${OPERATION_PATH[operation]}`
-}
 
 /** A file's share state as last reported by the worker. Tagged with the
  * `fileId` it belongs to, so a response for a file the owner has since
@@ -92,11 +70,11 @@ export interface UseSyncedShareOwnerResult {
    * live share first (mirrors clicking "Stop Sync"). */
   disconnectGithub: () => void
   /** Set whenever a request (start, stop, or the status lookup) fails --
-   * a `401` GitHub-verification failure from the worker, a non-2xx
-   * response, or a network-level error. Drives the full-screen error dialog
+   * the worker's `unauthorized` GitHub-verification failure, any other
+   * failure response, or a network-level error. Drives the full-screen error dialog
    * (task 9); `null` means no failure is currently being shown. There is no
    * automatic retry -- dismissing it (`dismissSyncFailure`) just returns to
-   * idle. A `401` additionally clears the stored GitHub connection (see
+   * idle. An auth rejection additionally clears the stored GitHub connection (see
    * `recordSyncFailure`), so the next "Sync" click re-prompts sign-in
    * instead of resending the same now-invalid token forever. */
   syncFailure: SyncedShareFailure | null
@@ -149,8 +127,8 @@ export function useSyncedShareOwner(
     [],
   )
 
-  /** Records a request failure and, if it's a `401` (the worker's
-   * `VerificationFailure` -- GitHub itself rejected the stored identity
+  /** Records a request failure and, if it's an auth rejection (the worker's
+   * `unauthorized` `ApiError` -- GitHub itself rejected the stored identity
    * token as revoked/invalid, not merely a transient network blip), also
    * clears the stored Synced Share GitHub auth: without this, a token
    * that's gone stale (e.g. its GitHub grant was revoked) keeps being
@@ -159,38 +137,25 @@ export function useSyncedShareOwner(
   const recordSyncFailure = useCallback(
     (failure: SyncedShareFailure) => {
       setSyncFailure(failure)
-      if (failure.httpStatus === 401) setGithubAuth(null)
+      if (failure.authRejected) setGithubAuth(null)
     },
     [setGithubAuth],
   )
 
-  /** Sends one owner-side request for `fileId`'s share. Resolves the ok
-   * `Response`, or `null` after recording the failure. */
-  const requestFileShare = useCallback(
-    async (
+  /** Sends one owner-side request (`send`, given the worker client).
+   * Resolves `{ data }` with its success body, or `null` after recording the
+   * failure. */
+  const runShareRequest = useCallback(
+    async <Data>(
       operation: SyncedShareOperation,
-      fileId: string,
-      token: string,
-    ): Promise<Response | null> => {
+      send: (client: ReturnType<typeof createWorkerClient>) => Promise<Data>,
+    ): Promise<{ data: Data } | null> => {
       const host = import.meta.env.VITE_SYNCED_SHARE_HOST
       if (!host) return null
-      const request: FileShareRequest = { identityToken: token }
       try {
-        const response = await fetch(
-          fileShareEndpointUrl(host, fileId, operation),
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(request),
-          },
-        )
-        if (response.ok) return response
-        recordSyncFailure(
-          await buildSyncedShareResponseFailure(operation, response),
-        )
-        return null
+        return { data: await send(createWorkerClient(host)) }
       } catch (error) {
-        recordSyncFailure(buildSyncedShareNetworkFailure(operation, error))
+        recordSyncFailure(buildSyncedShareFailure(operation, error))
         return null
       }
     },
@@ -199,17 +164,22 @@ export function useSyncedShareOwner(
 
   useEffect(() => {
     if (!cloudFileId || !identityToken) return
-    void requestFileShare('status', cloudFileId, identityToken).then(
-      async (response) => {
-        if (!response) return
-        const { share } = (await response.json()) as ShareStatusResponse
-        applyStatusFor(
-          cloudFileId,
-          share ? { fileId: cloudFileId, ...share } : null,
-        )
-      },
-    )
-  }, [cloudFileId, identityToken, requestFileShare, applyStatusFor])
+    void runShareRequest('status', (client) =>
+      callWorker(
+        client.POST('/files/{id}/share/status', {
+          params: { path: { id: cloudFileId } },
+          body: { identityToken },
+        }),
+      ),
+    ).then((result) => {
+      if (!result) return
+      const { share } = result.data
+      applyStatusFor(
+        cloudFileId,
+        share ? { fileId: cloudFileId, ...share } : null,
+      )
+    })
+  }, [cloudFileId, identityToken, runShareRequest, applyStatusFor])
 
   const startSync = useCallback(async (): Promise<string | null> => {
     // Per §0's "no seamless OAuth-then-continue flow" decision: this never
@@ -218,16 +188,23 @@ export function useSyncedShareOwner(
     // sign-in state instead of calling this in that case -- this check is
     // a defensive backstop, not the primary gate.
     if (!cloudFileId || !identityToken) return null
-    const response = await requestFileShare('start', cloudFileId, identityToken)
-    if (!response) return null
-    const { shareId } = (await response.json()) as FileShareResponse
+    const result = await runShareRequest('start', (client) =>
+      callWorker(
+        client.POST('/files/{id}/share', {
+          params: { path: { id: cloudFileId } },
+          body: { identityToken },
+        }),
+      ),
+    )
+    if (!result) return null
+    const { shareId } = result.data
     applyStatusFor(cloudFileId, {
       fileId: cloudFileId,
       shareId,
       ended: false,
     })
     return buildSyncedShareUrl(shareId, filename)
-  }, [cloudFileId, identityToken, filename, requestFileShare, applyStatusFor])
+  }, [cloudFileId, identityToken, filename, runShareRequest, applyStatusFor])
 
   const isSynced =
     cloudFileId !== null &&
@@ -238,17 +215,22 @@ export function useSyncedShareOwner(
   const stopSync = useCallback(() => {
     if (!isSynced || !cloudFileId || !identityToken || !status) return
     const stopped = { ...status, ended: true }
-    void requestFileShare('stop', cloudFileId, identityToken).then(
-      (response) => {
-        if (response) applyStatusFor(cloudFileId, stopped)
-      },
-    )
+    void runShareRequest('stop', (client) =>
+      callWorker(
+        client.POST('/files/{id}/share/stop', {
+          params: { path: { id: cloudFileId } },
+          body: { identityToken },
+        }),
+      ),
+    ).then((result) => {
+      if (result) applyStatusFor(cloudFileId, stopped)
+    })
   }, [
     isSynced,
     cloudFileId,
     identityToken,
     status,
-    requestFileShare,
+    runShareRequest,
     applyStatusFor,
   ])
 

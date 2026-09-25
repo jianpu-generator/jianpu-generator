@@ -176,3 +176,21 @@ the tag ↔ attribute mapping itself.
   a larger, separate Rust-side change. `clickableElementIdFromElement` was updated to
   derive from `tagFromElement` instead of re-parsing `dataset` independently (removing
   the TS-side duplication), but the two-enum split itself remains.
+
+---
+
+## [x] 7. Synced Share worker HTTP routes, bodies and error statuses
+
+ts-rs only generated the worker's body *shapes*. Everything else was restated
+by hand in TS: route paths (`handlers/mod.rs` vs. four separate `fetch` call
+sites and e2e's `page.route` globs), which request type went with which path,
+`as Wire.X` casts on every response, the OAuth routes' bodies (never exported
+at all), `401`/`404`/`409` status numbers, and the untyped
+`{code: "name_taken"}` literal.
+
+**Fix:** `handlers::routes()` registers each route into both the worker
+`Router` and an OpenAPI spec, deriving path params, request body, success
+response and the `ApiError` failure union from the handler's own signature;
+`web/` generates `schema.ts` from that spec (openapi-typescript) and calls
+the worker only through `syncedShare/workerClient.ts` (openapi-fetch). See
+ARCHITECTURE.md's "Route list and generated client".

@@ -1,24 +1,29 @@
 import { beforeEach, vi } from 'vitest'
+import type { ApiError } from '../syncedShare/workerClient'
 
-/** Shared `fetch` mock + response/body helpers for `cloudBackend.test.ts`
+/** Shared `fetch` mock + response/request helpers for `cloudBackend.test.ts`
  * and `cloudBackendRetry.test.ts` -- split out so each test file stays
  * under this repo's 400-line cap while keeping identical setup. Vitest
  * isolates each test file's module graph by default, so the `fetchMock`
- * instance below is fresh per test file despite the shared import. */
-export const fetchMock = vi.fn()
+ * instance below is fresh per test file despite the shared import. The
+ * worker client (openapi-fetch) calls `fetch` with a single `Request`. */
+export const fetchMock = vi.fn<(request: Request) => Promise<Response>>()
 
 export function jsonResponse(status: number, body: unknown): Response {
-  return {
+  return new Response(JSON.stringify(body), {
     status,
-    json: () => Promise.resolve(body),
-  } as unknown as Response
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+/** A worker failure response, its body checked against the generated
+ * `ApiError` union. */
+export function apiErrorResponse(status: number, error: ApiError): Response {
+  return jsonResponse(status, error)
 }
 
 export function emptyResponse(status: number): Response {
-  return {
-    status,
-    json: () => Promise.reject(new Error('no body')),
-  } as unknown as Response
+  return new Response(null, { status })
 }
 
 beforeEach(() => {
@@ -28,12 +33,23 @@ beforeEach(() => {
 
 export const config = { token: 'test-token', workerHost: 'localhost:8787' }
 
-export function lastCall(): { url: string; init: RequestInit } {
-  const call = fetchMock.mock.calls.at(-1)
-  if (!call) throw new Error('fetch was not called')
-  return { url: call[0] as string, init: call[1] as RequestInit }
+export interface RecordedCall {
+  url: string
+  method: string
+  body: Record<string, unknown>
 }
 
-export function parsedBody(init: RequestInit): Record<string, unknown> {
-  return JSON.parse(init.body as string) as Record<string, unknown>
+/** The `index`-th (negative counts from the end) request `fetch` got. */
+export async function callAt(index: number): Promise<RecordedCall> {
+  const request = fetchMock.mock.calls.at(index)?.[0]
+  if (!request) throw new Error(`fetch call ${index} was not made`)
+  return {
+    url: request.url,
+    method: request.method,
+    body: (await request.clone().json()) as Record<string, unknown>,
+  }
+}
+
+export function lastCall(): Promise<RecordedCall> {
+  return callAt(-1)
 }

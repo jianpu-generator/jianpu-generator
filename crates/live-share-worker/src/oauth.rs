@@ -41,9 +41,13 @@
 
 use base64::Engine;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use worker::wasm_bindgen::JsValue;
-use worker::{Error, Fetch, Headers, Method, Request, RequestInit, Response, Result};
+use worker::{Error, Fetch, Headers, Method, Request, RequestInit, Result};
 use worker::{RouteContext, Var};
+
+use crate::api_error::ApiError;
+use crate::handlers::routes::{HandlerResult, Json, NoContent, NoPathParams};
 
 const DEFAULT_GITHUB_TOKEN_URL: &str = "https://github.com/login/oauth/access_token";
 
@@ -88,7 +92,7 @@ const CLIENT_SECRET_BINDING: &str = "SYNCED_SHARE_GITHUB_CLIENT_SECRET";
 /// `syncedShareGithubAuth.ts`), plus the exact `redirect_uri` used to start
 /// the authorization request (GitHub requires it to match on the token
 /// exchange too).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct GithubOauthCallbackRequest {
     pub code: String,
@@ -105,7 +109,7 @@ pub(crate) struct GithubOauthCallbackRequest {
 /// the storage and Synced Share UIs) -- fetched via one extra `GET /user`
 /// call with the freshly issued token; `None` if that call fails, since a
 /// missing display name shouldn't fail a successful sign-in.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct GithubOauthCallbackResponse {
     pub access_token: String,
@@ -128,13 +132,10 @@ struct GithubTokenResponse {
 /// client secret. See the module doc comment for what this route does and
 /// does not do.
 pub(crate) async fn github_oauth_callback(
-    mut req: Request,
     ctx: RouteContext<()>,
-) -> Result<Response> {
-    let Ok(body) = req.json::<GithubOauthCallbackRequest>().await else {
-        return Response::error("Bad Request", 400);
-    };
-
+    _path: NoPathParams,
+    body: GithubOauthCallbackRequest,
+) -> HandlerResult<Json<GithubOauthCallbackResponse>> {
     let client_id: Var = ctx.var(CLIENT_ID_BINDING)?;
     let client_secret = ctx.secret(CLIENT_SECRET_BINDING)?;
     let token_url = ctx
@@ -159,17 +160,19 @@ pub(crate) async fn github_oauth_callback(
             let login = crate::identity::github::fetch_github_login(&user_endpoint, &access_token)
                 .await
                 .ok();
-            Response::from_json(&GithubOauthCallbackResponse {
+            Ok(Json(GithubOauthCallbackResponse {
                 access_token,
                 login,
-            })
+            }))
         }
         None => {
             let reason = token_response
                 .error_description
                 .or(token_response.error)
                 .unwrap_or_else(|| "GitHub did not return an access token".to_string());
-            Response::error(format!("GitHub token exchange failed: {reason}"), 502)
+            Err(ApiError::UpstreamFailed {
+                message: format!("GitHub token exchange failed: {reason}"),
+            })
         }
     }
 }
@@ -216,7 +219,7 @@ async fn exchange_code_for_token(
 /// `disconnectGithub` (`useSyncedShareOwner.ts`) at logout time -- see the
 /// module doc comment for why that's the only place a token to revoke ever
 /// exists.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct GithubRevokeRequest {
     pub identity_token: String,
@@ -235,11 +238,11 @@ pub(crate) struct GithubRevokeRequest {
 /// treats the call as best-effort (never awaited, never blocks the local
 /// logout), but this route's own contract stays honest/debuggable, matching
 /// `github_oauth_callback`'s error shape.
-pub(crate) async fn github_revoke(mut req: Request, ctx: RouteContext<()>) -> Result<Response> {
-    let Ok(body) = req.json::<GithubRevokeRequest>().await else {
-        return Response::error("Bad Request", 400);
-    };
-
+pub(crate) async fn github_revoke(
+    ctx: RouteContext<()>,
+    _path: NoPathParams,
+    body: GithubRevokeRequest,
+) -> HandlerResult<NoContent> {
     let client_id: Var = ctx.var(CLIENT_ID_BINDING)?;
     let client_secret = ctx.secret(CLIENT_SECRET_BINDING)?;
     let grant_url = grant_url_from_env(&ctx, &client_id.to_string());
@@ -252,8 +255,10 @@ pub(crate) async fn github_revoke(mut req: Request, ctx: RouteContext<()>) -> Re
     )
     .await
     {
-        Ok(()) => Response::empty(),
-        Err(error) => Response::error(format!("GitHub grant revocation failed: {error}"), 502),
+        Ok(()) => Ok(NoContent),
+        Err(error) => Err(ApiError::UpstreamFailed {
+            message: format!("GitHub grant revocation failed: {error}"),
+        }),
     }
 }
 

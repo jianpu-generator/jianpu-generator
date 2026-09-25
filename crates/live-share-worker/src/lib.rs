@@ -11,7 +11,8 @@
 //! (real `GET /user` verification), per
 //! `TODO-synced-share-rust-d1-migration.md` §0/§6.
 //!
-//! `files`, `protocol`, `share`, `share_id`, and `verification` are `pub`
+//! `api_error`, `files`, `protocol`, `share`, `share_id`, and
+//! `verification` are `pub`
 //! (and D1/JsValue-free) so `tests/*.rs` can unit-test them directly, per
 //! this repo's convention of keeping tests in separate files rather than inline
 //! `#[cfg(test)]` modules. Everything else here is D1- or
@@ -27,6 +28,7 @@ mod handlers;
 mod identity;
 mod oauth;
 
+pub mod api_error;
 pub mod files;
 pub mod protocol;
 pub mod share;
@@ -56,6 +58,17 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         return Response::empty()?.with_status(204).with_cors(&cors);
     }
 
-    let response = handlers::router().run(req, env).await?;
+    let response = handlers::routes()?.into_router().run(req, env).await?;
     response.with_cors(&cors)
+}
+
+/// The OpenAPI spec of every route this worker serves, built from the same
+/// `handlers::routes()` list the `fetch` handler above serves from -- see
+/// `handlers::routes`. `tests/export_openapi.rs` writes it out for `web/`'s
+/// generated client.
+pub fn openapi_json() -> Result<String> {
+    handlers::routes()?
+        .into_openapi()
+        .to_pretty_json()
+        .map_err(|error| worker::Error::RustError(error.to_string()))
 }

@@ -64,7 +64,7 @@ pub(crate) async fn list_files_by_owner(
 /// Creates a new file row (new file / duplicate / import). Propagates a D1
 /// error as-is, including a `idx_files_owner_name` unique-constraint
 /// violation on a name-collision race -- `crate::handlers` maps that one to
-/// a `409 name_taken` response via `is_unique_constraint_violation`.
+/// an `ApiError::NameTaken` response via `is_unique_constraint_violation`.
 pub(crate) async fn insert_file(db: &D1Database, file: &StoredFile) -> Result<()> {
     db.prepare(INSERT_FILE)
         .bind(&[

@@ -2,7 +2,7 @@
 //! `live-share-worker/migrations/0004_shares_reference_files.sql`) is a
 //! pointer to a cloud `files` row, not a copy of its content: the viewer
 //! reads the file itself, so the only write path is the owner's ordinary
-//! autosave (`POST /files/:id/content`). Ownership is enforced by the
+//! autosave (`POST /files/{id}/content`). Ownership is enforced by the
 //! owner-scoped SQL in `queries/`, the same way the `/files/*` routes work,
 //! so nothing here needs to compare identities.
 
@@ -39,7 +39,7 @@ pub fn empty_doc() -> SyncedDoc {
     }
 }
 
-/// Builds the public wire shape for `GET /shares/:share_id`. An ended share
+/// Builds the public wire shape for `GET /shares/{share_id}`. An ended share
 /// (stopped, or its file is in the bin) returns empty `filename`/`content`,
 /// so a stopped link can never leak what the file says now -- only
 /// `ended` and the owner attribution survive.
