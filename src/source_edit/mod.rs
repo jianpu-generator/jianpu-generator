@@ -14,6 +14,7 @@ pub use tie_toggle::toggle_range_tie;
 use crate::parser::parts_parser::{
     SourcePartMode, DEFAULT_PART_OCTAVE_OFFSET, DEFAULT_PART_VOLUME,
 };
+use crate::parser::section_splitter::section_header_kind;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PartMode {
@@ -67,7 +68,9 @@ pub fn update_part_declaration(
 ) -> Option<String> {
     let lines: Vec<&str> = source.split('\n').collect();
 
-    let parts_index = lines.iter().position(|line| line.trim() == "# parts")?;
+    let parts_index = lines
+        .iter()
+        .position(|line| section_header_kind(line.trim()) == Some("parts"))?;
 
     let target_index = lines
         .iter()
@@ -78,7 +81,7 @@ pub fn update_part_declaration(
             if trimmed.is_empty() {
                 return false;
             }
-            if trimmed.starts_with("# ") {
+            if section_header_kind(trimmed).is_some() {
                 return false;
             }
             let Some(eq_pos) = line.find('=') else {

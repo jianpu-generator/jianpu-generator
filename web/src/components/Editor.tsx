@@ -227,7 +227,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         provideCodeLenses(model: editor.ITextModel) {
           const lenses: languages.CodeLens[] = []
           for (let line = 1; line <= model.getLineCount(); line++) {
-            if (model.getLineContent(line).trim() === '# parts') {
+            if (/^#\s*parts$/.test(model.getLineContent(line).trim())) {
               lenses.push({
                 range: new monacoApi.Range(line, 1, line, 1),
                 command: {
@@ -236,7 +236,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
                 },
               })
             }
-            if (model.getLineContent(line).trim() === '# metadata') {
+            if (/^#\s*metadata$/.test(model.getLineContent(line).trim())) {
               lenses.push({
                 range: new monacoApi.Range(line, 1, line, 1),
                 command: {

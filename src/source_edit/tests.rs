@@ -140,3 +140,11 @@ fn test_default_volume_and_octave_are_omitted() {
         update_part_declaration(&source, "M", &settings(PartMode::Notes, None, 100, 0)).unwrap();
     assert!(result.contains("Melody [M] = notes\n"));
 }
+
+#[test]
+fn test_parts_header_without_space_after_hash() {
+    let source = "#parts\nAlto [A] = notes\n\n#score\n1\n";
+    let result =
+        update_part_declaration(source, "A", &settings(follow("M"), None, 100, 0)).unwrap();
+    assert!(result.contains("Alto [A] = follow[M]"));
+}

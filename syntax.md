@@ -27,6 +27,7 @@ A `.jianpu` file has up to four sections, which may appear in any order:
 - `# sequence` — **optional**
 - `# score` — **required**
 - Sections may appear in any order.
+- Any amount of whitespace (including none) may follow the `#` in a section header: `#metadata`, `# metadata` and `#   metadata` are all the same header.
 - Legacy `# score:Name` / `# lyrics:Name` sections are **not** supported.
 
 Whitespace around `=` in metadata is optional. Metadata values may be quoted with `"`.
