@@ -6,6 +6,7 @@ use crate::error::IrrecoverableError;
 
 pub use crate::ast::parsed::JianPuPitch;
 
+mod chord_voicing;
 mod event_processing;
 mod midi_notes;
 mod navigation;
@@ -134,23 +135,33 @@ pub(crate) enum RawKind {
     },
 }
 
-/// Pending-tie tracking for all three channel groups (melodic, chord, percussion),
-/// bundled so `process_measure` can thread them through as a single argument.
+/// Pending-tie tracking for all three channel groups (melodic, chord, percussion), plus
+/// each chord part's previous voicing (see [`ChordPartState`]), bundled so
+/// `process_measure` can thread them through as a single argument.
 #[derive(Default)]
 pub(crate) struct TieState {
     /// Keyed by MIDI channel (a part's channel is a stable identity for the
     /// lifetime of a render, see [`PartChannelAssignment`]) rather than by
     /// position in any single measure's part list.
     per_part_ties: HashMap<u8, HashMap<u8, u32>>,
-    chord_ties: Vec<HashMap<u8, u32>>,
+    chord_parts: Vec<ChordPartState>,
     percussion_ties: HashMap<u8, u32>,
+}
+
+/// One chord part's cross-measure playback state.
+#[derive(Default)]
+pub(crate) struct ChordPartState {
+    pub(crate) ties: HashMap<u8, u32>,
+    /// The last voicing this part sounded, which the next chord leads from (see
+    /// [`chord_voicing`]).
+    pub(crate) previous_voicing: Option<chord_voicing::ChordVoicing>,
 }
 
 impl TieState {
     fn flush(mut self, raw: &mut Vec<RawEvent>, current_tick: u32) {
         flush_pending_ties(raw, self.per_part_ties.into_iter().collect());
-        for ties in &mut self.chord_ties {
-            flush_pending_ties_at_tick(ties, current_tick, raw, CHORD_CHANNEL);
+        for chord_part in &mut self.chord_parts {
+            flush_pending_ties_at_tick(&mut chord_part.ties, current_tick, raw, CHORD_CHANNEL);
         }
         flush_pending_ties_at_tick(
             &mut self.percussion_ties,
@@ -291,7 +302,7 @@ pub(crate) fn process_measure(
 ) -> Result<u32, IrrecoverableError> {
     let TieState {
         per_part_ties,
-        chord_ties,
+        chord_parts: chord_part_states,
         percussion_ties,
     } = tie_state;
     if let Some(bpm) = measure.bpm {
@@ -323,17 +334,17 @@ pub(crate) fn process_measure(
 
     let chord_parts = parts_matching(measure, |kind| kind == PartKind::Chords);
 
-    while chord_ties.len() < chord_parts.len() {
-        chord_ties.push(HashMap::new());
+    while chord_part_states.len() < chord_parts.len() {
+        chord_part_states.push(ChordPartState::default());
     }
 
-    for (part, ties) in chord_parts.iter().zip(chord_ties.iter_mut()) {
+    for (part, state) in chord_parts.iter().zip(chord_part_states.iter_mut()) {
         let chord_duration = process_chord_events(
             &part.notes.events,
             current_tick,
             raw,
             active_key,
-            ties,
+            state,
             part.resolution_multiplier,
         );
         if chord_duration > measure_duration {

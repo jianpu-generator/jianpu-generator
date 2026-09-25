@@ -4,10 +4,11 @@ use crate::ast::grouped::NoteEvent;
 use crate::ast::parsed::KeyChange;
 use crate::error::IrrecoverableError;
 
+use super::chord_voicing::{voice_chord, ChordPitchClasses};
 use super::midi_notes::{
     accidental_offset, duration_to_ticks, resolve_midi_note, resolve_midi_note_with_accidental,
 };
-use super::{RawEvent, RawKind, CHORD_CHANNEL, PERCUSSION_CHANNEL};
+use super::{ChordPartState, RawEvent, RawKind, CHORD_CHANNEL, PERCUSSION_CHANNEL};
 
 pub(super) enum EventResolution {
     Skip,
@@ -87,7 +88,7 @@ fn process_events_with_ties(
     context: &EventProcessingContext<'_>,
     raw: &mut Vec<RawEvent>,
     ties: &mut HashMap<u8, u32>,
-    resolve: impl Fn(&NoteEvent) -> EventResolution,
+    mut resolve: impl FnMut(&NoteEvent) -> EventResolution,
 ) -> u32 {
     let &EventProcessingContext {
         events,
@@ -142,9 +143,13 @@ pub(super) fn process_chord_events(
     current_tick: u32,
     raw: &mut Vec<RawEvent>,
     active_key: &KeyChange,
-    chord_ties: &mut HashMap<u8, u32>,
+    state: &mut ChordPartState,
     multiplier: u32,
 ) -> u32 {
+    let ChordPartState {
+        ties,
+        previous_voicing,
+    } = state;
     process_events_with_ties(
         &EventProcessingContext {
             events,
@@ -153,13 +158,21 @@ pub(super) fn process_chord_events(
             multiplier,
         },
         raw,
-        chord_ties,
+        ties,
         |event| match event {
-            NoteEvent::Chord(c) => EventResolution::Notes {
-                midi_notes: chord_midi_notes(c, active_key),
-                duration: c.duration,
-                slur: c.slur || c.tie_to_next(),
-            },
+            NoteEvent::Chord(c) => {
+                let voicing = voice_chord(
+                    &chord_pitch_classes(c, active_key),
+                    previous_voicing.as_ref(),
+                );
+                let midi_notes = voicing.midi_notes();
+                *previous_voicing = Some(voicing);
+                EventResolution::Notes {
+                    midi_notes,
+                    duration: c.duration,
+                    slur: c.slur || c.tie_to_next(),
+                }
+            }
             NoteEvent::Rest(r) => EventResolution::Rest {
                 duration: r.duration,
             },
@@ -199,13 +212,12 @@ pub(super) fn process_percussion_events(
     )
 }
 
-fn chord_midi_notes(
+fn chord_pitch_classes(
     chord: &crate::ast::grouped::GroupedChordNote,
     active_key: &KeyChange,
-) -> Vec<u8> {
-    let base_root = resolve_midi_note(&chord.degree, 0, active_key);
-    let acc_delta = accidental_offset(&chord.accidental);
-    let root = (base_root as i32 + acc_delta).clamp(0, 127) as u8;
+) -> ChordPitchClasses {
+    let root = resolve_midi_note(&chord.degree, 0, active_key) as i32
+        + accidental_offset(&chord.accidental);
 
     let triad_offsets: &[i32] = match chord.triad {
         crate::ast::parsed::TriadQuality::Major => &[0, 4, 7],
@@ -222,22 +234,18 @@ fn chord_midi_notes(
         None => None,
     };
 
-    let mut notes_to_play: Vec<u8> = triad_offsets
-        .iter()
-        .map(|&off| (root as i32 + off).clamp(0, 127) as u8)
-        .collect();
-    if let Some(off) = ext_offset {
-        notes_to_play.push((root as i32 + off).clamp(0, 127) as u8);
-    }
+    let bass = chord.bass.as_ref().map_or(root, |bass| {
+        resolve_midi_note(&bass.degree, 0, active_key) as i32 + accidental_offset(&bass.accidental)
+    });
 
-    if let Some(bass) = &chord.bass {
-        let base_bass = resolve_midi_note(&bass.degree, 0, active_key);
-        let bass_acc = accidental_offset(&bass.accidental);
-        let bass_note = ((base_bass as i32 + bass_acc) - 12).clamp(0, 127) as u8;
-        notes_to_play.push(bass_note);
+    ChordPitchClasses {
+        chord_tones: triad_offsets
+            .iter()
+            .chain(ext_offset.iter())
+            .map(|offset| (root + offset).rem_euclid(12))
+            .collect(),
+        bass: bass.rem_euclid(12),
     }
-
-    notes_to_play
 }
 
 pub(super) fn flush_pending_ties(

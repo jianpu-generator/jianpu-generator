@@ -132,8 +132,8 @@ fn sus4_chord_expands_to_root_fourth_fifth() {
     let midi_bytes = write_midi(&score).unwrap();
     assert_eq!(
         note_on_keys(&midi_bytes),
-        vec![60, 65, 67],
-        "1sus4 in key C should expand to C, F, G"
+        vec![48, 60, 65, 67],
+        "1sus4 in key C should expand to bass C plus C, F, G"
     );
 }
 
@@ -150,8 +150,8 @@ fn sus2_chord_expands_to_root_second_fifth() {
     let midi_bytes = write_midi(&score).unwrap();
     assert_eq!(
         note_on_keys(&midi_bytes),
-        vec![60, 62, 67],
-        "1sus2 in key C should expand to C, D, G"
+        vec![48, 60, 62, 67],
+        "1sus2 in key C should expand to bass C plus C, D, G"
     );
 }
 
@@ -273,8 +273,9 @@ fn octave_offset_zero_is_identity() {
 #[test]
 fn cross_measure_chord_slur_does_not_replay_chord() {
     // A chord `(1` at the end of measure 1 slurred into `1)` at the start of measure 2.
-    // Because the same chord is tied across the barline, there should be exactly 3 NoteOn
-    // events (one per note of the C major triad), not 6 (which would mean the chord re-fires).
+    // Because the same chord is tied across the barline, there should be exactly 4 NoteOn
+    // events (the bass plus one per note of the C major triad), not 8 (which would mean the
+    // chord re-fires).
     let input = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
         "# parts\nC = chords\n\n",
@@ -288,8 +289,8 @@ fn cross_measure_chord_slur_does_not_replay_chord() {
     let midi_bytes = write_midi(&score).unwrap();
     assert_eq!(
         count_note_on_events(&midi_bytes),
-        3,
-        "cross-measure chord slur should produce exactly 3 NoteOn events (C major triad once), \
+        4,
+        "cross-measure chord slur should produce exactly 4 NoteOn events (bass + C major triad once), \
          got {} — chord is being re-articulated across the barline",
         count_note_on_events(&midi_bytes),
     );
@@ -298,7 +299,7 @@ fn cross_measure_chord_slur_does_not_replay_chord() {
 #[test]
 fn tilde_cross_measure_chord_does_not_replay_chord() {
     // [a] 3~---  => chord 3 tied into 3 extensions; [a] 3 => chord 3 in measure 2.
-    // The same chord tied across the barline should produce only 3 NoteOn events (one triad).
+    // The same chord tied across the barline should produce only 4 NoteOn events (bass + one triad).
     let input = concat!(
         "# metadata\ntitle=\"\"\nauthor=\"\"\n\n",
         "# parts\nAccompaniment [a] = chords\n\n",
@@ -312,8 +313,8 @@ fn tilde_cross_measure_chord_does_not_replay_chord() {
     let midi_bytes = write_midi(&score).unwrap();
     assert_eq!(
         count_note_on_events(&midi_bytes),
-        3,
-        "cross-measure tilde chord tie should produce 3 NoteOn events (triad once), \
+        4,
+        "cross-measure tilde chord tie should produce 4 NoteOn events (bass + triad once), \
          got {} — chord is being re-articulated",
         count_note_on_events(&midi_bytes),
     );
@@ -323,8 +324,8 @@ fn tilde_cross_measure_chord_does_not_replay_chord() {
 fn tie_across_barline_with_two_chord_parts_does_not_replay_either_chord() {
     // `g = follow[m]` makes `g` a second `chords`-kind part, so both `m` and `g`
     // share the MIDI chord channel. Each part ties its own chord across the barline
-    // (`1~` into `1`), so this must produce exactly 6 NoteOn events total (3 per
-    // part, one attack each) — not 12, which would mean one part's tie got dropped
+    // (`1~` into `1`), so this must produce exactly 8 NoteOn events total (4 per
+    // part, one attack each) — not 16, which would mean one part's tie got dropped
     // because it shared tie-tracking state with the other chord part.
     let input = concat!(
         "# metadata\ntitle=\"\"\nauthor=\"\"\n\n",
@@ -341,9 +342,9 @@ fn tie_across_barline_with_two_chord_parts_does_not_replay_either_chord() {
     let midi_bytes = write_midi(&score).unwrap();
     assert_eq!(
         count_note_on_events(&midi_bytes),
-        6,
-        "two tied chord parts crossing a barline should produce 6 NoteOn events total \
-         (3 per part, one attack each), got {} — a chord part's tie state is bleeding \
+        8,
+        "two tied chord parts crossing a barline should produce 8 NoteOn events total \
+         (4 per part, one attack each), got {} — a chord part's tie state is bleeding \
          into another chord part sharing the same channel",
         count_note_on_events(&midi_bytes),
     );

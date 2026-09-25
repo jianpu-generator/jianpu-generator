@@ -5,6 +5,8 @@ use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, Offset};
 use crate::error::Span;
 use midly::{MidiMessage, Smf, TrackEventKind};
 
+#[path = "tests_chord_voicing.rs"]
+mod tests_chord_voicing;
 #[path = "tests_chords.rs"]
 mod tests_chords;
 #[path = "tests_tied_notes.rs"]
