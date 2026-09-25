@@ -1,8 +1,5 @@
+import { type ClickableElementId, jianpuWasm } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
-import {
-  type ClickableElementId,
-  resolveSelectionRange,
-} from './clickableElementId'
 import type { PreviewAnchorState } from './previewAnchorState'
 import {
   anyClickableElementIdAtPoint,
@@ -64,7 +61,7 @@ export function resolveMeasureSelection(
   const finalRange = point
     ? (getMeasureAtPoint(point.x, point.y) ?? anchorState.current)
     : anchorState.anchor
-  const response = resolveSelectionRange(
+  const response = jianpuWasm().resolveSelectionRange(
     noteSpans,
     lyricSpans,
     anchorState.anchorId,
@@ -153,10 +150,7 @@ export function resolveNoteSelection(
   { container, point, currentIdHint, noteSpans, lyricSpans }: ResolveModeArgs,
 ): ResolvedSelection {
   const current = point ?? anchorState.anchor
-  const anchorCell: NoteCell = {
-    sourcePartIndex: anchorState.anchorId.sourcePartIndex,
-    noteId: anchorState.anchorId.noteId,
-  }
+  const anchorCell: NoteCell = anchorState.anchorId.val
   // Resolves every `Note ↔ Note` combination (same-part and cross-part)
   // and, when `current` lands on a lyric syllable, part label, or lyric
   // label instead, every one of `Note ↔ Lyric` (cross-row, either
@@ -195,7 +189,7 @@ export function resolveNoteSelection(
     return { noteCells, lyricCells }
   }
 
-  const response = resolveSelectionRange(
+  const response = jianpuWasm().resolveSelectionRange(
     noteSpans,
     lyricSpans,
     anchorState.anchorId,
@@ -253,11 +247,7 @@ export function resolveLyricSelection(
   { container, point, currentIdHint, noteSpans, lyricSpans }: ResolveModeArgs,
 ): ResolvedSelection {
   const current = point ?? anchorState.anchor
-  const anchorCell: LyricCell = {
-    sourcePartIndex: anchorState.anchorId.sourcePartIndex,
-    noteId: anchorState.anchorId.noteId,
-    verse: anchorState.anchorId.verse,
-  }
+  const anchorCell: LyricCell = anchorState.anchorId.val
   // Try wasm's ID-based range resolution first — resolves every
   // `Lyric ↔ Lyric` scope (same part-and-verse, same-part cross-verse, and
   // cross-part) and, when `current` lands on a note, part label, or lyric
@@ -273,7 +263,7 @@ export function resolveLyricSelection(
   const currentId =
     currentIdHint ?? anyClickableElementIdAtPoint(current.x, current.y)
   const response = currentId
-    ? resolveSelectionRange(
+    ? jianpuWasm().resolveSelectionRange(
         noteSpans,
         lyricSpans,
         anchorState.anchorId,

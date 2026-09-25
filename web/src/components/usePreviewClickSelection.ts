@@ -1,7 +1,7 @@
 import type { RefObject } from 'react'
 import { useEffect, useRef, useState } from 'react'
+import type { ClickableElementId } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
-import type { ClickableElementId } from './clickableElementId'
 import { clickableElementIdFromElement } from './clickableElementId'
 import type { PreviewAnchorState } from './previewAnchorState'
 import { cancelAnchor } from './previewClickHandler'

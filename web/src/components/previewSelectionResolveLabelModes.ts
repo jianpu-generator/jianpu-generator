@@ -1,4 +1,4 @@
-import { resolveSelectionRange } from './clickableElementId'
+import { jianpuWasm } from '../jianpuWasm'
 import type { PreviewAnchorState } from './previewAnchorState'
 import { anyClickableElementIdAtPoint } from './previewClickableElementIdBuilders'
 import {
@@ -53,7 +53,7 @@ export function resolvePartLabelSelection(
     ? (currentIdHint ?? anyClickableElementIdAtPoint(current.x, current.y))
     : undefined
   const response = currentId
-    ? resolveSelectionRange(
+    ? jianpuWasm().resolveSelectionRange(
         noteSpans,
         lyricSpans,
         anchorState.anchorId,
@@ -79,7 +79,7 @@ export function resolvePartLabelSelection(
           container,
           anchorState.anchor,
           current,
-          anchorState.anchorId,
+          anchorState.anchorId.val,
         )
       : []
     noteCells = noteCellsForPartLabels(noteSpans, hits)
@@ -152,7 +152,7 @@ export function resolveLyricLabelSelection(
     ? (currentIdHint ?? anyClickableElementIdAtPoint(current.x, current.y))
     : undefined
   const response = currentId
-    ? resolveSelectionRange(
+    ? jianpuWasm().resolveSelectionRange(
         noteSpans,
         lyricSpans,
         anchorState.anchorId,
@@ -184,7 +184,7 @@ export function resolveLyricLabelSelection(
           container,
           anchorState.anchor,
           current,
-          anchorState.anchorId,
+          anchorState.anchorId.val,
         )
       : []
     noteCells = []

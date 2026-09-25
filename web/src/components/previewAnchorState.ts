@@ -1,4 +1,4 @@
-import type { ClickableElementId } from './clickableElementId'
+import type { ClickableElementId } from '../jianpuWasm'
 import type { AnchorPoint } from './previewRangeHighlights'
 import type { MeasureRange } from './previewSelection'
 
@@ -39,7 +39,7 @@ export type PreviewAnchorState =
       mode: 'measure'
       anchor: MeasureRange
       current: MeasureRange
-      anchorId: Extract<ClickableElementId, { kind: 'measure' }>
+      anchorId: Extract<ClickableElementId, { tag: 'measure' }>
     }
   | {
       // A bar number's own click target anchors this instead of plain
@@ -55,7 +55,7 @@ export type PreviewAnchorState =
       mode: 'bar-number-system'
       anchor: MeasureRange
       current: MeasureRange
-      anchorId: Extract<ClickableElementId, { kind: 'measure' }>
+      anchorId: Extract<ClickableElementId, { tag: 'measure' }>
     }
   | {
       mode: 'note'
@@ -66,13 +66,13 @@ export type PreviewAnchorState =
        * on any note's own click target, so the gesture still collapses to a
        * single cell instead of an empty selection. See this type's doc
        * comment above. */
-      anchorId: Extract<ClickableElementId, { kind: 'note' }>
+      anchorId: Extract<ClickableElementId, { tag: 'note' }>
     }
   | {
       mode: 'part-label'
       anchor: AnchorPoint
       current: AnchorPoint
-      anchorId: Extract<ClickableElementId, { kind: 'partLabel' }>
+      anchorId: Extract<ClickableElementId, { tag: 'part-label' }>
     }
   | {
       // Cmd/Ctrl-click on a part label — the label-side mirror of 'measure'
@@ -97,7 +97,7 @@ export type PreviewAnchorState =
       mode: 'lyric-label'
       anchor: AnchorPoint
       current: AnchorPoint
-      anchorId: Extract<ClickableElementId, { kind: 'lyricLabel' }>
+      anchorId: Extract<ClickableElementId, { tag: 'lyric-label' }>
     }
   | {
       // No note-style single-cell fallback needed here: a lyric syllable's
@@ -114,6 +114,6 @@ export type PreviewAnchorState =
        * second click that lands directly on another syllable in the same
        * verse resolves by `noteId` order instead of pixel geometry (see
        * `previewRangeSelection.ts`). */
-      anchorId: Extract<ClickableElementId, { kind: 'lyric' }>
+      anchorId: Extract<ClickableElementId, { tag: 'lyric' }>
     }
   | null

@@ -43,8 +43,8 @@ export interface MeasureRange {
 function measureRangeFromId(
   id: ReturnType<typeof clickableElementIdFromElement>,
 ): MeasureRange | undefined {
-  if (id?.kind !== 'measure') return undefined
-  return { start: id.measureIndexStart, end: id.measureIndexEnd }
+  if (id?.tag !== 'measure') return undefined
+  return { start: id.val.measureIndexStart, end: id.val.measureIndexEnd }
 }
 
 /**
@@ -193,8 +193,7 @@ export function noteCellsInMeasureRange(
  * the `pointer-events: none` playback cursor rect for the same note. */
 export function getNoteAtPoint(x: number, y: number): NoteCell | undefined {
   const id = getClickableElementIdAtPoint(x, y, 'note')
-  if (id?.kind !== 'note') return undefined
-  return { sourcePartIndex: id.sourcePartIndex, noteId: id.noteId }
+  return id?.tag === 'note' ? id.val : undefined
 }
 
 /** One rendered lyric syllable, keyed the same way as `Tag::Lyric`'s
@@ -213,12 +212,7 @@ export type LyricCell = LyricCellIn
  * resolves here rather than to `getNoteAtPoint`. */
 export function getLyricAtPoint(x: number, y: number): LyricCell | undefined {
   const id = getClickableElementIdAtPoint(x, y, 'lyric')
-  if (id?.kind !== 'lyric') return undefined
-  return {
-    sourcePartIndex: id.sourcePartIndex,
-    noteId: id.noteId,
-    verse: id.verse,
-  }
+  return id?.tag === 'lyric' ? id.val : undefined
 }
 
 /** Every lyric syllable cell belonging to the given measure range, resolved

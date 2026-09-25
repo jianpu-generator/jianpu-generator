@@ -1,4 +1,4 @@
-import type { ClickableElementId } from './clickableElementId'
+import type { ClickableElementId } from '../jianpuWasm'
 import type { LyricLabelHit, PartLabelHit } from './previewLabelSelection'
 import {
   getLyricLabelAtPoint,
@@ -15,11 +15,10 @@ import { getLyricAtPoint, getNoteAtPoint } from './previewSelection'
  */
 export function measureClickableElementId(
   range: MeasureRange,
-): Extract<ClickableElementId, { kind: 'measure' }> {
+): Extract<ClickableElementId, { tag: 'measure' }> {
   return {
-    kind: 'measure',
-    measureIndexStart: range.start,
-    measureIndexEnd: range.end,
+    tag: 'measure',
+    val: { measureIndexStart: range.start, measureIndexEnd: range.end },
   }
 }
 
@@ -27,11 +26,10 @@ export function measureClickableElementId(
  * `ClickableElementId` (`'note'` variant) from a `NoteCell`. */
 export function noteClickableElementId(
   cell: NoteCell,
-): Extract<ClickableElementId, { kind: 'note' }> {
+): Extract<ClickableElementId, { tag: 'note' }> {
   return {
-    kind: 'note',
-    sourcePartIndex: cell.sourcePartIndex,
-    noteId: cell.noteId,
+    tag: 'note',
+    val: { sourcePartIndex: cell.sourcePartIndex, noteId: cell.noteId },
   }
 }
 
@@ -39,40 +37,31 @@ export function noteClickableElementId(
  * `ClickableElementId` (`'lyric'` variant) from a `LyricCell`. */
 export function lyricClickableElementId(
   cell: LyricCell,
-): Extract<ClickableElementId, { kind: 'lyric' }> {
+): Extract<ClickableElementId, { tag: 'lyric' }> {
   return {
-    kind: 'lyric',
-    sourcePartIndex: cell.sourcePartIndex,
-    noteId: cell.noteId,
-    verse: cell.verse,
+    tag: 'lyric',
+    val: {
+      sourcePartIndex: cell.sourcePartIndex,
+      noteId: cell.noteId,
+      verse: cell.verse,
+    },
   }
 }
 
 /** The 'part-label'-mode analog of `noteClickableElementId` — builds the
- * `ClickableElementId` (`'partLabel'` variant) from a `PartLabelHit`. */
+ * `ClickableElementId` (`'part-label'` variant) from a `PartLabelHit`. */
 export function partLabelClickableElementId(
   hit: PartLabelHit,
-): Extract<ClickableElementId, { kind: 'partLabel' }> {
-  return {
-    kind: 'partLabel',
-    sourcePartIndex: hit.sourcePartIndex,
-    measureIndexStart: hit.measureIndexStart,
-    measureIndexEnd: hit.measureIndexEnd,
-  }
+): Extract<ClickableElementId, { tag: 'part-label' }> {
+  return { tag: 'part-label', val: hit }
 }
 
 /** The 'lyric-label'-mode analog of `partLabelClickableElementId` — builds
- * the `ClickableElementId` (`'lyricLabel'` variant) from a `LyricLabelHit`. */
+ * the `ClickableElementId` (`'lyric-label'` variant) from a `LyricLabelHit`. */
 export function lyricLabelClickableElementId(
   hit: LyricLabelHit,
-): Extract<ClickableElementId, { kind: 'lyricLabel' }> {
-  return {
-    kind: 'lyricLabel',
-    sourcePartIndex: hit.sourcePartIndex,
-    verse: hit.verse,
-    measureIndexStart: hit.measureIndexStart,
-    measureIndexEnd: hit.measureIndexEnd,
-  }
+): Extract<ClickableElementId, { tag: 'lyric-label' }> {
+  return { tag: 'lyric-label', val: hit }
 }
 
 /**

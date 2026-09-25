@@ -941,8 +941,9 @@ world jianpu-wasm {
 
     // ==================== selection_range/types.rs ====================
 
-    // `ClickableElementId` — input-only, decoded via serde_wasm_bindgen
-    // today; the `kind` tag becomes the variant case name.
+    // `ClickableElementId` — input-only. Each case's record has the same
+    // fields as the matching `tag` case, so the web builds one straight from
+    // a rendered group's `Tag`.
     record note-element-id {
         source-part-index: u32,
         note-id: u32,

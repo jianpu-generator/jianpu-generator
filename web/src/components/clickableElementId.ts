@@ -3,39 +3,7 @@ import {
   measureGroupSelector,
   tagFromElement,
 } from '../dataAttributes'
-import {
-  jianpuWasm,
-  type LyricSpan,
-  type NoteSpan,
-  type ResolveSelectionRangeResponse,
-  type ClickableElementId as WasmClickableElementId,
-} from '../jianpuWasm'
-
-/**
- * TS mirror of `ClickableElementId` (`crates/jianpu-wasm/src/selection_range_types.rs`)
- * — a tagged union over every rendered element `resolve_selection_range` can
- * resolve a selection range against, keyed exactly the way each element's
- * own `data-*` attributes already carry its identity (see
- * `groupAttrsForTag` in `../dataAttributes.ts`). Hand-written rather than
- * generated, per that Rust type's own doc comment.
- */
-export type ClickableElementId =
-  | { kind: 'note'; sourcePartIndex: number; noteId: number }
-  | { kind: 'lyric'; sourcePartIndex: number; noteId: number; verse: number }
-  | { kind: 'measure'; measureIndexStart: number; measureIndexEnd: number }
-  | {
-      kind: 'partLabel'
-      sourcePartIndex: number
-      measureIndexStart: number
-      measureIndexEnd: number
-    }
-  | {
-      kind: 'lyricLabel'
-      sourcePartIndex: number
-      verse: number
-      measureIndexStart: number
-      measureIndexEnd: number
-    }
+import type { ClickableElementId } from '../jianpuWasm'
 
 /**
  * The `ClickableElementId` for an already-resolved DOM element — the
@@ -56,39 +24,15 @@ export function clickableElementIdFromElement(
   if (!tag) return undefined
   switch (tag.tag) {
     case 'note':
-      return {
-        kind: 'note',
-        sourcePartIndex: tag.val.sourcePartIndex,
-        noteId: tag.val.noteId,
-      }
     case 'lyric':
-      return {
-        kind: 'lyric',
-        sourcePartIndex: tag.val.sourcePartIndex,
-        noteId: tag.val.noteId,
-        verse: tag.val.verse,
-      }
     case 'part-label':
-      return {
-        kind: 'partLabel',
-        sourcePartIndex: tag.val.sourcePartIndex,
-        measureIndexStart: tag.val.measureIndexStart,
-        measureIndexEnd: tag.val.measureIndexEnd,
-      }
     case 'lyric-label':
-      return {
-        kind: 'lyricLabel',
-        sourcePartIndex: tag.val.sourcePartIndex,
-        verse: tag.val.verse,
-        measureIndexStart: tag.val.measureIndexStart,
-        measureIndexEnd: tag.val.measureIndexEnd,
-      }
+      return tag
     case 'measure':
     case 'bar-number':
       return {
-        kind: 'measure',
-        measureIndexStart: tag.val.index,
-        measureIndexEnd: tag.val.end,
+        tag: 'measure',
+        val: { measureIndexStart: tag.val.index, measureIndexEnd: tag.val.end },
       }
     case 'bar-line': {
       // A bar line visually introduces the measure *after* it, so `next`
@@ -123,9 +67,11 @@ export function clickableElementIdFromElement(
       )
         return undefined
       return {
-        kind: 'measure',
-        measureIndexStart: measureTag.val.index,
-        measureIndexEnd: measureTag.val.end,
+        tag: 'measure',
+        val: {
+          measureIndexStart: measureTag.val.index,
+          measureIndexEnd: measureTag.val.end,
+        },
       }
     }
     case 'section-label':
@@ -137,69 +83,4 @@ export function clickableElementIdFromElement(
       )
     }
   }
-}
-
-/** The wasm component's own `clickable-element-id` shape for `id`, as
- * `resolveSelectionRange` takes it. */
-export function clickableElementIdToWasm(
-  id: ClickableElementId,
-): WasmClickableElementId {
-  switch (id.kind) {
-    case 'note':
-      return {
-        tag: 'note',
-        val: { sourcePartIndex: id.sourcePartIndex, noteId: id.noteId },
-      }
-    case 'lyric':
-      return {
-        tag: 'lyric',
-        val: {
-          sourcePartIndex: id.sourcePartIndex,
-          noteId: id.noteId,
-          verse: id.verse,
-        },
-      }
-    case 'measure':
-      return {
-        tag: 'measure',
-        val: {
-          measureIndexStart: id.measureIndexStart,
-          measureIndexEnd: id.measureIndexEnd,
-        },
-      }
-    case 'partLabel':
-      return {
-        tag: 'part-label',
-        val: {
-          sourcePartIndex: id.sourcePartIndex,
-          measureIndexStart: id.measureIndexStart,
-          measureIndexEnd: id.measureIndexEnd,
-        },
-      }
-    case 'lyricLabel':
-      return {
-        tag: 'lyric-label',
-        val: {
-          sourcePartIndex: id.sourcePartIndex,
-          verse: id.verse,
-          measureIndexStart: id.measureIndexStart,
-          measureIndexEnd: id.measureIndexEnd,
-        },
-      }
-  }
-}
-
-/** `resolveSelectionRange` over two `ClickableElementId`s. */
-export function resolveSelectionRange(
-  noteSpans: NoteSpan[],
-  lyricSpans: LyricSpan[],
-  anchor: ClickableElementId,
-  current: ClickableElementId,
-): ResolveSelectionRangeResponse {
-  return jianpuWasm().resolveSelectionRange(
-    noteSpans,
-    lyricSpans,
-    clickableElementIdToWasm(anchor),
-    clickableElementIdToWasm(current),
-  )
 }

@@ -1,5 +1,9 @@
 import { groupTagSelector } from '../dataAttributes'
-import type { Tag } from '../jianpuWasm'
+import type {
+  LyricLabelElementId,
+  PartLabelElementId,
+  Tag,
+} from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import { clickableElementIdFromElement } from './clickableElementId'
 import type { LyricCell, NoteCell } from './previewSelection'
@@ -21,11 +25,7 @@ function getClickableElementIdAtPoint(
 /** One rendered part-label click target, keyed the same way as
  * `Tag` `part-label`'s `data-part-index`/`data-measure-index-start`/
  * `data-measure-index-end` SVG attributes — see `getPartLabelAtPoint`. */
-export interface PartLabelHit {
-  sourcePartIndex: number
-  measureIndexStart: number
-  measureIndexEnd: number
-}
+export type PartLabelHit = PartLabelElementId
 
 /** The part-label click target under the given point, if any — reads the
  * invisible `PartLabelClickTarget` rect's enclosing `Tag` `part-label` group
@@ -35,12 +35,7 @@ export function getPartLabelAtPoint(
   y: number,
 ): PartLabelHit | undefined {
   const id = getClickableElementIdAtPoint(x, y, 'part-label')
-  if (id?.kind !== 'partLabel') return undefined
-  return {
-    sourcePartIndex: id.sourcePartIndex,
-    measureIndexStart: id.measureIndexStart,
-    measureIndexEnd: id.measureIndexEnd,
-  }
+  return id?.tag === 'part-label' ? id.val : undefined
 }
 
 /** Every note/rest cell belonging to the given part-label hits — each hit
@@ -93,12 +88,7 @@ export function lyricCellsForPartLabels(
  * `Tag::LyricLabel`'s `data-part-index`/`data-verse`/
  * `data-measure-index-start`/`data-measure-index-end` SVG attributes — see
  * `getLyricLabelAtPoint`. The lyric-side mirror of `PartLabelHit`. */
-export interface LyricLabelHit {
-  sourcePartIndex: number
-  verse: number
-  measureIndexStart: number
-  measureIndexEnd: number
-}
+export type LyricLabelHit = LyricLabelElementId
 
 /** The lyric-label click target under the given point, if any — reads the
  * invisible `LyricLabelClickTarget` rect's enclosing `Tag::LyricLabel` group
@@ -109,13 +99,7 @@ export function getLyricLabelAtPoint(
   y: number,
 ): LyricLabelHit | undefined {
   const id = getClickableElementIdAtPoint(x, y, 'lyric-label')
-  if (id?.kind !== 'lyricLabel') return undefined
-  return {
-    sourcePartIndex: id.sourcePartIndex,
-    verse: id.verse,
-    measureIndexStart: id.measureIndexStart,
-    measureIndexEnd: id.measureIndexEnd,
-  }
+  return id?.tag === 'lyric-label' ? id.val : undefined
 }
 
 /** Every lyric syllable cell belonging to the given lyric-label hits — each
