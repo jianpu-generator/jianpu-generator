@@ -51,6 +51,7 @@ import type {
   ListSymbolsResponse,
   MeasureAtOffsetResponse,
   MetadataDefaultsOut,
+  PitchDescription,
   RenameSymbolResponse,
   RenderResponse,
   ResolveSelectionRangeResponse,
@@ -351,6 +352,24 @@ export function toggle_range_tie(
   return fromRangeEditResponse(
     root().toggleRangeTie(source, toWasmByteRanges(ranges)),
   )
+}
+
+export function describe_selection(
+  source: string,
+  ranges: SelectionRange[],
+): PitchDescription | null {
+  const description = root().describeSelection(source, toWasmByteRanges(ranges))
+  if (description === undefined) return null
+  if (description.tag === 'note') {
+    return { kind: 'note', letterName: description.val.letterName }
+  }
+  return {
+    kind: 'chord',
+    chordName: description.val.chordName,
+    toneNames: description.val.toneNames,
+    bassNote: description.val.bassNote ?? null,
+    guitarDiagramSvg: description.val.guitarDiagramSvg ?? null,
+  }
 }
 
 export function format_score(source: string): string {

@@ -14,6 +14,7 @@ import type {
 import type { WorkerResponse } from '../worker/jianpu.worker'
 import { handleExportMessage } from './useJianpuWorkerExportMessages'
 import type {
+  DescribeSelectionRequestTracker,
   RangeEditRequestTracker,
   TextRequestTracker,
 } from './useJianpuWorkerTypes'
@@ -38,6 +39,7 @@ export interface WorkerMessageHandlerDeps {
   >
   shiftPartOctaveTracker: TextRequestTracker
   editRangeTracker: RangeEditRequestTracker
+  describeSelectionTracker: DescribeSelectionRequestTracker
   latestPdfIdRef: RefObject<number>
   setPdfExporting: (value: boolean) => void
   activeFileRef: RefObject<string>
@@ -154,6 +156,15 @@ export function createWorkerMessageHandler(deps: WorkerMessageHandlerDeps) {
         ranges: msg.ranges,
       })
       deps.editRangeTracker.pendingRequestsRef.current.delete(msg.id)
+      return
+    }
+
+    if (msg.type === 'selectionDescribed') {
+      const { latestIdRef, pendingRequestsRef } = deps.describeSelectionTracker
+      if (msg.id === latestIdRef.current) {
+        pendingRequestsRef.current.get(msg.id)?.(msg.description)
+      }
+      pendingRequestsRef.current.delete(msg.id)
       return
     }
 

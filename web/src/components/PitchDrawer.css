@@ -1,0 +1,83 @@
+.pane--preview {
+  position: relative;
+}
+
+.pitch-drawer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--editor-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(0);
+  transition:
+    transform 0.25s ease,
+    visibility 0s linear 0s;
+}
+
+.pitch-drawer[data-state="closed"] {
+  transform: translateY(100%);
+  visibility: hidden;
+  transition:
+    transform 0.25s ease,
+    visibility 0s linear 0.25s;
+}
+
+.pitch-drawer[data-dragging] {
+  transition: none;
+}
+
+.pitch-drawer-handle {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 4px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.pitch-drawer[data-dragging] .pitch-drawer-handle {
+  cursor: grabbing;
+}
+
+.pitch-drawer-handle-bar {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+}
+
+.pitch-drawer-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 16px 16px;
+}
+
+.pitch-drawer-name {
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.pitch-drawer-detail {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.pitch-drawer-guitar-diagram {
+  flex: none;
+  color: var(--text);
+}
+
+.pitch-drawer-guitar-diagram svg {
+  display: block;
+  width: 132px;
+  height: auto;
+}

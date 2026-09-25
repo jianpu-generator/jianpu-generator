@@ -3,6 +3,11 @@
 //! role — see that file's own comments for the full picture, including the
 //! Serif-vs-alias asymmetry). Output lands in `OUT_DIR/fonts_generated.rs`,
 //! `include!`-d by `src/fonts.rs`.
+//!
+//! Also generates `src/pitch_description/guitar_voicing.rs`'s lookup table
+//! from the vendored `vendor/chords-db/guitar.json` (see
+//! `emit_guitar_voicings`), keeping only each chord's first position so the
+//! wasm binary carries a few KB of table instead of the whole JSON.
 
 use serde::Deserialize;
 use std::env;
@@ -56,8 +61,75 @@ fn emit_role(
     Ok(())
 }
 
+#[derive(Deserialize)]
+struct ChordsDb {
+    chords: std::collections::BTreeMap<String, Vec<ChordsDbChord>>,
+}
+
+#[derive(Deserialize)]
+struct ChordsDbChord {
+    suffix: String,
+    positions: Vec<ChordsDbPosition>,
+}
+
+#[derive(Deserialize)]
+struct ChordsDbPosition {
+    frets: Vec<i8>,
+    #[serde(rename = "baseFret")]
+    base_fret: u8,
+    barres: Vec<u8>,
+}
+
+/// Maps a chords-db root key (`"Csharp"`, `"Eb"`, ...) to its pitch class
+/// (C = 0).
+fn chords_db_root_pitch_class(root: &str) -> Result<u8, Box<dyn std::error::Error>> {
+    let pitch_class = match root {
+        "C" => 0,
+        "Csharp" => 1,
+        "D" => 2,
+        "Eb" => 3,
+        "E" => 4,
+        "F" => 5,
+        "Fsharp" => 6,
+        "G" => 7,
+        "Ab" => 8,
+        "A" => 9,
+        "Bb" => 10,
+        "B" => 11,
+        other => return Err(format!("unknown chords-db root {other:?}").into()),
+    };
+    Ok(pitch_class)
+}
+
+/// Emits one `GuitarVoicingEntry` per chords-db chord, using only its first
+/// (most common) position.
+fn emit_guitar_voicings(manifest_dir: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let json_path = PathBuf::from(manifest_dir).join("vendor/chords-db/guitar.json");
+    let db: ChordsDb = serde_json::from_str(&fs::read_to_string(json_path)?)?;
+
+    let mut out = String::from("pub(super) static GUITAR_VOICINGS: &[GuitarVoicingEntry] = &[\n");
+    for (root, chords) in &db.chords {
+        let root_pitch_class = chords_db_root_pitch_class(root)?;
+        for chord in chords {
+            let Some(position) = chord.positions.first() else {
+                continue;
+            };
+            out.push_str(&format!(
+                "    GuitarVoicingEntry {{ root_pitch_class: {root_pitch_class}, suffix: {suffix:?}, voicing: GuitarVoicing {{ frets: {frets:?}, base_fret: {base_fret}, barres: &{barres:?} }} }},\n",
+                suffix = chord.suffix,
+                frets = position.frets,
+                base_fret = position.base_fret,
+                barres = position.barres,
+            ));
+        }
+    }
+    out.push_str("];\n");
+    Ok(out)
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=fonts/fonts.json");
+    println!("cargo:rerun-if-changed=vendor/chords-db/guitar.json");
 
     let manifest_dir = env::var("CARGO_MANIFEST_DIR")?;
     let manifest_json_path = PathBuf::from(&manifest_dir).join("fonts/fonts.json");
@@ -72,6 +144,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = env::var("OUT_DIR")?;
     let out_path = PathBuf::from(out_dir).join("fonts_generated.rs");
     fs::write(out_path, out)?;
+
+    let guitar_voicings_path =
+        PathBuf::from(env::var("OUT_DIR")?).join("guitar_voicings_generated.rs");
+    fs::write(guitar_voicings_path, emit_guitar_voicings(&manifest_dir)?)?;
 
     Ok(())
 }

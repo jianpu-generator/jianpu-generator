@@ -162,6 +162,7 @@ export function useAppController() {
     formatScore,
     shiftPartOctave,
     editRange,
+    describeSelection,
     importFromFile,
   } = useJianpuWorker(
     source,
@@ -365,6 +366,7 @@ export function useAppController() {
     handleSelect,
     handleFormatScore,
     handleEditSelection,
+    describeSelection,
     importingFile,
     handleImportFile,
     editPartsOpen,

@@ -117,6 +117,9 @@ interface PreviewProps {
      * everywhere else it's declared. */
     highlightRanges?: { start: number; end: number }[]
   } | null
+  /** Fired whenever a click-and-click gesture starts or stops waiting on its
+   * second click, so the pitch drawer can hold off until it commits. */
+  onPendingSecondClickChange?: (pending: boolean) => void
 }
 
 export function Preview({
@@ -143,6 +146,7 @@ export function Preview({
   lyricSpans = [],
   onMeasureRangeSelect,
   selectedMeasureRange = null,
+  onPendingSecondClickChange,
 }: PreviewProps) {
   const previewPagesRef = useRef<HTMLDivElement>(null)
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
@@ -186,6 +190,9 @@ export function Preview({
     lyricSpans,
     onMeasureRangeSelect,
   )
+  useEffect(() => {
+    onPendingSecondClickChange?.(pendingSecondClick)
+  }, [pendingSecondClick, onPendingSecondClickChange])
   const onSectionLabelClickRef = useRef(onSectionLabelClick)
   onSectionLabelClickRef.current = onSectionLabelClick
 

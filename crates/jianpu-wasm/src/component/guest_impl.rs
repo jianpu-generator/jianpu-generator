@@ -316,6 +316,10 @@ impl Guest for Component {
         format_score(source)
     }
 
+    fn describe_selection(source: String, ranges: Vec<ByteRange>) -> Option<PitchDescription> {
+        describe_selection(source, ranges)
+    }
+
     fn list_part_declarations(
         source: String,
         raw_instruments: Vec<InstrumentInfo>,

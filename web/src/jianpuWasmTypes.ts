@@ -331,3 +331,18 @@ export type NoteTimingsResponse =
 export type ResolveSelectionRangeResponse =
   | { status: 'ok'; note_cells: NoteCellOut[]; lyric_cells: LyricCellOut[] }
   | { status: 'err' }
+
+/** What a selection covering exactly one note or chord means in letter
+ * names, resolved against the key in effect at its measure (see
+ * `pitch_description::describe_selection`). Shown by the pitch drawer. */
+export type PitchDescription =
+  | { kind: 'note'; letterName: string }
+  | {
+      kind: 'chord'
+      chordName: string
+      toneNames: string[]
+      bassNote: string | null
+      /** A chord-box SVG drawn in `currentColor`, absent for chord types
+       * with no known guitar voicing. */
+      guitarDiagramSvg: string | null
+    }

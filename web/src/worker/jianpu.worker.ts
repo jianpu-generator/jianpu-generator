@@ -1,5 +1,6 @@
 import * as jianpuWasm from '../jianpuWasm'
 import {
+  describe_selection,
   extract_source_from_pdf,
   extract_source_from_svg,
   format_score,
@@ -216,6 +217,15 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       id: msg.id,
       source: result.source,
       ranges: result.ranges,
+    } satisfies WorkerResponse)
+    return
+  }
+
+  if (msg.type === 'describeSelection') {
+    postMessage({
+      type: 'selectionDescribed',
+      id: msg.id,
+      description: describe_selection(msg.source, msg.ranges),
     } satisfies WorkerResponse)
     return
   }

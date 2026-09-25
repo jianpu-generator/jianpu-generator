@@ -730,6 +730,27 @@ world jianpu-wasm {
 
     export format-score: func(source: string) -> string;
 
+    // The editor's pitch drawer (see `pitch_description::describe_selection`):
+    // what a selection covering exactly one note/chord means in letter names,
+    // or `none` for any other selection (several notes, a rest, a caret).
+    record note-description {
+        letter-name: string,
+    }
+
+    record chord-description {
+        chord-name: string,
+        tone-names: list<string>,
+        bass-note: option<string>,
+        guitar-diagram-svg: option<string>,
+    }
+
+    variant pitch-description {
+        note(note-description),
+        chord(chord-description),
+    }
+
+    export describe-selection: func(source: string, ranges: list<byte-range>) -> option<pitch-description>;
+
     // ==================== types_export.rs (wav/pdf/midi/mp3) ====================
 
     record generate-wav-response-ok {

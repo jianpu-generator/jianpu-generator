@@ -16,6 +16,7 @@ export type {
   PartDeclarationModeOut as PartMode,
   PartDeclarationOut as PartDeclaration,
   PartOut as PartInfo,
+  PitchDescription,
   RenderResponse as RenderResult,
   SectionRangeOut as SectionRange,
   SequenceEntryOut as SequenceEntry,

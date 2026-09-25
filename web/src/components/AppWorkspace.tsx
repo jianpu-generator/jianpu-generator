@@ -2,12 +2,14 @@ import * as Tooltip from '@radix-ui/react-tooltip'
 import { AlignLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { MOBILE_BREAKPOINT_QUERY, useMediaQuery } from '../hooks/useMediaQuery'
+import { useSelectionPitchDescription } from '../hooks/useSelectionPitchDescription'
 import type { EditorSelection } from '../types'
 import type { AppWorkspaceProps } from './AppWorkspace.types'
 import { EditMetadataModal } from './EditMetadataModal'
 import { Editor } from './Editor'
 import { EditorToolbarButton } from './EditorToolbarButton'
 import { EditPartsModal } from './EditPartsModal'
+import { PitchDrawer } from './PitchDrawer'
 import { Preview } from './Preview'
 import { SlurIcon } from './SlurIcon'
 import { TieIcon } from './TieIcon'
@@ -22,6 +24,7 @@ export function AppWorkspace({
   handleSourceChange,
   handleFormatScore,
   handleEditSelection,
+  describeSelection,
   readOnly,
   diagnostics,
   diagnosticViewZones,
@@ -88,6 +91,12 @@ export function AppWorkspace({
   const [selectionByteRanges, setSelectionByteRanges] = useState<
     EditorSelection[] | null
   >(null)
+  const [previewSelectionPending, setPreviewSelectionPending] = useState(false)
+  const describedSelection = useSelectionPitchDescription(
+    selectionByteRanges,
+    previewSelectionPending,
+    describeSelection,
+  )
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT_QUERY)
   // Below the mobile breakpoint only one pane is visible at a time, so
   // showing the editor must collapse the preview instead of sitting beside it.
@@ -300,7 +309,9 @@ export function AppWorkspace({
           emptyMessage={
             noPartsSelected ? 'No parts selected.' : 'No preview yet.'
           }
+          onPendingSecondClickChange={setPreviewSelectionPending}
         />
+        <PitchDrawer described={describedSelection} />
       </section>
     </main>
   )

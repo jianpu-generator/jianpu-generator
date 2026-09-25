@@ -10,6 +10,7 @@ import type {
   PartDeclaration,
   PartInfo,
   PartMode,
+  PitchDescription,
   RangeEditOperation,
   SectionRange,
   SequenceEntry,
@@ -37,6 +38,17 @@ export interface RangeEditRequestTracker {
   latestIdRef: RefObject<number>
   pendingRequestsRef: RefObject<
     Map<number, (result: { source: string; ranges: EditorSelection[] }) => void>
+  >
+}
+
+/** Same tracking scheme as `TextRequestTracker`, for the read-only
+ * "describe the selected note/chord" query behind the pitch drawer (see
+ * `pitch_description::describe_selection`). */
+export interface DescribeSelectionRequestTracker {
+  requestIdRef: RefObject<number>
+  latestIdRef: RefObject<number>
+  pendingRequestsRef: RefObject<
+    Map<number, (description: PitchDescription | null) => void>
   >
 }
 
@@ -223,6 +235,15 @@ export interface JianpuWorkerState {
     ranges: EditorSelection[],
     operation: RangeEditOperation,
   ) => Promise<{ source: string; ranges: EditorSelection[] }>
+  /**
+   * Describes the one note or chord `ranges` covers in letter names (see
+   * `pitch_description::describe_selection`), or `null` when it covers
+   * anything else (a caret, a rest, several notes). A reply superseded by a
+   * newer request never resolves.
+   */
+  describeSelection: (
+    ranges: EditorSelection[],
+  ) => Promise<PitchDescription | null>
   /**
    * Recovers the `.jianpu` source embedded in a previously exported SVG/PDF
    * file (see `source_embed::extract_embedded_source`). Rejects if the file

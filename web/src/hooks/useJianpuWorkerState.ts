@@ -12,6 +12,7 @@ import type {
   SequenceEntry,
 } from '../types'
 import type {
+  DescribeSelectionRequestTracker,
   PendingDownload,
   RangeEditRequestTracker,
   TextRequestTracker,
@@ -110,6 +111,11 @@ export function useJianpuWorkerState(
     requestIdRef: useRef(0),
     latestIdRef: useRef(0),
     pendingRequestsRef: useRef(new Map<number, (source: string) => void>()),
+  }
+  const describeSelectionTracker: DescribeSelectionRequestTracker = {
+    requestIdRef: useRef(0),
+    latestIdRef: useRef(0),
+    pendingRequestsRef: useRef(new Map()),
   }
   const editRangeTracker: RangeEditRequestTracker = {
     requestIdRef: useRef(0),
@@ -314,6 +320,7 @@ export function useJianpuWorkerState(
     pendingFormatScoreRequestsRef,
     shiftPartOctaveTracker,
     editRangeTracker,
+    describeSelectionTracker,
     importRequestIdRef,
     pendingImportsRef,
     renderRequestIdRef,

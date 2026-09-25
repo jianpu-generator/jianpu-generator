@@ -9,6 +9,7 @@ import type {
   PartDeclaration,
   PartInfo,
   PartMode,
+  PitchDescription,
   RangeEditOperation,
   SectionRange,
   SequenceEntry,
@@ -198,6 +199,12 @@ export type WorkerRequest =
       operation: RangeEditOperation
       id: number
     }
+  | {
+      type: 'describeSelection'
+      source: string
+      ranges: EditorSelection[]
+      id: number
+    }
 
 export type WorkerResponse =
   | {
@@ -301,4 +308,9 @@ export type WorkerResponse =
        * lose to a second click landing first (see
        * `HANDOFF-octave-toolbar-part-label-selection-bug.md`). */
       ranges: { start: number; end: number }[]
+    }
+  | {
+      type: 'selectionDescribed'
+      id: number
+      description: PitchDescription | null
     }

@@ -34,6 +34,7 @@ pub mod measure_spans;
 pub mod note_spans;
 pub mod parser;
 mod part_info;
+pub mod pitch_description;
 pub mod render_config;
 pub mod renderer;
 pub mod serializer;

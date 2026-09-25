@@ -89,6 +89,25 @@ pub(super) fn toggle_range_tie(source: String, ranges: Vec<ByteRange>) -> RangeE
     to_range_edit_response(result)
 }
 
+pub(super) fn describe_selection(
+    source: String,
+    ranges: Vec<ByteRange>,
+) -> Option<PitchDescription> {
+    use jianpu_generator::pitch_description as description;
+    let ranges = to_source_edit_ranges(ranges);
+    description::describe_selection(&source, &ranges).map(|described| match described {
+        description::PitchDescription::Note(note) => PitchDescription::Note(NoteDescription {
+            letter_name: note.letter_name,
+        }),
+        description::PitchDescription::Chord(chord) => PitchDescription::Chord(ChordDescription {
+            chord_name: chord.chord_name,
+            tone_names: chord.tone_names,
+            bass_note: chord.bass_note,
+            guitar_diagram_svg: chord.guitar_diagram_svg,
+        }),
+    })
+}
+
 fn to_source_edit_ranges(ranges: Vec<ByteRange>) -> Vec<jianpu_generator::source_edit::ByteRange> {
     ranges
         .into_iter()

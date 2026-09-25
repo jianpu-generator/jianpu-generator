@@ -1,6 +1,7 @@
 import type { RefObject } from 'react'
 import { useInstrumentPreview } from './useInstrumentPreview'
 import { useJianpuWorkerAudioActions } from './useJianpuWorkerAudioActions'
+import { useJianpuWorkerDescribeSelection } from './useJianpuWorkerDescribeSelection'
 import { useJianpuWorkerEditRange } from './useJianpuWorkerEditRange'
 import { useJianpuWorkerExports } from './useJianpuWorkerExports'
 import { useJianpuWorkerFormat } from './useJianpuWorkerFormat'
@@ -125,6 +126,7 @@ export function useJianpuWorkerActions({
     pendingFormatScoreRequestsRef: state.pendingFormatScoreRequestsRef,
     shiftPartOctaveTracker: state.shiftPartOctaveTracker,
     editRangeTracker: state.editRangeTracker,
+    describeSelectionTracker: state.describeSelectionTracker,
     latestPdfIdRef: state.latestPdfIdRef,
     setPdfExporting: state.setPdfExporting,
     activeFileRef: state.activeFileRef,
@@ -277,6 +279,12 @@ export function useJianpuWorkerActions({
     editRangeTracker: state.editRangeTracker,
   })
 
+  const { describeSelection } = useJianpuWorkerDescribeSelection({
+    workerRef: state.workerRef,
+    sourceRef: state.sourceRef,
+    describeSelectionTracker: state.describeSelectionTracker,
+  })
+
   const { importFromFile } = useJianpuWorkerImport({
     workerRef: state.workerRef,
     importRequestIdRef: state.importRequestIdRef,
@@ -306,6 +314,7 @@ export function useJianpuWorkerActions({
     formatScore,
     shiftPartOctave,
     editRange,
+    describeSelection,
     importFromFile,
     previewInstrument,
     previewPercussion,

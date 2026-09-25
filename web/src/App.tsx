@@ -122,6 +122,7 @@ export default function App() {
     handleSelect,
     handleFormatScore,
     handleEditSelection,
+    describeSelection,
     importingFile,
     handleImportFile,
     editPartsOpen,
@@ -304,6 +305,7 @@ export default function App() {
         handleSourceChange={handleSourceChange}
         handleFormatScore={handleFormatScore}
         handleEditSelection={handleEditSelection}
+        describeSelection={describeSelection}
         readOnly={readOnly}
         diagnostics={diagnostics}
         diagnosticViewZones={diagnosticViewZones}

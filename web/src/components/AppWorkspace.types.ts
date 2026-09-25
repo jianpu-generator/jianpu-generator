@@ -11,6 +11,7 @@ import type {
   PartDeclaration,
   PartInfo,
   PartMode,
+  PitchDescription,
   RangeEditOperation,
   SoundfontValue,
 } from '../types'
@@ -55,6 +56,11 @@ export interface AppWorkspaceProps {
     ranges: EditorSelection[],
     operation: RangeEditOperation,
   ) => void
+  /** Describes the one note or chord `ranges` covers in letter names, for
+   * the pitch drawer (see `pitch_description::describe_selection`). */
+  describeSelection: (
+    ranges: EditorSelection[],
+  ) => Promise<PitchDescription | null>
   readOnly: boolean
   diagnostics: Diagnostic[]
   diagnosticViewZones: DiagnosticViewZone[]
