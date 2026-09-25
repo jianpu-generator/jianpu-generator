@@ -20,11 +20,13 @@ mod empty_note_measures;
 
 mod directive_grouper;
 mod lyrics_pairing;
+mod metadata_defaults;
 mod part_grouper;
 mod sequence_resolution;
 mod tie_validation;
 
 use directive_grouper::DirectiveGrouper;
+pub use metadata_defaults::metadata_defaults;
 use part_grouper::group_timed_track;
 use sequence_resolution::resolve_sequence;
 use tie_validation::validate_ties;
@@ -344,6 +346,10 @@ fn resolve_metadata(metadata: ParsedMetadata) -> Metadata {
             .unwrap_or(DEFAULT_DIRECTIVE_ROW_OFFSET),
     }
 }
+
+#[cfg(test)]
+#[path = "tests_metadata_defaults.rs"]
+mod tests_metadata_defaults;
 
 #[cfg(test)]
 mod percussion_tests;

@@ -1,5 +1,7 @@
 // ── Text-style defaults and the fully-resolved `TextStyle` type ────────────
 
+use crate::ast::parsed::TextStyleKind;
+
 /// Default `row_height` in points, used when unset in `# metadata`.
 pub const DEFAULT_ROW_HEIGHT: u32 = 24;
 /// Default `max_measures_per_system`, used when unset in `# metadata`.
@@ -153,5 +155,43 @@ pub(crate) fn resolve_text_style(
                 FontFamilyChoice::Monospace => FontFamily::Monospace,
             }
         }),
+    }
+}
+
+impl super::Metadata {
+    pub fn style(&self, kind: TextStyleKind) -> &TextStyle {
+        match kind {
+            TextStyleKind::Title => &self.title_style,
+            TextStyleKind::Subtitle => &self.subtitle_style,
+            TextStyleKind::Author => &self.author_style,
+            TextStyleKind::Sequence => &self.sequence,
+            TextStyleKind::PartLegend => &self.part_legend,
+            TextStyleKind::MeasureNumber => &self.measure_number,
+            TextStyleKind::SectionLabel => &self.section_label,
+            TextStyleKind::PartLabel => &self.part_label,
+            TextStyleKind::PageNumber => &self.page_number,
+            TextStyleKind::Lyrics => &self.lyrics,
+            TextStyleKind::Notes => &self.notes,
+            TextStyleKind::Chords => &self.chords,
+            TextStyleKind::NoteDash => &self.note_dash,
+        }
+    }
+
+    pub fn style_mut(&mut self, kind: TextStyleKind) -> &mut TextStyle {
+        match kind {
+            TextStyleKind::Title => &mut self.title_style,
+            TextStyleKind::Subtitle => &mut self.subtitle_style,
+            TextStyleKind::Author => &mut self.author_style,
+            TextStyleKind::Sequence => &mut self.sequence,
+            TextStyleKind::PartLegend => &mut self.part_legend,
+            TextStyleKind::MeasureNumber => &mut self.measure_number,
+            TextStyleKind::SectionLabel => &mut self.section_label,
+            TextStyleKind::PartLabel => &mut self.part_label,
+            TextStyleKind::PageNumber => &mut self.page_number,
+            TextStyleKind::Lyrics => &mut self.lyrics,
+            TextStyleKind::Notes => &mut self.notes,
+            TextStyleKind::Chords => &mut self.chords,
+            TextStyleKind::NoteDash => &mut self.note_dash,
+        }
     }
 }

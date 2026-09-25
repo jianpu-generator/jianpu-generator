@@ -193,7 +193,7 @@ pub struct TextStyle {
     pub font_family: Option<FontFamilyChoice>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ParsedMetadata {
     pub title: Option<String>,
     pub subtitle: Option<String>,

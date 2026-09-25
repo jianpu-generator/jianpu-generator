@@ -132,6 +132,22 @@ Feature: Edit Metadata modal
     And I close the metadata modal with Escape
     Then the editor source and stored source both contain "directive_row_offset = 0 12"
 
+  Scenario: Font Size placeholders follow an edited row_height
+    Given the edit-metadata-modal test fixture is loaded
+    When I open the Edit Metadata modal
+    And I fill the Row Height numeric field with "40"
+    Then the "Title Style Font Size" field's placeholder is "60"
+    And the "Lyrics Style Font Size" field's placeholder is "24"
+    And the "Sequence Style Font Size" field's placeholder is "12"
+
+  Scenario: Notes and chords Font Size placeholders follow an explicit lyrics font size
+    Given the edit-metadata-modal test fixture is loaded
+    When I open the Edit Metadata modal
+    And I fill the "Lyrics Style Font Size" field with "20"
+    Then the "Notes Style Font Size" field's placeholder is "20"
+    And the "Chords Style Font Size" field's placeholder is "20"
+    And the "Note Dash Style Font Size" field's placeholder is "20"
+
   Scenario: Modal stays within the editor pane and does not cover the preview pane
     Given the edit-metadata-modal test fixture is loaded with viewport 1400 by 900
     When I open the Edit Metadata modal

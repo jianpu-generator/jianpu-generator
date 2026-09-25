@@ -260,10 +260,6 @@ impl Guest for Component {
         generate_percussion_preview_wav(key, soundfont)
     }
 
-    fn get_metadata_defaults() -> MetadataDefaults {
-        get_metadata_defaults()
-    }
-
     fn parse_metadata_fields(source: String) -> MetadataFields {
         parse_metadata_fields(source)
     }
@@ -274,30 +270,6 @@ impl Guest for Component {
 
     fn highlight_tokens(source: String) -> Vec<HighlightToken> {
         highlight_tokens(source)
-    }
-
-    fn get_default_lyrics_font_size(row_height: u32) -> u32 {
-        get_default_lyrics_font_size(row_height)
-    }
-
-    fn get_default_title_font_size(row_height: u32) -> u32 {
-        get_default_title_font_size(row_height)
-    }
-
-    fn get_default_subtitle_font_size(row_height: u32) -> u32 {
-        get_default_subtitle_font_size(row_height)
-    }
-
-    fn get_default_author_font_size(row_height: u32) -> u32 {
-        get_default_author_font_size(row_height)
-    }
-
-    fn get_default_part_legend_font_size(row_height: u32) -> u32 {
-        get_default_part_legend_font_size(row_height)
-    }
-
-    fn get_default_page_number_font_size(row_height: u32) -> u32 {
-        get_default_page_number_font_size(row_height)
     }
 
     fn set_layout_fonts(

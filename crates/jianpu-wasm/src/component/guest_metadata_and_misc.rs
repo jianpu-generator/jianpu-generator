@@ -18,10 +18,6 @@ use super::*;
 // one-line call into a `jianpu_generator::` function is not meaningfully
 // riskier than extracting it).
 
-pub(super) fn get_metadata_defaults() -> MetadataDefaults {
-    metadata_defaults_to_wit(&crate::metadata_types::MetadataDefaultsOut::default())
-}
-
 pub(super) fn parse_metadata_fields(source: String) -> MetadataFields {
     metadata_fields_to_wit(jianpu_generator::source_edit::parse_metadata_fields(
         &source,
@@ -37,30 +33,6 @@ pub(super) fn highlight_tokens(source: String) -> Vec<HighlightToken> {
         .into_iter()
         .map(highlight_token_to_wit)
         .collect()
-}
-
-pub(super) fn get_default_lyrics_font_size(row_height: u32) -> u32 {
-    jianpu_generator::ast::grouped::default_lyrics_font_size(row_height)
-}
-
-pub(super) fn get_default_title_font_size(row_height: u32) -> u32 {
-    jianpu_generator::ast::grouped::default_title_font_size(row_height)
-}
-
-pub(super) fn get_default_subtitle_font_size(row_height: u32) -> u32 {
-    jianpu_generator::ast::grouped::default_subtitle_font_size(row_height)
-}
-
-pub(super) fn get_default_author_font_size(row_height: u32) -> u32 {
-    jianpu_generator::ast::grouped::default_author_font_size(row_height)
-}
-
-pub(super) fn get_default_part_legend_font_size(row_height: u32) -> u32 {
-    jianpu_generator::ast::grouped::default_part_legend_font_size(row_height)
-}
-
-pub(super) fn get_default_page_number_font_size(row_height: u32) -> u32 {
-    jianpu_generator::ast::grouped::default_page_number_font_size(row_height)
 }
 
 // Same underlying `jianpu_generator` calls as the old

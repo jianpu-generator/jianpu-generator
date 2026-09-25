@@ -21,7 +21,8 @@ export interface StyleRowSpec {
   label: string
   help: string
   value: TextStyleFields
-  placeholder: TextStyleDefaults | null
+  /** What each component resolves to when unset. */
+  placeholder: TextStyleDefaults
   /** No row currently sets this `false` — every kind, including
    * `notes`/`chords`/`note_dash` (whose glyph widths are re-measured
    * against whichever font `font_family` resolves to, see `syntax.md`),
@@ -157,7 +158,7 @@ function StyleTableRow({
   // from its fixed default face, so there's no capability restriction to
   // look up for it either.
   const effectiveFontFamily = showFontFamily
-    ? (value.fontFamily ?? placeholder?.fontFamily ?? null)
+    ? (value.fontFamily ?? placeholder.fontFamily)
     : null
   return (
     <tr>
@@ -168,19 +169,16 @@ function StyleTableRow({
         <td key={column.field} style={tdStyle}>
           <NumberStepper
             value={value[column.field] ?? ''}
-            defaultValue={placeholder ? placeholder[column.field] : null}
+            defaultValue={placeholder[column.field]}
             min={0}
             aria-label={`${label} ${column.subLabel}`}
-            placeholder={
-              placeholder ? String(placeholder[column.field]) : undefined
-            }
+            placeholder={String(placeholder[column.field])}
             onChange={(text) => onChange(column.edit(optionalNumber(text)))}
           />
         </td>
       ))}
       {booleanColumns.map((column) => {
-        const checked =
-          value[column.field] ?? placeholder?.[column.field] ?? false
+        const checked = value[column.field] ?? placeholder[column.field]
         const unsupported =
           effectiveFontFamily != null &&
           fontFamilyStyleCapabilities[effectiveFontFamily][column.field] ===
@@ -206,7 +204,7 @@ function StyleTableRow({
           <select
             aria-label={`${label} Font Family`}
             style={fontFamilySelectStyle}
-            value={value.fontFamily ?? placeholder?.fontFamily ?? ''}
+            value={value.fontFamily ?? placeholder.fontFamily}
             onChange={(e) =>
               onChange({
                 tag: 'font-family',

@@ -638,14 +638,13 @@ world jianpu-wasm {
     export group-note-selection: func(note-spans: list<note-span>, selected-cells: list<note-cell-in>) -> group-note-selection-response;
     export group-lyric-selection: func(lyric-spans: list<lyric-span>, selected-cells: list<lyric-cell-in>) -> group-lyric-selection-response;
 
-    // ==================== metadata_types.rs ====================
-
     enum font-family-choice {
         serif,
         sans-serif,
         monospace,
     }
 
+    // One kind's fully resolved style when its style object is left unset.
     record text-style-defaults {
         font-size: u32,
         horizontal-padding-pt: u32,
@@ -656,25 +655,13 @@ world jianpu-wasm {
         font-family: font-family-choice,
     }
 
+    // What each scalar `# metadata` field resolves to when left unset.
     record metadata-defaults {
         row-height: u32,
         max-measures-per-system: u32,
         note-number-width: u32,
         parts-list-columns: u32,
         part-label-width-pt: u32,
-        title: text-style-defaults,
-        subtitle: text-style-defaults,
-        author: text-style-defaults,
-        sequence: text-style-defaults,
-        part-legend: text-style-defaults,
-        measure-number: text-style-defaults,
-        section-label: text-style-defaults,
-        part-label: text-style-defaults,
-        page-number: text-style-defaults,
-        lyrics: text-style-defaults,
-        notes: text-style-defaults,
-        chords: text-style-defaults,
-        note-dash: text-style-defaults,
         merge-duplicate-measures-across-parts: bool,
         hide-resting-parts: bool,
         hide-system-dividers: bool,
@@ -716,6 +703,9 @@ world jianpu-wasm {
     record text-style-entry {
         kind: text-style-kind,
         fields: text-style-fields,
+        // What `fields` resolve to when all unset, given the rest of the
+        // document (`jianpu_generator::grouper::metadata_defaults`).
+        defaults: text-style-defaults,
     }
 
     // The `# metadata` section's values as written; unset fields are `none`.
@@ -735,6 +725,7 @@ world jianpu-wasm {
         directive-row-offset: option<string>,
         // One entry per `text-style-kind`, in that enum's order.
         styles: list<text-style-entry>,
+        defaults: metadata-defaults,
     }
 
     enum metadata-text-key {
@@ -819,25 +810,6 @@ world jianpu-wasm {
     // Every `.jianpu` keyword in `source`, ordered by position, found by the
     // parser's own lexers. Drives the editor's semantic highlighting.
     export highlight-tokens: func(source: string) -> list<highlight-token>;
-
-    // Phase 3, group 7 of PLAN-wit-bindgen-migration.md. Plain
-    // value-returning exports, no response-shaped wrapper — `get-metadata-
-    // defaults` returns the record above directly (`MetadataDefaultsOut`
-    // has no `Result`-like `Ok`/`Err` shape today), and the six font-size
-    // getters are `u32 -> u32` functions with no record at all.
-    export get-metadata-defaults: func() -> metadata-defaults;
-
-    export get-default-lyrics-font-size: func(row-height: u32) -> u32;
-
-    export get-default-title-font-size: func(row-height: u32) -> u32;
-
-    export get-default-subtitle-font-size: func(row-height: u32) -> u32;
-
-    export get-default-author-font-size: func(row-height: u32) -> u32;
-
-    export get-default-part-legend-font-size: func(row-height: u32) -> u32;
-
-    export get-default-page-number-font-size: func(row-height: u32) -> u32;
 
     // `set_layout_fonts` supplies the raw font bytes used for layout glyph
     // measurement — no return value, so this is the first `export` in this

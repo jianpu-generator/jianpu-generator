@@ -1,18 +1,12 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type {
   MetadataEdit,
   MetadataFields,
   TextStyleComponentValue,
-  TextStyleDefaults,
   TextStyleKind,
 } from '../jianpuWasm'
-import {
-  loadMetadataDefaults,
-  type MetadataDefaults,
-} from '../utils/metadataDefaults'
 import { metadataFieldHelp } from '../utils/metadataFieldHelp'
-import { useFontSizeDefaults } from '../utils/useFontSizeDefaults'
 import { FieldHelpModal } from './FieldHelpModal'
 import { MetadataFieldsTableBody } from './MetadataFieldsTableBody'
 import type { StyleRowSpec } from './MetadataStylesTable'
@@ -46,26 +40,6 @@ const styleRowLabels: Record<TextStyleKind, string> = {
   'note-dash': 'Note Dash Style',
 }
 
-function styleDefaultsByKind(
-  d: MetadataDefaults,
-): Record<TextStyleKind, TextStyleDefaults> {
-  return {
-    title: d.title,
-    subtitle: d.subtitle,
-    author: d.author,
-    sequence: d.sequence,
-    'part-legend': d.partLegend,
-    'measure-number': d.measureNumber,
-    'section-label': d.sectionLabel,
-    'part-label': d.partLabel,
-    'page-number': d.pageNumber,
-    lyrics: d.lyrics,
-    notes: d.notes,
-    chords: d.chords,
-    'note-dash': d.noteDash,
-  }
-}
-
 const thStyle: React.CSSProperties = {
   padding: '6px 10px',
   textAlign: 'left',
@@ -83,7 +57,6 @@ export function EditMetadataModal({
   onFieldChange,
   container,
 }: EditMetadataModalProps) {
-  const [defaults, setDefaults] = useState<MetadataDefaults | null>(null)
   const [helpContent, setHelpContent] = useState<{
     label: string
     help: string
@@ -91,65 +64,13 @@ export function EditMetadataModal({
   const showHelp = (label: string, help: string) =>
     setHelpContent({ label, help })
 
-  useEffect(() => {
-    loadMetadataDefaults().then(setDefaults)
-  }, [])
-
-  const effectiveRowHeight = metadata?.rowHeight ?? defaults?.rowHeight ?? null
-  const {
-    lyricsFontSizeDefault,
-    titleFontSizeDefault,
-    subtitleFontSizeDefault,
-    authorFontSizeDefault,
-    partLegendFontSizeDefault,
-    pageNumberFontSizeDefault,
-  } = useFontSizeDefaults(effectiveRowHeight)
-
-  const d = defaults
-  const styleOf = (kind: TextStyleKind) =>
-    metadata?.styles.find((entry) => entry.kind === kind)?.fields
-
-  // notes/chords styles' font_size default to the *effective* lyrics font
-  // size — either the explicit override or its own row_height-derived
-  // default; note_dash's font_size then defaults to that effective notes
-  // font size, one level further down the cascade (see `syntax.md`'s
-  // "Text styles" defaults table).
-  const effectiveLyricsFontSize =
-    styleOf('lyrics')?.fontSize ?? lyricsFontSizeDefault
-  const effectiveNotesFontSize =
-    styleOf('notes')?.fontSize ?? effectiveLyricsFontSize
-
-  // The kinds whose real `font_size` default isn't a flat constant but
-  // depends on `row_height` (or on `lyrics`' font size) — these override
-  // the static `d.<kind>` snapshot with a live value (see
-  // `useFontSizeDefaults` above), falling back to the snapshot while the
-  // live value isn't known yet.
-  const liveFontSizeDefaults: Partial<Record<TextStyleKind, number | null>> = {
-    title: titleFontSizeDefault,
-    subtitle: subtitleFontSizeDefault,
-    author: authorFontSizeDefault,
-    'part-legend': partLegendFontSizeDefault,
-    'page-number': pageNumberFontSizeDefault,
-    lyrics: lyricsFontSizeDefault,
-    notes: effectiveLyricsFontSize,
-    chords: effectiveLyricsFontSize,
-    'note-dash': effectiveNotesFontSize,
-  }
-
-  const stylePlaceholder = (kind: TextStyleKind): TextStyleDefaults | null => {
-    if (!d) return null
-    const base = styleDefaultsByKind(d)[kind]
-    const liveFontSize = liveFontSizeDefaults[kind]
-    return liveFontSize == null ? base : { ...base, fontSize: liveFontSize }
-  }
-
   const styleRows: StyleRowSpec[] = (metadata?.styles ?? []).map(
-    ({ kind, fields }) => ({
+    ({ kind, fields, defaults }) => ({
       kind,
       label: styleRowLabels[kind],
       help: metadataFieldHelp[kind],
       value: fields,
-      placeholder: stylePlaceholder(kind),
+      placeholder: defaults,
     }),
   )
 
@@ -245,7 +166,6 @@ export function EditMetadataModal({
                 </thead>
                 <MetadataFieldsTableBody
                   metadata={metadata}
-                  defaults={d}
                   showHelp={showHelp}
                   onFieldChange={onFieldChange}
                 />

@@ -3,7 +3,6 @@
 mod component;
 mod diagnostics;
 mod lyric_selection_types;
-mod metadata_types;
 mod note_selection_types;
 mod part_declarations;
 mod responses;

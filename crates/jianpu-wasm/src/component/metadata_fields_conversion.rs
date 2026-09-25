@@ -4,8 +4,10 @@
 //! to compile here.
 
 use super::*;
-use jianpu_generator::ast::parsed;
-use jianpu_generator::source_edit;
+use jianpu_generator::ast::{grouped, parsed};
+use jianpu_generator::compositor::types::FontFamily;
+use jianpu_generator::parser::metadata_parser::format_offset;
+use jianpu_generator::{grouper, source_edit};
 
 fn font_family_choice_to_wit(family: parsed::FontFamilyChoice) -> FontFamilyChoice {
     match family {
@@ -119,19 +121,56 @@ fn text_style_fields_to_wit(style: &parsed::TextStyle) -> TextStyleFields {
     }
 }
 
+fn font_family_to_wit(family: FontFamily) -> FontFamilyChoice {
+    match family {
+        FontFamily::Serif => FontFamilyChoice::Serif,
+        FontFamily::SansSerif => FontFamilyChoice::SansSerif,
+        FontFamily::Monospace => FontFamilyChoice::Monospace,
+    }
+}
+
+fn text_style_defaults_to_wit(style: &grouped::TextStyle) -> TextStyleDefaults {
+    TextStyleDefaults {
+        font_size: style.font_size,
+        horizontal_padding_pt: style.horizontal_padding_pt,
+        vertical_padding_pt: style.vertical_padding_pt,
+        bold: style.bold,
+        italic: style.italic,
+        underline: style.underline,
+        font_family: font_family_to_wit(style.font_family),
+    }
+}
+
+fn metadata_defaults_to_wit(defaults: &grouped::Metadata) -> MetadataDefaults {
+    MetadataDefaults {
+        row_height: defaults.row_height,
+        max_measures_per_system: defaults.max_measures_per_system,
+        note_number_width: defaults.note_number_width,
+        parts_list_columns: defaults.parts_list_columns,
+        part_label_width_pt: defaults.part_label_width_pt,
+        merge_duplicate_measures_across_parts: defaults.merge_duplicate_measures_across_parts,
+        hide_resting_parts: defaults.hide_resting_parts,
+        hide_system_dividers: defaults.hide_system_dividers,
+        directive_row_offset: format_offset(defaults.directive_row_offset),
+    }
+}
+
 pub(super) fn metadata_fields_to_wit(fields: source_edit::MetadataFields) -> MetadataFields {
     let source_edit::MetadataFields {
         metadata,
         directive_row_offset,
     } = fields;
+    let defaults = grouper::metadata_defaults(&metadata);
     MetadataFields {
         styles: parsed::TextStyleKind::ALL
             .iter()
             .map(|&kind| TextStyleEntry {
                 kind: text_style_kind_to_wit(kind),
                 fields: text_style_fields_to_wit(metadata.style(kind)),
+                defaults: text_style_defaults_to_wit(defaults.style(kind)),
             })
             .collect(),
+        defaults: metadata_defaults_to_wit(&defaults),
         title: metadata.title,
         subtitle: metadata.subtitle,
         author: metadata.author,

@@ -322,3 +322,12 @@ Then('the preview pane scroll position is greater than 0', async ({ page }) => {
     .poll(() => previewPages.evaluate((el) => el.scrollTop))
     .toBeGreaterThan(0)
 })
+
+Then(
+  "the {string} field's placeholder is {string}",
+  async ({ page }, ariaLabel: string, placeholder: string) => {
+    await expect(
+      editMetadataModal(page).getByLabel(ariaLabel, { exact: true }),
+    ).toHaveAttribute('placeholder', placeholder)
+  },
+)

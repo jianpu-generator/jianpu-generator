@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 /**
- * `renameSymbol.ts`, `shareUrl.ts`, and `utils/metadataDefaults.ts` each
+ * `renameSymbol.ts` and `shareUrl.ts` each
  * call the shared `ensureWasmInit()` (`wasmInit.ts`) before touching
  * `jianpuWasm.ts`'s functions. Because `ensureWasmInit()` memoizes a single
  * in-flight promise, calling into two of them before the first
@@ -27,29 +27,13 @@ vi.mock('../../crates/jianpu-wasm/pkg-component/jianpu_wasm.js', () => ({
           renameSymbol: vi.fn(),
           compressSharePayload: vi.fn(() => new Uint8Array()),
           decompressSharePayload: vi.fn(() => ''),
-          getMetadataDefaults: vi.fn(() => ({
-            title: {},
-            subtitle: {},
-            author: {},
-            sequence: {},
-            partLegend: {},
-            measureNumber: {},
-            sectionLabel: {},
-            partLabel: {},
-            pageNumber: {},
-            lyrics: {},
-            notes: {},
-            chords: {},
-            noteDash: {},
-          })),
-          getDefaultLyricsFontSize: vi.fn(() => 0),
         })
     })
   }),
 }))
 
 describe('main-thread wasm init', () => {
-  it('only instantiates the wasm component once across renameSymbol/shareUrl/metadataDefaults, even when they race', async () => {
+  it('only instantiates the wasm component once across renameSymbol/shareUrl, even when they race', async () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response()))
     vi.stubGlobal('fetch', fetchMock)
     const compileStreamingMock = vi.fn(() => Promise.resolve({}))
@@ -60,7 +44,6 @@ describe('main-thread wasm init', () => {
 
     const { listRenameSymbols } = await import('./renameSymbol')
     const { encodeShareHashSuffix } = await import('./shareUrl')
-    const { loadMetadataDefaults } = await import('./utils/metadataDefaults')
     const { ensureWasmModule } = await import('./wasmInit')
 
     // Fire all entry points before the first instantiate() resolves, the
@@ -69,7 +52,6 @@ describe('main-thread wasm init', () => {
     // would race in practice.
     void listRenameSymbols('')
     void encodeShareHashSuffix('a.jianpu', '')
-    void loadMetadataDefaults()
     void ensureWasmModule()
 
     // The shared `ensureWasmInit()` chain (fetch -> compileStreaming ->
