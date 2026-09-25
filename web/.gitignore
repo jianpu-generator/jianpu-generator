@@ -26,3 +26,6 @@ test-results
 *.njsproj
 *.sln
 *.sw?
+
+# Per-code-fingerprint record of passed e2e tests (scripts/resolve-e2e-flakes.mjs)
+.e2e-pass-cache

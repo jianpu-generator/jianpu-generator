@@ -11,19 +11,128 @@
 // without ever shrinking or repeating 3 times in a row. MAX_PASSES exists
 // for that case: it's a real possibility, not just a fuse against script
 // bugs.
+//
+// Passes are also remembered *across* invocations, keyed on a fingerprint of
+// the exact code under test (staged tree + unstaged diff + untracked files):
+// every test that passes is recorded in .e2e-pass-cache/<fingerprint> as soon
+// as it finishes (see e2e-pass-cache-reporter.mjs), and a later invocation on
+// the same fingerprint only runs the tests that haven't passed yet. This makes
+// re-attempting the same commit (after a killed hook, a failing non-e2e check,
+// or a genuine e2e failure that turned out to be a flake) cheap. Any change to
+// the code yields a new fingerprint and therefore a full run — a pass is only
+// ever reused for byte-identical code. Pass `--no-pass-cache` to discard the
+// recorded passes for the current code and run everything fresh (the fresh
+// passes are still recorded for the next invocation).
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { createHash } from 'node:crypto'
+import {
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { join, resolve } from 'node:path'
 
 const LAST_RUN_FILE = join('test-results', '.last-run.json')
+const PASS_CACHE_DIR = '.e2e-pass-cache'
+const PASS_CACHE_REPORTER = './scripts/e2e-pass-cache-reporter.mjs'
+const NO_PASS_CACHE_FLAG = '--no-pass-cache'
 const STABLE_STREAK_TO_CONFIRM = 3
 const MAX_PASSES = 15
 
-function run(args) {
-  const result = spawnSync('pnpm', ['exec', 'playwright', 'test', ...args], {
-    stdio: 'inherit',
-  })
+function run(args, passCacheFile) {
+  const result = spawnSync(
+    'pnpm',
+    [
+      'exec',
+      'playwright',
+      'test',
+      `--reporter=list,${PASS_CACHE_REPORTER}`,
+      ...args,
+    ],
+    {
+      stdio: 'inherit',
+      env: { ...process.env, E2E_PASS_CACHE_FILE: passCacheFile },
+    },
+  )
   if (result.error) throw result.error
+}
+
+function git(args, { cwd, input } = {}) {
+  const result = spawnSync('git', args, { cwd, input, maxBuffer: 1 << 30 })
+  if (result.error) throw result.error
+  if (result.status !== 0) {
+    throw new Error(`git ${args.join(' ')} failed:\n${result.stderr}`)
+  }
+  return result.stdout
+}
+
+// Identifies the exact code the suite is about to run against. The staged
+// tree alone isn't enough: the hook runs against the working tree, so
+// unstaged edits and untracked files can change what's under test too.
+function codeFingerprint() {
+  const repoRoot = git(['rev-parse', '--show-toplevel']).toString().trim()
+  const untrackedPaths = git(
+    ['ls-files', '--others', '--exclude-standard', '-z'],
+    { cwd: repoRoot },
+  )
+    .toString()
+    .split('\0')
+    .filter((path) => path !== '')
+  const untrackedContentHashes =
+    untrackedPaths.length === 0
+      ? ''
+      : git(['hash-object', '--stdin-paths'], {
+          cwd: repoRoot,
+          input: untrackedPaths.join('\n'),
+        })
+  return createHash('sha256')
+    .update(git(['write-tree'], { cwd: repoRoot }))
+    .update(git(['diff', '--binary'], { cwd: repoRoot }))
+    .update(untrackedPaths.join('\0'))
+    .update(untrackedContentHashes)
+    .digest('hex')
+}
+
+// Returns the cache file for `fingerprint` and the tests already recorded as
+// passed in it. Cache files for any other fingerprint are stale (that code is
+// no longer what's being committed), so they're deleted rather than left to
+// accumulate; with `fresh`, the one for `fingerprint` is deleted too.
+function openPassCache(fingerprint, { fresh }) {
+  mkdirSync(PASS_CACHE_DIR, { recursive: true })
+  for (const entry of readdirSync(PASS_CACHE_DIR)) {
+    if (fresh || entry !== fingerprint) rmSync(join(PASS_CACHE_DIR, entry))
+  }
+  const file = resolve(PASS_CACHE_DIR, fingerprint)
+  let passed = new Set()
+  try {
+    passed = new Set(
+      readFileSync(file, 'utf-8')
+        .split('\n')
+        .filter((id) => id !== ''),
+    )
+  } catch {
+    // No cache yet for this fingerprint.
+  }
+  return { file, passed }
+}
+
+function listTestIds(args) {
+  const result = spawnSync(
+    'pnpm',
+    ['exec', 'playwright', 'test', '--list', '--reporter=json', ...args],
+    { encoding: 'utf-8', maxBuffer: 1 << 30 },
+  )
+  if (result.error) throw result.error
+  if (result.status !== 0) {
+    throw new Error(`playwright test --list failed:\n${result.stderr}`)
+  }
+  const collectIds = (suite) => [
+    ...(suite.specs ?? []).map((spec) => spec.id),
+    ...(suite.suites ?? []).flatMap(collectIds),
+  ]
+  return JSON.parse(result.stdout).suites.flatMap(collectIds)
 }
 
 function readFailingSet() {
@@ -56,9 +165,39 @@ function main() {
   // instead of just the scoped test. Stripping a single leading `--` here
   // keeps both `pnpm run` (which already swallows it) and `pnpm` (which
   // doesn't) working the same way.
-  const extraArgs = process.argv.slice(2)
-  if (extraArgs[0] === '--') extraArgs.shift()
-  run(extraArgs)
+  const cliArgs = process.argv.slice(2)
+  if (cliArgs[0] === '--') cliArgs.shift()
+  // Our own flag is consumed here rather than forwarded, since Playwright
+  // would reject it as unknown.
+  const extraArgs = cliArgs.filter((arg) => arg !== NO_PASS_CACHE_FLAG)
+  const fresh = extraArgs.length !== cliArgs.length
+
+  const passCache = openPassCache(codeFingerprint(), { fresh })
+  if (passCache.passed.size === 0) {
+    run(extraArgs, passCache.file)
+  } else {
+    const notYetPassed = listTestIds(extraArgs).filter(
+      (id) => !passCache.passed.has(id),
+    )
+    if (notYetPassed.length === 0) {
+      console.error(
+        'e2e: every test already passed against this exact code in an earlier run; skipping.',
+      )
+      return
+    }
+    console.error(
+      `e2e: ${passCache.passed.size} test(s) already passed against this exact code in an earlier run; ` +
+        `running only the ${notYetPassed.length} that haven't...`,
+    )
+    // Seeds --last-failed with exactly the not-yet-passed tests, so this
+    // first pass skips everything the cache already vouches for.
+    mkdirSync('test-results', { recursive: true })
+    writeFileSync(
+      LAST_RUN_FILE,
+      JSON.stringify({ status: 'failed', failedTests: notYetPassed }),
+    )
+    run(['--last-failed'], passCache.file)
+  }
   let failing = readFailingSet()
   if (failing === null) {
     console.error(
@@ -101,7 +240,7 @@ function main() {
     console.error(
       `e2e: pass ${pass}, re-running ${failing.size} previously-failing test(s)...`,
     )
-    run(['--last-failed'])
+    run(['--last-failed'], passCache.file)
     failing = readFailingSet() ?? failing
     for (const id of failing) everFailed.add(id)
     history.push(failing)
