@@ -32,6 +32,13 @@ pub(super) fn update_metadata_field(source: String, edit: MetadataEdit) -> Strin
     jianpu_generator::source_edit::update_metadata_field(&source, metadata_edit_from_wit(edit))
 }
 
+pub(super) fn highlight_tokens(source: String) -> Vec<HighlightToken> {
+    jianpu_generator::highlight::highlight_tokens(&source)
+        .into_iter()
+        .map(highlight_token_to_wit)
+        .collect()
+}
+
 pub(super) fn get_default_lyrics_font_size(row_height: u32) -> u32 {
     jianpu_generator::ast::grouped::default_lyrics_font_size(row_height)
 }

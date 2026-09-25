@@ -802,6 +802,24 @@ world jianpu-wasm {
     // order; returns `source` unchanged when it has no such section.
     export update-metadata-field: func(source: string, edit: metadata-edit) -> string;
 
+    // Kind of one editor keyword `highlight-tokens` reports.
+    enum highlight-kind {
+        section-header,
+        metadata-key,
+        part-kind,
+        directive-key,
+    }
+
+    // One keyword's UTF-8 byte span; never spans a line break.
+    record highlight-token {
+        kind: highlight-kind,
+        span: span,
+    }
+
+    // Every `.jianpu` keyword in `source`, ordered by position, found by the
+    // parser's own lexers. Drives the editor's semantic highlighting.
+    export highlight-tokens: func(source: string) -> list<highlight-token>;
+
     // Phase 3, group 7 of PLAN-wit-bindgen-migration.md. Plain
     // value-returning exports, no response-shaped wrapper — `get-metadata-
     // defaults` returns the record above directly (`MetadataDefaultsOut`

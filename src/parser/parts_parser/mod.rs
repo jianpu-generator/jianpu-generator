@@ -136,6 +136,38 @@ struct RhsSuffixes {
     octave_offset: Option<i8>,
 }
 
+/// One non-blank line of a `# parts` section.
+struct PartsLine<'a> {
+    trimmed: &'a str,
+    trimmed_start: usize,
+    line_span: Span,
+}
+
+fn parts_lines(content: &str, base_offset: usize) -> impl Iterator<Item = PartsLine<'_>> {
+    content
+        .lines()
+        .scan(base_offset, |next_offset, line| {
+            let line_start = *next_offset;
+            *next_offset += line.len() + 1;
+            Some(PartsLine {
+                trimmed: line.trim(),
+                trimmed_start: line_start + (line.len() - line.trim_start().len()),
+                line_span: Span::new(line_start, line_start + line.len()),
+            })
+        })
+        .filter(|line| !line.trimmed.is_empty())
+}
+
+/// Spans of every part-kind keyword (`notes`, `chords`, `percussion`,
+/// `follow`) in a `# parts` section's `content`, from the parts lexer.
+pub(crate) fn part_kind_spans(content: &str, base_offset: usize) -> Vec<Span> {
+    parts_lines(content, base_offset)
+        .filter_map(|line| lex_line(line.trimmed, line.trimmed_start, line.line_span).ok())
+        .flatten()
+        .filter_map(|token| lexer::kind_keyword_span(&token))
+        .collect()
+}
+
 fn collect_raw_declarations(
     content: &str,
     base_offset: usize,
@@ -144,18 +176,13 @@ fn collect_raw_declarations(
 ) -> Vec<RawDecl> {
     let mut raw_declarations = Vec::new();
     let mut seen_abbreviations = std::collections::HashSet::new();
-    let mut byte_offset = base_offset;
 
-    for line in content.lines() {
-        let trimmed = line.trim();
-        let line_start = byte_offset;
-        byte_offset += line.len() + 1;
-        if trimmed.is_empty() {
-            continue;
-        }
-        let line_span = Span::new(line_start, line_start + line.len());
-        let trimmed_start = line_start + (line.len() - line.trim_start().len());
-
+    for line in parts_lines(content, base_offset) {
+        let PartsLine {
+            trimmed,
+            trimmed_start,
+            line_span,
+        } = line;
         let tokens = match lex_line(trimmed, trimmed_start, line_span) {
             Ok(tokens) => tokens,
             Err(error) => {

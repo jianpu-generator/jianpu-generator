@@ -3,6 +3,8 @@ use crate::error::{RecoverableError, Span};
 #[derive(Clone)]
 pub struct RawSection {
     pub kind: SectionKind,
+    /// The `# <kind>` header line, excluding trailing whitespace and comments.
+    pub header_span: Span,
     pub content: String,
     /// Byte offset in the original source where this section's content begins.
     pub content_offset: usize,
@@ -58,6 +60,7 @@ pub fn split_sections(input: &str) -> (Vec<RawSection>, Vec<RecoverableError>) {
     let mut current_kind: Option<SectionKind> = None;
     let mut current_content = String::new();
     let mut current_content_offset: usize = 0;
+    let mut current_header_span = Span::new(0, 0);
     let mut byte_offset: usize = 0;
 
     for line in input.lines() {
@@ -67,6 +70,7 @@ pub fn split_sections(input: &str) -> (Vec<RawSection>, Vec<RecoverableError>) {
             if let Some(kind) = current_kind.take() {
                 sections.push(RawSection {
                     kind,
+                    header_span: current_header_span,
                     content: current_content.clone(),
                     content_offset: current_content_offset,
                 });
@@ -74,6 +78,7 @@ pub fn split_sections(input: &str) -> (Vec<RawSection>, Vec<RecoverableError>) {
             }
             let kind_str = after_prefix.trim();
             let span = Span::new(byte_offset, byte_offset + line.len());
+            current_header_span = Span::new(byte_offset, byte_offset + line.trim_end().len());
             match kind_str {
                 "metadata" => {
                     current_kind = Some(SectionKind::Metadata);
@@ -107,6 +112,7 @@ pub fn split_sections(input: &str) -> (Vec<RawSection>, Vec<RecoverableError>) {
     if let Some(kind) = current_kind {
         sections.push(RawSection {
             kind,
+            header_span: current_header_span,
             content: current_content,
             content_offset: current_content_offset,
         });

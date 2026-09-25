@@ -1,15 +1,10 @@
+use super::directive_keyword::classify_directive_token;
+
 type SourceLine = (String, usize);
 
-pub(super) fn is_directive_line(line: &str) -> bool {
-    line.split_whitespace().any(|t| {
-        t.starts_with("bpm=")
-            || t.starts_with("key=")
-            || t.starts_with("time=")
-            || t.starts_with("label=")
-            || t.starts_with("merge_duplicate_measures_across_parts=")
-            || t.starts_with("hide_resting_parts=")
-            || t == "break"
-    })
+pub(crate) fn is_directive_line(line: &str) -> bool {
+    line.split_whitespace()
+        .any(|token| classify_directive_token(token).is_some())
 }
 
 /// Number of leading directive lines in a raw measure group (0 or 1).

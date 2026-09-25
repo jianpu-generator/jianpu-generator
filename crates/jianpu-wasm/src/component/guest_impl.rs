@@ -272,6 +272,10 @@ impl Guest for Component {
         update_metadata_field(source, edit)
     }
 
+    fn highlight_tokens(source: String) -> Vec<HighlightToken> {
+        highlight_tokens(source)
+    }
+
     fn get_default_lyrics_font_size(row_height: u32) -> u32 {
         get_default_lyrics_font_size(row_height)
     }

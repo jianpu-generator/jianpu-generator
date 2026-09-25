@@ -1,3 +1,4 @@
+pub mod directive_keyword;
 pub mod interleaved_parser;
 pub mod measure_group;
 pub mod timed_parser;

@@ -21,6 +21,7 @@ use crate::parser::score::measure_group::collect_groups;
 use accumulators::{build_parse_result, build_slot_actions, init_accumulators};
 use beat_padding::{beats_per_measure, validate_and_pad_group_lines};
 use column_lines::process_padded_columns;
+pub(crate) use directives::directive_keyword_spans;
 use directives::split_directive;
 
 /// One entry per bar group: all directive events emitted by that group's directive row.

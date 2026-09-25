@@ -121,6 +121,35 @@ use text_style_parser::parse_text_style_object;
 #[path = "text_style_parser.rs"]
 mod text_style_parser;
 
+/// A recognized `# metadata` key, classified by the value it takes.
+enum MetadataKey {
+    Number(MetadataNumberKey),
+    Flag(MetadataFlagKey),
+    DirectiveRowOffset,
+    /// A text-style kind, which for `title`/`subtitle`/`author` may also take
+    /// the text itself.
+    Style(TextStyleKind),
+}
+
+impl MetadataKey {
+    fn from_keyword(key: &str) -> Option<Self> {
+        MetadataNumberKey::from_keyword(key)
+            .map(Self::Number)
+            .or_else(|| MetadataFlagKey::from_keyword(key).map(Self::Flag))
+            .or_else(|| (key == DIRECTIVE_ROW_OFFSET_KEY).then_some(Self::DirectiveRowOffset))
+            .or_else(|| TextStyleKind::from_keyword(key).map(Self::Style))
+    }
+}
+
+/// Spans of every recognized key in a `# metadata` section's `content`.
+pub(crate) fn metadata_key_spans(content: &str, base_offset: usize) -> Vec<Span> {
+    metadata_lines(content, base_offset)
+        .filter_map(Result::ok)
+        .filter(|line| MetadataKey::from_keyword(line.key).is_some())
+        .map(|line| line.key_span)
+        .collect()
+}
+
 fn apply_field(
     metadata: &mut ParsedMetadata,
     line: &MetadataLine,
@@ -132,22 +161,25 @@ fn apply_field(
         key_span,
         value_span,
     } = *line;
-    if let Some(number_key) = MetadataNumberKey::from_keyword(key) {
-        if let Some(number) = recorded(parse_positive_u32(key, value, value_span), errors) {
-            *metadata.number_mut(number_key) = Some(number);
+    match MetadataKey::from_keyword(key) {
+        Some(MetadataKey::Number(number_key)) => {
+            if let Some(number) = recorded(parse_positive_u32(key, value, value_span), errors) {
+                *metadata.number_mut(number_key) = Some(number);
+            }
         }
-    } else if let Some(flag_key) = MetadataFlagKey::from_keyword(key) {
-        if let Some(flag) = recorded(parse_bool(key, value, value_span), errors) {
-            *metadata.flag_mut(flag_key) = Some(flag);
+        Some(MetadataKey::Flag(flag_key)) => {
+            if let Some(flag) = recorded(parse_bool(key, value, value_span), errors) {
+                *metadata.flag_mut(flag_key) = Some(flag);
+            }
         }
-    } else if key == DIRECTIVE_ROW_OFFSET_KEY {
-        if let Some(offset) = recorded(parse_offset(key, value, value_span), errors) {
-            metadata.directive_row_offset = Some(offset);
+        Some(MetadataKey::DirectiveRowOffset) => {
+            if let Some(offset) = recorded(parse_offset(key, value, value_span), errors) {
+                metadata.directive_row_offset = Some(offset);
+            }
         }
-    } else if let Some(kind) = TextStyleKind::from_keyword(key) {
         // `title`/`subtitle`/`author` take either their text or a style
         // object; every other kind only takes a style object.
-        match MetadataTextKey::from_style_kind(kind) {
+        Some(MetadataKey::Style(kind)) => match MetadataTextKey::from_style_kind(kind) {
             Some(text_key) if !value.trim_start().starts_with('{') => {
                 *metadata.text_mut(text_key) = Some(value.to_string());
             }
@@ -159,9 +191,8 @@ fn apply_field(
                 &value_span,
                 errors,
             ),
-        }
-    } else {
-        errors.push(RecoverableError::metadata_unknown_field(key_span, key));
+        },
+        None => errors.push(RecoverableError::metadata_unknown_field(key_span, key)),
     }
 }
 

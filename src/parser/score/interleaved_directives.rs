@@ -1,7 +1,10 @@
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, ScoreEvent};
 use crate::desugar::SourceLine;
 use crate::error::{RecoverableError, Span, Spanned};
-use crate::parser::score::measure_group::is_directive_line;
+use crate::parser::score::directive_keyword::{
+    classify_directive_token, DirectiveKey, DirectiveToken,
+};
+use crate::parser::score::measure_group::{collect_groups, is_directive_line};
 
 type SplitDirectiveResult<'a> = (
     Vec<Spanned<ScoreEvent>>,
@@ -95,68 +98,118 @@ fn parse_directive_line(
     for (token, token_inner_offset) in &tokens {
         let token_file_offset = inner_offset + token_inner_offset;
         let span = Span::new(token_file_offset, token_file_offset + token.len());
-
-        let mut event_span = span;
-        let event = if let Some(rest) = token.strip_prefix("bpm=") {
-            match rest.parse::<u32>() {
-                Ok(bpm) => Some(ScoreEvent::BpmChange(bpm)),
-                Err(_) => {
-                    errors.push(RecoverableError::general(
-                        span,
-                        format!("invalid bpm value: {rest}"),
-                    ));
-                    None
-                }
-            }
-        } else if let Some(rest) = token.strip_prefix("key=") {
-            parse_key_value(rest, span, &mut errors)
-        } else if let Some(rest) = token.strip_prefix("time=") {
-            parse_time_value(rest, span, &mut errors)
-        } else if let Some(rest) = token.strip_prefix("label=") {
-            if rest.len() < 2 || !rest.starts_with('"') || !rest.ends_with('"') {
-                errors.push(RecoverableError::general(
-                    span,
-                    format!("label value must be a quoted string, got: {rest}"),
-                ));
-                None
-            } else {
-                let text = rest[1..rest.len() - 1].to_string();
-                if text.is_empty() {
-                    errors.push(RecoverableError::general(
-                        span,
-                        "label value must not be empty",
-                    ));
-                    None
-                } else {
-                    // Narrow the event span to just the quoted text (not the whole
-                    // `label="..."` token), so rename-symbol can replace it in place.
-                    let text_start = token_file_offset + (token.len() - rest.len()) + 1;
-                    event_span = Span::new(text_start, text_start + text.len());
-                    Some(ScoreEvent::LabelChange(text))
-                }
-            }
-        } else if let Some(rest) = token.strip_prefix("merge_duplicate_measures_across_parts=") {
-            parse_bool_directive_value(rest, span, &mut errors)
-                .map(ScoreEvent::MergeDuplicateMeasuresAcrossPartsChange)
-        } else if let Some(rest) = token.strip_prefix("hide_resting_parts=") {
-            parse_bool_directive_value(rest, span, &mut errors)
-                .map(ScoreEvent::HideRestingPartsChange)
-        } else if token == "break" {
-            Some(ScoreEvent::SystemBreak)
-        } else {
+        let Some(directive) = classify_directive_token(token) else {
             errors.push(RecoverableError::general(
                 span,
                 format!("unknown directive: '{token}'"),
             ));
-            None
+            continue;
         };
-
-        if let Some(event) = event {
-            events.push(Spanned::new(event, event_span));
+        if let Some(event) = directive_event(directive, span, &mut errors) {
+            events.push(event);
         }
     }
 
     (events, errors)
+}
+
+fn directive_event(
+    directive: DirectiveToken,
+    span: Span,
+    errors: &mut Vec<RecoverableError>,
+) -> Option<Spanned<ScoreEvent>> {
+    use DirectiveToken::{Assignment, Break};
+    let event = match directive {
+        Break => Some(ScoreEvent::SystemBreak),
+        Assignment {
+            key: DirectiveKey::Bpm,
+            value,
+        } => match value.parse::<u32>() {
+            Ok(bpm) => Some(ScoreEvent::BpmChange(bpm)),
+            Err(_) => {
+                errors.push(RecoverableError::general(
+                    span,
+                    format!("invalid bpm value: {value}"),
+                ));
+                None
+            }
+        },
+        Assignment {
+            key: DirectiveKey::Key,
+            value,
+        } => parse_key_value(value, span, errors),
+        Assignment {
+            key: DirectiveKey::Time,
+            value,
+        } => parse_time_value(value, span, errors),
+        Assignment {
+            key: DirectiveKey::Label,
+            value,
+        } => return parse_label_value(value, span, errors),
+        Assignment {
+            key: DirectiveKey::MergeDuplicateMeasuresAcrossParts,
+            value,
+        } => parse_bool_directive_value(value, span, errors)
+            .map(ScoreEvent::MergeDuplicateMeasuresAcrossPartsChange),
+        Assignment {
+            key: DirectiveKey::HideRestingParts,
+            value,
+        } => {
+            parse_bool_directive_value(value, span, errors).map(ScoreEvent::HideRestingPartsChange)
+        }
+    };
+    event.map(|event| Spanned::new(event, span))
+}
+
+/// Parses `label="..."`'s value. The event span is narrowed to just the
+/// quoted text (not the whole token), so rename-symbol can replace it in place.
+fn parse_label_value(
+    rest: &str,
+    token_span: Span,
+    errors: &mut Vec<RecoverableError>,
+) -> Option<Spanned<ScoreEvent>> {
+    if rest.len() < 2 || !rest.starts_with('"') || !rest.ends_with('"') {
+        errors.push(RecoverableError::general(
+            token_span,
+            format!("label value must be a quoted string, got: {rest}"),
+        ));
+        return None;
+    }
+    let text = rest.get(1..rest.len() - 1).unwrap_or_default();
+    if text.is_empty() {
+        errors.push(RecoverableError::general(
+            token_span,
+            "label value must not be empty",
+        ));
+        return None;
+    }
+    let text_start = token_span.end - rest.len() + 1;
+    Some(Spanned::new(
+        ScoreEvent::LabelChange(text.to_string()),
+        Span::new(text_start, text_start + text.len()),
+    ))
+}
+
+/// Spans of every directive keyword (`bpm` in `bpm=92`, `break`) on the
+/// directive lines of a `# score` section's `content`.
+pub(crate) fn directive_keyword_spans(content: &str, base_offset: usize) -> Vec<Span> {
+    collect_groups(content)
+        .iter()
+        .filter_map(|group| group.first())
+        .filter(|line| is_directive_line(&line.0))
+        .flat_map(|(line, line_offset)| {
+            let line_start = base_offset + line_offset;
+            tokenize_directive_tokens(line)
+                .unwrap_or_default()
+                .into_iter()
+                .filter_map(move |(token, token_offset)| {
+                    classify_directive_token(&token).map(|directive| {
+                        let start = line_start + token_offset;
+                        Span::new(start, start + directive.keyword_len())
+                    })
+                })
+        })
+        .collect()
 }
 
 fn parse_key_value(

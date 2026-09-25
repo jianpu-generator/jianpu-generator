@@ -14,6 +14,7 @@ import {
   registerJianpuLanguage,
 } from '../monacoJianpuLanguage'
 import { registerJianpuRenameProvider } from '../monacoRenameProvider'
+import { registerJianpuSemanticTokensProvider } from '../monacoSemanticTokensProvider'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -358,12 +359,14 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           beforeMount={(monacoApi) => {
             registerJianpuLanguage(monacoApi)
             registerJianpuRenameProvider(monacoApi)
+            registerJianpuSemanticTokensProvider(monacoApi)
             defineJianpuEditorTheme(monacoApi)
           }}
           onMount={handleMount}
           options={{
             readOnly,
             codeLens: true,
+            'semanticHighlighting.enabled': true,
             minimap: { enabled: false },
             fontFamily: 'var(--mono)',
             fontSize: 14,

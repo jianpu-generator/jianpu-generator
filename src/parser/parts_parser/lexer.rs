@@ -19,6 +19,30 @@ pub(crate) enum PartsToken {
     OctaveOffset(i8),
 }
 
+/// The part-kind keyword that makes a part follow another (`follow[M]`).
+const FOLLOW_KEYWORD: &str = "follow";
+
+/// The span of `token`'s part-kind keyword, if it is one: the whole token
+/// for `notes`/`chords`/`percussion`, just `follow` for `follow[M]`.
+pub(crate) fn kind_keyword_span(token: &Spanned<PartsToken>) -> Option<Span> {
+    match token.value {
+        PartsToken::Kind(_) => Some(token.span),
+        PartsToken::Follow => Some(Span::new(
+            token.span.start,
+            token.span.start + FOLLOW_KEYWORD.len(),
+        )),
+        PartsToken::Name(_)
+        | PartsToken::LBracket
+        | PartsToken::Abbreviation(_)
+        | PartsToken::RBracket
+        | PartsToken::Equals
+        | PartsToken::FollowTarget(_)
+        | PartsToken::Soundfont(_)
+        | PartsToken::Volume(_)
+        | PartsToken::OctaveOffset(_) => None,
+    }
+}
+
 struct CoarseToken {
     text: String,
     span: Span,
@@ -215,7 +239,7 @@ fn coarse_tokenize(input: &str, base_offset: usize) -> Result<Vec<CoarseToken>, 
 }
 
 fn parse_follow_target_with_span(text: &str, span: Span) -> Option<(String, Span)> {
-    let rest = text.strip_prefix("follow[")?;
+    let rest = text.strip_prefix(FOLLOW_KEYWORD)?.strip_prefix('[')?;
     let bracket_end = rest.find(']')?;
     if bracket_end + 1 != rest.len() {
         return None;
@@ -223,7 +247,7 @@ fn parse_follow_target_with_span(text: &str, span: Span) -> Option<(String, Span
     let inner = &rest[..bracket_end];
     let trimmed = inner.trim();
     let trim_start = inner.find(trimmed)?;
-    let prefix_len = "follow[".len();
+    let prefix_len = FOLLOW_KEYWORD.len() + '['.len_utf8();
     let target_start = span.start + prefix_len + trim_start;
     let target_end = target_start + trimmed.len();
     Some((trimmed.to_string(), Span::new(target_start, target_end)))

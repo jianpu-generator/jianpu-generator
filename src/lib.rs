@@ -31,6 +31,7 @@ mod gm_percussion;
 pub mod grid_layout;
 pub mod grouper;
 pub mod grouping;
+pub mod highlight;
 pub mod layout;
 pub mod lyric_spans;
 pub mod measure_spans;
