@@ -1,7 +1,12 @@
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  /* On mobile, `100vh` is the *large* viewport (as if the browser's URL bar
+     were hidden), so the app overflows the visible area and the document
+     itself scrolls — a second scrollbar that drags the toolbars out of view.
+     `100dvh` tracks the actually-visible height, leaving `.preview-pages` /
+     the editor as the only scroll container. */
+  height: 100dvh;
   overflow: hidden;
 }
 

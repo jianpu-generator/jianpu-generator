@@ -18,3 +18,9 @@ Feature: Mobile workspace layout
   Scenario: Export dropdown items are reachable on a mobile viewport
     When I open the Export dropdown menu
     Then every export menu item is within the mobile viewport
+
+  Scenario: Only the score scrolls, never the page around the toolbars
+    Given the mobile browser's 100vh is taller than its visible area
+    When I scroll the page with the pointer over the toolbars
+    Then the page itself does not scroll
+    And the toolbars stay pinned at the top of the viewport

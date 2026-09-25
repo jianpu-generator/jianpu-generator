@@ -119,6 +119,55 @@ Then(
   },
 )
 
+Given(
+  "the mobile browser's 100vh is taller than its visible area",
+  async ({ page }) => {
+    // On real phones `100vh` is the *large* viewport (as if the URL bar were
+    // hidden), so anything sized to it overflows the visible area by the URL
+    // bar's height. Desktop Chromium's mobile emulation has no URL bar, so
+    // `100vh` always equals the visible height there — simulate the gap by
+    // making `.app` taller than the viewport the way a phone would.
+    await page.addStyleTag({
+      content: '.app { height: calc(100vh + 120px) !important; }',
+    })
+  },
+)
+
+When(
+  'I scroll the page with the pointer over the toolbars',
+  async ({ page }) => {
+    const box = await page.locator('.app-header').boundingBox()
+    if (box == null) throw new Error('app header is not rendered')
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.wheel(0, 300)
+    // Give the scroll a frame to land before asserting it didn't happen.
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(resolve)),
+    )
+  },
+)
+
+Then('the page itself does not scroll', async ({ page }) => {
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+})
+
+Then(
+  'the toolbars stay pinned at the top of the viewport',
+  async ({ page }) => {
+    // Every rendered bar stacked above the workspace (header, sections
+    // toolbar, part toggles — whichever this score shows).
+    const toolbars = page.locator('.app > :not(.workspace)')
+    for (const toolbar of await toolbars.all()) {
+      const { top, height } = await toolbar.evaluate((el) =>
+        el.getBoundingClientRect(),
+      )
+      if (height === 0) continue
+      expect(top).toBeGreaterThanOrEqual(0)
+      await expect(toolbar).toBeInViewport({ ratio: 1 })
+    }
+  },
+)
+
 When('I open the Export dropdown menu', async ({ page }) => {
   const menuButton = page.getByRole('button', { name: 'Export', exact: true })
   await expect(menuButton).toBeEnabled({ timeout: 30_000 })

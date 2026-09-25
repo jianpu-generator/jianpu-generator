@@ -48,6 +48,15 @@ body,
   height: 100%;
 }
 
+/* The page itself never scrolls — only the panes inside `.app` do (see the
+   `.app` rule in App.css). Also stops mobile pull-to-refresh / rubber-band
+   from dragging the toolbars around. */
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 [data-tag="note"][data-note-range-selected]
   rect[data-variant="note-click-target-rect"] {
   fill: rgba(37, 99, 235, 0.25);
