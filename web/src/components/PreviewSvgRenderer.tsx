@@ -1,11 +1,7 @@
 import type { ReactNode } from 'react'
 import fontsManifest from '../../../fonts/fonts.json'
-import { DATA_VARIANT, groupAttrsForTag } from '../dataAttributes'
-import type {
-  FontFamily,
-  SvgDocument,
-  TransparentRectRole,
-} from '../jianpuWasm'
+import { type DataVariant, groupAttrsForTag } from '../dataAttributes'
+import type { FontFamily, SvgDocument } from '../jianpuWasm'
 
 // `FontFamily::SansSerif`'s backing font — the default role for the
 // directive line (bar number, section label, key/bpm/time signature,
@@ -42,10 +38,6 @@ function textFontFamily(font: FontFamily): string {
   }
 }
 
-function transparentRectRoleToDataVariant(role: TransparentRectRole): string {
-  return DATA_VARIANT[role]
-}
-
 /** Renders `doc.elements[index]` — the Rust side flattens the element tree
  * into this arena in pre-order, with each group naming its children by
  * index (`SvgGroupKind.childIndices`). */
@@ -61,7 +53,7 @@ function renderSvgElement(doc: SvgDocument, index: number): ReactNode {
           key={key}
           x={el.x}
           y={el.y}
-          data-variant={el.variantTag}
+          data-variant={el.variantTag satisfies DataVariant | undefined}
           fontSize={kind.fontSize}
           textAnchor={
             kind.anchor === 'start'
@@ -91,7 +83,7 @@ function renderSvgElement(doc: SvgDocument, index: number): ReactNode {
           key={key}
           x={el.x}
           y={el.y}
-          data-variant={el.variantTag}
+          data-variant={el.variantTag satisfies DataVariant | undefined}
           fontSize={kind.fontSize}
           textAnchor={
             kind.anchor === 'start'
@@ -181,7 +173,7 @@ function renderSvgElement(doc: SvgDocument, index: number): ReactNode {
           y={el.y}
           width={kind.width}
           height={kind.height}
-          data-variant={transparentRectRoleToDataVariant(kind.role)}
+          data-variant={kind.role satisfies DataVariant}
           fill="transparent"
           stroke={
             kind.role === 'section-label-background' ? 'black' : undefined
@@ -198,7 +190,7 @@ function renderSvgElement(doc: SvgDocument, index: number): ReactNode {
       return (
         <rect
           key={key}
-          data-variant={DATA_VARIANT['playback-cursor-rect']}
+          data-variant={tag satisfies DataVariant}
           x={el.x}
           y={el.y}
           width={kind.width}

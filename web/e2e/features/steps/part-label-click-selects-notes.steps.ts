@@ -306,9 +306,7 @@ Then(
   "the Melody label's click-target rect is marked range-active",
   async ({ page }) => {
     await expect(
-      melodyLabel(page).locator(
-        'rect[data-variant="part-label-click-target-rect"]',
-      ),
+      melodyLabel(page).locator('rect[data-variant="part-label-click-target"]'),
     ).toHaveAttribute('data-part-label-range-active', '')
   },
 )
@@ -317,9 +315,7 @@ Then(
   "the Melody label's click-target rect is not marked range-active",
   async ({ page }) => {
     await expect(
-      melodyLabel(page).locator(
-        'rect[data-variant="part-label-click-target-rect"]',
-      ),
+      melodyLabel(page).locator('rect[data-variant="part-label-click-target"]'),
     ).not.toHaveAttribute('data-part-label-range-active', '')
   },
 )
@@ -329,7 +325,7 @@ Then(
   async ({ page }) => {
     await expect(
       harmonyLabel(page).locator(
-        'rect[data-variant="part-label-click-target-rect"]',
+        'rect[data-variant="part-label-click-target"]',
       ),
     ).toHaveAttribute('data-part-label-range-active', '')
   },
@@ -340,7 +336,7 @@ Then(
   async ({ page }) => {
     await expect(
       harmonyLabel(page).locator(
-        'rect[data-variant="part-label-click-target-rect"]',
+        'rect[data-variant="part-label-click-target"]',
       ),
     ).not.toHaveAttribute('data-part-label-range-active', '')
   },
@@ -351,12 +347,12 @@ Then(
   async ({ page }) => {
     const partLabelRect = page
       .locator(
-        '[data-tag="part-label"][data-part-index="0"] rect[data-variant="part-label-click-target-rect"]',
+        '[data-tag="part-label"][data-part-index="0"] rect[data-variant="part-label-click-target"]',
       )
       .first()
     const lyricLabelRect = page
       .locator(
-        '[data-tag="lyric-label"][data-part-index="0"][data-verse="0"] rect[data-variant="lyric-label-click-target-rect"]',
+        '[data-tag="lyric-label"][data-part-index="0"][data-verse="0"] rect[data-variant="lyric-label-click-target"]',
       )
       .first()
     const partBox = await stableBoundingBox(partLabelRect)
@@ -376,7 +372,7 @@ Then(
   "the Melody label's click-target rect has a visible hover fill",
   async ({ page }) => {
     const melodyRect = melodyLabel(page).locator(
-      'rect[data-variant="part-label-click-target-rect"]',
+      'rect[data-variant="part-label-click-target"]',
     )
     hoveredFill = await melodyRect.evaluate((el) => getComputedStyle(el).fill)
     expect(hoveredFill).not.toBe('none')
@@ -388,7 +384,7 @@ Then(
   "the Melody label's click-target rect keeps the same hover fill while the second click is pending",
   async ({ page }) => {
     const melodyRect = melodyLabel(page).locator(
-      'rect[data-variant="part-label-click-target-rect"]',
+      'rect[data-variant="part-label-click-target"]',
     )
     const fillWhilePending = await melodyRect.evaluate(
       (el) => getComputedStyle(el).fill,

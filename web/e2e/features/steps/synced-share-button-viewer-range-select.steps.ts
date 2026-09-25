@@ -148,7 +148,7 @@ When(
 When('the viewer taps the first note', async ({}) => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   const noteRect = state.viewerPage
-    .locator('rect[data-variant="note-click-target-rect"]')
+    .locator('rect[data-variant="note-click-target"]')
     .first()
   await expect(noteRect).toBeVisible()
   const box = await stableBoundingBox(noteRect)
@@ -170,7 +170,7 @@ When('the viewer taps the first note', async ({}) => {
 When('the viewer taps a bar line', async ({}) => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   const barLineRect = state.viewerPage
-    .locator('rect[data-variant="bar-line-click-target-rect"]')
+    .locator('rect[data-variant="bar-line-click-target"]')
     .first()
   await expect(barLineRect).toBeVisible()
   const box = await stableBoundingBox(barLineRect)

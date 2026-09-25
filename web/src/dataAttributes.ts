@@ -1,38 +1,26 @@
-import type { SvgKind, Tag, TransparentRectRole } from './jianpuWasm'
+import type {
+  SvgKind,
+  SvgVariant,
+  Tag,
+  TransparentRectRole,
+} from './jianpuWasm'
 
 /**
  * Every `data-variant` attribute value written onto rendered preview SVG
- * elements — the kebab-case wire format for `TransparentRectRole`
- * (`crates/jianpu-wasm/src/svg_types.rs:20-30`), plus `playbackCursorRect`
- * (a distinct `SvgKind` `playback-cursor-rect` element, not one of the
- * `TransparentRectRole` variants, but a `data-variant` value in its own
- * right).
- *
- * Single source of truth for every place that used to re-type these strings
- * independently: `PreviewSvgRenderer.tsx`'s `transparentRectRoleToDataVariant`
- * switch and `playbackCursorRect` case, `usePlaybackCursor.ts`,
- * `previewRangeHighlights.ts`, and `previewLabelRangeHighlights.ts`'s
- * `querySelector`/`closest` selectors. `preview.css` and `index.css` are
- * plain CSS and can't import this constant, so `dataAttributes.test.ts`
- * instead asserts every `data-variant` literal they contain is still a
- * value produced here — a rename here that isn't mirrored in the CSS fails
- * that test instead of the CSS rule silently matching nothing.
+ * elements: a text element's `SvgVariant`, a transparent rect's
+ * `TransparentRectRole`, or the `playback-cursor-rect` element kind — each
+ * written verbatim as the jco-generated string, so there is no TS-side
+ * mapping to keep in step with the WIT enums.
  */
-export const DATA_VARIANT = {
-  'measure-click-target': 'measure-click-target-rect',
-  'bar-number-click-target': 'bar-number-click-target-rect',
-  'section-label-background': 'section-label-bg',
-  'section-label-click-target': 'section-label-click-target-rect',
-  'note-click-target': 'note-click-target-rect',
-  'part-label-click-target': 'part-label-click-target-rect',
-  'lyric-click-target': 'lyric-click-target-rect',
-  'lyric-label-click-target': 'lyric-label-click-target-rect',
-  'bar-line-click-target': 'bar-line-click-target-rect',
-  'playback-cursor-rect': 'playback-cursor-rect',
-} as const satisfies Record<
-  TransparentRectRole | Extract<SvgKind['tag'], 'playback-cursor-rect'>,
-  string
->
+export type DataVariant =
+  | SvgVariant
+  | TransparentRectRole
+  | Extract<SvgKind['tag'], 'playback-cursor-rect'>
+
+/** Selects the `<rect>` elements whose `data-variant` is `variant`. */
+export function rectVariantSelector(variant: DataVariant): string {
+  return `rect[data-variant="${variant}"]`
+}
 
 /**
  * Every `data-tag` attribute value written onto a rendered preview SVG `<g>`
@@ -64,10 +52,8 @@ export const DATA_TAG = {
 /**
  * The two boolean `data-*-range-active` flags imperatively toggled on a
  * part-label/lyric-label click-target rect by `previewLabelRangeHighlights.ts`
- * (`setAttribute`/`removeAttribute`, no value — a presence-only flag, unlike
- * `DATA_VARIANT`'s valued attributes) and read back by `index.css`. Kept
- * alongside `DATA_VARIANT`/`DATA_TAG` so `dataAttributes.test.ts` can guard
- * `index.css` against the same kind of drift.
+ * (`setAttribute`/`removeAttribute`, no value — a presence-only flag) and
+ * read back by `injectPreviewInteractionStyles.ts`.
  */
 export const DATA_RANGE_ACTIVE_FLAG = {
   partLabel: 'data-part-label-range-active',

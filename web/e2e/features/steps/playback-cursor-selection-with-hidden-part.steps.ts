@@ -99,7 +99,7 @@ When(
 )
 
 Then('{int} notes render with Harmony hidden', async ({ page }, count) => {
-  const noteRects = page.locator('rect[data-variant="note-click-target-rect"]')
+  const noteRects = page.locator('rect[data-variant="note-click-target"]')
   // Melody (2) + Bass (2), Harmony hidden = 4 rendered notes.
   await expect(noteRects).toHaveCount(count, { timeout: 10_000 })
   // Give the debounced listNoteSpans worker round-trip time to catch up
@@ -113,7 +113,7 @@ When(
     // Click-and-click select only Bass's two notes (rendered/compacted
     // part-index 1), never touching Melody's row above.
     const bassNotes = page.locator(
-      '[data-tag="note"][data-part-index="1"] rect[data-variant="note-click-target-rect"]',
+      '[data-tag="note"][data-part-index="1"] rect[data-variant="note-click-target"]',
     )
     await expect(bassNotes).toHaveCount(2)
     const firstBox = await stableBoundingBox(bassNotes.nth(0))

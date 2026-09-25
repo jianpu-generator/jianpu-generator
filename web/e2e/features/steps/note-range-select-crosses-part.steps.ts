@@ -33,7 +33,7 @@ const crossPartSource = [
 ].join('\n')
 
 function noteRects(page: import('@playwright/test').Page) {
-  return page.locator('rect[data-variant="note-click-target-rect"]')
+  return page.locator('rect[data-variant="note-click-target"]')
 }
 
 // `data-note-id` restarts at 0 within each part (see `noteRects`' two note

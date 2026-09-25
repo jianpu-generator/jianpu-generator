@@ -119,7 +119,7 @@ Then(
     // (spanning measures 0-1) plus measure 2's 4 notes — not 6, which would
     // mean the merge never happened.
     await expect(
-      page.locator('rect[data-variant="note-click-target-rect"]'),
+      page.locator('rect[data-variant="note-click-target"]'),
     ).toHaveCount(5)
   },
 )
@@ -159,9 +159,7 @@ Then(
     if (!mergedRestBox) {
       throw new Error('Could not get bounding box for the merged rest bar.')
     }
-    const noteRects = page.locator(
-      'rect[data-variant="note-click-target-rect"]',
-    )
+    const noteRects = page.locator('rect[data-variant="note-click-target"]')
     const rectCount = await noteRects.count()
     let noteId: string | null = null
     let partIndex: string | null = null
@@ -211,9 +209,7 @@ Then(
     // click-target belongs to Melody — the merged rest (spanning measures
     // 0-1) plus measure 2's four notes. Pick the one whose x falls inside
     // measure 2's own bounds rather than assuming DOM order.
-    const noteRects = page.locator(
-      'rect[data-variant="note-click-target-rect"]',
-    )
+    const noteRects = page.locator('rect[data-variant="note-click-target"]')
     const rectCount = await noteRects.count()
     let noteId: string | null = null
     let partIndex: string | null = null
@@ -237,7 +233,7 @@ Then(
 
     // Re-query by the note's own identity (not DOM adjacency): the
     // `playback-cursor-rect` for a given `(part-index, note-id)` lives in a
-    // separate rendered layer from the `note-click-target-rect`'s own group,
+    // separate rendered layer from the `note-click-target`'s own group,
     // even though both carry the same `data-tag="note"` attributes — see
     // `usePlaybackCursor.ts`'s own lookup, which does the same thing.
     await expect(

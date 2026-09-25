@@ -5,9 +5,11 @@ import './index.css'
 import App from './App.tsx'
 import { SyncedShareGithubCallbackPage } from './components/SyncedShareGithubCallbackPage.tsx'
 import { injectFontFaces } from './injectFontFaces.ts'
+import { injectPreviewInteractionStyles } from './injectPreviewInteractionStyles.ts'
 import { syncedShareGithubCallbackPathname } from './storage/accountAuthPopup.ts'
 
 injectFontFaces()
+injectPreviewInteractionStyles()
 
 const root = document.getElementById('root')
 if (root == null) {

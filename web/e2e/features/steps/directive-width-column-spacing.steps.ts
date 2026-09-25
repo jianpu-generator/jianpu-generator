@@ -158,7 +158,7 @@ Given(
     // Every measure here carries a `label=` directive, so 3 measures produce
     // 3 section-label groups (one click-target rect each).
     await expect(
-      page.locator('rect[data-variant="section-label-click-target-rect"]'),
+      page.locator('rect[data-variant="section-label-click-target"]'),
     ).toHaveCount(3, { timeout: 10_000 })
   },
 )
@@ -192,7 +192,7 @@ Then(
         [
           ...(await group.locator('text[data-variant="directive-line"]').all()),
           ...(await group
-            .locator('rect[data-variant="section-label-click-target-rect"]')
+            .locator('rect[data-variant="section-label-click-target"]')
             .all()),
         ].map((locator) => stableBoundingBox(locator)),
       )

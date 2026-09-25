@@ -34,7 +34,7 @@ const crossSystemSource = [
 ].join('\n')
 
 function noteRects(page: import('@playwright/test').Page) {
-  return page.locator('rect[data-variant="note-click-target-rect"]')
+  return page.locator('rect[data-variant="note-click-target"]')
 }
 
 // A note renders two sibling `[data-tag="note"]` groups (the click-target
@@ -44,7 +44,7 @@ function noteRects(page: import('@playwright/test').Page) {
 // carries the click-target rect and gets the `noteRangeSelected` flag.
 function noteGroup(page: import('@playwright/test').Page, noteId: number) {
   return page.locator(
-    `[data-tag="note"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target-rect"])`,
+    `[data-tag="note"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target"])`,
   )
 }
 

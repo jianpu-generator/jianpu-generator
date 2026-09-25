@@ -44,14 +44,14 @@ function noteClickTarget(
 ) {
   return page
     .locator(
-      `[data-tag="note"][data-part-index="0"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target-rect"])`,
+      `[data-tag="note"][data-part-index="0"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target"])`,
     )
-    .locator('rect[data-variant="note-click-target-rect"]')
+    .locator('rect[data-variant="note-click-target"]')
 }
 
 function noteAt(page: import('@playwright/test').Page, noteId: number) {
   return page.locator(
-    `[data-tag="note"][data-part-index="0"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target-rect"])`,
+    `[data-tag="note"][data-part-index="0"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target"])`,
   )
 }
 
@@ -88,7 +88,7 @@ Given(
       timeout: 15_000,
     })
     await expect(
-      page.locator('rect[data-variant="note-click-target-rect"]'),
+      page.locator('rect[data-variant="note-click-target"]'),
     ).toHaveCount(4, { timeout: 10_000 })
     await expect(
       page.locator('[data-tag="lyric"][data-part-index="0"]'),

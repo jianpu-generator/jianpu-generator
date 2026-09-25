@@ -33,6 +33,26 @@ pub(super) fn font_weight_to_wit(weight: &crate::svg_types::FontWeightOut) -> Fo
     }
 }
 
+pub(super) fn svg_variant_to_wit(variant: crate::svg_types::SvgVariantOut) -> SvgVariant {
+    use crate::svg_types::SvgVariantOut;
+    match variant {
+        SvgVariantOut::Text => SvgVariant::Text,
+        SvgVariantOut::NoteHead => SvgVariant::NoteHead,
+        SvgVariantOut::Rest => SvgVariant::Rest,
+        SvgVariantOut::OmittedPartRest => SvgVariant::OmittedPartRest,
+        SvgVariantOut::MultiMeasureRest => SvgVariant::MultiMeasureRest,
+        SvgVariantOut::ChordSymbol => SvgVariant::ChordSymbol,
+        SvgVariantOut::PercussionHit => SvgVariant::PercussionHit,
+        SvgVariantOut::HorizontalLine => SvgVariant::HorizontalLine,
+        SvgVariantOut::Underline => SvgVariant::Underline,
+        SvgVariantOut::TieOrSlur => SvgVariant::TieOrSlur,
+        SvgVariantOut::TupletBracket => SvgVariant::TupletBracket,
+        SvgVariantOut::BarLine => SvgVariant::BarLine,
+        SvgVariantOut::Lyric => SvgVariant::Lyric,
+        SvgVariantOut::DirectiveLine => SvgVariant::DirectiveLine,
+    }
+}
+
 pub(super) fn transparent_rect_role_to_wit(
     role: &crate::svg_types::TransparentRectRoleOut,
 ) -> TransparentRectRole {

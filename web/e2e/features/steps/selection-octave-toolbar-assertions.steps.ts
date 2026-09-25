@@ -44,7 +44,7 @@ async function highlightedNoteCellKeys(page: import('@playwright/test').Page) {
   return page.evaluate(() =>
     Array.from(
       document.querySelectorAll(
-        '[data-tag="note"][data-note-range-selected] rect[data-variant="note-click-target-rect"]',
+        '[data-tag="note"][data-note-range-selected] rect[data-variant="note-click-target"]',
       ),
     )
       .map((rect) => rect.closest('[data-tag="note"]') as HTMLElement)

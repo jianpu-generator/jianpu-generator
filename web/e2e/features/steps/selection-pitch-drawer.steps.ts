@@ -68,7 +68,7 @@ async function loadScore(page: Page, source: string) {
     timeout: 15_000,
   })
   await expect(
-    page.locator('rect[data-variant="note-click-target-rect"]').first(),
+    page.locator('rect[data-variant="note-click-target"]').first(),
   ).toBeVisible({ timeout: 10_000 })
   const isMobile = (page.viewportSize()?.width ?? 1280) <= 768
   if (isMobile) {
@@ -105,7 +105,7 @@ function noteGroup(page: Page, partIndex: number, noteId: number) {
   // holding the click target.
   return page
     .locator(
-      `[data-tag="note"][data-part-index="${partIndex}"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target-rect"])`,
+      `[data-tag="note"][data-part-index="${partIndex}"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target"])`,
     )
     .first()
 }
@@ -113,7 +113,7 @@ function noteGroup(page: Page, partIndex: number, noteId: number) {
 function clickTarget(page: Page, noteId: number) {
   // Every score here has a single part, so it's always part index 0.
   return noteGroup(page, 0, noteId).locator(
-    'rect[data-variant="note-click-target-rect"]',
+    'rect[data-variant="note-click-target"]',
   )
 }
 
@@ -153,7 +153,7 @@ Given(
       timeout: 15_000,
     })
     await expect(
-      page.locator('rect[data-variant="note-click-target-rect"]').first(),
+      page.locator('rect[data-variant="note-click-target"]').first(),
     ).toBeVisible({ timeout: 10_000 })
     // No editor to prime the worker round-trip through, so just give
     // `listNoteSpans` time to land before hit-testing.

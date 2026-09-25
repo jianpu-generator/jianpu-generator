@@ -44,9 +44,7 @@ function pages(page: import('@playwright/test').Page) {
 function notesOnPage(page: import('@playwright/test').Page, pageIndex: number) {
   return pages(page)
     .nth(pageIndex)
-    .locator(
-      '[data-tag="note"]:has(rect[data-variant="note-click-target-rect"])',
-    )
+    .locator('[data-tag="note"]:has(rect[data-variant="note-click-target"])')
 }
 
 Given(

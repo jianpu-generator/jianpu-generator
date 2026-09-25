@@ -134,7 +134,7 @@ When(
     // where the lyric rows start.
     const noteRect = page
       .locator(`[data-tag="note"][data-note-id="${noteId}"]`)
-      .locator('rect[data-variant="note-click-target-rect"]')
+      .locator('rect[data-variant="note-click-target"]')
     const box = await stableBoundingBox(noteRect)
     if (!box) throw new Error('no box')
     await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.15)
@@ -155,7 +155,7 @@ When(
     // where the lyric rows start.
     const noteRect = page
       .locator(`[data-tag="note"][data-note-id="${noteId}"]`)
-      .locator('rect[data-variant="note-click-target-rect"]')
+      .locator('rect[data-variant="note-click-target"]')
     const box = await stableBoundingBox(noteRect)
     if (!box) throw new Error('no box')
     await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.15)

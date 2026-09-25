@@ -85,7 +85,7 @@ function barNumberRect(
 ) {
   return page
     .locator(`[data-tag="bar-number"][data-measure-index="${measureIndex}"]`)
-    .locator('rect[data-variant="bar-number-click-target-rect"]')
+    .locator('rect[data-variant="bar-number-click-target"]')
     .first()
 }
 

@@ -75,9 +75,9 @@ function noteClickTargetRect(
 ) {
   return page
     .locator(
-      `[data-tag="note"][data-part-index="0"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target-rect"])`,
+      `[data-tag="note"][data-part-index="0"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target"])`,
     )
-    .locator('rect[data-variant="note-click-target-rect"]')
+    .locator('rect[data-variant="note-click-target"]')
     .first()
 }
 
@@ -185,7 +185,7 @@ Then(
     const selected = page.locator('[data-tag="note"][data-note-range-selected]')
     await expect(selected.first()).toBeVisible()
     const fills = await selected
-      .locator('rect[data-variant="note-click-target-rect"]')
+      .locator('rect[data-variant="note-click-target"]')
       .evaluateAll((els) => els.map((el) => getComputedStyle(el).fill))
     for (const fill of fills) {
       expect(fill).toBe(COMMITTED_FILL)

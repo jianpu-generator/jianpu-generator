@@ -147,7 +147,7 @@ Then(
   async ({ page }) => {
     await expect(
       partLabel(page, 0, 0).locator(
-        'rect[data-variant="part-label-click-target-rect"]',
+        'rect[data-variant="part-label-click-target"]',
       ),
     ).toHaveAttribute('data-part-label-range-active', '')
   },
@@ -159,7 +159,7 @@ Then(
     // Harmony was never swept — see the feature file's header comment.
     await expect(
       partLabel(page, 1, 0).locator(
-        'rect[data-variant="part-label-click-target-rect"]',
+        'rect[data-variant="part-label-click-target"]',
       ),
     ).not.toHaveAttribute('data-part-label-range-active', '')
   },
@@ -172,7 +172,7 @@ Then(
     // range spans both systems' Melody notes.
     await expect(
       partLabel(page, 0, 1).locator(
-        'rect[data-variant="part-label-click-target-rect"]',
+        'rect[data-variant="part-label-click-target"]',
       ),
     ).toHaveAttribute('data-part-label-range-active', '')
   },

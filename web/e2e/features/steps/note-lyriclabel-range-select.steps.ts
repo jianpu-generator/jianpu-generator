@@ -54,7 +54,7 @@ function noteInPart(page: import('@playwright/test').Page, partIndex: number) {
   return page
     .locator(`[data-tag="note"][data-part-index="${partIndex}"]`)
     .filter({
-      has: page.locator('rect[data-variant="note-click-target-rect"]'),
+      has: page.locator('rect[data-variant="note-click-target"]'),
     })
 }
 

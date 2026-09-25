@@ -223,7 +223,7 @@ When('I release the mouse button', async ({ page }) => {
 // one regardless.)
 When('I click a bar line in the SVG preview', async ({ page }) => {
   const barLine = page
-    .locator('rect[data-variant="bar-line-click-target-rect"]')
+    .locator('rect[data-variant="bar-line-click-target"]')
     .first()
   await expect(barLine).toHaveCount(1, { timeout: 15_000 })
   await barLine.click()

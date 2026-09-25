@@ -4,12 +4,14 @@
 //! repo's max-file-lines limit.
 use jianpu_generator::{
     compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor},
-    renderer::new_types::{SvgDocument, SvgElement, SvgKind, Tag, TransparentRectRole, TspanData},
+    renderer::new_types::{
+        SvgDocument, SvgElement, SvgKind, SvgVariant, Tag, TransparentRectRole, TspanData,
+    },
 };
 
 use crate::svg_types::{
     DominantBaselineOut, FontFamilyOut, FontWeightOut, SvgDocumentOut, SvgElementOut, SvgKindOut,
-    TagOut, TextAnchorOut, TransparentRectRoleOut, TspanOut,
+    SvgVariantOut, TagOut, TextAnchorOut, TransparentRectRoleOut, TspanOut,
 };
 
 pub(crate) fn svg_document_to_out(doc: &SvgDocument) -> SvgDocumentOut {
@@ -34,8 +36,27 @@ fn svg_element_to_out(el: &SvgElement) -> SvgElementOut {
     SvgElementOut {
         x: el.x,
         y: el.y,
-        variant: el.variant.map(|variant| variant.as_str().to_string()),
+        variant: el.variant.map(svg_variant_to_out),
         kind: svg_kind_to_out(&el.kind),
+    }
+}
+
+fn svg_variant_to_out(variant: SvgVariant) -> SvgVariantOut {
+    match variant {
+        SvgVariant::Text => SvgVariantOut::Text,
+        SvgVariant::NoteHead => SvgVariantOut::NoteHead,
+        SvgVariant::Rest => SvgVariantOut::Rest,
+        SvgVariant::OmittedPartRest => SvgVariantOut::OmittedPartRest,
+        SvgVariant::MultiMeasureRest => SvgVariantOut::MultiMeasureRest,
+        SvgVariant::ChordSymbol => SvgVariantOut::ChordSymbol,
+        SvgVariant::PercussionHit => SvgVariantOut::PercussionHit,
+        SvgVariant::HorizontalLine => SvgVariantOut::HorizontalLine,
+        SvgVariant::Underline => SvgVariantOut::Underline,
+        SvgVariant::TieOrSlur => SvgVariantOut::TieOrSlur,
+        SvgVariant::TupletBracket => SvgVariantOut::TupletBracket,
+        SvgVariant::BarLine => SvgVariantOut::BarLine,
+        SvgVariant::Lyric => SvgVariantOut::Lyric,
+        SvgVariant::DirectiveLine => SvgVariantOut::DirectiveLine,
     }
 }
 

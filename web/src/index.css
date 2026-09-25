@@ -57,46 +57,6 @@ body {
   overscroll-behavior: none;
 }
 
-[data-tag="note"][data-note-range-selected]
-  rect[data-variant="note-click-target-rect"] {
-  fill: rgba(37, 99, 235, 0.25);
-}
-
-[data-tag="lyric"][data-lyric-range-selected]
-  rect[data-variant="lyric-click-target-rect"] {
-  fill: rgba(37, 99, 235, 0.25);
-}
-
-/* A click-and-click gesture's anchor, while it's still waiting on a second
-   click (`usePreviewClickSelection`'s `pendingSecondClick` mirrored onto the
-   preview container as `data-pending-selection` — see its own doc comment),
-   paints in this amber "pending" color instead of the committed-selection
-   blue above, so mid-gesture never reads as an already-final selection. Both
-   rules match the same `[data-note-range-selected]`/`[data-lyric-range-selected]`
-   attribute; this one wins on specificity (one extra ancestor attribute
-   selector) whenever the container carries the pending flag. */
-[data-pending-selection]
-  [data-tag="note"][data-note-range-selected]
-  rect[data-variant="note-click-target-rect"] {
-  fill: rgba(217, 119, 6, 0.25);
-}
-
-[data-pending-selection]
-  [data-tag="lyric"][data-lyric-range-selected]
-  rect[data-variant="lyric-click-target-rect"] {
-  fill: rgba(217, 119, 6, 0.25);
-}
-
-rect[data-variant="part-label-click-target-rect"]:hover,
-rect[data-variant="part-label-click-target-rect"][data-part-label-range-active] {
-  fill: rgba(37, 99, 235, 0.12);
-}
-
-rect[data-variant="lyric-label-click-target-rect"]:hover,
-rect[data-variant="lyric-label-click-target-rect"][data-lyric-label-range-active] {
-  fill: rgba(37, 99, 235, 0.12);
-}
-
 /* Hide native number-input spinners: EditMetadataModal's `NumberStepper`
    (see src/components/MetadataFieldRows.tsx) renders its own always-visible
    +/- buttons instead, since native spinner arrows are hover-only in some

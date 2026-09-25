@@ -236,13 +236,32 @@ world jianpu-wasm {
         group(svg-group-kind),
     }
 
+    // Mirrors `SvgVariant` (`src/renderer/new_types.rs`): what a drawn
+    // element depicts, written onto it as its `data-variant` styling hook.
+    enum svg-variant {
+        text,
+        note-head,
+        rest,
+        omitted-part-rest,
+        multi-measure-rest,
+        chord-symbol,
+        percussion-hit,
+        horizontal-line,
+        underline,
+        tie-or-slur,
+        tuplet-bracket,
+        bar-line,
+        lyric,
+        directive-line,
+    }
+
     // `variant` is a reserved WIT keyword, so the field named `variant` in
-    // `SvgElementOut` (an optional CSS-class-like variant tag, unrelated to
-    // WIT's `variant` type construct) is ported as `variant-tag` instead.
+    // `SvgElementOut` (unrelated to WIT's `variant` type construct) is ported
+    // as `variant-tag` instead.
     record svg-element {
         x: f32,
         y: f32,
-        variant-tag: option<string>,
+        variant-tag: option<svg-variant>,
         kind: svg-kind,
     }
 

@@ -75,38 +75,3 @@
   max-width: 100%;
   height: auto;
 }
-
-.preview-page
-  svg
-  g[data-tag="section-label"]:hover
-  > rect[data-variant="section-label-bg"] {
-  fill: rgba(100, 160, 255, 0.2);
-}
-
-.preview-page
-  svg
-  g[data-tag="note"]:hover
-  > rect[data-variant="note-click-target-rect"] {
-  fill: rgba(100, 160, 255, 0.2);
-}
-
-.preview-page
-  svg
-  g[data-tag="lyric"]:hover
-  > rect[data-variant="lyric-click-target-rect"] {
-  fill: rgba(100, 160, 255, 0.2);
-}
-
-.preview-page
-  svg
-  g[data-tag="bar-number"]:hover
-  > rect[data-variant="bar-number-click-target-rect"] {
-  fill: rgba(100, 160, 255, 0.2);
-}
-
-.preview-page
-  svg
-  g[data-tag="bar-line"]:hover
-  > rect[data-variant="bar-line-click-target-rect"] {
-  fill: rgba(100, 160, 255, 0.45);
-}

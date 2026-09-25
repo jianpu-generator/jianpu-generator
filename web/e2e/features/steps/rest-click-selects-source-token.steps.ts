@@ -63,7 +63,7 @@ Given('the rest-click test fixture is loaded', async ({ page }) => {
   await page.waitForSelector('[data-tag="measure"][data-measure-index="0"]', {
     timeout: 10_000,
   })
-  const noteRects = page.locator('rect[data-variant="note-click-target-rect"]')
+  const noteRects = page.locator('rect[data-variant="note-click-target"]')
   await expect(noteRects).toHaveCount(4, { timeout: 10_000 })
 
   // Prime the editor/worker round-trip the same way the other click-select
@@ -87,9 +87,7 @@ Given('the rest-click test fixture is loaded', async ({ page }) => {
 When(
   "I click-and-click just past the note-range-select arm threshold inside the rest's own click target",
   async ({ page }) => {
-    const noteRects = page.locator(
-      'rect[data-variant="note-click-target-rect"]',
-    )
+    const noteRects = page.locator('rect[data-variant="note-click-target"]')
     // Note index 1 is the rest ("0" in "1 0 3 4").
     const restBox = await stableBoundingBox(noteRects.nth(1))
     if (!restBox) {

@@ -214,7 +214,7 @@ When('I tap the first note, as seen in share', async ({ page }) => {
     timeout: 15_000,
   })
   const noteRect = page
-    .locator('rect[data-variant="note-click-target-rect"]')
+    .locator('rect[data-variant="note-click-target"]')
     .first()
   await expect(noteRect).toBeVisible()
   const box = await stableBoundingBox(noteRect)

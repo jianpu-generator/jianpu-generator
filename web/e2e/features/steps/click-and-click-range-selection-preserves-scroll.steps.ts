@@ -36,7 +36,7 @@ function previewPages(page: import('@playwright/test').Page) {
 
 function notes(page: import('@playwright/test').Page) {
   return page.locator(
-    '[data-tag="note"]:has(rect[data-variant="note-click-target-rect"])',
+    '[data-tag="note"]:has(rect[data-variant="note-click-target"])',
   )
 }
 

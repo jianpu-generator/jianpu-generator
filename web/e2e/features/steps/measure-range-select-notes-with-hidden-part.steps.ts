@@ -112,7 +112,7 @@ When('I hide the Harmony part', async ({ page }) => {
 })
 
 Then('{int} notes render across both measures', async ({ page }, count) => {
-  const noteRects = page.locator('rect[data-variant="note-click-target-rect"]')
+  const noteRects = page.locator('rect[data-variant="note-click-target"]')
   // Melody (2/measure) + Bass (2/measure), 2 measures = 8 rendered notes.
   await expect(noteRects).toHaveCount(count, { timeout: 10_000 })
   // Give the debounced listNoteSpans worker round-trip time to catch up

@@ -285,6 +285,14 @@ a runtime `JsValue`/`any` surprise.
   unconstructible type (`jianpuWasmDts.test.ts` guards this). The
   exports table below names each function by its WIT (snake_case) name;
   `Root`'s method for it is the camelCase form.
+- The React preview (`PreviewSvgRenderer.tsx`) writes `data-tag`/`data-variant`
+  as the generated `Tag['tag']`/`SvgVariant`/`TransparentRectRole` strings
+  verbatim (`DataVariant` in `web/src/dataAttributes.ts`), so its
+  click-target `data-variant`s drop the Rust serializer's `-rect` suffix.
+  CSS selectors on those attributes are built in
+  `web/src/injectPreviewInteractionStyles.ts` from the typed selector
+  helpers, never hand-typed in a `.css` file (`dataAttributes.test.ts`
+  guards this).
 
 ### WASM exports (`crates/jianpu-wasm`)
 

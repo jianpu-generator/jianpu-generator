@@ -54,7 +54,7 @@ function noteAt(
   noteId: number,
 ) {
   return page.locator(
-    `[data-tag="note"][data-part-index="${partIndex}"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target-rect"])`,
+    `[data-tag="note"][data-part-index="${partIndex}"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target"])`,
   )
 }
 
@@ -64,7 +64,7 @@ function noteClickTarget(
   noteId: number,
 ) {
   return noteAt(page, partIndex, noteId).locator(
-    'rect[data-variant="note-click-target-rect"]',
+    'rect[data-variant="note-click-target"]',
   )
 }
 
@@ -107,7 +107,7 @@ Given(
       timeout: 10_000,
     })
     await expect(
-      page.locator('rect[data-variant="note-click-target-rect"]'),
+      page.locator('rect[data-variant="note-click-target"]'),
     ).toHaveCount(6, { timeout: 10_000 })
     await expect(page.locator('[data-tag="lyric"]')).toHaveCount(6, {
       timeout: 10_000,

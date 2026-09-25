@@ -63,7 +63,7 @@ Given(
 )
 
 function noteClickTargets(page: import('@playwright/test').Page) {
-  return page.locator('rect[data-variant="note-click-target-rect"]')
+  return page.locator('rect[data-variant="note-click-target"]')
 }
 
 Then(

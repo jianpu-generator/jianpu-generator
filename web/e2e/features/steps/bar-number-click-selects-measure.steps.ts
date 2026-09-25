@@ -71,7 +71,7 @@ Given('the bar-number-click test fixture is loaded', async ({ page }) => {
 function barNumberRect(page: import('@playwright/test').Page) {
   return page
     .locator(
-      'g[data-tag="bar-number"] > rect[data-variant="bar-number-click-target-rect"]',
+      'g[data-tag="bar-number"] > rect[data-variant="bar-number-click-target"]',
     )
     .first()
 }

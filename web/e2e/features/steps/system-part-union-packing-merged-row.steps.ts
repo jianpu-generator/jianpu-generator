@@ -59,7 +59,7 @@ Then('all notes in the first system are highlighted', async ({ page }) => {
   const highlightedRectBoxes = await page.evaluate(() =>
     Array.from(
       document.querySelectorAll<SVGRectElement>(
-        '[data-tag="note"][data-note-range-selected] rect[data-variant="note-click-target-rect"]',
+        '[data-tag="note"][data-note-range-selected] rect[data-variant="note-click-target"]',
       ),
     ).map((el) => el.getBoundingClientRect().toJSON()),
   )

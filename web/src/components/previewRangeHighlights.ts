@@ -1,6 +1,6 @@
 import {
-  DATA_VARIANT,
   groupTagSelector,
+  rectVariantSelector,
   tagFromElement,
 } from '../dataAttributes'
 import type { Tag } from '../jianpuWasm'
@@ -23,7 +23,7 @@ export interface AnchorPoint {
  */
 interface RangeHighlightSpec<Cell> {
   /** CSS selector for each candidate hit-target rect, e.g.
-   * `rect[data-variant="note-click-target-rect"]`. */
+   * `rect[data-variant="note-click-target"]`. */
   rectSelector: string
   /** `Tag['tag']` of the rect's enclosing group, e.g. `'note'` — the
    * selector itself is built from this via `groupTagSelector`. */
@@ -116,7 +116,7 @@ function applyRangeHighlights<Cell>(
 }
 
 const noteRangeSpec: RangeHighlightSpec<NoteCell> = {
-  rectSelector: `rect[data-variant="${DATA_VARIANT['note-click-target']}"]`,
+  rectSelector: rectVariantSelector('note-click-target'),
   tagType: 'note',
   parseCell: (tag) => {
     if (tag.tag !== 'note') return undefined
@@ -127,7 +127,7 @@ const noteRangeSpec: RangeHighlightSpec<NoteCell> = {
 }
 
 const lyricRangeSpec: RangeHighlightSpec<LyricCell> = {
-  rectSelector: `rect[data-variant="${DATA_VARIANT['lyric-click-target']}"]`,
+  rectSelector: rectVariantSelector('lyric-click-target'),
   tagType: 'lyric',
   parseCell: (tag) => {
     if (tag.tag !== 'lyric') return undefined
@@ -184,7 +184,7 @@ export function applyPersistedNoteHighlights(
 /**
  * Every lyric syllable cell whose click-target rect overlaps the axis-aligned
  * marquee spanned by `anchor`/`current` — mirrors `selectedNoteCellsInMarquee`
- * exactly, but scoped to `[data-tag="lyric"]` groups/`lyric-click-target-rect`
+ * exactly, but scoped to `[data-tag="lyric"]` groups/`lyric-click-target`
  * rects so it's independent of any note selection happening at the same time.
  */
 export function selectedLyricCellsInMarquee(

@@ -103,7 +103,7 @@ Then(
   'the bar-line click-target shows a col-resize cursor',
   async ({ page }) => {
     const handle = page
-      .locator('rect[data-variant="bar-line-click-target-rect"]')
+      .locator('rect[data-variant="bar-line-click-target"]')
       .first()
     await expect(handle).toHaveCSS('cursor', 'col-resize')
   },

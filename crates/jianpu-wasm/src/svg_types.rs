@@ -12,8 +12,27 @@ pub struct SvgElementOut {
     pub x: f32,
     pub y: f32,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub variant: Option<String>,
+    pub variant: Option<SvgVariantOut>,
     pub kind: SvgKindOut,
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SvgVariantOut {
+    Text,
+    NoteHead,
+    Rest,
+    OmittedPartRest,
+    MultiMeasureRest,
+    ChordSymbol,
+    PercussionHit,
+    HorizontalLine,
+    Underline,
+    TieOrSlur,
+    TupletBracket,
+    BarLine,
+    Lyric,
+    DirectiveLine,
 }
 
 #[derive(Debug, Clone, Serialize)]

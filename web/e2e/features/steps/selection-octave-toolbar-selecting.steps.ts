@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { DATA_VARIANT } from '../../../src/dataAttributes'
+import { rectVariantSelector } from '../../../src/dataAttributes'
 import { Given, When } from './fixtures'
 
 const SINGLE_MEASURE_SOURCE = [
@@ -162,10 +162,9 @@ async function selectRangeBetween(
   // SVG highlight from an empty span list, and since it only re-derives on
   // the *next* selection-change event, a selection made before spans load
   // never gets a highlight even after they arrive.
-  await page.waitForSelector(
-    `rect[data-variant="${DATA_VARIANT['note-click-target']}"]`,
-    { timeout: 10_000 },
-  )
+  await page.waitForSelector(rectVariantSelector('note-click-target'), {
+    timeout: 10_000,
+  })
   // The rects existing in the DOM only means the SVG has rendered — it says
   // nothing about whether `noteSpans` (the separate, debounced `listNoteSpans`
   // worker round-trip `handleEditorSelectionChange` reads to resolve a text

@@ -113,9 +113,7 @@ When(
     })
     await harmonyPill.locator('.part-toggle-segment--eye').click()
 
-    const noteRects = page.locator(
-      'rect[data-variant="note-click-target-rect"]',
-    )
+    const noteRects = page.locator('rect[data-variant="note-click-target"]')
     // Melody (2) + Bass (2), Harmony hidden = 4 rendered notes.
     await expect(noteRects).toHaveCount(4, { timeout: 10_000 })
     // Give the debounced listNoteSpans worker round-trip time to catch up

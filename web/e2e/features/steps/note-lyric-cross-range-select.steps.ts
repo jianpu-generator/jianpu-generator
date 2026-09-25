@@ -49,7 +49,7 @@ const rangeTestSource = [
 ].join('\n')
 
 function noteRects(page: import('@playwright/test').Page) {
-  return page.locator('rect[data-variant="note-click-target-rect"]')
+  return page.locator('rect[data-variant="note-click-target"]')
 }
 
 function lyricTexts(page: import('@playwright/test').Page) {

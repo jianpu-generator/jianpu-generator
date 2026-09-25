@@ -12,7 +12,7 @@ import { Given, Then } from './fixtures'
  * `src/grid_layout/tests_playback_cursor.rs`.
  *
  * Before the fix, a note's `NoteClickTarget` rect (`data-tag="note"`,
- * `rect[data-variant="note-click-target-rect"]`) reused the same row range as
+ * `rect[data-variant="note-click-target"]`) reused the same row range as
  * the playback cursor rect, which is deliberately widened to cover the
  * note's lyric verse row(s) so the "now playing" highlight visually covers
  * the lyric text too. That meant hovering/selecting a note with a lyric
@@ -69,7 +69,7 @@ Then(
   async ({ page }) => {
     const noteClickRect = page
       .locator('[data-tag="note"][data-note-id="0"]')
-      .locator('rect[data-variant="note-click-target-rect"]')
+      .locator('rect[data-variant="note-click-target"]')
     const lyricRect = page
       .locator('[data-tag="lyric"][data-note-id="0"][data-verse="0"]')
       .locator('rect')

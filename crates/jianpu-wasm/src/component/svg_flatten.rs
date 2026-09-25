@@ -12,7 +12,7 @@ pub(super) fn push_leaf_element(
     elements.push(SvgElement {
         x: element.x,
         y: element.y,
-        variant_tag: element.variant.clone(),
+        variant_tag: element.variant.map(svg_variant_to_wit),
         kind,
     });
     elements.len() as u32 - 1
@@ -35,7 +35,7 @@ pub(super) fn flatten_svg_group(
     elements.push(SvgElement {
         x: element.x,
         y: element.y,
-        variant_tag: element.variant.clone(),
+        variant_tag: element.variant.map(svg_variant_to_wit),
         kind: SvgKind::Group(SvgGroupKind {
             child_indices: Vec::new(),
             tag: tag.map(tag_to_wit),

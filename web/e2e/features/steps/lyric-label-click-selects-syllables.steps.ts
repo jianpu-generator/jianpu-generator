@@ -48,7 +48,7 @@ function verseLabel(page: import('@playwright/test').Page, verse: number) {
 
 function verseLabelRect(page: import('@playwright/test').Page, verse: number) {
   return verseLabel(page, verse).locator(
-    'rect[data-variant="lyric-label-click-target-rect"]',
+    'rect[data-variant="lyric-label-click-target"]',
   )
 }
 

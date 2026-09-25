@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import {
-  DATA_VARIANT,
   groupTagSelector,
   noteGroupSelector,
+  rectVariantSelector,
 } from '../dataAttributes'
 import type { NoteTiming } from '../jianpuWasm'
 import {
@@ -52,7 +52,7 @@ export function clearStaleHighlights(
   keep: Set<string>,
 ): void {
   const highlighted = container.querySelectorAll(
-    `${groupTagSelector('note')} rect[data-variant="${DATA_VARIANT['playback-cursor-rect']}"][fill="${PLAYBACK_CURSOR_FILL}"]`,
+    `${groupTagSelector('note')} ${rectVariantSelector('playback-cursor-rect')}[fill="${PLAYBACK_CURSOR_FILL}"]`,
   )
   for (const rect of highlighted) {
     const group = rect.closest(groupTagSelector('note'))
@@ -94,7 +94,7 @@ export function usePlaybackCursor(
       on: boolean,
     ) => {
       const rects = container.querySelectorAll<SVGRectElement>(
-        `${noteGroupSelector({ partIndex: sourcePartIndex, noteId })} rect[data-variant="${DATA_VARIANT['playback-cursor-rect']}"]`,
+        `${noteGroupSelector({ partIndex: sourcePartIndex, noteId })} ${rectVariantSelector('playback-cursor-rect')}`,
       )
       for (const rect of rects) {
         rect.setAttribute('fill', on ? PLAYBACK_CURSOR_FILL : 'transparent')
@@ -106,7 +106,7 @@ export function usePlaybackCursor(
       noteId: number,
     ) => {
       const rect = container.querySelector<SVGRectElement>(
-        `${noteGroupSelector({ partIndex: sourcePartIndex, noteId })} rect[data-variant="${DATA_VARIANT['playback-cursor-rect']}"]`,
+        `${noteGroupSelector({ partIndex: sourcePartIndex, noteId })} ${rectVariantSelector('playback-cursor-rect')}`,
       )
       if (!rect) return
       const noteBounds = rect.getBoundingClientRect()
