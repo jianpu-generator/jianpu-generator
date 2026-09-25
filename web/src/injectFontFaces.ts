@@ -1,4 +1,4 @@
-import fonts from '../../fonts/fonts.json'
+import { pinnedPreviewRoles } from './fontRoles'
 
 // index.css can't import a JSON/JS constant, so the `@font-face` rules it
 // used to hold statically are built here instead, straight from
@@ -40,12 +40,10 @@ function bareFamilyName(familyCss: string): string {
  * DOM (see injectFontFaces.test.ts). `baseUrl` must be Vite's
  * `import.meta.env.BASE_URL`-shaped value: an absolute path ending in `/`. */
 export function buildFontFaceCss(baseUrl: string): string {
-  // Only `serif`/`sansSerif` get a `@font-face` rule, matching the static
-  // rules this replaces: the preview SVG renders monospace-role glyphs with
-  // the plain CSS `monospace` keyword rather than a `FontFamily` family
-  // stack (see `textFontFamily` in PreviewSvgRenderer.tsx), so there's
-  // nothing in the browser for a `Monospace` `@font-face` rule to back.
-  const roles = [fonts.serif, fonts.sansSerif]
+  // A role with a `previewFamilyCss` renders in the preview with that
+  // generic family instead (see `previewFontFamilyCss`), so there's nothing
+  // in the browser for its `@font-face` rule to back.
+  const roles = pinnedPreviewRoles
   // Two roles can point at the same font file/family (e.g. while
   // experimenting with a single typeface for both) — dedupe by family name
   // so that doesn't produce two identical `@font-face` rules.

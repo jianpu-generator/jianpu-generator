@@ -57,13 +57,15 @@ export const numericColumns: NumericColumn[] = [
 
 /** One boolean toggle column: its full label (the button's `aria-label`,
  * as `"${rowLabel} ${label}"`), the single-letter glyph shown on the
- * button (styled to preview the effect it toggles), and the edit that sets
- * it. */
+ * button (styled to preview the effect it toggles), whether it selects a
+ * font face (so it's a no-op for a font role without one — see
+ * `hasPreviewStyleFaces`), and the edit that sets it. */
 export interface BooleanColumn {
   field: BooleanField
   label: string
   glyph: string
   glyphStyle: React.CSSProperties
+  selectsFontFace: boolean
   edit: (val: boolean) => TextStyleComponentValue
 }
 
@@ -73,6 +75,7 @@ export const booleanColumns: BooleanColumn[] = [
     label: 'Bold',
     glyph: 'B',
     glyphStyle: { fontWeight: 'bold' },
+    selectsFontFace: true,
     edit: (val) => ({ tag: 'bold', val }),
   },
   {
@@ -80,6 +83,7 @@ export const booleanColumns: BooleanColumn[] = [
     label: 'Italic',
     glyph: 'I',
     glyphStyle: { fontStyle: 'italic' },
+    selectsFontFace: true,
     edit: (val) => ({ tag: 'italic', val }),
   },
   {
@@ -87,40 +91,10 @@ export const booleanColumns: BooleanColumn[] = [
     label: 'Underline',
     glyph: 'U',
     glyphStyle: { textDecoration: 'underline' },
+    selectsFontFace: false,
     edit: (val) => ({ tag: 'underline', val }),
   },
 ]
-
-/** Whether a `bold`/`italic` toggle actually changes anything for a given
- * `font_family` role — `underline` is `text-decoration`, not a font face, so
- * it always works and isn't checked here.
- *
- * - `serif` (Zhuque Fangsong) and `sans_serif` (Source Han Sans SC) each
- *   bundle only their Regular file (see `fonts/fonts.json`), rendered via a
- *   dedicated `@font-face` pinned to that one file (`injectFontFaces.ts`),
- *   with `font-synthesis: none` set app-wide (`index.css`) — so there's no
- *   real bold/italic face for the browser to pick, and no synthesis to fake
- *   one. PDF export (`src/pdf.rs`) loads the same single Regular file into
- *   `usvg`'s `fontdb`, which never synthesizes either, so bold/italic are a
- *   no-op there too. Real bold/italic files don't currently exist upstream
- *   for either typeface.
- * - `monospace` renders in the preview with the bare CSS `monospace`
- *   keyword rather than a pinned custom font (see `textFontFamily` in
- *   PreviewSvgRenderer.tsx), so it resolves to the viewer's real system
- *   monospace font — which typically ships genuine bold/italic faces the
- *   browser can pick directly, no synthesis needed. (PDF export is the
- *   exception: it loads only `NotoSansMono-Regular.ttf`, so exported bold/
- *   italic monospace text is still a no-op there — a separate, currently
- *   undocumented preview/export mismatch.)
- */
-export const fontFamilyStyleCapabilities: Record<
-  FontFamilyChoice,
-  Partial<Record<BooleanField, boolean>>
-> = {
-  serif: { bold: false, italic: false },
-  'sans-serif': { bold: false, italic: false },
-  monospace: { bold: true, italic: true },
-}
 
 /** Display label for each `font_family` option, shown in the `<select>`
  * (see `StyleRowSpec.showFontFamily`). */

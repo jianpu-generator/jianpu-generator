@@ -1,3 +1,4 @@
+import { hasPreviewStyleFaces } from '../fontRoles'
 import type {
   TextStyleComponentValue,
   TextStyleDefaults,
@@ -12,7 +13,6 @@ import {
   booleanColumns,
   fontFamilyChoices,
   fontFamilyOptionLabels,
-  fontFamilyStyleCapabilities,
   numericColumns,
 } from './metadataStyleColumns'
 
@@ -116,7 +116,7 @@ function StyleToggleButton({
   checked: boolean
   /** When set, the toggle renders disabled and this becomes its `title`
    * (e.g. explaining that the row's current font has no real bold/italic
-   * face — see `fontFamilyStyleCapabilities`). */
+   * face — see `hasPreviewStyleFaces`). */
   disabledReason?: string
   ariaLabel: string
   onClick: () => void
@@ -181,8 +181,8 @@ function StyleTableRow({
         const checked = value[column.field] ?? placeholder[column.field]
         const unsupported =
           effectiveFontFamily != null &&
-          fontFamilyStyleCapabilities[effectiveFontFamily][column.field] ===
-            false
+          column.selectsFontFace &&
+          !hasPreviewStyleFaces(effectiveFontFamily)
         const disabledReason =
           unsupported && effectiveFontFamily != null
             ? `${fontFamilyOptionLabels[effectiveFontFamily]} has no ${column.field} face, so this has no visible effect`

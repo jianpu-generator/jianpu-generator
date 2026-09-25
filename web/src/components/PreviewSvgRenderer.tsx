@@ -1,42 +1,7 @@
 import type { ReactNode } from 'react'
-import fontsManifest from '../../../fonts/fonts.json'
 import { type DataVariant, groupAttrsForTag } from '../dataAttributes'
-import type { FontFamily, SvgDocument } from '../jianpuWasm'
-
-// `FontFamily::SansSerif`'s backing font — the default role for the
-// directive line (bar number, section label, key/bpm/time signature,
-// navigation markers), part legend, and footer, but overridable per-kind via
-// `Metadata::*.font_family` (see `textFontFamily` below), mirroring
-// `DIRECTIVE_LINE_FONT_FAMILY` in `src/serializer/mod.rs` (the Rust-side
-// serializer backing exported .svg files and PDF export). Loaded via the
-// `@font-face` rules injected by `injectFontFaces` (see src/injectFontFaces.ts),
-// which point at the same font file bundled for PDF export (see
-// `set_sans_serif_family` in src/pdf.rs) — instead of the generic
-// `sans-serif` alias, so glyph widths stay consistent across viewers that
-// have the font available. See `fonts/fonts.json` (this constant's source)
-// and Task 1 of PLAN-section-label-engraving-quality.md.
-const DIRECTIVE_LINE_FONT_FAMILY = fontsManifest.sansSerif.familyCss
-
-// `FontFamily::Serif`'s backing font — the default role for the song title,
-// subtitle, author, and lyric syllables/lines, but likewise overridable
-// per-kind — is pinned to a separate, typically more calligraphic font
-// instead. Mirrors `SERIF_FONT_FAMILY` in `src/serializer/mod.rs`.
-const SERIF_FONT_FAMILY = fontsManifest.serif.familyCss
-
-/** Resolves an element's `FontFamily` (`text`'s `font`, or
- * `text-with-tspans`'s own `font` — see `Metadata::measure_number_style`/
- * `section_label_style`/`sequence`'s `font_family`) to the CSS stack it
- * should render with. */
-function textFontFamily(font: FontFamily): string {
-  switch (font) {
-    case 'monospace':
-      return 'monospace'
-    case 'sans-serif':
-      return DIRECTIVE_LINE_FONT_FAMILY
-    case 'serif':
-      return SERIF_FONT_FAMILY
-  }
-}
+import { previewFontFamilyCss } from '../fontRoles'
+import type { SvgDocument } from '../jianpuWasm'
 
 /** Renders `doc.elements[index]` — the Rust side flattens the element tree
  * into this arena in pre-order, with each group naming its children by
@@ -69,7 +34,7 @@ function renderSvgElement(doc: SvgDocument, index: number): ReactNode {
                 ? 'hanging'
                 : 'ideographic'
           }
-          fontFamily={textFontFamily(kind.font)}
+          fontFamily={previewFontFamilyCss(kind.font)}
           fontWeight={kind.weight === 'normal' ? 'normal' : 'bold'}
           fontStyle={kind.italic ? 'italic' : undefined}
           textDecoration={kind.underline ? 'underline' : undefined}
@@ -99,7 +64,7 @@ function renderSvgElement(doc: SvgDocument, index: number): ReactNode {
                 ? 'hanging'
                 : 'ideographic'
           }
-          fontFamily={textFontFamily(kind.font)}
+          fontFamily={previewFontFamilyCss(kind.font)}
         >
           {kind.spans.map((span, spanIndex) => (
             <tspan

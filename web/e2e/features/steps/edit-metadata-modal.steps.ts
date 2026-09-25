@@ -349,3 +349,21 @@ Then(
     ).toContainText(text)
   },
 )
+
+Then('the {string} toggle is disabled', async ({ page }, ariaLabel: string) => {
+  await expect(
+    editMetadataModal(page).getByRole('button', {
+      name: ariaLabel,
+      exact: true,
+    }),
+  ).toBeDisabled()
+})
+
+Then('the {string} toggle is enabled', async ({ page }, ariaLabel: string) => {
+  await expect(
+    editMetadataModal(page).getByRole('button', {
+      name: ariaLabel,
+      exact: true,
+    }),
+  ).toBeEnabled()
+})

@@ -171,3 +171,16 @@ Feature: Edit Metadata modal
     When I open the Edit Metadata modal
     And I open the help for the "Note Dash Style" field
     Then the "Note Dash Style" help contains "Font Size defaults to Notes Style's Font Size."
+
+  Scenario: Bold and Italic are disabled for a font pinned to its single Regular face
+    Given the edit-metadata-modal test fixture is loaded
+    When I open the Edit Metadata modal
+    Then the "Title Style Bold" toggle is disabled
+    And the "Title Style Italic" toggle is disabled
+    And the "Title Style Underline" toggle is enabled
+
+  Scenario: Bold and Italic stay enabled for a font previewed with the system font
+    Given the edit-metadata-modal test fixture is loaded
+    When I open the Edit Metadata modal
+    Then the "Notes Style Bold" toggle is enabled
+    And the "Notes Style Italic" toggle is enabled

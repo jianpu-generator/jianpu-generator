@@ -5,6 +5,8 @@
 
   "//serif": "Serif has no `name` field: it's addressed by its own literal name-table family instead of a fontdb generic alias (fontdb resolves a literal font-family by matching a loaded font's own name-table family). So serif's familyCss bare name *must* equal the actual font file's internal name-table family — swapping in a different font file for this role means updating that name to match the new file's own family, not an arbitrary choice like the other two roles.",
 
+  "//previewFamilyCss": "Optional, web preview only. When set, the in-browser preview renders that role with this CSS font-family (a generic family, resolving to the viewer's system font with its real bold/italic faces) instead of pinning `filename` via an injected @font-face rule. Without it, the preview pins the role to its single bundled Regular file with font-synthesis off, so bold/italic have no visible effect and the Edit Metadata modal disables those toggles for that role (see web/src/fontRoles.ts). PDF export always uses `filename`.",
+
   "serif": {
     "filename": "ZhuqueFangsong-Regular.ttf",
     "familyCss": "\"Zhuque Fangsong (technical preview)\", sans-serif"
@@ -17,6 +19,7 @@
   "monospace": {
     "filename": "NotoSansMono-Regular.ttf",
     "name": "Noto Sans Mono",
-    "familyCss": "\"Noto Sans Mono\", monospace"
+    "familyCss": "\"Noto Sans Mono\", monospace",
+    "previewFamilyCss": "monospace"
   }
 }
