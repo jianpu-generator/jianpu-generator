@@ -54,8 +54,8 @@ export function useSectionNavigation(
     if (!selectedLineRange) return new Set<string>()
     const match = sectionRanges.find(
       (r) =>
-        r.first_line === selectedLineRange.firstLine &&
-        r.last_line === selectedLineRange.lastLine,
+        r.firstLine === selectedLineRange.firstLine &&
+        r.lastLine === selectedLineRange.lastLine,
     )
     return new Set(match?.labels ?? [])
   }, [dragStartLabel, dragHighlightedLabels, selectedLineRange, sectionRanges])
@@ -117,7 +117,7 @@ export function useSectionNavigation(
           (r) => r.labels[0] === labelB && r.labels.at(-1) === labelA,
         )
       if (!range) return
-      selectSectionRange(range.first_line, range.last_line)
+      selectSectionRange(range.firstLine, range.lastLine)
     },
     [sectionRanges, selectSectionRange],
   )

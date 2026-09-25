@@ -118,7 +118,7 @@ pub(super) fn resolve_selection_range_response_to_wit(
         crate::selection_range::ResolveSelectionRangeResponse::Ok {
             note_cells,
             lyric_cells,
-        } => ResolveSelectionRangeResponse::Ok(ResolveSelectionRangeResponseOk {
+        } => ResolveSelectionRangeResponse::Ok(ResolveSelectionRangeSuccess {
             note_cells: note_cells.iter().map(note_cell_out_to_wit).collect(),
             lyric_cells: lyric_cells.iter().map(lyric_cell_out_to_wit).collect(),
         }),

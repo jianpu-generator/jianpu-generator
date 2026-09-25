@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import type { NoteTimingOut, SvgDocumentOut } from '../jianpuWasm'
+import type { NoteTiming, SvgDocument } from '../jianpuWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -43,12 +43,12 @@ export function useJianpuWorkerState(
     [],
   )
   const [partsLoading, setPartsLoading] = useState(false)
-  const [documents, setDocuments] = useState<SvgDocumentOut[]>([])
+  const [documents, setDocuments] = useState<SvgDocument[]>([])
   const [pendingDownload, setPendingDownload] =
     useState<PendingDownload | null>(null)
   const [wavUrl, setWavUrl] = useState<string | null>(null)
   const [mp3Url, setMp3Url] = useState<string | null>(null)
-  const [noteTimings, setNoteTimings] = useState<NoteTimingOut[]>([])
+  const [noteTimings, setNoteTimings] = useState<NoteTiming[]>([])
   const [audioAvailable, setAudioAvailable] = useState(false)
   const [pdfAvailable, setPdfAvailable] = useState(false)
   const [pdfExporting, setPdfExporting] = useState(false)
@@ -77,7 +77,7 @@ export function useJianpuWorkerState(
     highlightRanges?: { start: number; end: number }[]
   } | null>(null)
   const [highlightedDocuments, setHighlightedDocuments] = useState<
-    SvgDocumentOut[]
+    SvgDocument[]
   >([])
   const [measureSpans, setMeasureSpans] = useState<MeasureSpan[]>([])
   const [noteSpans, setNoteSpans] = useState<NoteSpan[]>([])

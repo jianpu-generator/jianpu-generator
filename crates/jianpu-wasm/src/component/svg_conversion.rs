@@ -79,21 +79,21 @@ pub(super) fn tspan_to_wit(tspan: &crate::svg_types::TspanOut) -> Tspan {
 
 pub(super) fn tag_to_wit(tag: &crate::svg_types::TagOut) -> Tag {
     match tag {
-        crate::svg_types::TagOut::Measure { index, end } => Tag::Measure(TagMeasure {
+        crate::svg_types::TagOut::Measure { index, end } => Tag::Measure(MeasureTag {
             index: *index as u32,
             end: *end as u32,
         }),
-        crate::svg_types::TagOut::BarNumber { index, end } => Tag::BarNumber(TagBarNumber {
+        crate::svg_types::TagOut::BarNumber { index, end } => Tag::BarNumber(BarNumberTag {
             index: *index as u32,
             end: *end as u32,
         }),
-        crate::svg_types::TagOut::SectionLabel { label } => Tag::SectionLabel(TagSectionLabel {
+        crate::svg_types::TagOut::SectionLabel { label } => Tag::SectionLabel(SectionLabelTag {
             label: label.clone(),
         }),
         crate::svg_types::TagOut::Note {
             source_part_index,
             note_id,
-        } => Tag::Note(TagNote {
+        } => Tag::Note(NoteTag {
             source_part_index: *source_part_index as u32,
             note_id: *note_id as u32,
         }),
@@ -101,7 +101,7 @@ pub(super) fn tag_to_wit(tag: &crate::svg_types::TagOut) -> Tag {
             source_part_index,
             measure_index_start,
             measure_index_end,
-        } => Tag::PartLabel(TagPartLabel {
+        } => Tag::PartLabel(PartLabelTag {
             source_part_index: *source_part_index as u32,
             measure_index_start: *measure_index_start as u32,
             measure_index_end: *measure_index_end as u32,
@@ -110,7 +110,7 @@ pub(super) fn tag_to_wit(tag: &crate::svg_types::TagOut) -> Tag {
             source_part_index,
             note_id,
             verse,
-        } => Tag::Lyric(TagLyric {
+        } => Tag::Lyric(LyricTag {
             source_part_index: *source_part_index as u32,
             note_id: *note_id as u32,
             verse: *verse as u32,
@@ -120,7 +120,7 @@ pub(super) fn tag_to_wit(tag: &crate::svg_types::TagOut) -> Tag {
             verse,
             measure_index_start,
             measure_index_end,
-        } => Tag::LyricLabel(TagLyricLabel {
+        } => Tag::LyricLabel(LyricLabelTag {
             source_part_index: *source_part_index as u32,
             verse: *verse as u32,
             measure_index_start: *measure_index_start as u32,
@@ -129,7 +129,7 @@ pub(super) fn tag_to_wit(tag: &crate::svg_types::TagOut) -> Tag {
         crate::svg_types::TagOut::BarLine {
             measure_index_next,
             measure_index_prev,
-        } => Tag::BarLine(TagBarLine {
+        } => Tag::BarLine(BarLineTag {
             measure_index_next: measure_index_next.map(|v| v as u32),
             measure_index_prev: measure_index_prev.map(|v| v as u32),
         }),

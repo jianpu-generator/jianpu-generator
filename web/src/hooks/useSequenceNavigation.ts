@@ -28,10 +28,10 @@ function resolveEntryLineRange(
   index: number,
 ): LineRange | null {
   const entry = sequenceEntries[index]
-  const startSpan = measureSpans[entry?.start_measure_index ?? -1]
-  const endSpan = measureSpans[entry?.end_measure_index ?? -1]
+  const startSpan = measureSpans[entry?.startMeasureIndex ?? -1]
+  const endSpan = measureSpans[entry?.endMeasureIndex ?? -1]
   if (!startSpan || !endSpan) return null
-  return { startLine: startSpan.start_line, endLine: endSpan.end_line }
+  return { startLine: startSpan.startLine, endLine: endSpan.endLine }
 }
 
 /**
@@ -87,8 +87,8 @@ export function computeSequenceSelectionMeasureRanges(
     const entry = sequenceEntries[i]
     if (entry) {
       ranges.push({
-        start: entry.start_measure_index,
-        end: entry.end_measure_index,
+        start: entry.startMeasureIndex,
+        end: entry.endMeasureIndex,
       })
     }
   }
@@ -167,8 +167,8 @@ export function useSequenceNavigation(
     const endEntry = sequenceEntries[selectedIndexRange.end]
     if (!startEntry || !endEntry) return null
     return {
-      start: startEntry.start_measure_index,
-      end: endEntry.end_measure_index,
+      start: startEntry.startMeasureIndex,
+      end: endEntry.endMeasureIndex,
       // The selected entries' own 0-based index into `# sequence`, needed
       // to disambiguate a repeated label (e.g. `A, B(-x), B`): every
       // occurrence shares the same written measure range above, so without

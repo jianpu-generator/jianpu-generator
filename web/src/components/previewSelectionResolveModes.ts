@@ -1,6 +1,8 @@
-import { resolve_selection_range } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
-import type { ClickableElementId } from './clickableElementId'
+import {
+  type ClickableElementId,
+  resolveSelectionRange,
+} from './clickableElementId'
 import type { PreviewAnchorState } from './previewAnchorState'
 import {
   anyClickableElementIdAtPoint,
@@ -62,7 +64,7 @@ export function resolveMeasureSelection(
   const finalRange = point
     ? (getMeasureAtPoint(point.x, point.y) ?? anchorState.current)
     : anchorState.anchor
-  const response = resolve_selection_range(
+  const response = resolveSelectionRange(
     noteSpans,
     lyricSpans,
     anchorState.anchorId,
@@ -75,12 +77,12 @@ export function resolveMeasureSelection(
   // side is proven out further.
   let noteCells: NoteCell[]
   let lyricCells: LyricCell[]
-  if (response.status === 'ok') {
-    noteCells = response.note_cells.map((cell) => ({
+  if (response.tag === 'ok') {
+    noteCells = response.val.noteCells.map((cell) => ({
       sourcePartIndex: cell.sourcePartIndex,
       noteId: cell.noteId,
     }))
-    lyricCells = response.lyric_cells.map((cell) => ({
+    lyricCells = response.val.lyricCells.map((cell) => ({
       sourcePartIndex: cell.sourcePartIndex,
       noteId: cell.noteId,
       verse: cell.verse,
@@ -193,35 +195,35 @@ export function resolveNoteSelection(
     return { noteCells, lyricCells }
   }
 
-  const response = resolve_selection_range(
+  const response = resolveSelectionRange(
     noteSpans,
     lyricSpans,
     anchorState.anchorId,
     currentId,
   )
-  if (response.status !== 'ok') {
+  if (response.tag !== 'ok') {
     // Should be unreachable — every type `current` can resolve to now has
     // an arm in `resolve_selection_range_response` paired with `Note`.
     // Logged rather than thrown so a real click-and-click gesture never
     // hard-fails on it; the empty-selection fallback below still collapses
     // to the anchor.
     console.error(
-      'resolve_selection_range returned Err for a Note-anchored pair',
+      'resolveSelectionRange returned Err for a Note-anchored pair',
       anchorState.anchorId,
       currentId,
     )
   }
 
   let noteCells: NoteCell[] =
-    response.status === 'ok'
-      ? response.note_cells.map((cell) => ({
+    response.tag === 'ok'
+      ? response.val.noteCells.map((cell) => ({
           sourcePartIndex: cell.sourcePartIndex,
           noteId: cell.noteId,
         }))
       : []
   let lyricCells: LyricCell[] =
-    response.status === 'ok'
-      ? response.lyric_cells.map((cell) => ({
+    response.tag === 'ok'
+      ? response.val.lyricCells.map((cell) => ({
           sourcePartIndex: cell.sourcePartIndex,
           noteId: cell.noteId,
           verse: cell.verse,
@@ -271,7 +273,7 @@ export function resolveLyricSelection(
   const currentId =
     currentIdHint ?? anyClickableElementIdAtPoint(current.x, current.y)
   const response = currentId
-    ? resolve_selection_range(
+    ? resolveSelectionRange(
         noteSpans,
         lyricSpans,
         anchorState.anchorId,
@@ -279,12 +281,12 @@ export function resolveLyricSelection(
       )
     : undefined
 
-  if (response?.status === 'ok') {
-    const noteCells = response.note_cells.map((cell) => ({
+  if (response?.tag === 'ok') {
+    const noteCells = response.val.noteCells.map((cell) => ({
       sourcePartIndex: cell.sourcePartIndex,
       noteId: cell.noteId,
     }))
-    const lyricCells = response.lyric_cells.map((cell) => ({
+    const lyricCells = response.val.lyricCells.map((cell) => ({
       sourcePartIndex: cell.sourcePartIndex,
       noteId: cell.noteId,
       verse: cell.verse,

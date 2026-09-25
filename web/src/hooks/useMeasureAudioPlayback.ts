@@ -1,6 +1,6 @@
 import type { RefObject } from 'react'
 import { useCallback, useRef, useState } from 'react'
-import type { NoteTimingOut } from '../jianpuWasm'
+import type { NoteTiming } from '../jianpuWasm'
 import type { NoteCell } from '../utils/noteSpanSelection'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 
@@ -51,7 +51,7 @@ export function useMeasureAudioPlayback({
   const [measureAudioGenerating, setMeasureAudioGenerating] = useState(false)
   const [measureAudioPlaying, setMeasureAudioPlaying] = useState(false)
   const [measureAudioNoteTimings, setMeasureAudioNoteTimings] = useState<
-    NoteTimingOut[]
+    NoteTiming[]
   >([])
   const [measureAudioElement, setMeasureAudioElement] =
     useState<HTMLAudioElement | null>(null)
@@ -61,7 +61,7 @@ export function useMeasureAudioPlayback({
   const measureWavUrlRef = useRef<string | null>(null)
 
   const setNextMeasureWavUrl = useCallback(
-    (next: string | null, nextNoteTimings: NoteTimingOut[] = []) => {
+    (next: string | null, nextNoteTimings: NoteTiming[] = []) => {
       if (currentMeasureAudioRef.current) {
         currentMeasureAudioRef.current.pause()
         currentMeasureAudioRef.current = null

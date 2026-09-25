@@ -1,11 +1,4 @@
-import type {
-  GenerateMidiResponse,
-  GeneratePdfResponse,
-  GenerateSplitMidisResponse,
-  GenerateSplitMp3sResponse,
-  GenerateSplitPdfsResponse,
-  GenerateSplitWavsResponse,
-} from '../jianpuWasm'
+import { type Diagnostic, jianpuWasm } from '../jianpuWasm'
 import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
 
 // `sc` holds the `title` role's font — the song title/lyric font; `tc`
@@ -17,60 +10,27 @@ type LoadedFonts = {
   mono: Uint8Array
 } | null
 
-function binaryBufferFromResult(
-  bytes: Uint8Array | ArrayBuffer | ArrayLike<number>,
-): ArrayBuffer {
-  if (bytes instanceof ArrayBuffer) {
-    return bytes.slice(0)
-  }
-  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
-  return view.slice().buffer
+export function binaryBufferFromResult(bytes: Uint8Array): ArrayBuffer {
+  return bytes.slice().buffer
+}
+
+export function singleErrorDiagnostic(message: string): Diagnostic[] {
+  return [{ severity: 'error', message, span: { start: 0, end: 0 } }]
 }
 
 export function handleGeneratePdf(
   msg: Extract<WorkerRequest, { type: 'generatePdf' }>,
-  generatePdf:
-    | ((
-        source: string,
-        enabledTracks: string[] | undefined,
-        disabledLyrics: string[] | undefined,
-        sansSerifSc: Uint8Array,
-        sansSerifTc: Uint8Array,
-        monospace: Uint8Array,
-      ) => GeneratePdfResponse)
-    | null,
   loadedFonts: LoadedFonts,
 ): void {
-  if (!generatePdf) {
-    postMessage({
-      type: 'pdfErr',
-      id: msg.id,
-      diagnostics: [
-        {
-          severity: 'error',
-          message: 'PDF export is not available in this build.',
-          span: { start: 0, end: 0 },
-        },
-      ],
-    } satisfies WorkerResponse)
-    return
-  }
-
   if (!loadedFonts) {
     postMessage({
       type: 'pdfErr',
       id: msg.id,
-      diagnostics: [
-        {
-          severity: 'error',
-          message: 'Fonts are not yet loaded.',
-          span: { start: 0, end: 0 },
-        },
-      ],
+      diagnostics: singleErrorDiagnostic('Fonts are not yet loaded.'),
     } satisfies WorkerResponse)
     return
   }
-  const result = generatePdf(
+  const result = jianpuWasm().generatePdf(
     msg.source,
     msg.enabledTracks,
     msg.disabledLyrics,
@@ -78,8 +38,8 @@ export function handleGeneratePdf(
     loadedFonts.tc,
     loadedFonts.mono,
   )
-  if (result.status === 'ok') {
-    const pdfBuffer = binaryBufferFromResult(result.pdf)
+  if (result.tag === 'ok') {
+    const pdfBuffer = binaryBufferFromResult(result.val.pdf)
     postMessage(
       {
         type: 'pdf',
@@ -94,61 +54,31 @@ export function handleGeneratePdf(
   postMessage({
     type: 'pdfErr',
     id: msg.id,
-    diagnostics: result.diagnostics,
+    diagnostics: result.val.diagnostics,
   } satisfies WorkerResponse)
 }
 
 export function handleGenerateSplitPdf(
   msg: Extract<WorkerRequest, { type: 'generateSplitPdf' }>,
-  generateSplitPdfs:
-    | ((
-        source: string,
-        baseName: string,
-        sansSerifSc: Uint8Array,
-        sansSerifTc: Uint8Array,
-        monospace: Uint8Array,
-      ) => GenerateSplitPdfsResponse)
-    | null,
   loadedFonts: LoadedFonts,
 ): void {
-  if (!generateSplitPdfs) {
-    postMessage({
-      type: 'splitPdfErr',
-      id: msg.id,
-      diagnostics: [
-        {
-          severity: 'error',
-          message: 'Split PDF export is not available in this build.',
-          span: { start: 0, end: 0 },
-        },
-      ],
-    } satisfies WorkerResponse)
-    return
-  }
-
   if (!loadedFonts) {
     postMessage({
       type: 'splitPdfErr',
       id: msg.id,
-      diagnostics: [
-        {
-          severity: 'error',
-          message: 'Fonts are not yet loaded.',
-          span: { start: 0, end: 0 },
-        },
-      ],
+      diagnostics: singleErrorDiagnostic('Fonts are not yet loaded.'),
     } satisfies WorkerResponse)
     return
   }
-  const result = generateSplitPdfs(
+  const result = jianpuWasm().generateSplitPdfs(
     msg.source,
     msg.baseName,
     loadedFonts.sc,
     loadedFonts.tc,
     loadedFonts.mono,
   )
-  if (result.status === 'ok') {
-    const zipBuffer = binaryBufferFromResult(result.zip)
+  if (result.tag === 'ok') {
+    const zipBuffer = binaryBufferFromResult(result.val.zip)
     postMessage(
       {
         type: 'splitPdf',
@@ -163,36 +93,16 @@ export function handleGenerateSplitPdf(
   postMessage({
     type: 'splitPdfErr',
     id: msg.id,
-    diagnostics: result.diagnostics,
+    diagnostics: result.val.diagnostics,
   } satisfies WorkerResponse)
 }
 
 export function handleGenerateMidi(
   msg: Extract<WorkerRequest, { type: 'generateMidi' }>,
-  generateMidi:
-    | ((
-        source: string,
-        enabledTracks: string[] | undefined,
-      ) => GenerateMidiResponse)
-    | null,
 ): void {
-  if (!generateMidi) {
-    postMessage({
-      type: 'midiErr',
-      id: msg.id,
-      diagnostics: [
-        {
-          severity: 'error',
-          message: 'MIDI export is not available in this build.',
-          span: { start: 0, end: 0 },
-        },
-      ],
-    } satisfies WorkerResponse)
-    return
-  }
-  const result = generateMidi(msg.source, msg.enabledTracks)
-  if (result.status === 'ok') {
-    const midiBuffer = binaryBufferFromResult(result.midi)
+  const result = jianpuWasm().generateMidi(msg.source, msg.enabledTracks)
+  if (result.tag === 'ok') {
+    const midiBuffer = binaryBufferFromResult(result.val.midi)
     postMessage(
       {
         type: 'midi',
@@ -207,33 +117,16 @@ export function handleGenerateMidi(
   postMessage({
     type: 'midiErr',
     id: msg.id,
-    diagnostics: result.diagnostics,
+    diagnostics: result.val.diagnostics,
   } satisfies WorkerResponse)
 }
 
 export function handleGenerateSplitMidi(
   msg: Extract<WorkerRequest, { type: 'generateSplitMidi' }>,
-  generateSplitMidis:
-    | ((source: string, baseName: string) => GenerateSplitMidisResponse)
-    | null,
 ): void {
-  if (!generateSplitMidis) {
-    postMessage({
-      type: 'splitMidiErr',
-      id: msg.id,
-      diagnostics: [
-        {
-          severity: 'error',
-          message: 'Split MIDI export is not available in this build.',
-          span: { start: 0, end: 0 },
-        },
-      ],
-    } satisfies WorkerResponse)
-    return
-  }
-  const result = generateSplitMidis(msg.source, msg.baseName)
-  if (result.status === 'ok') {
-    const zipBuffer = binaryBufferFromResult(result.zip)
+  const result = jianpuWasm().generateSplitMidis(msg.source, msg.baseName)
+  if (result.tag === 'ok') {
+    const zipBuffer = binaryBufferFromResult(result.val.zip)
     postMessage(
       {
         type: 'splitMidi',
@@ -248,52 +141,29 @@ export function handleGenerateSplitMidi(
   postMessage({
     type: 'splitMidiErr',
     id: msg.id,
-    diagnostics: result.diagnostics,
+    diagnostics: result.val.diagnostics,
   } satisfies WorkerResponse)
 }
 
 export function handleGenerateSplitWav(
   msg: Extract<WorkerRequest, { type: 'generateSplitWav' }>,
-  generateSplitWavs:
-    | ((
-        source: string,
-        baseName: string,
-        soundfont: Uint8Array,
-      ) => GenerateSplitWavsResponse)
-    | null,
   loadedSoundfont: Uint8Array | null,
 ): void {
-  if (!generateSplitWavs) {
-    postMessage({
-      type: 'splitWavErr',
-      id: msg.id,
-      diagnostics: [
-        {
-          severity: 'error',
-          message: 'Split WAV export is not available in this build.',
-          span: { start: 0, end: 0 },
-        },
-      ],
-    } satisfies WorkerResponse)
-    return
-  }
   if (!loadedSoundfont) {
     postMessage({
       type: 'splitWavErr',
       id: msg.id,
-      diagnostics: [
-        {
-          severity: 'error',
-          message: 'Soundfont is not yet loaded.',
-          span: { start: 0, end: 0 },
-        },
-      ],
+      diagnostics: singleErrorDiagnostic('Soundfont is not yet loaded.'),
     } satisfies WorkerResponse)
     return
   }
-  const result = generateSplitWavs(msg.source, msg.baseName, loadedSoundfont)
-  if (result.status === 'ok') {
-    const zipBuffer = binaryBufferFromResult(result.zip)
+  const result = jianpuWasm().generateSplitWavs(
+    msg.source,
+    msg.baseName,
+    loadedSoundfont,
+  )
+  if (result.tag === 'ok') {
+    const zipBuffer = binaryBufferFromResult(result.val.zip)
     postMessage(
       {
         type: 'splitWav',
@@ -308,52 +178,29 @@ export function handleGenerateSplitWav(
   postMessage({
     type: 'splitWavErr',
     id: msg.id,
-    diagnostics: result.diagnostics,
+    diagnostics: result.val.diagnostics,
   } satisfies WorkerResponse)
 }
 
 export function handleGenerateSplitMp3(
   msg: Extract<WorkerRequest, { type: 'generateSplitMp3' }>,
-  generateSplitMp3s:
-    | ((
-        source: string,
-        baseName: string,
-        soundfont: Uint8Array,
-      ) => GenerateSplitMp3sResponse)
-    | null,
   loadedSoundfont: Uint8Array | null,
 ): void {
-  if (!generateSplitMp3s) {
-    postMessage({
-      type: 'splitMp3Err',
-      id: msg.id,
-      diagnostics: [
-        {
-          severity: 'error',
-          message: 'Split MP3 export is not available in this build.',
-          span: { start: 0, end: 0 },
-        },
-      ],
-    } satisfies WorkerResponse)
-    return
-  }
   if (!loadedSoundfont) {
     postMessage({
       type: 'splitMp3Err',
       id: msg.id,
-      diagnostics: [
-        {
-          severity: 'error',
-          message: 'Soundfont is not yet loaded.',
-          span: { start: 0, end: 0 },
-        },
-      ],
+      diagnostics: singleErrorDiagnostic('Soundfont is not yet loaded.'),
     } satisfies WorkerResponse)
     return
   }
-  const result = generateSplitMp3s(msg.source, msg.baseName, loadedSoundfont)
-  if (result.status === 'ok') {
-    const zipBuffer = binaryBufferFromResult(result.zip)
+  const result = jianpuWasm().generateSplitMp3s(
+    msg.source,
+    msg.baseName,
+    loadedSoundfont,
+  )
+  if (result.tag === 'ok') {
+    const zipBuffer = binaryBufferFromResult(result.val.zip)
     postMessage(
       {
         type: 'splitMp3',
@@ -368,6 +215,6 @@ export function handleGenerateSplitMp3(
   postMessage({
     type: 'splitMp3Err',
     id: msg.id,
-    diagnostics: result.diagnostics,
+    diagnostics: result.val.diagnostics,
   } satisfies WorkerResponse)
 }

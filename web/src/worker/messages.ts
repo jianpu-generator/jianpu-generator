@@ -1,4 +1,4 @@
-import type { NoteTimingOut, SvgDocumentOut } from '../jianpuWasm'
+import type { NoteTiming, SvgDocument } from '../jianpuWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -217,7 +217,7 @@ export type WorkerResponse =
   | {
       type: 'ok'
       id: number
-      documents: SvgDocumentOut[]
+      documents: SvgDocument[]
       diagnostics: Diagnostic[]
       diagnosticViewZones: DiagnosticViewZone[]
     }
@@ -225,7 +225,7 @@ export type WorkerResponse =
       type: 'audio'
       id: number
       wav: ArrayBuffer
-      noteTimings: NoteTimingOut[]
+      noteTimings: NoteTiming[]
     }
   | { type: 'audioErr'; id: number }
   | {
@@ -256,7 +256,7 @@ export type WorkerResponse =
   | { type: 'splitMidiErr'; id: number; diagnostics: Diagnostic[] }
   | { type: 'splitWav'; id: number; zip: ArrayBuffer }
   | { type: 'splitWavErr'; id: number; diagnostics: Diagnostic[] }
-  | { type: 'mp3'; id: number; mp3: ArrayBuffer; noteTimings: NoteTimingOut[] }
+  | { type: 'mp3'; id: number; mp3: ArrayBuffer; noteTimings: NoteTiming[] }
   | { type: 'mp3Err'; id: number; diagnostics: Diagnostic[] }
   | { type: 'splitMp3'; id: number; zip: ArrayBuffer }
   | { type: 'splitMp3Err'; id: number; diagnostics: Diagnostic[] }
@@ -264,14 +264,14 @@ export type WorkerResponse =
       type: 'measureRangeAudio'
       id: number
       wav: ArrayBuffer
-      noteTimings: NoteTimingOut[]
+      noteTimings: NoteTiming[]
     }
   | { type: 'measureRangeAudioErr'; id: number }
   | { type: 'instrumentPreview'; id: number; wav: ArrayBuffer }
   | { type: 'instrumentPreviewErr'; id: number }
   | { type: 'percussionPreview'; id: number; wav: ArrayBuffer }
   | { type: 'percussionPreviewErr'; id: number }
-  | { type: 'highlightRangeOk'; id: number; documents: SvgDocumentOut[] }
+  | { type: 'highlightRangeOk'; id: number; documents: SvgDocument[] }
   | { type: 'highlightRangeErr'; id: number; diagnostics: Diagnostic[] }
   | {
       type: 'measureSpans'

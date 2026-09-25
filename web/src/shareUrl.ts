@@ -1,5 +1,5 @@
 import LZString from 'lz-string'
-import { compress_share_payload, decompress_share_payload } from './jianpuWasm'
+import { jianpuWasm } from './jianpuWasm'
 import { ensureWasmInit } from './wasmInit'
 
 export interface SharePayload {
@@ -52,7 +52,7 @@ export async function encodeShareHashSuffix(
 ): Promise<string> {
   await ensureWasmInit()
   const payload = JSON.stringify({ filename, content } satisfies SharePayload)
-  const compressed = compress_share_payload(payload)
+  const compressed = jianpuWasm().compressSharePayload(payload)
   return bytesToBase64Url(compressed)
 }
 
@@ -60,7 +60,7 @@ async function tryDecodeBrotli(encoded: string): Promise<SharePayload | null> {
   const bytes = base64UrlToBytes(encoded)
   if (!bytes) return null
   await ensureWasmInit()
-  const decompressed = decompress_share_payload(bytes)
+  const decompressed = jianpuWasm().decompressSharePayload(bytes)
   if (decompressed === undefined) return null
   return parseSharePayloadJson(decompressed)
 }

@@ -1,11 +1,11 @@
-import type { TagOut, TransparentRectRoleOut } from './jianpuWasm'
+import type { SvgKind, Tag, TransparentRectRole } from './jianpuWasm'
 
 /**
  * Every `data-variant` attribute value written onto rendered preview SVG
- * elements — the kebab-case wire format for `TransparentRectRoleOut`
+ * elements — the kebab-case wire format for `TransparentRectRole`
  * (`crates/jianpu-wasm/src/svg_types.rs:20-30`), plus `playbackCursorRect`
- * (a distinct `SvgKindOut::PlaybackCursorRect` element, not one of the
- * `TransparentRectRoleOut` variants, but a `data-variant` value in its own
+ * (a distinct `SvgKind` `playback-cursor-rect` element, not one of the
+ * `TransparentRectRole` variants, but a `data-variant` value in its own
  * right).
  *
  * Single source of truth for every place that used to re-type these strings
@@ -19,28 +19,28 @@ import type { TagOut, TransparentRectRoleOut } from './jianpuWasm'
  * that test instead of the CSS rule silently matching nothing.
  */
 export const DATA_VARIANT = {
-  measureClickTarget: 'measure-click-target-rect',
-  barNumberClickTarget: 'bar-number-click-target-rect',
-  sectionLabelBackground: 'section-label-bg',
-  sectionLabelClickTarget: 'section-label-click-target-rect',
-  noteClickTarget: 'note-click-target-rect',
-  partLabelClickTarget: 'part-label-click-target-rect',
-  lyricClickTarget: 'lyric-click-target-rect',
-  lyricLabelClickTarget: 'lyric-label-click-target-rect',
-  barLineClickTarget: 'bar-line-click-target-rect',
-  playbackCursorRect: 'playback-cursor-rect',
+  'measure-click-target': 'measure-click-target-rect',
+  'bar-number-click-target': 'bar-number-click-target-rect',
+  'section-label-background': 'section-label-bg',
+  'section-label-click-target': 'section-label-click-target-rect',
+  'note-click-target': 'note-click-target-rect',
+  'part-label-click-target': 'part-label-click-target-rect',
+  'lyric-click-target': 'lyric-click-target-rect',
+  'lyric-label-click-target': 'lyric-label-click-target-rect',
+  'bar-line-click-target': 'bar-line-click-target-rect',
+  'playback-cursor-rect': 'playback-cursor-rect',
 } as const satisfies Record<
-  TransparentRectRoleOut | 'playbackCursorRect',
+  TransparentRectRole | Extract<SvgKind['tag'], 'playback-cursor-rect'>,
   string
 >
 
 /**
  * Every `data-tag` attribute value written onto a rendered preview SVG `<g>`
- * group — the kebab-case wire format for `TagOut['type']`
- * (`crates/jianpu-wasm/src/svg_types.rs`). `satisfies Record<TagOut['type'], string>`
- * means renaming, adding, or removing a `TagOut` variant fails the TS build
+ * group, keyed by `Tag['tag']`
+ * (`crates/jianpu-wasm/wit/world.wit`). `satisfies Record<Tag['tag'], string>`
+ * means renaming, adding, or removing a `Tag` variant fails the TS build
  * right here until this map (and everything derived from it below) is
- * updated — closing the exact `data-tag`/`TagOut` gap the "Cross-boundary
+ * updated — closing the exact `data-tag`/`Tag` gap the "Cross-boundary
  * invariants" section of `AGENTS.md` names.
  *
  * This file is the single source of truth for the tag ↔ attribute-name ↔
@@ -52,14 +52,14 @@ export const DATA_VARIANT = {
  */
 export const DATA_TAG = {
   measure: 'measure',
-  barNumber: 'bar-number',
-  sectionLabel: 'section-label',
+  'bar-number': 'bar-number',
+  'section-label': 'section-label',
   note: 'note',
-  partLabel: 'part-label',
+  'part-label': 'part-label',
   lyric: 'lyric',
-  lyricLabel: 'lyric-label',
-  barLine: 'bar-line',
-} as const satisfies Record<TagOut['type'], string>
+  'lyric-label': 'lyric-label',
+  'bar-line': 'bar-line',
+} as const satisfies Record<Tag['tag'], string>
 
 /**
  * The two boolean `data-*-range-active` flags imperatively toggled on a
@@ -98,69 +98,60 @@ interface GroupTagAttrs {
 }
 
 /** The `data-*` attributes (and whether the group gets a pointer cursor) a
- * rendered `<g>` group should carry for its `TagOut` — the writer half of
+ * rendered `<g>` group should carry for its `Tag` — the writer half of
  * this file's tag ↔ attribute mapping. `PreviewSvgRenderer.tsx` spreads the
  * result directly onto the `<g>` it renders. */
-export function groupAttrsForTag(tag: TagOut | undefined): GroupTagAttrs {
+export function groupAttrsForTag(tag: Tag | undefined): GroupTagAttrs {
   if (!tag) return { cursor: false }
-  switch (tag.type) {
+  const dataTag = DATA_TAG[tag.tag]
+  switch (tag.tag) {
     case 'measure':
+    case 'bar-number':
       return {
-        dataTag: DATA_TAG.measure,
-        dataMeasureIndex: tag.index,
-        dataMeasureIndexEnd: tag.end,
+        dataTag,
+        dataMeasureIndex: tag.val.index,
+        dataMeasureIndexEnd: tag.val.end,
         cursor: true,
       }
-    case 'barNumber':
-      return {
-        dataTag: DATA_TAG.barNumber,
-        dataMeasureIndex: tag.index,
-        dataMeasureIndexEnd: tag.end,
-        cursor: true,
-      }
-    case 'sectionLabel':
-      return {
-        dataTag: DATA_TAG.sectionLabel,
-        dataSectionLabel: tag.label,
-        cursor: true,
-      }
+    case 'section-label':
+      return { dataTag, dataSectionLabel: tag.val.label, cursor: true }
     case 'note':
       return {
-        dataTag: DATA_TAG.note,
-        dataPartIndex: tag.source_part_index,
-        dataNoteId: tag.note_id,
+        dataTag,
+        dataPartIndex: tag.val.sourcePartIndex,
+        dataNoteId: tag.val.noteId,
         cursor: false,
       }
-    case 'partLabel':
+    case 'part-label':
       return {
-        dataTag: DATA_TAG.partLabel,
-        dataPartIndex: tag.source_part_index,
-        dataMeasureIndexStart: tag.measure_index_start,
-        dataMeasureIndexEnd: tag.measure_index_end,
+        dataTag,
+        dataPartIndex: tag.val.sourcePartIndex,
+        dataMeasureIndexStart: tag.val.measureIndexStart,
+        dataMeasureIndexEnd: tag.val.measureIndexEnd,
         cursor: true,
       }
     case 'lyric':
       return {
-        dataTag: DATA_TAG.lyric,
-        dataPartIndex: tag.source_part_index,
-        dataNoteId: tag.note_id,
-        dataVerse: tag.verse,
+        dataTag,
+        dataPartIndex: tag.val.sourcePartIndex,
+        dataNoteId: tag.val.noteId,
+        dataVerse: tag.val.verse,
         cursor: false,
       }
-    case 'lyricLabel':
+    case 'lyric-label':
       return {
-        dataTag: DATA_TAG.lyricLabel,
-        dataPartIndex: tag.source_part_index,
-        dataVerse: tag.verse,
-        dataMeasureIndexStart: tag.measure_index_start,
-        dataMeasureIndexEnd: tag.measure_index_end,
+        dataTag,
+        dataPartIndex: tag.val.sourcePartIndex,
+        dataVerse: tag.val.verse,
+        dataMeasureIndexStart: tag.val.measureIndexStart,
+        dataMeasureIndexEnd: tag.val.measureIndexEnd,
         cursor: true,
       }
-    case 'barLine':
+    case 'bar-line':
       return {
-        dataTag: DATA_TAG.barLine,
-        dataMeasureIndexNext: tag.measure_index_next,
-        dataMeasureIndexPrev: tag.measure_index_prev,
+        dataTag,
+        dataMeasureIndexNext: tag.val.measureIndexNext,
+        dataMeasureIndexPrev: tag.val.measureIndexPrev,
         cursor: true,
       }
     default: {
@@ -172,23 +163,23 @@ export function groupAttrsForTag(tag: TagOut | undefined): GroupTagAttrs {
   }
 }
 
-/** Reverse lookup of `DATA_TAG`, e.g. `'bar-number'` → `'barNumber'` — keeps
- * `tagFromElement`'s switch below keyed off a real `TagOut['type']` literal
+/** Reverse lookup of `DATA_TAG` — keeps
+ * `tagFromElement`'s switch below keyed off a real `Tag['tag']` literal
  * union (`keyof typeof DATA_TAG`) instead of the bare `string` `dataset.tag`
  * itself carries, so its `default` arm's `never` check actually catches an
- * unhandled `TagOut` variant at compile time rather than only at the
+ * unhandled `Tag` variant at compile time rather than only at the
  * `DATA_TAG` declaration above. */
 function tagTypeFromDataTagValue(
   value: string | undefined,
-): TagOut['type'] | undefined {
-  const entry = (Object.entries(DATA_TAG) as [TagOut['type'], string][]).find(
+): Tag['tag'] | undefined {
+  const entry = (Object.entries(DATA_TAG) as [Tag['tag'], string][]).find(
     ([, dataTagValue]) => dataTagValue === value,
   )
   return entry?.[0]
 }
 
 /**
- * The `TagOut` a rendered `<g>` group's own `data-*` attributes encode, or
+ * The `Tag` a rendered `<g>` group's own `data-*` attributes encode, or
  * `undefined` if `el` isn't such a group (no recognized `data-tag`) or is
  * missing a field that `type` requires — the reader half of this file's tag
  * ↔ attribute mapping, mirroring `groupAttrsForTag` field-for-field. Replaces
@@ -197,83 +188,80 @@ function tagTypeFromDataTagValue(
  * `usePlaybackCursor.ts`, `previewRangeHighlights.ts`,
  * `previewLabelRangeHighlights.ts`).
  */
-export function tagFromElement(el: Element): TagOut | undefined {
+export function tagFromElement(el: Element): Tag | undefined {
   const dataset = (el as HTMLElement).dataset
   const tagType = tagTypeFromDataTagValue(dataset.tag)
   if (tagType === undefined) return undefined
   switch (tagType) {
     case 'measure':
-    case 'barNumber': {
+    case 'bar-number': {
       const index = parseDatasetInt(dataset.measureIndex)
       const end = parseDatasetInt(dataset.measureIndexEnd)
       if (index === undefined || end === undefined) return undefined
-      return { type: tagType, index, end }
+      return { tag: tagType, val: { index, end } }
     }
-    case 'sectionLabel': {
+    case 'section-label': {
       if (dataset.sectionLabel === undefined) return undefined
-      return { type: 'sectionLabel', label: dataset.sectionLabel }
+      return { tag: 'section-label', val: { label: dataset.sectionLabel } }
     }
     case 'note': {
-      const source_part_index = parseDatasetInt(dataset.partIndex)
-      const note_id = parseDatasetInt(dataset.noteId)
-      if (source_part_index === undefined || note_id === undefined)
+      const sourcePartIndex = parseDatasetInt(dataset.partIndex)
+      const noteId = parseDatasetInt(dataset.noteId)
+      if (sourcePartIndex === undefined || noteId === undefined)
         return undefined
-      return { type: 'note', source_part_index, note_id }
+      return { tag: 'note', val: { sourcePartIndex, noteId } }
     }
-    case 'partLabel': {
-      const source_part_index = parseDatasetInt(dataset.partIndex)
-      const measure_index_start = parseDatasetInt(dataset.measureIndexStart)
-      const measure_index_end = parseDatasetInt(dataset.measureIndexEnd)
+    case 'part-label': {
+      const sourcePartIndex = parseDatasetInt(dataset.partIndex)
+      const measureIndexStart = parseDatasetInt(dataset.measureIndexStart)
+      const measureIndexEnd = parseDatasetInt(dataset.measureIndexEnd)
       if (
-        source_part_index === undefined ||
-        measure_index_start === undefined ||
-        measure_index_end === undefined
+        sourcePartIndex === undefined ||
+        measureIndexStart === undefined ||
+        measureIndexEnd === undefined
       )
         return undefined
       return {
-        type: 'partLabel',
-        source_part_index,
-        measure_index_start,
-        measure_index_end,
+        tag: 'part-label',
+        val: { sourcePartIndex, measureIndexStart, measureIndexEnd },
       }
     }
     case 'lyric': {
-      const source_part_index = parseDatasetInt(dataset.partIndex)
-      const note_id = parseDatasetInt(dataset.noteId)
+      const sourcePartIndex = parseDatasetInt(dataset.partIndex)
+      const noteId = parseDatasetInt(dataset.noteId)
       const verse = parseDatasetInt(dataset.verse)
       if (
-        source_part_index === undefined ||
-        note_id === undefined ||
+        sourcePartIndex === undefined ||
+        noteId === undefined ||
         verse === undefined
       )
         return undefined
-      return { type: 'lyric', source_part_index, note_id, verse }
+      return { tag: 'lyric', val: { sourcePartIndex, noteId, verse } }
     }
-    case 'lyricLabel': {
-      const source_part_index = parseDatasetInt(dataset.partIndex)
+    case 'lyric-label': {
+      const sourcePartIndex = parseDatasetInt(dataset.partIndex)
       const verse = parseDatasetInt(dataset.verse)
-      const measure_index_start = parseDatasetInt(dataset.measureIndexStart)
-      const measure_index_end = parseDatasetInt(dataset.measureIndexEnd)
+      const measureIndexStart = parseDatasetInt(dataset.measureIndexStart)
+      const measureIndexEnd = parseDatasetInt(dataset.measureIndexEnd)
       if (
-        source_part_index === undefined ||
+        sourcePartIndex === undefined ||
         verse === undefined ||
-        measure_index_start === undefined ||
-        measure_index_end === undefined
+        measureIndexStart === undefined ||
+        measureIndexEnd === undefined
       )
         return undefined
       return {
-        type: 'lyricLabel',
-        source_part_index,
-        verse,
-        measure_index_start,
-        measure_index_end,
+        tag: 'lyric-label',
+        val: { sourcePartIndex, verse, measureIndexStart, measureIndexEnd },
       }
     }
-    case 'barLine': {
+    case 'bar-line': {
       return {
-        type: 'barLine',
-        measure_index_next: parseDatasetInt(dataset.measureIndexNext),
-        measure_index_prev: parseDatasetInt(dataset.measureIndexPrev),
+        tag: 'bar-line',
+        val: {
+          measureIndexNext: parseDatasetInt(dataset.measureIndexNext),
+          measureIndexPrev: parseDatasetInt(dataset.measureIndexPrev),
+        },
       }
     }
     default: {
@@ -288,7 +276,7 @@ export function tagFromElement(el: Element): TagOut | undefined {
 /** A bare `[data-tag="..."]` selector for `type` — the typed replacement for
  * every consumer that used to hand-format e.g. `'[data-tag="note"]'`
  * itself. */
-export function groupTagSelector(type: TagOut['type']): string {
+export function groupTagSelector(type: Tag['tag']): string {
   return `[data-tag="${DATA_TAG[type]}"]`
 }
 
@@ -306,7 +294,7 @@ export function measureGroupSelector({ index }: { index: number }): string {
  * `` `[data-tag="measure"][data-measure-index-end="${end}"]` ``
  * (`clickableElementIdFromElement`'s bar-line-to-previous-measure lookup, for
  * a merged multi-measure-rest block whose trailing index is what a bar
- * line's own `measure_index_prev` names). */
+ * line's own `measureIndexPrev` names). */
 export function measureGroupByEndSelector({ end }: { end: number }): string {
   return `${groupTagSelector('measure')}[data-measure-index-end="${end}"]`
 }

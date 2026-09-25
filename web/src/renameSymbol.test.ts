@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import type { SymbolOut } from './jianpuWasm'
+import type { Symbol as WasmSymbol } from './jianpuWasm'
 import { symbolAtByteOffset } from './renameSymbol'
 
-function makeSymbol(name: string, spans: Array<[number, number]>): SymbolOut {
+function makeSymbol(name: string, spans: Array<[number, number]>): WasmSymbol {
   return {
     name,
     kind: 'abbreviation',
     occurrences: spans.map(([start, end]) => ({
       span: { start, end },
-      hit_span: { start, end },
+      hitSpan: { start, end },
       role: 'declaration',
     })),
   }
@@ -18,14 +18,14 @@ function makeSymbolWithHitSpan(
   name: string,
   span: [number, number],
   hitSpan: [number, number],
-): SymbolOut {
+): WasmSymbol {
   return {
     name,
-    kind: 'sectionLabel',
+    kind: 'section-label',
     occurrences: [
       {
         span: { start: span[0], end: span[1] },
-        hit_span: { start: hitSpan[0], end: hitSpan[1] },
+        hitSpan: { start: hitSpan[0], end: hitSpan[1] },
         role: 'declaration',
       },
     ],

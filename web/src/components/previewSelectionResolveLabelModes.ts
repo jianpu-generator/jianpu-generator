@@ -1,4 +1,4 @@
-import { resolve_selection_range } from '../jianpuWasm'
+import { resolveSelectionRange } from './clickableElementId'
 import type { PreviewAnchorState } from './previewAnchorState'
 import { anyClickableElementIdAtPoint } from './previewClickableElementIdBuilders'
 import {
@@ -53,7 +53,7 @@ export function resolvePartLabelSelection(
     ? (currentIdHint ?? anyClickableElementIdAtPoint(current.x, current.y))
     : undefined
   const response = currentId
-    ? resolve_selection_range(
+    ? resolveSelectionRange(
         noteSpans,
         lyricSpans,
         anchorState.anchorId,
@@ -63,12 +63,12 @@ export function resolvePartLabelSelection(
 
   let noteCells: NoteCell[]
   let lyricCells: LyricCell[]
-  if (response?.status === 'ok') {
-    noteCells = response.note_cells.map((cell) => ({
+  if (response?.tag === 'ok') {
+    noteCells = response.val.noteCells.map((cell) => ({
       sourcePartIndex: cell.sourcePartIndex,
       noteId: cell.noteId,
     }))
-    lyricCells = response.lyric_cells.map((cell) => ({
+    lyricCells = response.val.lyricCells.map((cell) => ({
       sourcePartIndex: cell.sourcePartIndex,
       noteId: cell.noteId,
       verse: cell.verse,
@@ -152,7 +152,7 @@ export function resolveLyricLabelSelection(
     ? (currentIdHint ?? anyClickableElementIdAtPoint(current.x, current.y))
     : undefined
   const response = currentId
-    ? resolve_selection_range(
+    ? resolveSelectionRange(
         noteSpans,
         lyricSpans,
         anchorState.anchorId,
@@ -162,18 +162,18 @@ export function resolveLyricLabelSelection(
 
   let noteCells: NoteCell[]
   let lyricCells: LyricCell[]
-  if (response?.status === 'ok') {
+  if (response?.tag === 'ok') {
     // Unlike the plain `LyricLabel ↔ LyricLabel` pair (never any notes — a
     // lyric-only gesture never reaches into the note row), the label-mixed
     // `Note ↔ LyricLabel`/`PartLabel ↔ LyricLabel` pairs above always
     // populate `note_cells` too (see each arm's own doc comment in
     // `selection_range.rs`), so this mode can no longer hardcode an empty
     // `noteCells` the way it did before those arms existed.
-    noteCells = response.note_cells.map((cell) => ({
+    noteCells = response.val.noteCells.map((cell) => ({
       sourcePartIndex: cell.sourcePartIndex,
       noteId: cell.noteId,
     }))
-    lyricCells = response.lyric_cells.map((cell) => ({
+    lyricCells = response.val.lyricCells.map((cell) => ({
       sourcePartIndex: cell.sourcePartIndex,
       noteId: cell.noteId,
       verse: cell.verse,

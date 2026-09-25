@@ -66,7 +66,7 @@ pub(super) fn list_parts_response_to_wit(
         crate::types::ListPartsResponse::Ok {
             parts,
             declarations,
-        } => ListPartsResponse::Ok(ListPartsResponseOk {
+        } => ListPartsResponse::Ok(ListPartsSuccess {
             parts: parts.iter().map(part_to_wit).collect(),
             declarations: declarations.iter().map(part_declaration_to_wit).collect(),
         }),
@@ -124,7 +124,7 @@ pub(super) fn list_symbols_response_to_wit(
 ) -> ListSymbolsResponse {
     match response {
         crate::types::ListSymbolsResponse::Ok { symbols } => {
-            ListSymbolsResponse::Ok(ListSymbolsResponseOk {
+            ListSymbolsResponse::Ok(ListSymbolsSuccess {
                 symbols: symbols.iter().map(symbol_to_wit).collect(),
             })
         }
@@ -146,7 +146,7 @@ pub(super) fn rename_symbol_response_to_wit(
 ) -> RenameSymbolResponse {
     match response {
         crate::types::RenameSymbolResponse::Ok { edits } => {
-            RenameSymbolResponse::Ok(RenameSymbolResponseOk {
+            RenameSymbolResponse::Ok(RenameSymbolSuccess {
                 edits: edits.iter().map(text_edit_to_wit).collect(),
             })
         }
@@ -161,7 +161,7 @@ pub(super) fn measure_at_offset_response_to_wit(
 ) -> MeasureAtOffsetResponse {
     match response {
         crate::types::MeasureAtOffsetResponse::Ok { measure_index } => {
-            MeasureAtOffsetResponse::Ok(MeasureAtOffsetResponseOk {
+            MeasureAtOffsetResponse::Ok(MeasureAtOffsetSuccess {
                 measure_index: *measure_index as u32,
             })
         }
@@ -185,7 +185,7 @@ pub(super) fn list_part_declarations_response_to_wit(
 ) -> ListPartDeclarationsResponse {
     match response {
         crate::types::ListPartDeclarationsResponse::Ok { declarations } => {
-            ListPartDeclarationsResponse::Ok(ListPartDeclarationsResponseOk {
+            ListPartDeclarationsResponse::Ok(ListPartDeclarationsSuccess {
                 declarations: declarations.iter().map(part_declaration_to_wit).collect(),
             })
         }

@@ -65,7 +65,7 @@ export function MetadataFieldsTableBody({
         help={metadataFieldHelp.row_height}
         onShowHelp={showHelp}
         value={metadata.row_height ?? ''}
-        placeholder={numOrUndef(d?.row_height)}
+        placeholder={numOrUndef(d?.rowHeight)}
         onChange={setNumber('row_height')}
       />
       <NumberFieldRow
@@ -73,7 +73,7 @@ export function MetadataFieldsTableBody({
         help={metadataFieldHelp.max_measures_per_system}
         onShowHelp={showHelp}
         value={metadata.max_measures_per_system ?? ''}
-        placeholder={numOrUndef(d?.max_measures_per_system)}
+        placeholder={numOrUndef(d?.maxMeasuresPerSystem)}
         onChange={setNumber('max_measures_per_system')}
       />
       <NumberFieldRow
@@ -81,7 +81,7 @@ export function MetadataFieldsTableBody({
         help={metadataFieldHelp.note_number_width}
         onShowHelp={showHelp}
         value={metadata.note_number_width ?? ''}
-        placeholder={numOrUndef(d?.note_number_width)}
+        placeholder={numOrUndef(d?.noteNumberWidth)}
         onChange={setNumber('note_number_width')}
       />
       <NumberFieldRow
@@ -89,7 +89,7 @@ export function MetadataFieldsTableBody({
         help={metadataFieldHelp.parts_list_columns}
         onShowHelp={showHelp}
         value={metadata.parts_list_columns ?? ''}
-        placeholder={numOrUndef(d?.parts_list_columns)}
+        placeholder={numOrUndef(d?.partsListColumns)}
         onChange={setNumber('parts_list_columns')}
       />
       <NumberFieldRow
@@ -97,7 +97,7 @@ export function MetadataFieldsTableBody({
         help={metadataFieldHelp.part_label_width_pt}
         onShowHelp={showHelp}
         value={metadata.part_label_width_pt ?? ''}
-        placeholder={numOrUndef(d?.part_label_width_pt)}
+        placeholder={numOrUndef(d?.partLabelWidthPt)}
         onChange={setNumber('part_label_width_pt')}
       />
       <CheckboxFieldRow
@@ -106,7 +106,7 @@ export function MetadataFieldsTableBody({
         onShowHelp={showHelp}
         checked={
           metadata.merge_duplicate_measures_across_parts ??
-          d?.merge_duplicate_measures_across_parts ??
+          d?.mergeDuplicateMeasuresAcrossParts ??
           true
         }
         onChange={setYesNo('merge_duplicate_measures_across_parts')}
@@ -115,7 +115,7 @@ export function MetadataFieldsTableBody({
         label="Hide Resting Parts"
         help={metadataFieldHelp.hide_resting_parts}
         onShowHelp={showHelp}
-        checked={metadata.hide_resting_parts ?? d?.hide_resting_parts ?? true}
+        checked={metadata.hide_resting_parts ?? d?.hideRestingParts ?? true}
         onChange={setYesNo('hide_resting_parts')}
       />
       <CheckboxFieldRow
@@ -123,7 +123,7 @@ export function MetadataFieldsTableBody({
         help={metadataFieldHelp.hide_system_dividers}
         onShowHelp={showHelp}
         checked={
-          metadata.hide_system_dividers ?? d?.hide_system_dividers ?? false
+          metadata.hide_system_dividers ?? d?.hideSystemDividers ?? false
         }
         onChange={setYesNo('hide_system_dividers')}
       />
@@ -133,9 +133,7 @@ export function MetadataFieldsTableBody({
         onShowHelp={showHelp}
         value={metadata.directive_row_offset ?? ''}
         placeholder={
-          d
-            ? `${d.directive_row_offset_x} ${d.directive_row_offset_y}`
-            : undefined
+          d ? `${d.directiveRowOffsetX} ${d.directiveRowOffsetY}` : undefined
         }
         onChange={setText('directive_row_offset')}
       />

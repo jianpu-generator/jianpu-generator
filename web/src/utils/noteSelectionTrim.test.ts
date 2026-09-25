@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { NoteTimingOut } from '../jianpuWasm'
+import type { NoteTiming } from '../jianpuWasm'
 import { computeNoteSelectionTrimWindow } from './noteSelectionTrim'
 
 function timing(
@@ -7,12 +7,12 @@ function timing(
   noteId: number,
   startS: number,
   endS: number,
-): NoteTimingOut {
+): NoteTiming {
   return {
-    source_part_index: sourcePartIndex,
-    note_id: noteId,
-    start_s: startS,
-    end_s: endS,
+    sourcePartIndex: sourcePartIndex,
+    noteId: noteId,
+    startS: startS,
+    endS: endS,
   }
 }
 

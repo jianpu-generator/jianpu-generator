@@ -193,7 +193,7 @@ export function useMeasureRangeSelection(
         const startSpan = measureSpans[Math.min(...measureIndices)]
         const endSpan = measureSpans[Math.max(...measureIndices)]
         if (startSpan && endSpan) {
-          notifySelection(startSpan.start_line, endSpan.end_line, false)
+          notifySelection(startSpan.startLine, endSpan.endLine, false)
         }
         return
       }

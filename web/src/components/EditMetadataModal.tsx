@@ -1,10 +1,12 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useState } from 'react'
-import type {
-  MetadataDefaults,
-  TextStyleDefaults,
+import {
+  loadMetadataDefaults,
+  type MetadataDefaults,
+  type TextStyleDefaultFields,
+  type TextStyleDefaults,
+  textStyleDefaultFields,
 } from '../utils/metadataDefaults'
-import { loadMetadataDefaults } from '../utils/metadataDefaults'
 import { metadataFieldHelp } from '../utils/metadataFieldHelp'
 import type {
   MetadataFieldKey,
@@ -57,7 +59,7 @@ export function EditMetadataModal({
     loadMetadataDefaults().then(setDefaults)
   }, [])
 
-  const effectiveRowHeight = metadata.row_height ?? defaults?.row_height ?? null
+  const effectiveRowHeight = metadata.row_height ?? defaults?.rowHeight ?? null
   const {
     lyricsFontSizeDefault,
     titleFontSizeDefault,
@@ -106,9 +108,12 @@ export function EditMetadataModal({
   const stylePlaceholder = (
     base: TextStyleDefaults | undefined,
     liveFontSize?: number | null,
-  ): TextStyleDefaults | null => {
+  ): TextStyleDefaultFields | null => {
     if (!base) return null
-    return liveFontSize == null ? base : { ...base, font_size: liveFontSize }
+    const fields = textStyleDefaultFields(base)
+    return liveFontSize == null
+      ? fields
+      : { ...fields, font_size: liveFontSize }
   }
 
   const styleRows: StyleRowSpec[] = [
@@ -138,42 +143,42 @@ export function EditMetadataModal({
       label: 'Sequence Style',
       help: metadataFieldHelp.sequence,
       value: metadata.styles.sequence,
-      placeholder: d?.sequence ?? null,
+      placeholder: stylePlaceholder(d?.sequence),
     },
     {
       kind: 'part_legend',
       label: 'Part Legend Style',
       help: metadataFieldHelp.part_legend,
       value: metadata.styles.part_legend,
-      placeholder: stylePlaceholder(d?.part_legend, partLegendFontSizeDefault),
+      placeholder: stylePlaceholder(d?.partLegend, partLegendFontSizeDefault),
     },
     {
       kind: 'measure_number',
       label: 'Measure Number Style',
       help: metadataFieldHelp.measure_number,
       value: metadata.styles.measure_number,
-      placeholder: d?.measure_number ?? null,
+      placeholder: stylePlaceholder(d?.measureNumber),
     },
     {
       kind: 'section_label',
       label: 'Section Label Style',
       help: metadataFieldHelp.section_label,
       value: metadata.styles.section_label,
-      placeholder: d?.section_label ?? null,
+      placeholder: stylePlaceholder(d?.sectionLabel),
     },
     {
       kind: 'part_label',
       label: 'Part Label Style',
       help: metadataFieldHelp.part_label,
       value: metadata.styles.part_label,
-      placeholder: d?.part_label ?? null,
+      placeholder: stylePlaceholder(d?.partLabel),
     },
     {
       kind: 'page_number',
       label: 'Page Number Style',
       help: metadataFieldHelp.page_number,
       value: metadata.styles.page_number,
-      placeholder: stylePlaceholder(d?.page_number, pageNumberFontSizeDefault),
+      placeholder: stylePlaceholder(d?.pageNumber, pageNumberFontSizeDefault),
     },
     {
       kind: 'lyrics',
@@ -201,7 +206,7 @@ export function EditMetadataModal({
       label: 'Note Dash Style',
       help: metadataFieldHelp.note_dash,
       value: metadata.styles.note_dash,
-      placeholder: stylePlaceholder(d?.note_dash, effectiveNotesFontSize),
+      placeholder: stylePlaceholder(d?.noteDash, effectiveNotesFontSize),
     },
   ]
 

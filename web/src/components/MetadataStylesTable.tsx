@@ -1,4 +1,4 @@
-import type { TextStyleDefaults } from '../utils/metadataDefaults'
+import type { TextStyleDefaultFields } from '../utils/metadataDefaults'
 import type {
   FontFamilyValue,
   TextStyleBooleanComponent,
@@ -16,7 +16,7 @@ export interface StyleRowSpec {
   label: string
   help: string
   value: TextStyleFields
-  placeholder: TextStyleDefaults | null
+  placeholder: TextStyleDefaultFields | null
   /** No row currently sets this `false` — every kind, including
    * `notes`/`chords`/`note_dash` (whose glyph widths are re-measured
    * against whichever font `font_family` resolves to, see `syntax.md`),

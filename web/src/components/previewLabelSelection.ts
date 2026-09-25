@@ -1,5 +1,5 @@
 import { groupTagSelector } from '../dataAttributes'
-import type { TagOut } from '../jianpuWasm'
+import type { Tag } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import { clickableElementIdFromElement } from './clickableElementId'
 import type { LyricCell, NoteCell } from './previewSelection'
@@ -10,7 +10,7 @@ import type { LyricCell, NoteCell } from './previewSelection'
 function getClickableElementIdAtPoint(
   x: number,
   y: number,
-  tagType: TagOut['type'],
+  tagType: Tag['tag'],
 ) {
   const el = document.elementFromPoint(x, y)
   const group = el?.closest(groupTagSelector(tagType))
@@ -19,7 +19,7 @@ function getClickableElementIdAtPoint(
 }
 
 /** One rendered part-label click target, keyed the same way as
- * `Tag::PartLabel`'s `data-part-index`/`data-measure-index-start`/
+ * `Tag` `part-label`'s `data-part-index`/`data-measure-index-start`/
  * `data-measure-index-end` SVG attributes — see `getPartLabelAtPoint`. */
 export interface PartLabelHit {
   sourcePartIndex: number
@@ -28,13 +28,13 @@ export interface PartLabelHit {
 }
 
 /** The part-label click target under the given point, if any — reads the
- * invisible `PartLabelClickTarget` rect's enclosing `Tag::PartLabel` group
+ * invisible `PartLabelClickTarget` rect's enclosing `Tag` `part-label` group
  * (see `renderer::new_renderer::render_part_label_click_target`). */
 export function getPartLabelAtPoint(
   x: number,
   y: number,
 ): PartLabelHit | undefined {
-  const id = getClickableElementIdAtPoint(x, y, 'partLabel')
+  const id = getClickableElementIdAtPoint(x, y, 'part-label')
   if (id?.kind !== 'partLabel') return undefined
   return {
     sourcePartIndex: id.sourcePartIndex,
@@ -108,7 +108,7 @@ export function getLyricLabelAtPoint(
   x: number,
   y: number,
 ): LyricLabelHit | undefined {
-  const id = getClickableElementIdAtPoint(x, y, 'lyricLabel')
+  const id = getClickableElementIdAtPoint(x, y, 'lyric-label')
   if (id?.kind !== 'lyricLabel') return undefined
   return {
     sourcePartIndex: id.sourcePartIndex,

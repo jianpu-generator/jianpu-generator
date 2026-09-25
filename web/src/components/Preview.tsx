@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { measureGroupSelector } from '../dataAttributes'
-import type { NoteTimingOut, SvgDocumentOut } from '../jianpuWasm'
+import type { NoteTiming, SvgDocument } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import { renderSvgDocument } from './PreviewSvgRenderer'
 import { handlePreviewClick } from './previewClickHandler'
@@ -19,8 +19,8 @@ import { usePreviewClickSelection } from './usePreviewClickSelection'
 export type { LyricCell, NoteCell } from './previewSelection'
 
 interface PreviewProps {
-  documents: SvgDocumentOut[]
-  highlightedDocuments?: SvgDocumentOut[]
+  documents: SvgDocument[]
+  highlightedDocuments?: SvgDocument[]
   rendering: boolean
   audioGenerating?: boolean
   wavUrl?: string | null
@@ -33,9 +33,9 @@ interface PreviewProps {
   mp3Url?: string | null
   mp3Filename?: string
   /** Elapsed-seconds start/end of every sounding note/rest for whichever of `wavUrl`/`mp3Url` is set, keyed by `(source_part_index, note_id)`. */
-  noteTimings?: NoteTimingOut[]
+  noteTimings?: NoteTiming[]
   /** Elapsed-seconds start/end of every sounding note/rest for the selected range's audio, keyed by `(source_part_index, note_id)`. */
-  measureAudioNoteTimings?: NoteTimingOut[]
+  measureAudioNoteTimings?: NoteTiming[]
   /** The `<audio>` element currently playing the selected measure range, if any. */
   measureAudioElement?: HTMLAudioElement | null
   emptyMessage?: string

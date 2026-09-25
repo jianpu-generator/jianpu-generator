@@ -1,12 +1,10 @@
+import type { LyricCellIn, NoteCellIn } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import { clickableElementIdFromElement } from './clickableElementId'
 
-/** One rendered note/rest, keyed the same way as `Tag::Note`'s
+/** One rendered note/rest, keyed the same way as the `note` `Tag`'s
  * `data-part-index`/`data-note-id` SVG attributes. */
-export interface NoteCell {
-  sourcePartIndex: number
-  noteId: number
-}
+export type NoteCell = NoteCellIn
 
 /**
  * Generic hit-test behind `getNoteAtPoint`/`getLyricAtPoint`/
@@ -205,11 +203,7 @@ export function getNoteAtPoint(x: number, y: number): NoteCell | undefined {
  * cell sharing the same underlying note number are not interchangeable,
  * they're just keyed by the same note for convenience (see
  * `lyric_spans::LyricCell`). */
-export interface LyricCell {
-  sourcePartIndex: number
-  noteId: number
-  verse: number
-}
+export type LyricCell = LyricCellIn
 
 /** The lyric syllable under the given point, if any — reads the invisible
  * `LyricClickTarget` rect's enclosing `Tag::Lyric` group (see

@@ -6,7 +6,7 @@ export function createMeasureViewZoneDomNode(
   span: MeasureSpan,
   index: number,
 ): HTMLElement {
-  const hasLabel = span.section_label != null
+  const hasLabel = span.sectionLabel != null
   const domNode = document.createElement('div')
   domNode.style.cssText = [
     'width: 100%',
@@ -21,7 +21,7 @@ export function createMeasureViewZoneDomNode(
     'padding-left: 8px',
     'box-sizing: border-box',
   ].join(';')
-  domNode.textContent = span.section_label ?? `${index + 1}`
+  domNode.textContent = span.sectionLabel ?? `${index + 1}`
   return domNode
 }
 
@@ -30,6 +30,6 @@ export function measureViewZoneLineNumber(
   source: string,
   span: MeasureSpan,
 ): number {
-  const stringIndex = byteOffsetToStringIndex(source, span.view_zone_start)
+  const stringIndex = byteOffsetToStringIndex(source, span.viewZoneStart)
   return model.getPositionAt(stringIndex).lineNumber
 }

@@ -1,36 +1,6 @@
-import * as jianpuWasm from '../jianpuWasm'
-import {
-  describe_selection,
-  extract_source_from_pdf,
-  extract_source_from_svg,
-  format_score,
-  generate_instrument_preview_wav as generateInstrumentPreviewWav,
-  generate_midi as generateMidi,
-  generate_mp3 as generateMp3,
-  generate_pdf as generatePdf,
-  generate_percussion_preview_wav as generatePercussionPreviewWav,
-  generate_split_midis as generateSplitMidis,
-  generate_split_mp3s as generateSplitMp3s,
-  generate_split_pdfs as generateSplitPdfs,
-  generate_split_wavs as generateSplitWavs,
-  generate_wav as generateWav,
-  generate_wav_for_measure_range as generateWavForMeasureRange,
-  list_lyric_spans,
-  list_measure_spans,
-  list_note_spans,
-  list_parts,
-  list_note_timings as listNoteTimings,
-  list_note_timings_for_range as listNoteTimingsForRange,
-  render,
-  render_with_highlight_range as renderWithHighlightRange,
-  set_layout_fonts,
-  shift_part_octave,
-  shift_range_octave,
-  toggle_range_slur,
-  toggle_range_tie,
-  update_part_declaration,
-} from '../jianpuWasm'
-import type { PartDeclaration } from '../types'
+import type { ByteRange } from '../jianpuWasm'
+import { jianpuWasm, setWasmRoot } from '../jianpuWasm'
+import type { EditorSelection, PartDeclaration } from '../types'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
 import { instantiateWasmComponentFromModule } from '../wasmInit'
 import {
@@ -67,7 +37,7 @@ function ensureInit(): Promise<void> {
     initPromise = wasmModulePromise
       .then((module) => instantiateWasmComponentFromModule(module))
       .then((root) => {
-        jianpuWasm.setWasmRoot(root)
+        setWasmRoot(root)
         postMessage({
           type: 'ready',
           audioAvailable: true,
@@ -93,13 +63,15 @@ function applyCoreFontsWhenReady(fonts: {
   tc: Uint8Array
   mono: Uint8Array
 }): void {
-  // `set_layout_fonts(directive_line_font, lyric_font, monospace_font)` —
+  // `setLayoutFonts(directiveLineFont, lyricFont, monospaceFont)` —
   // directive-line text measures against `tc` (the `sansSerif` role's
   // font), lyrics against `sc` (the `serif` role's font, shared with the
   // song title) — see `fonts/fonts.json` and
   // `DIRECTIVE_LINE_FONT_FAMILY`/`SERIF_FONT_FAMILY` in
   // src/serializer/mod.rs.
-  ensureInit().then(() => set_layout_fonts(fonts.tc, fonts.sc, fonts.mono))
+  ensureInit().then(() =>
+    jianpuWasm().setLayoutFonts(fonts.tc, fonts.sc, fonts.mono),
+  )
 }
 
 let loadedSoundfont: Uint8Array | null = null
@@ -117,9 +89,13 @@ function octaveOffsetToWasmString(octaveOffset: number | null): string {
   return octaveOffset > 0 ? `+${octaveOffset}` : String(octaveOffset)
 }
 
+function toByteRanges(ranges: EditorSelection[]): ByteRange[] {
+  return ranges.map((range) => ({ startByte: range.start, endByte: range.end }))
+}
+
 function listDeclarationsFromSource(source: string): PartDeclaration[] {
-  const result = jianpuWasm.list_part_declarations(source, GM_INSTRUMENTS)
-  return result.status === 'ok' ? result.declarations : []
+  const result = jianpuWasm().listPartDeclarations(source, GM_INSTRUMENTS)
+  return result.tag === 'ok' ? result.val.declarations : []
 }
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
@@ -147,13 +123,13 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   await ensureInit()
 
   if (msg.type === 'listParts') {
-    const result = list_parts(msg.source, GM_INSTRUMENTS)
-    if (result.status === 'ok') {
+    const result = jianpuWasm().listParts(msg.source, GM_INSTRUMENTS)
+    if (result.tag === 'ok') {
       postMessage({
         type: 'parts',
         id: msg.id,
-        parts: result.parts,
-        declarations: result.declarations,
+        parts: result.val.parts,
+        declarations: result.val.declarations,
       } satisfies WorkerResponse)
       return
     }
@@ -168,7 +144,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'updatePartDeclaration') {
-    const newSource = update_part_declaration(
+    const newSource = jianpuWasm().updatePartDeclaration(
       msg.source,
       msg.abbreviation,
       msg.mode,
@@ -190,7 +166,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     postMessage({
       type: 'scoreFormatted',
       id: msg.id,
-      source: format_score(msg.source),
+      source: jianpuWasm().formatScore(msg.source),
     } satisfies WorkerResponse)
     return
   }
@@ -199,24 +175,32 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     postMessage({
       type: 'partOctaveShifted',
       id: msg.id,
-      source: shift_part_octave(msg.source, msg.abbreviation, msg.delta),
+      source: jianpuWasm().shiftPartOctave(
+        msg.source,
+        msg.abbreviation,
+        msg.delta,
+      ),
     } satisfies WorkerResponse)
     return
   }
 
   if (msg.type === 'editRange') {
     const { operation } = msg
+    const ranges = toByteRanges(msg.ranges)
     const result =
       operation.kind === 'shiftOctave'
-        ? shift_range_octave(msg.source, msg.ranges, operation.delta)
+        ? jianpuWasm().shiftRangeOctave(msg.source, ranges, operation.delta)
         : operation.kind === 'toggleSlur'
-          ? toggle_range_slur(msg.source, msg.ranges)
-          : toggle_range_tie(msg.source, msg.ranges)
+          ? jianpuWasm().toggleRangeSlur(msg.source, ranges)
+          : jianpuWasm().toggleRangeTie(msg.source, ranges)
     postMessage({
       type: 'rangeEdited',
       id: msg.id,
       source: result.source,
-      ranges: result.ranges,
+      ranges: result.ranges.map((range) => ({
+        start: range.startByte,
+        end: range.endByte,
+      })),
     } satisfies WorkerResponse)
     return
   }
@@ -225,150 +209,147 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     postMessage({
       type: 'selectionDescribed',
       id: msg.id,
-      description: describe_selection(msg.source, msg.ranges),
+      description:
+        jianpuWasm().describeSelection(msg.source, toByteRanges(msg.ranges)) ??
+        null,
     } satisfies WorkerResponse)
     return
   }
 
   if (msg.type === 'generatePdf') {
-    handleGeneratePdf(msg, generatePdf, loadedFonts)
+    handleGeneratePdf(msg, loadedFonts)
     return
   }
 
   if (msg.type === 'generateSplitPdf') {
-    handleGenerateSplitPdf(msg, generateSplitPdfs, loadedFonts)
+    handleGenerateSplitPdf(msg, loadedFonts)
     return
   }
 
   if (msg.type === 'generateMidi') {
-    handleGenerateMidi(msg, generateMidi)
+    handleGenerateMidi(msg)
     return
   }
 
   if (msg.type === 'generateSplitMidi') {
-    handleGenerateSplitMidi(msg, generateSplitMidis)
+    handleGenerateSplitMidi(msg)
     return
   }
 
   if (msg.type === 'generateSplitWav') {
-    handleGenerateSplitWav(msg, generateSplitWavs, loadedSoundfont)
+    handleGenerateSplitWav(msg, loadedSoundfont)
     return
   }
 
   if (msg.type === 'generateMp3') {
-    handleGenerateMp3(msg, generateMp3, listNoteTimings, loadedSoundfont)
+    handleGenerateMp3(msg, loadedSoundfont)
     return
   }
 
   if (msg.type === 'generateSplitMp3') {
-    handleGenerateSplitMp3(msg, generateSplitMp3s, loadedSoundfont)
+    handleGenerateSplitMp3(msg, loadedSoundfont)
     return
   }
 
   if (msg.type === 'generateAudio') {
-    handleGenerateAudio(msg, generateWav, listNoteTimings, loadedSoundfont)
+    handleGenerateAudio(msg, loadedSoundfont)
     return
   }
 
   if (msg.type === 'generateMeasureRangeAudio') {
-    handleGenerateMeasureRangeAudio(
-      msg,
-      generateWavForMeasureRange,
-      listNoteTimingsForRange,
-      loadedSoundfont,
-    )
+    handleGenerateMeasureRangeAudio(msg, loadedSoundfont)
     return
   }
 
   if (msg.type === 'previewInstrument') {
-    handlePreviewInstrument(msg, generateInstrumentPreviewWav, loadedSoundfont)
+    handlePreviewInstrument(msg, loadedSoundfont)
     return
   }
 
   if (msg.type === 'previewPercussion') {
-    handlePreviewPercussion(msg, generatePercussionPreviewWav, loadedSoundfont)
+    handlePreviewPercussion(msg, loadedSoundfont)
     return
   }
 
   if (msg.type === 'renderWithHighlightRange') {
-    const result = renderWithHighlightRange(
+    const result = jianpuWasm().renderSvgWithHighlightRange(
       msg.source,
       msg.ranges,
       msg.enabledTracks,
       msg.disabledLyrics,
       GM_INSTRUMENTS,
     )
-    if (result.status === 'ok') {
+    if (result.tag === 'ok') {
       postMessage({
         type: 'highlightRangeOk',
         id: msg.id,
-        documents: result.documents,
+        documents: result.val.documents,
       } satisfies WorkerResponse)
       return
     }
     postMessage({
       type: 'highlightRangeErr',
       id: msg.id,
-      diagnostics: result.diagnostics,
+      diagnostics: result.val.diagnostics,
     } satisfies WorkerResponse)
     return
   }
 
   if (msg.type === 'importFromFile') {
-    handleImportFromFile(msg, extract_source_from_svg, extract_source_from_pdf)
+    handleImportFromFile(msg)
     return
   }
 
   if (msg.type === 'listMeasureSpans') {
-    const result = list_measure_spans(msg.source)
+    const result = jianpuWasm().listMeasureSpans(msg.source)
     postMessage({
       type: 'measureSpans',
       id: msg.id,
-      status: result.status,
-      spans: result.status === 'ok' ? result.spans : [],
-      sectionRanges: result.status === 'ok' ? result.section_ranges : [],
-      sequenceEntries: result.status === 'ok' ? result.sequence_entries : [],
+      status: result.tag,
+      spans: result.tag === 'ok' ? result.val.spans : [],
+      sectionRanges: result.tag === 'ok' ? result.val.sectionRanges : [],
+      sequenceEntries: result.tag === 'ok' ? result.val.sequenceEntries : [],
     } satisfies WorkerResponse)
     return
   }
 
   if (msg.type === 'listNoteSpans') {
-    const result = list_note_spans(msg.source, msg.enabledTracks)
+    const result = jianpuWasm().listNoteSpans(msg.source, msg.enabledTracks)
     postMessage({
       type: 'noteSpans',
       id: msg.id,
-      status: result.status,
-      spans: result.status === 'ok' ? result.spans : [],
+      status: result.tag,
+      spans: result.tag === 'ok' ? result.val.spans : [],
     } satisfies WorkerResponse)
     return
   }
 
   if (msg.type === 'listLyricSpans') {
-    const result = list_lyric_spans(msg.source, msg.enabledTracks)
+    const result = jianpuWasm().listLyricSpans(msg.source, msg.enabledTracks)
     postMessage({
       type: 'lyricSpans',
       id: msg.id,
-      status: result.status,
-      spans: result.status === 'ok' ? result.spans : [],
+      status: result.tag,
+      spans: result.tag === 'ok' ? result.val.spans : [],
     } satisfies WorkerResponse)
     return
   }
 
   if (msg.type !== 'render') return
 
-  const result = render(
+  const result = jianpuWasm().renderSvg(
     msg.source,
     msg.enabledTracks,
     msg.disabledLyrics,
     GM_INSTRUMENTS,
   )
-  if (result.status === 'ok') {
+  if (result.tag === 'ok') {
     postMessage({
       type: 'ok',
       id: msg.id,
-      documents: result.documents,
-      diagnostics: result.diagnostics,
-      diagnosticViewZones: result.diagnostic_view_zones,
+      documents: result.val.documents,
+      diagnostics: result.val.diagnostics,
+      diagnosticViewZones: result.val.diagnosticViewZones,
     } satisfies WorkerResponse)
     return
   }
@@ -376,7 +357,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   postMessage({
     type: 'err',
     id: msg.id,
-    diagnostics: result.diagnostics,
-    diagnosticViewZones: result.diagnostic_view_zones,
+    diagnostics: result.val.diagnostics,
+    diagnosticViewZones: result.val.diagnosticViewZones,
   } satisfies WorkerResponse)
 }

@@ -3,6 +3,13 @@ import {
   measureGroupSelector,
   tagFromElement,
 } from '../dataAttributes'
+import {
+  jianpuWasm,
+  type LyricSpan,
+  type NoteSpan,
+  type ResolveSelectionRangeResponse,
+  type ClickableElementId as WasmClickableElementId,
+} from '../jianpuWasm'
 
 /**
  * TS mirror of `ClickableElementId` (`crates/jianpu-wasm/src/selection_range_types.rs`)
@@ -37,7 +44,7 @@ export type ClickableElementId =
  * `getPartLabelAtPoint`/`getLyricLabelAtPoint` in `previewSelection.ts`/
  * `previewLabelSelection.ts`, which funnel their own "element → fields"
  * parsing through this same function rather than duplicating it. Reads off
- * `el`'s own `TagOut` (via `tagFromElement`, `../dataAttributes.ts`), so `el`
+ * `el`'s own `Tag` (via `tagFromElement`, `../dataAttributes.ts`), so `el`
  * must already be the `[data-tag="..."]` group itself (the caller's
  * `closest()`/`elementFromPoint` walk has already found it) — not just some
  * descendant of it.
@@ -47,43 +54,43 @@ export function clickableElementIdFromElement(
 ): ClickableElementId | undefined {
   const tag = tagFromElement(el)
   if (!tag) return undefined
-  switch (tag.type) {
+  switch (tag.tag) {
     case 'note':
       return {
         kind: 'note',
-        sourcePartIndex: tag.source_part_index,
-        noteId: tag.note_id,
+        sourcePartIndex: tag.val.sourcePartIndex,
+        noteId: tag.val.noteId,
       }
     case 'lyric':
       return {
         kind: 'lyric',
-        sourcePartIndex: tag.source_part_index,
-        noteId: tag.note_id,
-        verse: tag.verse,
+        sourcePartIndex: tag.val.sourcePartIndex,
+        noteId: tag.val.noteId,
+        verse: tag.val.verse,
       }
-    case 'partLabel':
+    case 'part-label':
       return {
         kind: 'partLabel',
-        sourcePartIndex: tag.source_part_index,
-        measureIndexStart: tag.measure_index_start,
-        measureIndexEnd: tag.measure_index_end,
+        sourcePartIndex: tag.val.sourcePartIndex,
+        measureIndexStart: tag.val.measureIndexStart,
+        measureIndexEnd: tag.val.measureIndexEnd,
       }
-    case 'lyricLabel':
+    case 'lyric-label':
       return {
         kind: 'lyricLabel',
-        sourcePartIndex: tag.source_part_index,
-        verse: tag.verse,
-        measureIndexStart: tag.measure_index_start,
-        measureIndexEnd: tag.measure_index_end,
+        sourcePartIndex: tag.val.sourcePartIndex,
+        verse: tag.val.verse,
+        measureIndexStart: tag.val.measureIndexStart,
+        measureIndexEnd: tag.val.measureIndexEnd,
       }
     case 'measure':
-    case 'barNumber':
+    case 'bar-number':
       return {
         kind: 'measure',
-        measureIndexStart: tag.index,
-        measureIndexEnd: tag.end,
+        measureIndexStart: tag.val.index,
+        measureIndexEnd: tag.val.end,
       }
-    case 'barLine': {
+    case 'bar-line': {
       // A bar line visually introduces the measure *after* it, so `next`
       // wins when present; a system's *last* bar line (its closing line,
       // with no following measure on the same row) has no `next` and falls
@@ -96,32 +103,32 @@ export function clickableElementIdFromElement(
       // measure is actually part of. Ported unchanged from
       // `getBarLineMeasureAtPoint` (`previewSelection.ts`) — the one
       // `document.querySelector` this function needs, since a bar line's
-      // own `TagOut` only carries a neighboring measure *index*, not that
+      // own `Tag` only carries a neighboring measure *index*, not that
       // measure's own possibly-wider range.
-      const { measure_index_next, measure_index_prev } = tag
+      const { measureIndexNext, measureIndexPrev } = tag.val
       const measureEl =
-        measure_index_next !== undefined
+        measureIndexNext !== undefined
           ? document.querySelector<HTMLElement>(
-              measureGroupSelector({ index: measure_index_next }),
+              measureGroupSelector({ index: measureIndexNext }),
             )
-          : measure_index_prev !== undefined
+          : measureIndexPrev !== undefined
             ? document.querySelector<HTMLElement>(
-                measureGroupByEndSelector({ end: measure_index_prev }),
+                measureGroupByEndSelector({ end: measureIndexPrev }),
               )
             : null
       const measureTag = measureEl && tagFromElement(measureEl)
       if (
         !measureTag ||
-        (measureTag.type !== 'measure' && measureTag.type !== 'barNumber')
+        (measureTag.tag !== 'measure' && measureTag.tag !== 'bar-number')
       )
         return undefined
       return {
         kind: 'measure',
-        measureIndexStart: measureTag.index,
-        measureIndexEnd: measureTag.end,
+        measureIndexStart: measureTag.val.index,
+        measureIndexEnd: measureTag.val.end,
       }
     }
-    case 'sectionLabel':
+    case 'section-label':
       return undefined
     default: {
       const exhaustiveCheck: never = tag
@@ -130,4 +137,69 @@ export function clickableElementIdFromElement(
       )
     }
   }
+}
+
+/** The wasm component's own `clickable-element-id` shape for `id`, as
+ * `resolveSelectionRange` takes it. */
+export function clickableElementIdToWasm(
+  id: ClickableElementId,
+): WasmClickableElementId {
+  switch (id.kind) {
+    case 'note':
+      return {
+        tag: 'note',
+        val: { sourcePartIndex: id.sourcePartIndex, noteId: id.noteId },
+      }
+    case 'lyric':
+      return {
+        tag: 'lyric',
+        val: {
+          sourcePartIndex: id.sourcePartIndex,
+          noteId: id.noteId,
+          verse: id.verse,
+        },
+      }
+    case 'measure':
+      return {
+        tag: 'measure',
+        val: {
+          measureIndexStart: id.measureIndexStart,
+          measureIndexEnd: id.measureIndexEnd,
+        },
+      }
+    case 'partLabel':
+      return {
+        tag: 'part-label',
+        val: {
+          sourcePartIndex: id.sourcePartIndex,
+          measureIndexStart: id.measureIndexStart,
+          measureIndexEnd: id.measureIndexEnd,
+        },
+      }
+    case 'lyricLabel':
+      return {
+        tag: 'lyric-label',
+        val: {
+          sourcePartIndex: id.sourcePartIndex,
+          verse: id.verse,
+          measureIndexStart: id.measureIndexStart,
+          measureIndexEnd: id.measureIndexEnd,
+        },
+      }
+  }
+}
+
+/** `resolveSelectionRange` over two `ClickableElementId`s. */
+export function resolveSelectionRange(
+  noteSpans: NoteSpan[],
+  lyricSpans: LyricSpan[],
+  anchor: ClickableElementId,
+  current: ClickableElementId,
+): ResolveSelectionRangeResponse {
+  return jianpuWasm().resolveSelectionRange(
+    noteSpans,
+    lyricSpans,
+    clickableElementIdToWasm(anchor),
+    clickableElementIdToWasm(current),
+  )
 }

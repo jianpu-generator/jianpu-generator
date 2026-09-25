@@ -4,7 +4,7 @@ import {
   groupTagSelector,
   noteGroupSelector,
 } from '../dataAttributes'
-import type { NoteTimingOut } from '../jianpuWasm'
+import type { NoteTiming } from '../jianpuWasm'
 import {
   groupNoteTimingsByPart,
   resolveActiveNotes,
@@ -52,7 +52,7 @@ export function clearStaleHighlights(
   keep: Set<string>,
 ): void {
   const highlighted = container.querySelectorAll(
-    `${groupTagSelector('note')} rect[data-variant="${DATA_VARIANT.playbackCursorRect}"][fill="${PLAYBACK_CURSOR_FILL}"]`,
+    `${groupTagSelector('note')} rect[data-variant="${DATA_VARIANT['playback-cursor-rect']}"][fill="${PLAYBACK_CURSOR_FILL}"]`,
   )
   for (const rect of highlighted) {
     const group = rect.closest(groupTagSelector('note'))
@@ -76,7 +76,7 @@ export function clearStaleHighlights(
 export function usePlaybackCursor(
   containerRef: React.RefObject<HTMLDivElement | null>,
   audio: HTMLAudioElement | null | undefined,
-  noteTimings: NoteTimingOut[] | undefined,
+  noteTimings: NoteTiming[] | undefined,
 ) {
   useEffect(() => {
     const container = containerRef.current
@@ -94,7 +94,7 @@ export function usePlaybackCursor(
       on: boolean,
     ) => {
       const rects = container.querySelectorAll<SVGRectElement>(
-        `${noteGroupSelector({ partIndex: sourcePartIndex, noteId })} rect[data-variant="${DATA_VARIANT.playbackCursorRect}"]`,
+        `${noteGroupSelector({ partIndex: sourcePartIndex, noteId })} rect[data-variant="${DATA_VARIANT['playback-cursor-rect']}"]`,
       )
       for (const rect of rects) {
         rect.setAttribute('fill', on ? PLAYBACK_CURSOR_FILL : 'transparent')
@@ -106,7 +106,7 @@ export function usePlaybackCursor(
       noteId: number,
     ) => {
       const rect = container.querySelector<SVGRectElement>(
-        `${noteGroupSelector({ partIndex: sourcePartIndex, noteId })} rect[data-variant="${DATA_VARIANT.playbackCursorRect}"]`,
+        `${noteGroupSelector({ partIndex: sourcePartIndex, noteId })} rect[data-variant="${DATA_VARIANT['playback-cursor-rect']}"]`,
       )
       if (!rect) return
       const noteBounds = rect.getBoundingClientRect()

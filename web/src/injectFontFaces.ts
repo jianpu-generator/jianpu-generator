@@ -42,7 +42,7 @@ function bareFamilyName(familyCss: string): string {
 export function buildFontFaceCss(baseUrl: string): string {
   // Only `serif`/`sansSerif` get a `@font-face` rule, matching the static
   // rules this replaces: the preview SVG renders monospace-role glyphs with
-  // the plain CSS `monospace` keyword rather than a `FontFamilyOut` family
+  // the plain CSS `monospace` keyword rather than a `FontFamily` family
   // stack (see `textFontFamily` in PreviewSvgRenderer.tsx), so there's
   // nothing in the browser for a `Monospace` `@font-face` rule to back.
   const roles = [fonts.serif, fonts.sansSerif]

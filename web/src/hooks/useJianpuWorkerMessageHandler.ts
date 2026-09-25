@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import type { NoteTimingOut, SvgDocumentOut } from '../jianpuWasm'
+import type { NoteTiming, SvgDocument } from '../jianpuWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -59,21 +59,21 @@ export interface WorkerMessageHandlerDeps {
   setSplitMp3Exporting: (value: boolean) => void
   latestRenderIdRef: RefObject<number>
   setRendering: (value: boolean) => void
-  setDocuments: (value: SvgDocumentOut[]) => void
+  setDocuments: (value: SvgDocument[]) => void
   setDiagnosticViewZones: (value: DiagnosticViewZone[]) => void
   latestAudioIdRef: RefObject<number>
   setAudioGenerating: (value: boolean) => void
   setNextWavUrl: (value: string | null) => void
   setNextMp3Url: (value: string | null) => void
-  setNoteTimings: (value: NoteTimingOut[]) => void
+  setNoteTimings: (value: NoteTiming[]) => void
   latestMeasureAudioIdRef: RefObject<number>
   setMeasureAudioGenerating: (value: boolean) => void
   setNextMeasureWavUrl: (
     value: string | null,
-    noteTimings: NoteTimingOut[],
+    noteTimings: NoteTiming[],
   ) => void
   latestHighlightRenderIdRef: RefObject<number>
-  setHighlightedDocuments: (value: SvgDocumentOut[]) => void
+  setHighlightedDocuments: (value: SvgDocument[]) => void
   latestMeasureSpansIdRef: RefObject<number>
   setMeasureSpans: (value: MeasureSpan[]) => void
   latestNoteSpansIdRef: RefObject<number>

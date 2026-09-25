@@ -31,6 +31,11 @@ package jianpu:wasm;
 //   - Field names stay `kebab-case` — `jco` auto-converts to `camelCase`
 //     in the generated `.d.ts`, matching every existing
 //     `#[serde(rename_all = "camelCase")]` struct with no extra config.
+//   - A record carried by a variant case is never named `<variant>-<case>`
+//     (e.g. `note-tag`, `render-success`, not `tag-note`,
+//     `render-response-ok`): jco names each case's own interface that way
+//     too, and TypeScript merges the two same-named declarations into one
+//     unconstructible type. `web/src/jianpuWasmDts.test.ts` guards this.
 //   - Flat world-level type declarations, not `interface`-grouped (Phase 2's
 //     explicit decision — see the plan's "Guest trait ergonomics" section).
 //     Revisit only if this file becomes hard to navigate at full function
@@ -90,58 +95,58 @@ world jianpu-wasm {
         font-size: option<f32>,
     }
 
-    record tag-measure {
+    record measure-tag {
         index: u32,
         end: u32,
     }
 
-    record tag-bar-number {
+    record bar-number-tag {
         index: u32,
         end: u32,
     }
 
-    record tag-section-label {
+    record section-label-tag {
         label: string,
     }
 
-    record tag-note {
+    record note-tag {
         source-part-index: u32,
         note-id: u32,
     }
 
-    record tag-part-label {
+    record part-label-tag {
         source-part-index: u32,
         measure-index-start: u32,
         measure-index-end: u32,
     }
 
-    record tag-lyric {
+    record lyric-tag {
         source-part-index: u32,
         note-id: u32,
         verse: u32,
     }
 
-    record tag-lyric-label {
+    record lyric-label-tag {
         source-part-index: u32,
         verse: u32,
         measure-index-start: u32,
         measure-index-end: u32,
     }
 
-    record tag-bar-line {
+    record bar-line-tag {
         measure-index-next: option<u32>,
         measure-index-prev: option<u32>,
     }
 
     variant tag {
-        measure(tag-measure),
-        bar-number(tag-bar-number),
-        section-label(tag-section-label),
-        note(tag-note),
-        part-label(tag-part-label),
-        lyric(tag-lyric),
-        lyric-label(tag-lyric-label),
-        bar-line(tag-bar-line),
+        measure(measure-tag),
+        bar-number(bar-number-tag),
+        section-label(section-label-tag),
+        note(note-tag),
+        part-label(part-label-tag),
+        lyric(lyric-tag),
+        lyric-label(lyric-label-tag),
+        bar-line(bar-line-tag),
     }
 
     record svg-text-kind {
@@ -313,20 +318,20 @@ world jianpu-wasm {
         messages: list<diagnostic-message>,
     }
 
-    record render-response-ok {
+    record render-success {
         documents: list<svg-document>,
         diagnostics: list<diagnostic>,
         diagnostic-view-zones: list<diagnostic-view-zone>,
     }
 
-    record render-response-err {
+    record render-failure {
         diagnostics: list<diagnostic>,
         diagnostic-view-zones: list<diagnostic-view-zone>,
     }
 
     variant render-response {
-        ok(render-response-ok),
-        err(render-response-err),
+        ok(render-success),
+        err(render-failure),
     }
 
     // Shared shape for every response whose `Err` case is just
@@ -336,13 +341,13 @@ world jianpu-wasm {
         diagnostics: list<diagnostic>,
     }
 
-    record list-parts-response-ok {
+    record list-parts-success {
         parts: list<part>,
         declarations: list<part-declaration>,
     }
 
     variant list-parts-response {
-        ok(list-parts-response-ok),
+        ok(list-parts-success),
         err(diagnostics-error),
     }
 
@@ -392,12 +397,12 @@ world jianpu-wasm {
     // Phase 3, group 3 of PLAN-wit-bindgen-migration.md.
     export list-parts: func(source: string, raw-instruments: list<instrument-info>) -> list-parts-response;
 
-    record list-part-declarations-response-ok {
+    record list-part-declarations-success {
         declarations: list<part-declaration>,
     }
 
     variant list-part-declarations-response {
-        ok(list-part-declarations-response-ok),
+        ok(list-part-declarations-success),
         err(diagnostics-error),
     }
 
@@ -439,12 +444,12 @@ world jianpu-wasm {
         occurrences: list<symbol-occurrence>,
     }
 
-    record list-symbols-response-ok {
+    record list-symbols-success {
         symbols: list<symbol>,
     }
 
     variant list-symbols-response {
-        ok(list-symbols-response-ok),
+        ok(list-symbols-success),
         err(diagnostics-error),
     }
 
@@ -456,24 +461,24 @@ world jianpu-wasm {
         replacement: string,
     }
 
-    record rename-symbol-response-ok {
+    record rename-symbol-success {
         edits: list<text-edit>,
     }
 
     variant rename-symbol-response {
-        ok(rename-symbol-response-ok),
+        ok(rename-symbol-success),
         err(diagnostics-error),
     }
 
     // Phase 3, group 3 of PLAN-wit-bindgen-migration.md.
     export rename-symbol: func(source: string, kind: symbol-kind, old-name: string, new-name: string, raw-instruments: list<instrument-info>) -> rename-symbol-response;
 
-    record measure-at-offset-response-ok {
+    record measure-at-offset-success {
         measure-index: u32,
     }
 
     variant measure-at-offset-response {
-        ok(measure-at-offset-response-ok),
+        ok(measure-at-offset-success),
         not-in-measure,
     }
 
@@ -499,12 +504,12 @@ world jianpu-wasm {
         end: option<u32>,
     }
 
-    record list-note-spans-response-ok {
+    record list-note-spans-success {
         spans: list<note-span>,
     }
 
     variant list-note-spans-response {
-        ok(list-note-spans-response-ok),
+        ok(list-note-spans-success),
         err,
     }
 
@@ -520,12 +525,12 @@ world jianpu-wasm {
         end: u32,
     }
 
-    record list-lyric-spans-response-ok {
+    record list-lyric-spans-success {
         spans: list<lyric-span>,
     }
 
     variant list-lyric-spans-response {
-        ok(list-lyric-spans-response-ok),
+        ok(list-lyric-spans-success),
         err,
     }
 
@@ -544,14 +549,14 @@ world jianpu-wasm {
         end-measure-index: u32,
     }
 
-    record list-measure-spans-response-ok {
+    record list-measure-spans-success {
         spans: list<measure-span>,
         section-ranges: list<section-range>,
         sequence-entries: list<sequence-entry>,
     }
 
     variant list-measure-spans-response {
-        ok(list-measure-spans-response-ok),
+        ok(list-measure-spans-success),
         err,
     }
 
@@ -573,12 +578,12 @@ world jianpu-wasm {
         end-byte: u32,
     }
 
-    record group-note-selection-response-ok {
+    record group-note-selection-success {
         runs: list<note-selection-run>,
     }
 
     variant group-note-selection-response {
-        ok(group-note-selection-response-ok),
+        ok(group-note-selection-success),
         err,
     }
 
@@ -598,12 +603,12 @@ world jianpu-wasm {
         end-byte: u32,
     }
 
-    record group-lyric-selection-response-ok {
+    record group-lyric-selection-success {
         runs: list<lyric-selection-run>,
     }
 
     variant group-lyric-selection-response {
-        ok(group-lyric-selection-response-ok),
+        ok(group-lyric-selection-success),
         err,
     }
 
@@ -753,12 +758,12 @@ world jianpu-wasm {
 
     // ==================== types_export.rs (wav/pdf/midi/mp3) ====================
 
-    record generate-wav-response-ok {
+    record generate-wav-success {
         wav: list<u8>,
     }
 
     variant generate-wav-response {
-        ok(generate-wav-response-ok),
+        ok(generate-wav-success),
         err(diagnostics-error),
     }
 
@@ -792,12 +797,12 @@ world jianpu-wasm {
         end-s: f64,
     }
 
-    record note-timings-response-ok {
+    record note-timings-success {
         timings: list<note-timing>,
     }
 
     variant note-timings-response {
-        ok(note-timings-response-ok),
+        ok(note-timings-success),
         err(diagnostics-error),
     }
 
@@ -809,12 +814,12 @@ world jianpu-wasm {
     // `sequence-entry-start-index`/`sequence-entry-end-index`.
     export list-note-timings-for-range: func(source: string, start-index: u32, end-index: u32, extend-to-last-occurrence: bool, respect-sequence: bool, sequence-entry-start-index: option<u32>, sequence-entry-end-index: option<u32>, visible-tracks: option<list<string>>, enabled-tracks: option<list<string>>) -> note-timings-response;
 
-    record generate-pdf-response-ok {
+    record generate-pdf-success {
         pdf: list<u8>,
     }
 
     variant generate-pdf-response {
-        ok(generate-pdf-response-ok),
+        ok(generate-pdf-success),
         err(diagnostics-error),
     }
 
@@ -823,60 +828,60 @@ world jianpu-wasm {
     // as the `#[wasm_bindgen] fn generate_pdf` original.
     export generate-pdf: func(source: string, enabled-tracks: option<list<string>>, disabled-lyrics: option<list<string>>, sans-serif-sc: list<u8>, sans-serif-tc: list<u8>, monospace: list<u8>) -> generate-pdf-response;
 
-    record generate-split-pdfs-response-ok {
+    record generate-split-pdfs-success {
         zip: list<u8>,
     }
 
     variant generate-split-pdfs-response {
-        ok(generate-split-pdfs-response-ok),
+        ok(generate-split-pdfs-success),
         err(diagnostics-error),
     }
 
     // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
     export generate-split-pdfs: func(source: string, base-name: string, sans-serif-sc: list<u8>, sans-serif-tc: list<u8>, monospace: list<u8>) -> generate-split-pdfs-response;
 
-    record generate-midi-response-ok {
+    record generate-midi-success {
         midi: list<u8>,
     }
 
     variant generate-midi-response {
-        ok(generate-midi-response-ok),
+        ok(generate-midi-success),
         err(diagnostics-error),
     }
 
     // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
     export generate-midi: func(source: string, enabled-tracks: option<list<string>>) -> generate-midi-response;
 
-    record generate-split-midis-response-ok {
+    record generate-split-midis-success {
         zip: list<u8>,
     }
 
     variant generate-split-midis-response {
-        ok(generate-split-midis-response-ok),
+        ok(generate-split-midis-success),
         err(diagnostics-error),
     }
 
     // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
     export generate-split-midis: func(source: string, base-name: string) -> generate-split-midis-response;
 
-    record generate-split-wavs-response-ok {
+    record generate-split-wavs-success {
         zip: list<u8>,
     }
 
     variant generate-split-wavs-response {
-        ok(generate-split-wavs-response-ok),
+        ok(generate-split-wavs-success),
         err(diagnostics-error),
     }
 
     // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
     export generate-split-wavs: func(source: string, base-name: string, soundfont: list<u8>) -> generate-split-wavs-response;
 
-    record generate-mp3-response-ok {
+    record generate-mp3-success {
         mp3: list<u8>,
     }
 
     variant generate-mp3-response {
-        ok(generate-mp3-response-ok),
+        ok(generate-mp3-success),
         err(diagnostics-error),
     }
 
@@ -890,12 +895,12 @@ world jianpu-wasm {
     // exactly, only encoding to MP3 instead of WAV.
     export generate-mp3-for-measure-range: func(source: string, start-index: u32, end-index: u32, extend-to-last-occurrence: bool, respect-sequence: bool, sequence-entry-start-index: option<u32>, sequence-entry-end-index: option<u32>, enabled-tracks: option<list<string>>, trim-start-s: option<f64>, trim-end-s: option<f64>, trim-next-note-start-s: option<f64>, soundfont: list<u8>) -> generate-mp3-response;
 
-    record generate-split-mp3s-response-ok {
+    record generate-split-mp3s-success {
         zip: list<u8>,
     }
 
     variant generate-split-mp3s-response {
-        ok(generate-split-mp3s-response-ok),
+        ok(generate-split-mp3s-success),
         err(diagnostics-error),
     }
 
@@ -919,29 +924,29 @@ world jianpu-wasm {
 
     // `ClickableElementId` — input-only, decoded via serde_wasm_bindgen
     // today; the `kind` tag becomes the variant case name.
-    record clickable-element-id-note {
+    record note-element-id {
         source-part-index: u32,
         note-id: u32,
     }
 
-    record clickable-element-id-lyric {
+    record lyric-element-id {
         source-part-index: u32,
         note-id: u32,
         verse: u32,
     }
 
-    record clickable-element-id-measure {
+    record measure-element-id {
         measure-index-start: u32,
         measure-index-end: u32,
     }
 
-    record clickable-element-id-part-label {
+    record part-label-element-id {
         source-part-index: u32,
         measure-index-start: u32,
         measure-index-end: u32,
     }
 
-    record clickable-element-id-lyric-label {
+    record lyric-label-element-id {
         source-part-index: u32,
         verse: u32,
         measure-index-start: u32,
@@ -949,11 +954,11 @@ world jianpu-wasm {
     }
 
     variant clickable-element-id {
-        note(clickable-element-id-note),
-        lyric(clickable-element-id-lyric),
-        measure(clickable-element-id-measure),
-        part-label(clickable-element-id-part-label),
-        lyric-label(clickable-element-id-lyric-label),
+        note(note-element-id),
+        lyric(lyric-element-id),
+        measure(measure-element-id),
+        part-label(part-label-element-id),
+        lyric-label(lyric-label-element-id),
     }
 
     record note-cell-out {
@@ -967,13 +972,13 @@ world jianpu-wasm {
         verse: u32,
     }
 
-    record resolve-selection-range-response-ok {
+    record resolve-selection-range-success {
         note-cells: list<note-cell-out>,
         lyric-cells: list<lyric-cell-out>,
     }
 
     variant resolve-selection-range-response {
-        ok(resolve-selection-range-response-ok),
+        ok(resolve-selection-range-success),
         err,
     }
 

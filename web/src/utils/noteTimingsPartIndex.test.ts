@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import type { NoteTimingOut, PartOut } from '../jianpuWasm'
+import type { NoteTiming, Part } from '../jianpuWasm'
 import { remapNoteTimingsToVisiblePartIndex } from './noteTimingsPartIndex'
 
-function part(abbreviation: string): PartOut {
-  return { abbreviation, display_name: abbreviation, has_lyrics: false }
+function part(abbreviation: string): Part {
+  return { abbreviation, displayName: abbreviation, hasLyrics: false }
 }
 
-function timing(sourcePartIndex: number, noteId: number): NoteTimingOut {
+function timing(sourcePartIndex: number, noteId: number): NoteTiming {
   return {
-    source_part_index: sourcePartIndex,
-    note_id: noteId,
-    start_s: 0,
-    end_s: 1,
+    sourcePartIndex: sourcePartIndex,
+    noteId: noteId,
+    startS: 0,
+    endS: 1,
   }
 }
 

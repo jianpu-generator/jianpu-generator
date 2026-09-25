@@ -127,7 +127,7 @@ export function PartRow({
   return (
     <tr style={{ background: rowBg }}>
       <td style={tdStyle}>
-        {partInfo?.display_name ?? declaration.abbreviation}
+        {partInfo?.displayName ?? declaration.abbreviation}
       </td>
       <td style={tdStyle}>
         <span

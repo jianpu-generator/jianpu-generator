@@ -58,18 +58,19 @@ function PitchDrawerContent({
 }: {
   description: PitchDescription
 }) {
-  if (description.kind === 'note') {
+  if (description.tag === 'note') {
     return (
       <div className="pitch-drawer-body">
         <div
           className="pitch-drawer-name"
           data-testid="pitch-drawer-letter-names"
         >
-          {description.letterName}
+          {description.val.letterName}
         </div>
       </div>
     )
   }
+  const chord = description.val
   return (
     <div className="pitch-drawer-body">
       <div className="pitch-drawer-text">
@@ -77,30 +78,28 @@ function PitchDrawerContent({
           className="pitch-drawer-name"
           data-testid="pitch-drawer-chord-name"
         >
-          {description.chordName}
+          {chord.chordName}
         </div>
         <div className="pitch-drawer-detail">
           Notes:{' '}
           <span data-testid="pitch-drawer-letter-names">
-            {description.toneNames.join(' ')}
+            {chord.toneNames.join(' ')}
           </span>
         </div>
-        {description.bassNote === null ? null : (
+        {chord.bassNote === undefined ? null : (
           <div className="pitch-drawer-detail">
             Bass:{' '}
-            <span data-testid="pitch-drawer-bass-note">
-              {description.bassNote}
-            </span>
+            <span data-testid="pitch-drawer-bass-note">{chord.bassNote}</span>
           </div>
         )}
       </div>
-      {description.guitarDiagramSvg === null ? null : (
+      {chord.guitarDiagramSvg === undefined ? null : (
         <div
           className="pitch-drawer-guitar-diagram"
           data-testid="pitch-drawer-guitar-diagram"
           // Our own Rust-generated SVG (`guitar_diagram_svg.rs`), not user input.
           // biome-ignore lint/security/noDangerouslySetInnerHtml: see above
-          dangerouslySetInnerHTML={{ __html: description.guitarDiagramSvg }}
+          dangerouslySetInnerHTML={{ __html: chord.guitarDiagramSvg }}
         />
       )}
     </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { NoteTimingOut } from '../jianpuWasm'
+import type { NoteTiming } from '../jianpuWasm'
 import {
   groupNoteTimingsByPart,
   resolveActiveNotes,
@@ -10,22 +10,22 @@ function timing(
   noteId: number,
   startS: number,
   endS: number,
-): NoteTimingOut {
+): NoteTiming {
   return {
-    source_part_index: sourcePartIndex,
-    note_id: noteId,
-    start_s: startS,
-    end_s: endS,
+    sourcePartIndex: sourcePartIndex,
+    noteId: noteId,
+    startS: startS,
+    endS: endS,
   }
 }
 
 describe('groupNoteTimingsByPart', () => {
-  it('groups by source_part_index and sorts each group by start_s', () => {
+  it('groups by sourcePartIndex and sorts each group by startS', () => {
     const timings = [timing(0, 1, 1, 2), timing(1, 0, 0, 1), timing(0, 0, 0, 1)]
     const byPart = groupNoteTimingsByPart(timings)
     expect([...byPart.keys()].sort()).toEqual([0, 1])
-    expect(byPart.get(0)?.map((t) => t.note_id)).toEqual([0, 1])
-    expect(byPart.get(1)?.map((t) => t.note_id)).toEqual([0])
+    expect(byPart.get(0)?.map((t) => t.noteId)).toEqual([0, 1])
+    expect(byPart.get(1)?.map((t) => t.noteId)).toEqual([0])
   })
 })
 

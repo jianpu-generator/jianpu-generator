@@ -2,10 +2,9 @@ import type { ReactNode } from 'react'
 import fontsManifest from '../../../fonts/fonts.json'
 import { DATA_VARIANT, groupAttrsForTag } from '../dataAttributes'
 import type {
-  FontFamilyOut,
-  SvgDocumentOut,
-  SvgElementOut,
-  TransparentRectRoleOut,
+  FontFamily,
+  SvgDocument,
+  TransparentRectRole,
 } from '../jianpuWasm'
 
 // `FontFamily::SansSerif`'s backing font — the default role for the
@@ -28,38 +27,42 @@ const DIRECTIVE_LINE_FONT_FAMILY = fontsManifest.sansSerif.familyCss
 // instead. Mirrors `SERIF_FONT_FAMILY` in `src/serializer/mod.rs`.
 const SERIF_FONT_FAMILY = fontsManifest.serif.familyCss
 
-/** Resolves an element's `FontFamilyOut` (`text`'s `font`, or
- * `textWithTspans`'s own `font` — see `Metadata::measure_number_style`/
+/** Resolves an element's `FontFamily` (`text`'s `font`, or
+ * `text-with-tspans`'s own `font` — see `Metadata::measure_number_style`/
  * `section_label_style`/`sequence`'s `font_family`) to the CSS stack it
  * should render with. */
-function textFontFamily(font: FontFamilyOut): string {
+function textFontFamily(font: FontFamily): string {
   switch (font) {
     case 'monospace':
       return 'monospace'
-    case 'sansSerif':
+    case 'sans-serif':
       return DIRECTIVE_LINE_FONT_FAMILY
     case 'serif':
       return SERIF_FONT_FAMILY
   }
 }
 
-function transparentRectRoleToDataVariant(
-  role: TransparentRectRoleOut,
-): string {
+function transparentRectRoleToDataVariant(role: TransparentRectRole): string {
   return DATA_VARIANT[role]
 }
 
-function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
-  const { kind } = el
-  switch (kind.type) {
+/** Renders `doc.elements[index]` — the Rust side flattens the element tree
+ * into this arena in pre-order, with each group naming its children by
+ * index (`SvgGroupKind.childIndices`). */
+function renderSvgElement(doc: SvgDocument, index: number): ReactNode {
+  // biome-ignore lint/style/noNonNullAssertion: index always comes from the arena's own childIndices/rootElementIndices
+  const el = doc.elements[index]!
+  const key = index
+  const { tag, val: kind } = el.kind
+  switch (tag) {
     case 'text':
       return (
         <text
           key={key}
           x={el.x}
           y={el.y}
-          data-variant={el.variant}
-          fontSize={kind.font_size}
+          data-variant={el.variantTag}
+          fontSize={kind.fontSize}
           textAnchor={
             kind.anchor === 'start'
               ? 'start'
@@ -82,14 +85,14 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           {kind.content}
         </text>
       )
-    case 'textWithTspans':
+    case 'text-with-tspans':
       return (
         <text
           key={key}
           x={el.x}
           y={el.y}
-          data-variant={el.variant}
-          fontSize={kind.font_size}
+          data-variant={el.variantTag}
+          fontSize={kind.fontSize}
           textAnchor={
             kind.anchor === 'start'
               ? 'start'
@@ -113,7 +116,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
               fontWeight={span.bold ? 'bold' : undefined}
               fontStyle={span.italic ? 'italic' : undefined}
               textDecoration={span.underline ? 'underline' : undefined}
-              fontSize={span.font_size ?? undefined}
+              fontSize={span.fontSize}
             >
               {span.content}
             </tspan>
@@ -129,7 +132,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           x2={kind.x2}
           y2={kind.y2}
           stroke="black"
-          strokeWidth={kind.stroke_width}
+          strokeWidth={kind.strokeWidth}
         />
       )
     case 'circle':
@@ -138,10 +141,10 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
       return (
         <path
           key={key}
-          d={`M ${el.x} ${el.y} Q ${kind.control_x} ${kind.control_y} ${kind.end_x} ${kind.end_y}`}
+          d={`M ${el.x} ${el.y} Q ${kind.controlX} ${kind.controlY} ${kind.endX} ${kind.endY}`}
           fill="none"
           stroke="black"
-          strokeWidth={kind.stroke_width}
+          strokeWidth={kind.strokeWidth}
         />
       )
     case 'rect':
@@ -157,7 +160,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           rx={2}
         />
       )
-    case 'errorRect':
+    case 'error-rect':
       return (
         <rect
           key={key}
@@ -170,7 +173,7 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           rx={2}
         />
       )
-    case 'transparentRect':
+    case 'transparent-rect':
       return (
         <rect
           key={key}
@@ -180,20 +183,22 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           height={kind.height}
           data-variant={transparentRectRoleToDataVariant(kind.role)}
           fill="transparent"
-          stroke={kind.role === 'sectionLabelBackground' ? 'black' : undefined}
-          strokeWidth={kind.role === 'sectionLabelBackground' ? 1 : undefined}
+          stroke={
+            kind.role === 'section-label-background' ? 'black' : undefined
+          }
+          strokeWidth={kind.role === 'section-label-background' ? 1 : undefined}
           rx={2}
           style={{
             cursor:
-              kind.role === 'barLineClickTarget' ? 'col-resize' : 'pointer',
+              kind.role === 'bar-line-click-target' ? 'col-resize' : 'pointer',
           }}
         />
       )
-    case 'playbackCursorRect':
+    case 'playback-cursor-rect':
       return (
         <rect
           key={key}
-          data-variant={DATA_VARIANT.playbackCursorRect}
+          data-variant={DATA_VARIANT['playback-cursor-rect']}
           x={el.x}
           y={el.y}
           width={kind.width}
@@ -220,14 +225,16 @@ function renderSvgElement(el: SvgElementOut, key: number): ReactNode {
           data-measure-index-prev={attrs.dataMeasureIndexPrev}
           style={attrs.cursor ? { cursor: 'pointer' } : undefined}
         >
-          {kind.children.map((child, i) => renderSvgElement(child, i))}
+          {Array.from(kind.childIndices, (child) =>
+            renderSvgElement(doc, child),
+          )}
         </g>
       )
     }
   }
 }
 
-export function renderSvgDocument(doc: SvgDocumentOut, key: number): ReactNode {
+export function renderSvgDocument(doc: SvgDocument, key: number): ReactNode {
   return (
     // biome-ignore lint/a11y/noSvgWithoutTitle: synthesized score SVG; title would be redundant with surrounding page context
     <svg
@@ -235,9 +242,11 @@ export function renderSvgDocument(doc: SvgDocumentOut, key: number): ReactNode {
       xmlns="http://www.w3.org/2000/svg"
       width="210mm"
       height="297mm"
-      viewBox={`0 0 ${Math.round(doc.width_pt)} ${Math.round(doc.height_pt)}`}
+      viewBox={`0 0 ${Math.round(doc.widthPt)} ${Math.round(doc.heightPt)}`}
     >
-      {doc.elements.map((el, i) => renderSvgElement(el, i))}
+      {Array.from(doc.rootElementIndices, (index) =>
+        renderSvgElement(doc, index),
+      )}
     </svg>
   )
 }

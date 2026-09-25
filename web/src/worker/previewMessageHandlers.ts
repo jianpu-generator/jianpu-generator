@@ -1,81 +1,63 @@
-import type { GenerateWavResponse } from '../jianpuWasm'
+import { type GenerateWavResponse, jianpuWasm } from '../jianpuWasm'
+import { binaryBufferFromResult } from './exportMessageHandlers'
 import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
 
-function binaryBufferFromResult(
-  bytes: Uint8Array | ArrayBuffer | ArrayLike<number>,
-): ArrayBuffer {
-  if (bytes instanceof ArrayBuffer) {
-    return bytes.slice(0)
+function postPreview(
+  type: 'instrumentPreview' | 'percussionPreview',
+  id: number,
+  result: GenerateWavResponse,
+): void {
+  if (result.tag === 'ok') {
+    const wavBuffer = binaryBufferFromResult(result.val.wav)
+    postMessage({ type, id, wav: wavBuffer } satisfies WorkerResponse, {
+      transfer: [wavBuffer],
+    })
+    return
   }
-  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
-  return view.slice().buffer
+  postMessage({
+    type:
+      type === 'instrumentPreview'
+        ? 'instrumentPreviewErr'
+        : 'percussionPreviewErr',
+    id,
+  } satisfies WorkerResponse)
 }
 
 export function handlePreviewInstrument(
   msg: Extract<WorkerRequest, { type: 'previewInstrument' }>,
-  generateInstrumentPreviewWav:
-    | ((programNumber: number, soundfont: Uint8Array) => GenerateWavResponse)
-    | null,
   loadedSoundfont: Uint8Array | null,
 ): void {
-  if (!generateInstrumentPreviewWav || !loadedSoundfont) {
+  if (!loadedSoundfont) {
     postMessage({
       type: 'instrumentPreviewErr',
       id: msg.id,
     } satisfies WorkerResponse)
     return
   }
-  const result = generateInstrumentPreviewWav(
-    msg.programNumber,
-    loadedSoundfont,
+  postPreview(
+    'instrumentPreview',
+    msg.id,
+    jianpuWasm().generateInstrumentPreviewWav(
+      msg.programNumber,
+      loadedSoundfont,
+    ),
   )
-  if (result.status === 'ok' && result.wav != null) {
-    const wavBuffer = binaryBufferFromResult(result.wav)
-    postMessage(
-      {
-        type: 'instrumentPreview',
-        id: msg.id,
-        wav: wavBuffer,
-      } satisfies WorkerResponse,
-      { transfer: [wavBuffer] },
-    )
-    return
-  }
-  postMessage({
-    type: 'instrumentPreviewErr',
-    id: msg.id,
-  } satisfies WorkerResponse)
 }
 
 export function handlePreviewPercussion(
   msg: Extract<WorkerRequest, { type: 'previewPercussion' }>,
-  generatePercussionPreviewWav:
-    | ((key: number, soundfont: Uint8Array) => GenerateWavResponse)
-    | null,
   loadedSoundfont: Uint8Array | null,
 ): void {
-  if (!generatePercussionPreviewWav || !loadedSoundfont) {
+  if (!loadedSoundfont) {
     postMessage({
       type: 'percussionPreviewErr',
       id: msg.id,
     } satisfies WorkerResponse)
     return
   }
-  const result = generatePercussionPreviewWav(msg.key, loadedSoundfont)
-  if (result.status === 'ok' && result.wav != null) {
-    const wavBuffer = binaryBufferFromResult(result.wav)
-    postMessage(
-      {
-        type: 'percussionPreview',
-        id: msg.id,
-        wav: wavBuffer,
-      } satisfies WorkerResponse,
-      { transfer: [wavBuffer] },
-    )
-    return
-  }
-  postMessage({
-    type: 'percussionPreviewErr',
-    id: msg.id,
-  } satisfies WorkerResponse)
+  postPreview(
+    'percussionPreview',
+    msg.id,
+    jianpuWasm().generatePercussionPreviewWav(msg.key, loadedSoundfont),
+  )
 }

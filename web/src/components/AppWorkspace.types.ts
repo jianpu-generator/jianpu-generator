@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import type { NoteTimingOut, SvgDocumentOut } from '../jianpuWasm'
+import type { NoteTiming, SvgDocument } from '../jianpuWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -111,8 +111,8 @@ export interface AppWorkspaceProps {
     key: MetadataFieldKey,
     value: string | null,
   ) => void
-  documents: SvgDocumentOut[]
-  highlightedDocuments: SvgDocumentOut[]
+  documents: SvgDocument[]
+  highlightedDocuments: SvgDocument[]
   rendering: boolean
   handleSectionJump: (label: string) => void
   handleNoteRangeSelect: (selectedCells: NoteCell[]) => void
@@ -159,8 +159,8 @@ export interface AppWorkspaceProps {
   mp3Url: string | null
   mp3Filename: string
   onRequestAudioDownload: (url: string, filename: string) => void
-  noteTimings: NoteTimingOut[]
-  measureAudioNoteTimings: NoteTimingOut[]
+  noteTimings: NoteTiming[]
+  measureAudioNoteTimings: NoteTiming[]
   measureAudioElement: HTMLAudioElement | null
   noPartsSelected: boolean
 }

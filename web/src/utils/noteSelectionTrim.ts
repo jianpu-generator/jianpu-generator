@@ -1,4 +1,4 @@
-import type { NoteTimingOut } from '../jianpuWasm'
+import type { NoteTiming } from '../jianpuWasm'
 import type { NoteCell } from './noteSpanSelection'
 
 /** Elapsed-seconds window, relative to the start of a generated audio clip. */
@@ -25,23 +25,23 @@ export interface TrimWindow {
  */
 export function computeNoteSelectionTrimWindow(
   cells: NoteCell[],
-  noteTimings: NoteTimingOut[],
+  noteTimings: NoteTiming[],
 ): TrimWindow | null {
   const keys = new Set(cells.map((c) => `${c.sourcePartIndex}:${c.noteId}`))
   const matched = noteTimings.filter((t) =>
-    keys.has(`${t.source_part_index}:${t.note_id}`),
+    keys.has(`${t.sourcePartIndex}:${t.noteId}`),
   )
   if (matched.length === 0) return null
-  const start = Math.min(...matched.map((t) => t.start_s))
-  const end = Math.max(...matched.map((t) => t.end_s))
+  const start = Math.min(...matched.map((t) => t.startS))
+  const end = Math.max(...matched.map((t) => t.endS))
   if (end <= start) return null
   // The earliest unselected note that starts at or after `end` — passed to
   // Rust as a hard cap on the release tail (see `TrimWindow.nextNoteStart`)
   // so a tightly-packed next note doesn't get partially/fully played,
   // which would sound like one extra note beyond the selection.
   const nextNoteStarts = noteTimings
-    .filter((t) => !keys.has(`${t.source_part_index}:${t.note_id}`))
-    .map((t) => t.start_s)
+    .filter((t) => !keys.has(`${t.sourcePartIndex}:${t.noteId}`))
+    .map((t) => t.startS)
     .filter((s) => s >= end)
   const nextNoteStart =
     nextNoteStarts.length > 0 ? Math.min(...nextNoteStarts) : undefined

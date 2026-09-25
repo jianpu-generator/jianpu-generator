@@ -27,7 +27,7 @@ export function usePartTogglePruning(
     if (parts.length === 0) return
 
     const lyricAbbreviations = new Set(
-      parts.filter((part) => part.has_lyrics).map((part) => part.abbreviation),
+      parts.filter((part) => part.hasLyrics).map((part) => part.abbreviation),
     )
     setDisabledLyrics((prev) => {
       const next = new Set(

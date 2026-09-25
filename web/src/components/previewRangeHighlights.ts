@@ -3,7 +3,7 @@ import {
   groupTagSelector,
   tagFromElement,
 } from '../dataAttributes'
-import type { TagOut } from '../jianpuWasm'
+import type { Tag } from '../jianpuWasm'
 import type { LyricCell, NoteCell } from './previewSelection'
 
 export interface AnchorPoint {
@@ -25,13 +25,13 @@ interface RangeHighlightSpec<Cell> {
   /** CSS selector for each candidate hit-target rect, e.g.
    * `rect[data-variant="note-click-target-rect"]`. */
   rectSelector: string
-  /** `TagOut['type']` of the rect's enclosing group, e.g. `'note'` — the
+  /** `Tag['tag']` of the rect's enclosing group, e.g. `'note'` — the
    * selector itself is built from this via `groupTagSelector`. */
-  tagType: TagOut['type']
-  /** Narrows the enclosing group's own `TagOut` (already known to be
+  tagType: Tag['tag']
+  /** Narrows the enclosing group's own `Tag` (already known to be
    * `tagType`, via `tagFromElement`) into a `Cell`, or `undefined` if a
    * required field is missing. */
-  parseCell: (tag: TagOut) => Cell | undefined
+  parseCell: (tag: Tag) => Cell | undefined
   /** A string uniquely identifying `cell`, used to test set membership. */
   cellKey: (cell: Cell) => string
   /** `dataset` property (camelCase) toggled on the enclosing group to mark it
@@ -116,25 +116,25 @@ function applyRangeHighlights<Cell>(
 }
 
 const noteRangeSpec: RangeHighlightSpec<NoteCell> = {
-  rectSelector: `rect[data-variant="${DATA_VARIANT.noteClickTarget}"]`,
+  rectSelector: `rect[data-variant="${DATA_VARIANT['note-click-target']}"]`,
   tagType: 'note',
   parseCell: (tag) => {
-    if (tag.type !== 'note') return undefined
-    return { sourcePartIndex: tag.source_part_index, noteId: tag.note_id }
+    if (tag.tag !== 'note') return undefined
+    return { sourcePartIndex: tag.val.sourcePartIndex, noteId: tag.val.noteId }
   },
   cellKey: (c) => `${c.sourcePartIndex}:${c.noteId}`,
   datasetFlag: 'noteRangeSelected',
 }
 
 const lyricRangeSpec: RangeHighlightSpec<LyricCell> = {
-  rectSelector: `rect[data-variant="${DATA_VARIANT.lyricClickTarget}"]`,
+  rectSelector: `rect[data-variant="${DATA_VARIANT['lyric-click-target']}"]`,
   tagType: 'lyric',
   parseCell: (tag) => {
-    if (tag.type !== 'lyric') return undefined
+    if (tag.tag !== 'lyric') return undefined
     return {
-      sourcePartIndex: tag.source_part_index,
-      noteId: tag.note_id,
-      verse: tag.verse,
+      sourcePartIndex: tag.val.sourcePartIndex,
+      noteId: tag.val.noteId,
+      verse: tag.val.verse,
     }
   },
   cellKey: (c) => `${c.sourcePartIndex}:${c.noteId}:${c.verse}`,

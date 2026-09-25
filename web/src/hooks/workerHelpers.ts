@@ -7,7 +7,7 @@ export function measureRangeInSpan(
   endLine: number,
 ): { start: number; end: number } | null {
   const overlaps = (span: MeasureSpan) =>
-    span.start_line <= endLine && span.end_line >= startLine
+    span.startLine <= endLine && span.endLine >= startLine
   const start = findIndex(spans, overlaps)
   const end = findLastIndex(spans, overlaps)
   return start === -1 ? null : { start, end }
@@ -69,7 +69,7 @@ export function enabledPartNamesForFilename(
   if (parts.length === 0) return undefined
   const enabled = parts
     .filter((part) => !disabledParts.has(part.abbreviation))
-    .map((part) => part.display_name)
+    .map((part) => part.displayName)
   if (enabled.length === parts.length) return undefined
   return enabled
 }
@@ -78,7 +78,7 @@ export function disabledLyricsForRender(
   parts: PartInfo[],
   disabledLyrics: ReadonlySet<string>,
 ): string[] | undefined {
-  const lyricParts = parts.filter((part) => part.has_lyrics)
+  const lyricParts = parts.filter((part) => part.hasLyrics)
   if (lyricParts.length === 0) return undefined
   const disabled = lyricParts
     .filter((part) => disabledLyrics.has(part.abbreviation))

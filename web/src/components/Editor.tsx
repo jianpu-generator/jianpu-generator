@@ -175,7 +175,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
           ed.getLayoutInfo().contentWidth,
         )
         const id = accessor.addZone({
-          afterLineNumber: zone.after_line_number,
+          afterLineNumber: zone.afterLineNumber,
           heightInPx,
           domNode,
         })

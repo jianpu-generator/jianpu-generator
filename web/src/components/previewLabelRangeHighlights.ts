@@ -14,28 +14,28 @@ import {
 import type { AnchorPoint } from './previewRangeHighlights'
 import type { LyricCell, NoteCell } from './previewSelection'
 
-/** Narrows a part-label group's own `TagOut` (already known to be
- * `'partLabel'`, via `tagFromElement`) into a `PartLabelHit`, or `undefined`
+/** Narrows a part-label group's own `Tag` (already known to be
+ * `'part-label'`, via `tagFromElement`) into a `PartLabelHit`, or `undefined`
  * if it isn't one — shared by every part-label hit-test/highlight below. */
 function partLabelHitFromGroup(group: Element): PartLabelHit | undefined {
   const tag = tagFromElement(group)
-  if (tag?.type !== 'partLabel') return undefined
+  if (tag?.tag !== 'part-label') return undefined
   return {
-    sourcePartIndex: tag.source_part_index,
-    measureIndexStart: tag.measure_index_start,
-    measureIndexEnd: tag.measure_index_end,
+    sourcePartIndex: tag.val.sourcePartIndex,
+    measureIndexStart: tag.val.measureIndexStart,
+    measureIndexEnd: tag.val.measureIndexEnd,
   }
 }
 
 /** The lyric-label mirror of `partLabelHitFromGroup`. */
 function lyricLabelHitFromGroup(group: Element): LyricLabelHit | undefined {
   const tag = tagFromElement(group)
-  if (tag?.type !== 'lyricLabel') return undefined
+  if (tag?.tag !== 'lyric-label') return undefined
   return {
-    sourcePartIndex: tag.source_part_index,
-    verse: tag.verse,
-    measureIndexStart: tag.measure_index_start,
-    measureIndexEnd: tag.measure_index_end,
+    sourcePartIndex: tag.val.sourcePartIndex,
+    verse: tag.val.verse,
+    measureIndexStart: tag.val.measureIndexStart,
+    measureIndexEnd: tag.val.measureIndexEnd,
   }
 }
 
@@ -66,7 +66,7 @@ export function partLabelsInMarquee(
   const hits: PartLabelHit[] = []
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
-      `rect[data-variant="${DATA_VARIANT.partLabelClickTarget}"]`,
+      `rect[data-variant="${DATA_VARIANT['part-label-click-target']}"]`,
     ),
   )) {
     const bounds = rect.getBoundingClientRect()
@@ -76,7 +76,7 @@ export function partLabelsInMarquee(
       bounds.top < maxY &&
       bounds.bottom > minY
     if (!intersects) continue
-    const group = rect.closest(groupTagSelector('partLabel'))
+    const group = rect.closest(groupTagSelector('part-label'))
     const hit = group && partLabelHitFromGroup(group)
     if (!hit) continue
     if (
@@ -114,10 +114,10 @@ export function partLabelsInMarqueeAcrossSystems(
   const touchedSystems = new Set<string>()
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
-      `rect[data-variant="${DATA_VARIANT.partLabelClickTarget}"]`,
+      `rect[data-variant="${DATA_VARIANT['part-label-click-target']}"]`,
     ),
   )) {
-    const group = rect.closest(groupTagSelector('partLabel'))
+    const group = rect.closest(groupTagSelector('part-label'))
     const hit = group && partLabelHitFromGroup(group)
     if (!hit) continue
     allHits.push(hit)
@@ -155,10 +155,10 @@ export function applyPartLabelRangeHighlight(
   )
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
-      `rect[data-variant="${DATA_VARIANT.partLabelClickTarget}"]`,
+      `rect[data-variant="${DATA_VARIANT['part-label-click-target']}"]`,
     ),
   )) {
-    const group = rect.closest(groupTagSelector('partLabel'))
+    const group = rect.closest(groupTagSelector('part-label'))
     const hit = group && partLabelHitFromGroup(group)
     const key =
       hit &&
@@ -191,7 +191,7 @@ export function lyricLabelsInMarquee(
   const hits: LyricLabelHit[] = []
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
-      `rect[data-variant="${DATA_VARIANT.lyricLabelClickTarget}"]`,
+      `rect[data-variant="${DATA_VARIANT['lyric-label-click-target']}"]`,
     ),
   )) {
     const bounds = rect.getBoundingClientRect()
@@ -201,7 +201,7 @@ export function lyricLabelsInMarquee(
       bounds.top < maxY &&
       bounds.bottom > minY
     if (!intersects) continue
-    const group = rect.closest(groupTagSelector('lyricLabel'))
+    const group = rect.closest(groupTagSelector('lyric-label'))
     const hit = group && lyricLabelHitFromGroup(group)
     if (!hit) continue
     if (
@@ -229,10 +229,10 @@ export function applyLyricLabelRangeHighlight(
   )
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
-      `rect[data-variant="${DATA_VARIANT.lyricLabelClickTarget}"]`,
+      `rect[data-variant="${DATA_VARIANT['lyric-label-click-target']}"]`,
     ),
   )) {
-    const group = rect.closest(groupTagSelector('lyricLabel'))
+    const group = rect.closest(groupTagSelector('lyric-label'))
     const hit = group && lyricLabelHitFromGroup(group)
     const key =
       hit &&
@@ -262,10 +262,10 @@ export function applyPersistedLyricLabelHighlights(
   )
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
-      `rect[data-variant="${DATA_VARIANT.lyricLabelClickTarget}"]`,
+      `rect[data-variant="${DATA_VARIANT['lyric-label-click-target']}"]`,
     ),
   )) {
-    const group = rect.closest(groupTagSelector('lyricLabel'))
+    const group = rect.closest(groupTagSelector('lyric-label'))
     const hit = group && lyricLabelHitFromGroup(group)
     if (!hit) continue
     const cells = lyricCellsForLyricLabels(lyricSpans, [hit])
@@ -303,10 +303,10 @@ export function applyPersistedPartLabelHighlights(
   )
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
-      `rect[data-variant="${DATA_VARIANT.partLabelClickTarget}"]`,
+      `rect[data-variant="${DATA_VARIANT['part-label-click-target']}"]`,
     ),
   )) {
-    const group = rect.closest(groupTagSelector('partLabel'))
+    const group = rect.closest(groupTagSelector('part-label'))
     const hit = group && partLabelHitFromGroup(group)
     if (!hit) continue
     const cells = noteCellsForPartLabels(noteSpans, [hit])

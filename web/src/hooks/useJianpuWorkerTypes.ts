@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import type { NoteTimingOut, SvgDocumentOut } from '../jianpuWasm'
+import type { NoteTiming, SvgDocument } from '../jianpuWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -69,7 +69,7 @@ export interface JianpuWorkerState {
   parts: PartInfo[]
   partDeclarations: PartDeclaration[]
   partsLoading: boolean
-  documents: SvgDocumentOut[]
+  documents: SvgDocument[]
   pendingDownload: PendingDownload | null
   /** Opens the rename-before-download modal for `url`/`filename` — see
    * `PendingDownload`'s `revokeOnClose` doc comment for what that flag
@@ -91,7 +91,7 @@ export interface JianpuWorkerState {
   mp3Url: string | null
   mp3Filename: string
   /** Elapsed-seconds start/end of every sounding note/rest for `wavUrl`'s audio, keyed by `(source_part_index, note_id)`. Drives the per-part, per-note playback cursor. */
-  noteTimings: NoteTimingOut[]
+  noteTimings: NoteTiming[]
   audioAvailable: boolean
   pdfAvailable: boolean
   pdfExporting: boolean
@@ -136,7 +136,7 @@ export interface JianpuWorkerState {
   measureAudioGenerating: boolean
   measureAudioPlaying: boolean
   /** Elapsed-seconds start/end of every sounding note/rest for the selected range's audio, keyed by `(source_part_index, note_id)`. */
-  measureAudioNoteTimings: NoteTimingOut[]
+  measureAudioNoteTimings: NoteTiming[]
   /** The `<audio>` element currently playing the selected measure range, if any; a new element each time playback starts. */
   measureAudioElement: HTMLAudioElement | null
   notifySelection: (
@@ -168,7 +168,7 @@ export interface JianpuWorkerState {
    * All" button. */
   playAll: () => void
   stopMeasurePlayback: () => void
-  highlightedDocuments: SvgDocumentOut[]
+  highlightedDocuments: SvgDocument[]
   measureSpans: MeasureSpan[]
   /** Source byte span of every note/chord/percussion/rest event, keyed by
    * `(source_part_index, note_id)` matching the SVG's `data-part-index`/

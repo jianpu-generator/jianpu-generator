@@ -1,17 +1,16 @@
 import {
-  list_symbols,
-  rename_symbol,
-  type SymbolKindOut,
-  type SymbolOut,
+  jianpuWasm,
+  type SymbolKind,
+  type Symbol as WasmSymbol,
 } from './jianpuWasm'
 import { GM_INSTRUMENTS } from './utils/gmInstruments'
 import { ensureWasmInit } from './wasmInit'
 
 /** Every renamable symbol (part/group abbreviation, section label) in `source`. */
-export async function listRenameSymbols(source: string): Promise<SymbolOut[]> {
+export async function listRenameSymbols(source: string): Promise<WasmSymbol[]> {
   await ensureWasmInit()
-  const result = list_symbols(source, GM_INSTRUMENTS)
-  return result.status === 'ok' ? result.symbols : []
+  const result = jianpuWasm().listSymbols(source, GM_INSTRUMENTS)
+  return result.tag === 'ok' ? result.val.symbols : []
 }
 
 /**
@@ -30,12 +29,12 @@ function spanContainsOffset(
 
 /** The symbol (if any) with an occurrence spanning `byteOffset`. */
 export function symbolAtByteOffset(
-  symbols: SymbolOut[],
+  symbols: WasmSymbol[],
   byteOffset: number,
-): SymbolOut | null {
+): WasmSymbol | null {
   for (const symbol of symbols) {
     const hit = symbol.occurrences.some((occurrence) =>
-      spanContainsOffset(occurrence.hit_span, byteOffset),
+      spanContainsOffset(occurrence.hitSpan, byteOffset),
     )
     if (hit) return symbol
   }
@@ -43,9 +42,9 @@ export function symbolAtByteOffset(
 }
 
 /** The occurrence of `symbol` (if any) spanning `byteOffset`. */
-export function occurrenceAtByteOffset(symbol: SymbolOut, byteOffset: number) {
+export function occurrenceAtByteOffset(symbol: WasmSymbol, byteOffset: number) {
   return symbol.occurrences.find((occurrence) =>
-    spanContainsOffset(occurrence.hit_span, byteOffset),
+    spanContainsOffset(occurrence.hitSpan, byteOffset),
   )
 }
 
@@ -58,14 +57,20 @@ export interface RenameTextEdit {
 /** Byte-offset text edits renaming every occurrence of `oldName` (of `kind`) to `newName`. */
 export async function renameSymbolEdits(
   source: string,
-  kind: SymbolKindOut,
+  kind: SymbolKind,
   oldName: string,
   newName: string,
 ): Promise<RenameTextEdit[]> {
   await ensureWasmInit()
-  const result = rename_symbol(source, kind, oldName, newName, GM_INSTRUMENTS)
-  if (result.status !== 'ok') return []
-  return result.edits.map((edit) => ({
+  const result = jianpuWasm().renameSymbol(
+    source,
+    kind,
+    oldName,
+    newName,
+    GM_INSTRUMENTS,
+  )
+  if (result.tag !== 'ok') return []
+  return result.val.edits.map((edit) => ({
     start: edit.span.start,
     end: edit.span.end,
     replacement: edit.replacement,

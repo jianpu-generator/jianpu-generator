@@ -8,16 +8,16 @@ import {
 // A doc that declares sections in order a, b, c (one measure each), each
 // measure spanning two source lines.
 const measureSpans: MeasureSpan[] = [
-  { start_line: 1, end_line: 2 } as MeasureSpan, // a
-  { start_line: 3, end_line: 4 } as MeasureSpan, // b
-  { start_line: 5, end_line: 6 } as MeasureSpan, // c
+  { startLine: 1, endLine: 2 } as MeasureSpan, // a
+  { startLine: 3, endLine: 4 } as MeasureSpan, // b
+  { startLine: 5, endLine: 6 } as MeasureSpan, // c
 ]
 
 function entry(label: string, measureIndex: number): SequenceEntry {
   return {
     label,
-    start_measure_index: measureIndex,
-    end_measure_index: measureIndex,
+    startMeasureIndex: measureIndex,
+    endMeasureIndex: measureIndex,
   }
 }
 

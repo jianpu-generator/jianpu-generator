@@ -163,7 +163,7 @@ async function selectRangeBetween(
   // the *next* selection-change event, a selection made before spans load
   // never gets a highlight even after they arrive.
   await page.waitForSelector(
-    `rect[data-variant="${DATA_VARIANT.noteClickTarget}"]`,
+    `rect[data-variant="${DATA_VARIANT['note-click-target']}"]`,
     { timeout: 10_000 },
   )
   // The rects existing in the DOM only means the SVG has rendered — it says

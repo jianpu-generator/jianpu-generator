@@ -1,22 +1,17 @@
 import type { RefObject } from 'react'
 import type { LyricCell } from '../components/previewSelection'
-import { group_lyric_selection } from '../jianpuWasm'
+import { jianpuWasm, type LyricSelectionRun } from '../jianpuWasm'
 import type { EditorHandle, LyricSpan } from '../types'
 import { ensureWasmInit } from '../wasmInit'
 import { useByteRangeSelectionCore } from './useByteRangeSelectionCore'
 
 /** One contiguous range-selected byte range within a single verse line of a
  * single part's single measure, as grouped by the wasm export
- * `group_lyric_selection` (`lyric_spans::group_selected_lyrics_into_contiguous_runs`
+ * `groupLyricSelection` (`lyric_spans::group_selected_lyrics_into_contiguous_runs`
  * in Rust). */
-export interface LyricSelectionRun {
-  sourcePartIndex: number
-  measureIndex: number
-  startByte: number
-  endByte: number
-}
+export type { LyricSelectionRun }
 
-/** Calls the wasm `group_lyric_selection` export directly on the main
+/** Calls the wasm `groupLyricSelection` export directly on the main
  * thread (bypassing the debounced render worker) — this is pure grouping
  * over an already-fetched flat `lyric_spans` array, so it doesn't need to
  * re-parse `source` and stays responsive on every selection-change tick. */
@@ -29,15 +24,8 @@ export async function groupSelectedLyricsIntoContiguousRuns(
   lyricSpans: LyricSpan[],
 ): Promise<LyricSelectionRun[]> {
   await ensureWasmInit()
-  const response = group_lyric_selection(lyricSpans, selectedCells)
-  return response.status === 'ok'
-    ? response.runs.map((r) => ({
-        sourcePartIndex: r.sourcePartIndex,
-        measureIndex: r.measureIndex,
-        startByte: r.startByte,
-        endByte: r.endByte,
-      }))
-    : []
+  const response = jianpuWasm().groupLyricSelection(lyricSpans, selectedCells)
+  return response.tag === 'ok' ? response.val.runs : []
 }
 
 function cellFromLyricSpan(span: LyricSpan): LyricCell {

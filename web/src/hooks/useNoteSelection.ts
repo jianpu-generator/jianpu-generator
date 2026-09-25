@@ -1,12 +1,12 @@
 import type { RefObject } from 'react'
 import { useMemo } from 'react'
-import { group_note_selection } from '../jianpuWasm'
+import { jianpuWasm } from '../jianpuWasm'
 import type { EditorHandle, NoteSpan, PartInfo } from '../types'
 import type { NoteCell, NoteSelectionRun } from '../utils/noteSpanSelection'
 import { ensureWasmInit } from '../wasmInit'
 import { useByteRangeSelectionCore } from './useByteRangeSelectionCore'
 
-/** Calls the wasm `group_note_selection` export directly on the main
+/** Calls the wasm `groupNoteSelection` export directly on the main
  * thread (bypassing the debounced render worker) — this is pure grouping
  * over an already-fetched flat `note_spans` array, so it doesn't need to
  * re-parse `source` and stays responsive on every selection-change tick. */
@@ -19,15 +19,8 @@ export async function groupSelectedNotesIntoContiguousRuns(
   noteSpans: NoteSpan[],
 ): Promise<NoteSelectionRun[]> {
   await ensureWasmInit()
-  const response = group_note_selection(noteSpans, selectedCells)
-  return response.status === 'ok'
-    ? response.runs.map((r) => ({
-        sourcePartIndex: r.sourcePartIndex,
-        measureIndex: r.measureIndex,
-        startByte: r.startByte,
-        endByte: r.endByte,
-      }))
-    : []
+  const response = jianpuWasm().groupNoteSelection(noteSpans, selectedCells)
+  return response.tag === 'ok' ? response.val.runs : []
 }
 
 function cellFromNoteSpan(span: NoteSpan): NoteCell {

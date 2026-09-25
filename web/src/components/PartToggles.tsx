@@ -83,7 +83,7 @@ export function PartToggles({
                           className="part-toggle-tooltip-content"
                           sideOffset={4}
                         >
-                          {part.display_name}
+                          {part.displayName}
                         </Tooltip.Content>
                       </Tooltip.Portal>
                     </Tooltip.Root>
@@ -144,7 +144,7 @@ export function PartToggles({
                       </Tooltip.Portal>
                     </Tooltip.Root>
 
-                    {part.has_lyrics && enabled ? (
+                    {part.hasLyrics && enabled ? (
                       <Tooltip.Root>
                         <Tooltip.Trigger asChild>
                           <label className="part-toggle-segment part-toggle-segment--mic">

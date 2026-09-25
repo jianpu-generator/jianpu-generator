@@ -1,6 +1,6 @@
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef } from 'react'
-import type { SvgDocumentOut } from '../jianpuWasm'
+import type { SvgDocument } from '../jianpuWasm'
 import type { Diagnostic, MeasureSpan } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 import { measureRangeInSpanWithReveal } from './workerHelpers'
@@ -13,7 +13,7 @@ interface UseJianpuWorkerRenderRequestsParams {
   debounceMs: number
   enabledTracks: string[] | undefined
   disabledLyricsTracks: string[] | undefined
-  setDocuments: (value: SvgDocumentOut[]) => void
+  setDocuments: (value: SvgDocument[]) => void
   setNextWavUrl: (value: string | null) => void
   setNextMp3Url: (value: string | null) => void
   setDiagnostics: (value: Diagnostic[]) => void
@@ -37,7 +37,7 @@ interface UseJianpuWorkerRenderRequestsParams {
       highlightRanges?: { start: number; end: number }[]
     } | null,
   ) => void
-  setHighlightedDocuments: (value: SvgDocumentOut[]) => void
+  setHighlightedDocuments: (value: SvgDocument[]) => void
   highlightRenderRequestIdRef: RefObject<number>
   latestHighlightRenderIdRef: RefObject<number>
   measureSpans: MeasureSpan[]

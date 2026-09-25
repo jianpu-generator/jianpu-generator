@@ -22,7 +22,7 @@ pub(super) fn group_note_selection_response_to_wit(
 ) -> GroupNoteSelectionResponse {
     match response {
         crate::note_selection_types::GroupNoteSelectionResponse::Ok { runs } => {
-            GroupNoteSelectionResponse::Ok(GroupNoteSelectionResponseOk {
+            GroupNoteSelectionResponse::Ok(GroupNoteSelectionSuccess {
                 runs: runs
                     .into_iter()
                     .map(|run| NoteSelectionRun {
@@ -66,7 +66,7 @@ pub(super) fn group_lyric_selection_response_to_wit(
 ) -> GroupLyricSelectionResponse {
     match response {
         crate::lyric_selection_types::GroupLyricSelectionResponse::Ok { runs } => {
-            GroupLyricSelectionResponse::Ok(GroupLyricSelectionResponseOk {
+            GroupLyricSelectionResponse::Ok(GroupLyricSelectionSuccess {
                 runs: runs
                     .into_iter()
                     .map(|run| LyricSelectionRun {
@@ -119,7 +119,7 @@ pub(super) fn list_measure_spans_response_to_wit(
             spans,
             section_ranges,
             sequence_entries,
-        } => ListMeasureSpansResponse::Ok(ListMeasureSpansResponseOk {
+        } => ListMeasureSpansResponse::Ok(ListMeasureSpansSuccess {
             spans: spans.into_iter().map(measure_span_to_wit).collect(),
             section_ranges: section_ranges
                 .into_iter()
@@ -149,7 +149,7 @@ pub(super) fn list_note_spans_response_to_wit(
 ) -> ListNoteSpansResponse {
     match response {
         crate::types::ListNoteSpansResponse::Ok { spans } => {
-            ListNoteSpansResponse::Ok(ListNoteSpansResponseOk {
+            ListNoteSpansResponse::Ok(ListNoteSpansSuccess {
                 spans: spans.iter().map(note_span_to_wit).collect(),
             })
         }
@@ -173,7 +173,7 @@ pub(super) fn list_lyric_spans_response_to_wit(
 ) -> ListLyricSpansResponse {
     match response {
         crate::types::ListLyricSpansResponse::Ok { spans } => {
-            ListLyricSpansResponse::Ok(ListLyricSpansResponseOk {
+            ListLyricSpansResponse::Ok(ListLyricSpansSuccess {
                 spans: spans.iter().map(lyric_span_to_wit).collect(),
             })
         }
