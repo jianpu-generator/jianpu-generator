@@ -22,46 +22,54 @@ pub const DEFAULT_HIDE_SYSTEM_DIVIDERS: bool = false;
 pub const DEFAULT_DIRECTIVE_ROW_OFFSET: crate::ast::parsed::Offset =
     crate::ast::parsed::Offset { x: 0, y: 0 };
 
-/// Default `lyrics.font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
-pub fn default_lyrics_font_size(row_height: u32) -> u32 {
-    (row_height as f32 * 0.6).round() as u32
+/// How a text kind's `font_size` defaults when its `<kind> = { ... }` style
+/// object leaves it unset. The single source of truth for every kind's
+/// default font size: the grouper resolves from it, and the Edit Metadata
+/// modal's help text is generated from it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FontSizeDefault {
+    /// A fixed size in points.
+    Fixed { points: u32 },
+    /// `percent`% of `row_height`, rounded to the nearest point.
+    RowHeightPercent { percent: u32 },
+    /// Whatever `kind`'s `font_size` resolves to (its own override, else its
+    /// own default).
+    SameAs { kind: TextStyleKind },
 }
 
-/// Default `title.font_size` in points: 150% of `row_height`, used when unset in `# metadata`.
-pub fn default_title_font_size(row_height: u32) -> u32 {
-    (row_height as f32 * 1.5).round() as u32
+impl TextStyleKind {
+    pub fn font_size_default(self) -> FontSizeDefault {
+        use FontSizeDefault::{Fixed, RowHeightPercent, SameAs};
+        match self {
+            Self::Title => RowHeightPercent { percent: 150 },
+            Self::Subtitle => RowHeightPercent { percent: 80 },
+            Self::Author | Self::PartLegend | Self::PageNumber | Self::Lyrics => {
+                RowHeightPercent { percent: 60 }
+            }
+            Self::Sequence | Self::SectionLabel | Self::PartLabel => Fixed { points: 12 },
+            Self::MeasureNumber => Fixed { points: 10 },
+            Self::Notes | Self::Chords => SameAs { kind: Self::Lyrics },
+            Self::NoteDash => SameAs { kind: Self::Notes },
+        }
+    }
 }
 
-/// Default `subtitle.font_size` in points: 80% of `row_height`, used when unset in `# metadata`.
-pub fn default_subtitle_font_size(row_height: u32) -> u32 {
-    (row_height as f32 * 0.8).round() as u32
-}
-
-/// Default `author.font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
-pub fn default_author_font_size(row_height: u32) -> u32 {
-    (row_height as f32 * 0.6).round() as u32
-}
-
-/// Default `sequence.font_size` in points, used when unset in `# metadata`.
-pub const DEFAULT_SEQUENCE_FONT_SIZE: u32 = 12;
-
-/// Default `part_legend.font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
-pub fn default_part_legend_font_size(row_height: u32) -> u32 {
-    (row_height as f32 * 0.6).round() as u32
-}
-
-/// Default `measure_number.font_size` in points, used when unset in `# metadata`.
-pub const DEFAULT_MEASURE_NUMBER_FONT_SIZE: u32 = 10;
-
-/// Default `section_label.font_size` in points, used when unset in `# metadata`.
-pub const DEFAULT_SECTION_LABEL_FONT_SIZE: u32 = 12;
-
-/// Default `part_label.font_size` in points, used when unset in `# metadata`.
-pub const DEFAULT_PART_LABEL_FONT_SIZE: u32 = 12;
-
-/// Default `page_number.font_size` in points: 60% of `row_height`, used when unset in `# metadata`.
-pub fn default_page_number_font_size(row_height: u32) -> u32 {
-    (row_height as f32 * 0.6).round() as u32
+/// `kind`'s default `font_size` in points under `metadata` (whose other
+/// kinds' overrides a [`FontSizeDefault::SameAs`] rule follows), with
+/// `row_height` already resolved.
+pub(crate) fn default_font_size(
+    metadata: &crate::ast::parsed::ParsedMetadata,
+    kind: TextStyleKind,
+    row_height: u32,
+) -> u32 {
+    match kind.font_size_default() {
+        FontSizeDefault::Fixed { points } => points,
+        FontSizeDefault::RowHeightPercent { percent } => (row_height * percent + 50) / 100,
+        FontSizeDefault::SameAs { kind } => metadata
+            .style(kind)
+            .font_size
+            .unwrap_or_else(|| default_font_size(metadata, kind, row_height)),
+    }
 }
 
 /// Default `lyrics.vertical_padding_pt` (formerly `lyric_click_target_padding_pt`),

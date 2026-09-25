@@ -66,10 +66,7 @@ fn measure_number_font_size_defaults_to_10() {
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
     ));
-    assert_eq!(
-        score.metadata.measure_number.font_size,
-        crate::ast::grouped::DEFAULT_MEASURE_NUMBER_FONT_SIZE
-    );
+    assert_eq!(score.metadata.measure_number.font_size, 10);
 }
 
 #[test]
@@ -78,10 +75,7 @@ fn section_label_font_size_defaults_to_12() {
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
     ));
-    assert_eq!(
-        score.metadata.section_label.font_size,
-        crate::ast::grouped::DEFAULT_SECTION_LABEL_FONT_SIZE
-    );
+    assert_eq!(score.metadata.section_label.font_size, 12);
 }
 
 #[test]
@@ -90,10 +84,7 @@ fn part_label_font_size_defaults_to_12() {
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
     ));
-    assert_eq!(
-        score.metadata.part_label.font_size,
-        crate::ast::grouped::DEFAULT_PART_LABEL_FONT_SIZE
-    );
+    assert_eq!(score.metadata.part_label.font_size, 12);
 }
 
 #[test]
@@ -102,10 +93,7 @@ fn page_number_font_size_defaults_to_60_percent_of_row_height() {
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
     ));
-    assert_eq!(
-        score.metadata.page_number.font_size,
-        crate::ast::grouped::default_page_number_font_size(score.metadata.row_height)
-    );
+    assert_eq!(score.metadata.page_number.font_size, 14);
 }
 
 #[test]

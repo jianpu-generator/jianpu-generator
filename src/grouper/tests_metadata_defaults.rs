@@ -41,3 +41,11 @@ fn a_kinds_own_components_do_not_leak_into_its_default() {
     assert!(!defaults.title_style.bold);
     assert_eq!(defaults.title_style.font_size, 36);
 }
+
+#[test]
+fn row_height_percent_defaults_round_to_the_nearest_point() {
+    let defaults = defaults_of("row_height = 25");
+    assert_eq!(font_size(&defaults, TextStyleKind::Title), 38);
+    assert_eq!(font_size(&defaults, TextStyleKind::Subtitle), 20);
+    assert_eq!(font_size(&defaults, TextStyleKind::Lyrics), 15);
+}

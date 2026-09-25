@@ -159,3 +159,15 @@ Feature: Edit Metadata modal
     When I open the Edit Metadata modal
     And I hover the preview pane and scroll the mouse wheel down by 400
     Then the preview pane scroll position is greater than 0
+
+  Scenario: A style row's help spells out its row-height-relative Font Size default
+    Given the edit-metadata-modal test fixture is loaded
+    When I open the Edit Metadata modal
+    And I open the help for the "Title Style" field
+    Then the "Title Style" help contains "Font Size defaults to 150% of Row Height."
+
+  Scenario: A style row's help names the style its Font Size default follows
+    Given the edit-metadata-modal test fixture is loaded
+    When I open the Edit Metadata modal
+    And I open the help for the "Note Dash Style" field
+    Then the "Note Dash Style" help contains "Font Size defaults to Notes Style's Font Size."

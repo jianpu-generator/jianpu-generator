@@ -698,12 +698,25 @@ world jianpu-wasm {
         font-family: option<font-family-choice>,
     }
 
+    // How a text kind's `font_size` defaults when unset
+    // (`jianpu_generator::ast::grouped::FontSizeDefault`).
+    variant font-size-default {
+        // A fixed size in points.
+        fixed(u32),
+        // This percentage of `row_height`, rounded to the nearest point.
+        row-height-percent(u32),
+        // Whatever this kind's `font_size` resolves to.
+        same-as(text-style-kind),
+    }
+
     record text-style-entry {
         kind: text-style-kind,
         fields: text-style-fields,
         // What `fields` resolve to when all unset, given the rest of the
         // document (`jianpu_generator::grouper::metadata_defaults`).
         defaults: text-style-defaults,
+        // The rule `defaults.font-size` was derived from.
+        font-size-default: font-size-default,
     }
 
     // The `# metadata` section's values as written; unset fields are `none`.

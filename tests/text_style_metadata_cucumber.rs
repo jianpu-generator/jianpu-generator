@@ -27,7 +27,7 @@
 )]
 
 use cucumber::{given, then, when, World as _};
-use jianpu_generator::ast::grouped::{default_lyrics_font_size, Metadata, TextStyle};
+use jianpu_generator::ast::grouped::{Metadata, TextStyle};
 use jianpu_generator::compile;
 
 #[derive(Debug, Default, cucumber::World)]
@@ -125,7 +125,7 @@ fn then_default_font_size(
     );
     let metadata = world.metadata.as_ref().expect("compiled score");
     let resolved = text_style_of(metadata, &kind).font_size;
-    let expected = default_lyrics_font_size(row_height as u32);
+    let expected = (row_height as f64 * 0.6).round() as u32;
     assert_eq!(
         resolved, expected,
         "expected `{kind}.font_size` to default to {expected} at row_height {row_height}, got {resolved}"

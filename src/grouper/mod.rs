@@ -1,16 +1,13 @@
 use crate::ast::grouped::{
-    default_author_font_size, default_lyrics_font_size, default_page_number_font_size,
-    default_part_legend_font_size, default_subtitle_font_size, default_title_font_size,
-    resolve_text_style, GroupedScore, GroupedTrack, Metadata, Score, TextStyle, TextStyleDefaults,
-    DEFAULT_CHORDS_HORIZONTAL_PADDING_PT, DEFAULT_DIRECTIVE_ROW_OFFSET, DEFAULT_HIDE_RESTING_PARTS,
-    DEFAULT_HIDE_SYSTEM_DIVIDERS, DEFAULT_LYRICS_HORIZONTAL_PADDING_PT,
+    default_font_size, resolve_text_style, GroupedScore, GroupedTrack, Metadata, Score, TextStyle,
+    TextStyleDefaults, DEFAULT_CHORDS_HORIZONTAL_PADDING_PT, DEFAULT_DIRECTIVE_ROW_OFFSET,
+    DEFAULT_HIDE_RESTING_PARTS, DEFAULT_HIDE_SYSTEM_DIVIDERS, DEFAULT_LYRICS_HORIZONTAL_PADDING_PT,
     DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT, DEFAULT_MAX_MEASURES_PER_SYSTEM,
-    DEFAULT_MEASURE_NUMBER_FONT_SIZE, DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
-    DEFAULT_NOTES_HORIZONTAL_PADDING_PT, DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT,
-    DEFAULT_NOTE_NUMBER_WIDTH, DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_PART_LABEL_FONT_SIZE,
-    DEFAULT_PART_LABEL_WIDTH_PT, DEFAULT_ROW_HEIGHT, DEFAULT_SECTION_LABEL_FONT_SIZE,
-    DEFAULT_SEQUENCE_FONT_SIZE,
+    DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS, DEFAULT_NOTES_HORIZONTAL_PADDING_PT,
+    DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT, DEFAULT_NOTE_NUMBER_WIDTH, DEFAULT_PARTS_LIST_COLUMNS,
+    DEFAULT_PART_LABEL_WIDTH_PT, DEFAULT_ROW_HEIGHT,
 };
+use crate::ast::parsed::TextStyleKind;
 use crate::ast::parsed::{ParsedDocument, ParsedMeasureSlot, ParsedMetadata, ParsedTrack};
 use crate::combiner;
 use crate::error::{Diagnostic, IrrecoverableError};
@@ -167,6 +164,7 @@ fn resolve_simple_text_styles(
     TextStyle,
 ) {
     use crate::compositor::types::FontFamily;
+    let font_size = |kind| default_font_size(metadata, kind, row_height);
     let defaults = |bold: bool, italic: bool, font_family: FontFamily| TextStyleDefaults {
         bold,
         italic,
@@ -175,47 +173,47 @@ fn resolve_simple_text_styles(
     (
         simple_text_style(
             metadata.title_style,
-            default_title_font_size(row_height),
+            font_size(TextStyleKind::Title),
             defaults(false, false, FontFamily::Serif),
         ),
         simple_text_style(
             metadata.subtitle_style,
-            default_subtitle_font_size(row_height),
+            font_size(TextStyleKind::Subtitle),
             defaults(false, true, FontFamily::Serif),
         ),
         simple_text_style(
             metadata.author_style,
-            default_author_font_size(row_height),
+            font_size(TextStyleKind::Author),
             defaults(false, false, FontFamily::Serif),
         ),
         simple_text_style(
             metadata.sequence_style,
-            DEFAULT_SEQUENCE_FONT_SIZE,
+            font_size(TextStyleKind::Sequence),
             defaults(false, false, FontFamily::SansSerif),
         ),
         simple_text_style(
             metadata.part_legend_style,
-            default_part_legend_font_size(row_height),
+            font_size(TextStyleKind::PartLegend),
             defaults(false, false, FontFamily::SansSerif),
         ),
         simple_text_style(
             metadata.measure_number_style,
-            DEFAULT_MEASURE_NUMBER_FONT_SIZE,
+            font_size(TextStyleKind::MeasureNumber),
             defaults(false, false, FontFamily::SansSerif),
         ),
         simple_text_style(
             metadata.section_label_style,
-            DEFAULT_SECTION_LABEL_FONT_SIZE,
+            font_size(TextStyleKind::SectionLabel),
             defaults(true, true, FontFamily::SansSerif),
         ),
         simple_text_style(
             metadata.page_number_style,
-            default_page_number_font_size(row_height),
+            font_size(TextStyleKind::PageNumber),
             defaults(false, false, FontFamily::SansSerif),
         ),
         simple_text_style(
             metadata.part_label_style,
-            DEFAULT_PART_LABEL_FONT_SIZE,
+            font_size(TextStyleKind::PartLabel),
             defaults(false, false, FontFamily::SansSerif),
         ),
     )
@@ -236,11 +234,7 @@ fn resolve_text_styles(metadata: &ParsedMetadata, row_height: u32) -> ResolvedTe
         page_number,
         part_label,
     ) = resolve_simple_text_styles(metadata, row_height);
-    let lyrics_font_size = metadata
-        .lyrics_style
-        .font_size
-        .unwrap_or_else(|| default_lyrics_font_size(row_height));
-    let notes_font_size = metadata.notes_style.font_size.unwrap_or(lyrics_font_size);
+    let font_size = |kind| default_font_size(metadata, kind, row_height);
     ResolvedTextStyles {
         title_style,
         subtitle_style,
@@ -253,7 +247,7 @@ fn resolve_text_styles(metadata: &ParsedMetadata, row_height: u32) -> ResolvedTe
         page_number,
         lyrics: resolve_text_style(
             metadata.lyrics_style,
-            lyrics_font_size,
+            font_size(TextStyleKind::Lyrics),
             DEFAULT_LYRICS_HORIZONTAL_PADDING_PT,
             DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT,
             TextStyleDefaults {
@@ -264,7 +258,7 @@ fn resolve_text_styles(metadata: &ParsedMetadata, row_height: u32) -> ResolvedTe
         ),
         notes: resolve_text_style(
             metadata.notes_style,
-            notes_font_size,
+            font_size(TextStyleKind::Notes),
             DEFAULT_NOTES_HORIZONTAL_PADDING_PT,
             0,
             TextStyleDefaults {
@@ -275,7 +269,7 @@ fn resolve_text_styles(metadata: &ParsedMetadata, row_height: u32) -> ResolvedTe
         ),
         chords: resolve_text_style(
             metadata.chords_style,
-            lyrics_font_size,
+            font_size(TextStyleKind::Chords),
             DEFAULT_CHORDS_HORIZONTAL_PADDING_PT,
             0,
             TextStyleDefaults {
@@ -286,7 +280,7 @@ fn resolve_text_styles(metadata: &ParsedMetadata, row_height: u32) -> ResolvedTe
         ),
         note_dash: resolve_text_style(
             metadata.note_dash_style,
-            notes_font_size,
+            font_size(TextStyleKind::NoteDash),
             DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT,
             0,
             TextStyleDefaults {

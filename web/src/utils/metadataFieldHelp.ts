@@ -18,61 +18,45 @@ export const metadataFieldHelp: Record<
   | Extract<MetadataEdit['tag'], 'directive-row-offset'>,
   string
 > = {
-  title: `Rendered as the large heading at the top of the score's first page.
+  title: `Rendered as the large heading at the top of the score's first page.`,
 
-Its style row's **Font Size** defaults to \`row_height × 1.5\`.`,
+  subtitle: `Rendered as a smaller line beneath the title in the header.`,
 
-  subtitle: `Rendered as a smaller line beneath the title in the header.
+  author: `Rendered in the header, below the title/subtitle.`,
 
-Its style row's **Font Size** defaults to \`row_height × 0.8\`.`,
+  sequence: `Style of the \`# sequence\` summary line rendered near the top of the score.`,
 
-  author: `Rendered in the header, below the title/subtitle.
+  'part-legend': `Style of the part-name legend entries shown in the header.`,
 
-Its style row's **Font Size** defaults to \`row_height × 0.6\`.`,
+  'measure-number': `Style of each measure's bar number.`,
 
-  sequence: `Style of the \`# sequence\` summary line rendered near the top of the score.
-
-**Font Size** defaults to 12.`,
-
-  'part-legend': `Style of the part-name legend entries shown in the header.
-
-**Font Size** defaults to \`row_height × 0.6\`.`,
-
-  'measure-number': `Style of each measure's bar number.
-
-**Font Size** defaults to 10.`,
-
-  'section-label': `Style of an inline section label (the \`label="..."\` on a measure's directive line).
-
-**Font Size** defaults to 12.`,
+  'section-label': `Style of an inline section label (the \`label="..."\` on a measure's directive line).`,
 
   'part-label': `Style of a part's row label (e.g. "Soprano"), shown at the start of each system row.
 
-**Font Size** defaults to 12. See **Part Label Width** below for the column's reserved width.`,
+See **Part Label Width** below for the column's reserved width.`,
 
-  'part-label-width-pt': `Fixed width (points) of the part-label column at the start of each system, shared by every system in the score regardless of how many measures/columns that system's music needs.
-
-Default: 40.`,
+  'part-label-width-pt': `Fixed width (points) of the part-label column at the start of each system, shared by every system in the score regardless of how many measures/columns that system's music needs.`,
 
   'page-number': `Style of the page number shown in the footer.
 
-**Font Size** defaults to \`row_height × 0.6\`. **V. Padding** pushes the page number upward from the page's bottom edge, without moving anything else.`,
+**V. Padding** pushes the page number upward from the page's bottom edge, without moving anything else.`,
 
   lyrics: `Style of lyric syllable text under notes.
 
-**Font Size** defaults to \`row_height × 0.6\` and also affects how far a syllable is allowed to shift horizontally to avoid overlapping its neighbors. **H. Padding** defaults to 4 (widens spacing between syllables). **V. Padding** is extra padding around a lyric syllable's hover/click-target box, on top of the lyric font's own measured height (default: 12).`,
+**Font Size** also affects how far a syllable is allowed to shift horizontally to avoid overlapping its neighbors. **H. Padding** widens spacing between syllables. **V. Padding** is extra padding around a lyric syllable's hover/click-target box, on top of the lyric font's own measured height.`,
 
   notes: `Style of note heads, rests, percussion hits, and tuplet brackets.
 
-**Font Size** defaults to \`lyrics.font_size\` and also affects the width allotted to a note column, since the note column's width is measured against these glyphs' own font (Monospace by default, but **Font** below can override it). **H. Padding** (default: 4) is also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings, which all key off a note column. **V. Padding** adds vertical space around the note-head row.`,
+**Font Size** also affects the width allotted to a note column, since the note column's width is measured against these glyphs' own font (see **Font**). **H. Padding** is also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings, which all key off a note column. **V. Padding** adds vertical space around the note-head row.`,
 
   chords: `Style of chord symbol text.
 
-**Font Size** defaults to \`lyrics.font_size\` and also affects the width allotted to a chord symbol's column, measured against its own font (Monospace by default, but **Font** below can override it). **H. Padding** defaults to 4.`,
+**Font Size** also affects the width allotted to a chord symbol's column, measured against its own font (see **Font**).`,
 
   'note-dash': `Style of a note dash (the sustain-beat \`-\` extension).
 
-**Font Size** defaults to \`notes.font_size\` and scales the rendered dash's width, measured against its own font (Monospace by default, but **Font** below can override it). **H. Padding** defaults to 4.`,
+**Font Size** scales the rendered dash's width, measured against its own font (see **Font**).`,
 
   'row-height': `Vertical spacing (points) of one part row.
 
@@ -81,7 +65,7 @@ Affects:
 - Octave and duration dots
 - Tie/slur arc height
 - Bar-line and multi-measure-rest thickness
-- The default \`lyrics\` style's font size (unless set explicitly), as \`row_height × 0.6\``,
+- The default **Font Size** of every text style whose default is a percentage of the row height (unless set explicitly)`,
 
   'max-measures-per-system': `Maximum number of measures placed on one system (row) before wrapping to a new system line.`,
 

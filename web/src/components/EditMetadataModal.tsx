@@ -1,6 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useState } from 'react'
 import type {
+  FontSizeDefault,
   MetadataEdit,
   MetadataFields,
   TextStyleComponentValue,
@@ -40,6 +41,19 @@ const styleRowLabels: Record<TextStyleKind, string> = {
   'note-dash': 'Note Dash Style',
 }
 
+/** A style row's "**Font Size** defaults to …" help line, spelled out from
+ * the Rust-side rule its default was resolved by. */
+function fontSizeDefaultHelp(rule: FontSizeDefault): string {
+  switch (rule.tag) {
+    case 'fixed':
+      return `**Font Size** defaults to ${rule.val}.`
+    case 'row-height-percent':
+      return `**Font Size** defaults to ${rule.val}% of **Row Height**.`
+    case 'same-as':
+      return `**Font Size** defaults to **${styleRowLabels[rule.val]}**'s Font Size.`
+  }
+}
+
 const thStyle: React.CSSProperties = {
   padding: '6px 10px',
   textAlign: 'left',
@@ -65,10 +79,10 @@ export function EditMetadataModal({
     setHelpContent({ label, help })
 
   const styleRows: StyleRowSpec[] = (metadata?.styles ?? []).map(
-    ({ kind, fields, defaults }) => ({
+    ({ kind, fields, defaults, fontSizeDefault }) => ({
       kind,
       label: styleRowLabels[kind],
-      help: metadataFieldHelp[kind],
+      help: `${metadataFieldHelp[kind]}\n\n${fontSizeDefaultHelp(fontSizeDefault)}`,
       value: fields,
       placeholder: defaults,
     }),

@@ -141,6 +141,18 @@ fn text_style_defaults_to_wit(style: &grouped::TextStyle) -> TextStyleDefaults {
     }
 }
 
+fn font_size_default_to_wit(rule: grouped::FontSizeDefault) -> FontSizeDefault {
+    match rule {
+        grouped::FontSizeDefault::Fixed { points } => FontSizeDefault::Fixed(points),
+        grouped::FontSizeDefault::RowHeightPercent { percent } => {
+            FontSizeDefault::RowHeightPercent(percent)
+        }
+        grouped::FontSizeDefault::SameAs { kind } => {
+            FontSizeDefault::SameAs(text_style_kind_to_wit(kind))
+        }
+    }
+}
+
 fn metadata_defaults_to_wit(defaults: &grouped::Metadata) -> MetadataDefaults {
     MetadataDefaults {
         row_height: defaults.row_height,
@@ -168,6 +180,7 @@ pub(super) fn metadata_fields_to_wit(fields: source_edit::MetadataFields) -> Met
                 kind: text_style_kind_to_wit(kind),
                 fields: text_style_fields_to_wit(metadata.style(kind)),
                 defaults: text_style_defaults_to_wit(defaults.style(kind)),
+                font_size_default: font_size_default_to_wit(kind.font_size_default()),
             })
             .collect(),
         defaults: metadata_defaults_to_wit(&defaults),

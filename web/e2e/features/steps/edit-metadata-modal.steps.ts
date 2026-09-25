@@ -331,3 +331,21 @@ Then(
     ).toHaveAttribute('placeholder', placeholder)
   },
 )
+
+When(
+  'I open the help for the {string} field',
+  async ({ page }, label: string) => {
+    await editMetadataModal(page)
+      .getByRole('button', { name: label, exact: true })
+      .click()
+  },
+)
+
+Then(
+  'the {string} help contains {string}',
+  async ({ page }, label: string, text: string) => {
+    await expect(
+      page.getByRole('dialog', { name: label, exact: true }),
+    ).toContainText(text)
+  },
+)
