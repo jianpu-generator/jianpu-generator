@@ -41,6 +41,11 @@ pub enum SourcePartMode {
 }
 
 /// Source-level part declaration before follow inheritance is applied.
+/// A part's volume when its `# parts` line has no `N%` suffix.
+pub const DEFAULT_PART_VOLUME: u8 = 100;
+/// A part's octave offset when its `# parts` line has no `+N`/`-N` suffix.
+pub const DEFAULT_PART_OCTAVE_OFFSET: i8 = 0;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SourceRawPartDecl {
     pub display_name: String,
@@ -261,8 +266,8 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                 kind,
                 follow_target: None,
                 soundfont: soundfont.unwrap_or_default(),
-                volume: volume.unwrap_or(100),
-                octave_offset: octave_offset.unwrap_or(0),
+                volume: volume.unwrap_or(DEFAULT_PART_VOLUME),
+                octave_offset: octave_offset.unwrap_or(DEFAULT_PART_OCTAVE_OFFSET),
             }),
         }
     }

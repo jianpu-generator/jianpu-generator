@@ -1,1 +1,6 @@
-export type { PartDeclaration, PartMode, SoundfontValue } from '../types'
+export type {
+  PartDeclaration,
+  PartMode,
+  PartSettings,
+  SoundfontValue,
+} from '../types'

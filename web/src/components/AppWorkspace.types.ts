@@ -15,10 +15,9 @@ import type {
   NoteSpan,
   PartDeclaration,
   PartInfo,
-  PartMode,
+  PartSettings,
   PitchDescription,
   RangeEditOperation,
-  SoundfontValue,
 } from '../types'
 import type { LyricCell, NoteCell } from './Preview'
 
@@ -95,11 +94,7 @@ export interface AppWorkspaceProps {
   parts: PartInfo[]
   handlePartDeclarationChange: (
     abbreviation: string,
-    mode: PartMode,
-    followTarget: string | null,
-    soundfont: SoundfontValue | null,
-    volume: number | null,
-    octaveOffset: number | null,
+    settings: PartSettings,
   ) => void
   handleShiftPartOctave: (abbreviation: string, delta: number) => void
   previewInstrument: (programNumber: number) => void

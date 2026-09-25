@@ -1,6 +1,6 @@
 import type { RefObject } from 'react'
 import { useCallback } from 'react'
-import type { PartMode } from '../types'
+import type { PartSettings } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 
 interface UseJianpuWorkerPartDeclarationParams {
@@ -13,8 +13,8 @@ interface UseJianpuWorkerPartDeclarationParams {
   >
 }
 
-/** Sends a part-declaration edit (mode, follow target, soundfont, volume,
- * octave offset) to the worker and resolves once it replies with the
+/** Sends a part's new settings (mode, soundfont, volume, octave offset)
+ * to the worker and resolves once it replies with the
  * rewritten `.jianpu` source. */
 export function useJianpuWorkerPartDeclaration({
   workerRef,
@@ -24,14 +24,7 @@ export function useJianpuWorkerPartDeclaration({
   pendingPartDeclarationUpdatesRef,
 }: UseJianpuWorkerPartDeclarationParams) {
   const updatePartDeclaration = useCallback(
-    (
-      abbreviation: string,
-      mode: PartMode,
-      followTarget: string | null,
-      soundfont: string | null,
-      volume: number | null,
-      octaveOffset: number | null,
-    ) =>
+    (abbreviation: string, settings: PartSettings) =>
       new Promise<string>((resolve) => {
         const worker = workerRef.current
         if (!worker) {
@@ -45,11 +38,7 @@ export function useJianpuWorkerPartDeclaration({
           type: 'updatePartDeclaration',
           source: sourceRef.current,
           abbreviation,
-          mode,
-          followTarget,
-          soundfont,
-          volume,
-          octaveOffset,
+          settings,
           id,
         } satisfies WorkerRequest)
       }),

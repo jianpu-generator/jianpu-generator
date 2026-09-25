@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { jianpuWasm, type MetadataEdit } from '../jianpuWasm'
-import type { PartMode, SoundfontValue } from '../types'
+import type { PartSettings } from '../types'
 import { useMetadataFields } from './useMetadataFields'
 
 /** Open/closed state for the edit-parts, edit-metadata, storage-settings,
@@ -10,11 +10,7 @@ export function useAppPanels(
   source: string,
   updatePartDeclaration: (
     abbreviation: string,
-    mode: PartMode,
-    followTarget: string | null,
-    soundfont: SoundfontValue | null,
-    volume: number | null,
-    octaveOffset: number | null,
+    settings: PartSettings,
   ) => Promise<string>,
   shiftPartOctave: (abbreviation: string, delta: number) => Promise<string>,
   handleSourceChange: (value: string) => void,
@@ -25,22 +21,10 @@ export function useAppPanels(
   const [binOpen, setBinOpen] = useState(false)
 
   const handlePartDeclarationChange = useCallback(
-    (
-      abbreviation: string,
-      mode: PartMode,
-      followTarget: string | null,
-      soundfont: SoundfontValue | null,
-      volume: number | null,
-      octaveOffset: number | null,
-    ) => {
-      void updatePartDeclaration(
-        abbreviation,
-        mode,
-        followTarget,
-        soundfont,
-        volume,
-        octaveOffset,
-      ).then(handleSourceChange)
+    (abbreviation: string, settings: PartSettings) => {
+      void updatePartDeclaration(abbreviation, settings).then(
+        handleSourceChange,
+      )
     },
     [updatePartDeclaration, handleSourceChange],
   )

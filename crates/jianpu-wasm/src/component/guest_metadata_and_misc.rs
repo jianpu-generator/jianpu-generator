@@ -148,20 +148,12 @@ pub(super) fn list_part_declarations(
 pub(super) fn update_part_declaration(
     source: String,
     abbreviation: String,
-    new_mode: PartDeclarationMode,
-    new_follow_target: String,
-    new_soundfont: String,
-    new_volume: String,
-    new_octave_offset: String,
+    settings: PartSettings,
 ) -> String {
     crate::part_declarations::update_part_declaration_source(
         &source,
         &abbreviation,
-        part_declaration_mode_from_wit(new_mode),
-        &new_follow_target,
-        &new_soundfont,
-        &new_volume,
-        &new_octave_offset,
+        &part_settings_from_wit(settings),
     )
 }
 

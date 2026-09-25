@@ -1,7 +1,13 @@
 import * as Slider from '@radix-ui/react-slider'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
-import type { PartDeclaration, PartInfo, SoundfontValue } from '../types'
+import type {
+  PartDeclaration,
+  PartInfo,
+  PartMode,
+  PartSettings,
+  SoundfontValue,
+} from '../types'
 import type { EditPartsModalProps } from './EditPartsModal'
 import { RadixSelect, RadixSelectItem } from './RadixTableSelect'
 import { SoundfontSearchModal } from './SoundfontSearchModal'
@@ -50,76 +56,25 @@ export function PartRow({
     allParts.findIndex((p) => p.abbreviation === declaration.abbreviation),
   )
 
+  const { settings } = declaration
+  const change = (patch: Partial<PartSettings>) =>
+    onPartDeclarationChange(declaration.abbreviation, { ...settings, ...patch })
+  const followTarget =
+    settings.mode.tag === 'follow' ? settings.mode.val : undefined
+
   function handleModeChange(newMode: string) {
-    const mode = newMode as PartDeclaration['mode']
-    if (mode === 'follow') {
-      const defaultTarget = precedingParts[0]?.abbreviation ?? null
-      onPartDeclarationChange(
-        declaration.abbreviation,
-        mode,
-        defaultTarget,
-        declaration.soundfont ?? null,
-        declaration.volume ?? null,
-        declaration.octaveOffset ?? null,
-      )
+    const tag = newMode as PartMode['tag']
+    if (tag === 'follow') {
+      const defaultTarget = precedingParts[0]?.abbreviation
+      if (defaultTarget !== undefined)
+        change({ mode: { tag, val: defaultTarget } })
     } else {
-      onPartDeclarationChange(
-        declaration.abbreviation,
-        mode,
-        null,
-        declaration.soundfont ?? null,
-        declaration.volume ?? null,
-        declaration.octaveOffset ?? null,
-      )
+      change({ mode: { tag } })
     }
   }
 
-  function handleFollowTargetChange(target: string) {
-    onPartDeclarationChange(
-      declaration.abbreviation,
-      'follow',
-      target,
-      declaration.soundfont ?? null,
-      declaration.volume ?? null,
-      declaration.octaveOffset ?? null,
-    )
-  }
-
   function handleSoundfontChange(value: string) {
-    const newSoundfont = value === '' ? null : (value as SoundfontValue)
-    onPartDeclarationChange(
-      declaration.abbreviation,
-      declaration.mode,
-      declaration.followTarget ?? null,
-      newSoundfont,
-      declaration.volume ?? null,
-      declaration.octaveOffset ?? null,
-    )
-  }
-
-  function handleVolumeChange(value: number) {
-    const newVolume = value === 100 ? null : value
-    onPartDeclarationChange(
-      declaration.abbreviation,
-      declaration.mode,
-      declaration.followTarget ?? null,
-      declaration.soundfont ?? null,
-      newVolume,
-      declaration.octaveOffset ?? null,
-    )
-  }
-
-  function handleOctaveChange(value: string) {
-    const parsed = parseInt(value, 10)
-    const newOctaveOffset = parsed === 0 ? null : parsed
-    onPartDeclarationChange(
-      declaration.abbreviation,
-      declaration.mode,
-      declaration.followTarget ?? null,
-      declaration.soundfont ?? null,
-      declaration.volume ?? null,
-      newOctaveOffset,
-    )
+    change({ soundfont: value === '' ? undefined : (value as SoundfontValue) })
   }
 
   const rowBg = rowIndex % 2 === 0 ? '#fafafa' : '#fff'
@@ -139,7 +94,7 @@ export function PartRow({
       <td style={tdStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <RadixSelect
-            value={declaration.mode}
+            value={settings.mode.tag}
             onValueChange={handleModeChange}
             placeholder="mode"
             testId={`mode-select-${declaration.abbreviation}`}
@@ -151,14 +106,12 @@ export function PartRow({
               <RadixSelectItem value="follow">follow</RadixSelectItem>
             )}
           </RadixSelect>
-          {declaration.mode === 'follow' && precedingParts.length > 0 && (
+          {followTarget !== undefined && precedingParts.length > 0 && (
             <RadixSelect
-              value={
-                declaration.followTarget ??
-                precedingParts[0]?.abbreviation ??
-                ''
+              value={followTarget}
+              onValueChange={(target) =>
+                change({ mode: { tag: 'follow', val: target } })
               }
-              onValueChange={handleFollowTargetChange}
               placeholder="target"
               testId={`follow-target-select-${declaration.abbreviation}`}
             >
@@ -195,13 +148,15 @@ export function PartRow({
             minWidth: '80px',
           }}
         >
-          {declaration.soundfont ?? 'default sound'}
+          {settings.soundfont ?? 'default sound'}
         </button>
         <SoundfontSearchModal
           open={searchOpen}
           onOpenChange={setSearchOpen}
-          mode={declaration.mode === 'percussion' ? 'percussion' : 'instrument'}
-          currentValue={declaration.soundfont ?? null}
+          mode={
+            settings.mode.tag === 'percussion' ? 'percussion' : 'instrument'
+          }
+          currentValue={settings.soundfont ?? null}
           onSelect={(value) => {
             handleSoundfontChange(value ?? '')
             setSearchOpen(false)
@@ -218,9 +173,9 @@ export function PartRow({
             min={1}
             max={100}
             step={1}
-            value={[declaration.volume ?? 100]}
+            value={[settings.volume]}
             onValueChange={([v]) => {
-              if (v !== undefined) handleVolumeChange(v)
+              if (v !== undefined) change({ volume: v })
             }}
             data-testid={`volume-slider-${declaration.abbreviation}`}
             style={{
@@ -273,14 +228,16 @@ export function PartRow({
               minWidth: '28px',
             }}
           >
-            {declaration.volume ?? 100}%
+            {settings.volume}%
           </span>
         </div>
       </td>
       <td style={tdStyle}>
         <RadixSelect
-          value={String(declaration.octaveOffset ?? 0)}
-          onValueChange={handleOctaveChange}
+          value={String(settings.octaveOffset)}
+          onValueChange={(value) =>
+            change({ octaveOffset: Number.parseInt(value, 10) })
+          }
           placeholder="octave"
           testId={`octave-select-${declaration.abbreviation}`}
         >
@@ -292,7 +249,7 @@ export function PartRow({
         </RadixSelect>
       </td>
       <td style={tdStyle}>
-        {declaration.mode !== 'follow' && (
+        {followTarget === undefined && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
             <button
               type="button"

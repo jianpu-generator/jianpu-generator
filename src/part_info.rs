@@ -1,8 +1,12 @@
 use crate::ast::parsed::ParsedTrack;
 use crate::error::IrrecoverableError;
 use crate::gm_percussion;
-use crate::parser::parts_parser::{self, InstrumentInfo, SourcePartMode, SourceRawPartDecl};
+use crate::parser::parts_parser::{
+    self, InstrumentInfo, SourcePartMode, SourceRawPartDecl, DEFAULT_PART_OCTAVE_OFFSET,
+    DEFAULT_PART_VOLUME,
+};
 use crate::parser::section_splitter::{split_sections, SectionKind};
+use crate::source_edit::{PartMode, PartSettings};
 
 /// A part declared in the `# parts` section.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -22,11 +26,7 @@ pub struct SourcePartDeclaration {
     pub abbreviation: String,
     pub display_name: String,
     pub line_number: u32,
-    pub mode: SourcePartMode,
-    pub follow_target: Option<String>,
-    pub soundfont: Option<String>,
-    pub volume: Option<u8>,
-    pub octave_offset: Option<i8>,
+    pub settings: PartSettings,
 }
 
 fn instrument_program_to_label(program: u8, instruments: &[InstrumentInfo]) -> String {
@@ -56,17 +56,16 @@ fn map_raw_to_source_declaration(
     let soundfont = raw
         .soundfont
         .map(|soundfont| soundfont_program_to_label(soundfont.0, &raw.mode, instruments));
-    let volume = raw.volume.filter(|&volume| volume != 100);
-    let octave_offset = raw.octave_offset.filter(|&offset| offset != 0);
     SourcePartDeclaration {
         abbreviation: raw.abbreviation,
         display_name: raw.display_name,
         line_number: raw.line_number,
-        mode: raw.mode,
-        follow_target: raw.follow_target,
-        soundfont,
-        volume,
-        octave_offset,
+        settings: PartSettings {
+            mode: PartMode::from_source_mode(raw.mode, raw.follow_target),
+            soundfont,
+            volume: raw.volume.unwrap_or(DEFAULT_PART_VOLUME),
+            octave_offset: raw.octave_offset.unwrap_or(DEFAULT_PART_OCTAVE_OFFSET),
+        },
     }
 }
 

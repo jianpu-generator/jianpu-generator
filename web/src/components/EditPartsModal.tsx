@@ -1,10 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import type {
-  PartDeclaration,
-  PartInfo,
-  PartMode,
-  SoundfontValue,
-} from '../types'
+import type { PartDeclaration, PartInfo, PartSettings } from '../types'
 import { PartRow } from './PartRow'
 
 export interface EditPartsModalProps {
@@ -14,11 +9,7 @@ export interface EditPartsModalProps {
   allParts: PartInfo[]
   onPartDeclarationChange: (
     abbreviation: string,
-    mode: PartMode,
-    followTarget: string | null,
-    soundfont: SoundfontValue | null,
-    volume: number | null,
-    octaveOffset: number | null,
+    settings: PartSettings,
   ) => void
   /** Bulk-shifts every note already written for this part by `delta`
    * octaves, rewriting `'`/`,` markers in the source (distinct from

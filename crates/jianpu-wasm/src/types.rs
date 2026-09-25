@@ -69,32 +69,6 @@ pub struct PartOut {
     pub has_lyrics: bool,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub enum PartDeclarationModeOut {
-    Chords,
-    Notes,
-    Percussion,
-    Follow,
-}
-
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct PartDeclarationOut {
-    pub abbreviation: String,
-    pub display_name: String,
-    pub line_number: u32,
-    pub mode: PartDeclarationModeOut,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub follow_target: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub soundfont: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub volume: Option<u8>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub octave_offset: Option<i8>,
-}
-
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
 pub enum RenderResponse {
@@ -109,23 +83,21 @@ pub enum RenderResponse {
     },
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-#[serde(tag = "status", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ListPartsResponse {
     Ok {
         parts: Vec<PartOut>,
-        declarations: Vec<PartDeclarationOut>,
+        declarations: Vec<jianpu_generator::SourcePartDeclaration>,
     },
     Err {
         diagnostics: Vec<DiagnosticOut>,
     },
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-#[serde(tag = "status", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ListPartDeclarationsResponse {
     Ok {
-        declarations: Vec<PartDeclarationOut>,
+        declarations: Vec<jianpu_generator::SourcePartDeclaration>,
     },
     Err {
         diagnostics: Vec<DiagnosticOut>,

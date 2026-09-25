@@ -8,7 +8,7 @@ import type {
   NoteSpan,
   PartDeclaration,
   PartInfo,
-  PartMode,
+  PartSettings,
   PitchDescription,
   RangeEditOperation,
   SectionRange,
@@ -40,11 +40,7 @@ export type WorkerRequest =
       type: 'updatePartDeclaration'
       source: string
       abbreviation: string
-      mode: PartMode
-      followTarget: string | null
-      soundfont: string | null
-      volume: number | null
-      octaveOffset: number | null
+      settings: PartSettings
       id: number
     }
   | {

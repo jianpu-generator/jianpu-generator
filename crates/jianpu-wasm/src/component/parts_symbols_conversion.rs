@@ -1,4 +1,5 @@
 use super::*;
+use jianpu_generator::source_edit;
 
 pub(super) fn instrument_info_from_wit(
     info: InstrumentInfo,
@@ -21,41 +22,50 @@ pub(super) fn part_to_wit(part: &crate::types::PartOut) -> Part {
     }
 }
 
-pub(super) fn part_declaration_mode_to_wit(
-    mode: &crate::types::PartDeclarationModeOut,
-) -> PartDeclarationMode {
+fn part_mode_to_wit(mode: source_edit::PartMode) -> PartMode {
     match mode {
-        crate::types::PartDeclarationModeOut::Chords => PartDeclarationMode::Chords,
-        crate::types::PartDeclarationModeOut::Notes => PartDeclarationMode::Notes,
-        crate::types::PartDeclarationModeOut::Percussion => PartDeclarationMode::Percussion,
-        crate::types::PartDeclarationModeOut::Follow => PartDeclarationMode::Follow,
+        source_edit::PartMode::Chords => PartMode::Chords,
+        source_edit::PartMode::Notes => PartMode::Notes,
+        source_edit::PartMode::Percussion => PartMode::Percussion,
+        source_edit::PartMode::Follow { target } => PartMode::Follow(target),
     }
 }
 
-pub(super) fn part_declaration_mode_from_wit(
-    mode: PartDeclarationMode,
-) -> jianpu_generator::parser::parts_parser::SourcePartMode {
-    use jianpu_generator::parser::parts_parser::SourcePartMode;
+fn part_mode_from_wit(mode: PartMode) -> source_edit::PartMode {
     match mode {
-        PartDeclarationMode::Chords => SourcePartMode::Chords,
-        PartDeclarationMode::Notes => SourcePartMode::Notes,
-        PartDeclarationMode::Percussion => SourcePartMode::Percussion,
-        PartDeclarationMode::Follow => SourcePartMode::Follow,
+        PartMode::Chords => source_edit::PartMode::Chords,
+        PartMode::Notes => source_edit::PartMode::Notes,
+        PartMode::Percussion => source_edit::PartMode::Percussion,
+        PartMode::Follow(target) => source_edit::PartMode::Follow { target },
     }
 }
 
-pub(super) fn part_declaration_to_wit(
-    declaration: &crate::types::PartDeclarationOut,
+fn part_settings_to_wit(settings: source_edit::PartSettings) -> PartSettings {
+    PartSettings {
+        mode: part_mode_to_wit(settings.mode),
+        soundfont: settings.soundfont,
+        volume: settings.volume,
+        octave_offset: settings.octave_offset,
+    }
+}
+
+pub(super) fn part_settings_from_wit(settings: PartSettings) -> source_edit::PartSettings {
+    source_edit::PartSettings {
+        mode: part_mode_from_wit(settings.mode),
+        soundfont: settings.soundfont,
+        volume: settings.volume,
+        octave_offset: settings.octave_offset,
+    }
+}
+
+fn part_declaration_to_wit(
+    declaration: jianpu_generator::SourcePartDeclaration,
 ) -> PartDeclaration {
     PartDeclaration {
-        abbreviation: declaration.abbreviation.clone(),
-        display_name: declaration.display_name.clone(),
+        abbreviation: declaration.abbreviation,
+        display_name: declaration.display_name,
         line_number: declaration.line_number,
-        mode: part_declaration_mode_to_wit(&declaration.mode),
-        follow_target: declaration.follow_target.clone(),
-        soundfont: declaration.soundfont.clone(),
-        volume: declaration.volume,
-        octave_offset: declaration.octave_offset,
+        settings: part_settings_to_wit(declaration.settings),
     }
 }
 
@@ -68,7 +78,10 @@ pub(super) fn list_parts_response_to_wit(
             declarations,
         } => ListPartsResponse::Ok(ListPartsSuccess {
             parts: parts.iter().map(part_to_wit).collect(),
-            declarations: declarations.iter().map(part_declaration_to_wit).collect(),
+            declarations: declarations
+                .into_iter()
+                .map(part_declaration_to_wit)
+                .collect(),
         }),
         crate::types::ListPartsResponse::Err { diagnostics } => {
             ListPartsResponse::Err(diagnostics_error_to_wit(&diagnostics))
@@ -186,7 +199,10 @@ pub(super) fn list_part_declarations_response_to_wit(
     match response {
         crate::types::ListPartDeclarationsResponse::Ok { declarations } => {
             ListPartDeclarationsResponse::Ok(ListPartDeclarationsSuccess {
-                declarations: declarations.iter().map(part_declaration_to_wit).collect(),
+                declarations: declarations
+                    .into_iter()
+                    .map(part_declaration_to_wit)
+                    .collect(),
             })
         }
         crate::types::ListPartDeclarationsResponse::Err { diagnostics } => {

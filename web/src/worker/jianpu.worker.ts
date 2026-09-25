@@ -84,11 +84,6 @@ let loadedFonts: {
   mono: Uint8Array
 } | null = null
 
-function octaveOffsetToWasmString(octaveOffset: number | null): string {
-  if (octaveOffset == null || octaveOffset === 0) return ''
-  return octaveOffset > 0 ? `+${octaveOffset}` : String(octaveOffset)
-}
-
 function toByteRanges(ranges: EditorSelection[]): ByteRange[] {
   return ranges.map((range) => ({ startByte: range.start, endByte: range.end }))
 }
@@ -147,11 +142,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const newSource = jianpuWasm().updatePartDeclaration(
       msg.source,
       msg.abbreviation,
-      msg.mode,
-      msg.followTarget ?? '',
-      msg.soundfont ?? '',
-      msg.volume != null ? String(msg.volume) : '',
-      octaveOffsetToWasmString(msg.octaveOffset),
+      msg.settings,
     )
     postMessage({
       type: 'partDeclarationUpdated',

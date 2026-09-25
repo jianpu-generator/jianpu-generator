@@ -309,22 +309,29 @@ world jianpu-wasm {
         has-lyrics: bool,
     }
 
-    enum part-declaration-mode {
+    // `jianpu_generator::source_edit::PartMode`; `follow` carries its target.
+    variant part-mode {
         chords,
         notes,
         percussion,
-        follow,
+        follow(string),
+    }
+
+    // `jianpu_generator::source_edit::PartSettings`: a `# parts` line's
+    // settings, with an omitted volume/octave suffix read as its default.
+    // `update-part-declaration` takes it back, omitting default suffixes.
+    record part-settings {
+        mode: part-mode,
+        soundfont: option<string>,
+        volume: u8,
+        octave-offset: s8,
     }
 
     record part-declaration {
         abbreviation: string,
         display-name: string,
         line-number: u32,
-        mode: part-declaration-mode,
-        follow-target: option<string>,
-        soundfont: option<string>,
-        volume: option<u8>,
-        octave-offset: option<s8>,
+        settings: part-settings,
     }
 
     record diagnostic-message {
@@ -428,18 +435,9 @@ world jianpu-wasm {
     // Phase 3, group 7 of PLAN-wit-bindgen-migration.md.
     export list-part-declarations: func(source: string, raw-instruments: list<instrument-info>) -> list-part-declarations-response;
 
-    // `update_part_declaration_source` has no response-shaped type of its
-    // own (a plain source-string round-trip, unchanged if the abbreviation
-    // isn't found), so this is just a plain string-returning export next to
-    // `list-part-declarations` above, per the task's "add whatever shape is
-    // simplest" note.
-    //
-    // `new-mode` is the `part-declaration-mode` enum above (not a
-    // hand-built string) so this call site can't drift from
-    // `part-declaration`'s `mode` field; `new-follow-target` mirrors
-    // `part-declaration.follow-target` and is only consulted when
-    // `new-mode` is `follow` (empty string otherwise).
-    export update-part-declaration: func(source: string, abbreviation: string, new-mode: part-declaration-mode, new-follow-target: string, new-soundfont: string, new-volume: string, new-octave-offset: string) -> string;
+    // Rewrites `abbreviation`'s `# parts` line to `settings`; returns
+    // `source` unchanged when no such part is declared.
+    export update-part-declaration: func(source: string, abbreviation: string, settings: part-settings) -> string;
 
     enum symbol-kind {
         abbreviation,

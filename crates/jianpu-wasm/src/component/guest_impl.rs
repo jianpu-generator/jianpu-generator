@@ -314,21 +314,9 @@ impl Guest for Component {
     fn update_part_declaration(
         source: String,
         abbreviation: String,
-        new_mode: PartDeclarationMode,
-        new_follow_target: String,
-        new_soundfont: String,
-        new_volume: String,
-        new_octave_offset: String,
+        settings: PartSettings,
     ) -> String {
-        update_part_declaration(
-            source,
-            abbreviation,
-            new_mode,
-            new_follow_target,
-            new_soundfont,
-            new_volume,
-            new_octave_offset,
-        )
+        update_part_declaration(source, abbreviation, settings)
     }
 
     fn extract_source_from_svg(svg_bytes: Vec<u8>) -> Option<String> {

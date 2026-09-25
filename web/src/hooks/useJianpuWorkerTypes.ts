@@ -9,7 +9,7 @@ import type {
   NoteSpan,
   PartDeclaration,
   PartInfo,
-  PartMode,
+  PartSettings,
   PitchDescription,
   RangeEditOperation,
   SectionRange,
@@ -194,11 +194,7 @@ export interface JianpuWorkerState {
   previewAudioPlaying: boolean
   updatePartDeclaration: (
     abbreviation: string,
-    mode: PartMode,
-    followTarget: string | null,
-    soundfont: string | null,
-    volume: number | null,
-    octaveOffset: number | null,
+    settings: PartSettings,
   ) => Promise<string>
   /**
    * Zipped-view "Format" action: drops `# score` `[Key]` data lines that are
