@@ -33,7 +33,7 @@ backoff = { version = "0.4", default-features = false, features = [
 ] }
 # Pure-Rust (no C build), safe on `wasm32-unknown-unknown`. Used only to
 # build the `Authorization: Basic` header for `src/oauth.rs`'s GitHub
-# grant-revocation call, which -- unlike the token exchange -- needs HTTP
+# token-revocation call, which -- unlike the token exchange -- needs HTTP
 # Basic auth (`client_id:client_secret`) rather than a JSON body field.
 base64 = "0.22"
 # Describes every route (method, path, params, request/response bodies,

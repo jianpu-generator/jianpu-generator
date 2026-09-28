@@ -4,7 +4,7 @@ import {
   openSyncedShareGithubSignInPopup,
   type SyncedShareGithubAuthResult,
 } from '../storage/accountAuthPopup'
-import { revokeSyncedShareGithubGrant } from '../storage/accountAuthRevoke'
+import { revokeSyncedShareGithubToken } from '../storage/accountAuthRevoke'
 import {
   buildSyncedShareFailure,
   type SyncedShareFailure,
@@ -247,14 +247,12 @@ export function useSyncedShareOwner(
 
   const disconnectGithub = useCallback(() => {
     stopSync()
-    // GitHub's real `/authorize` endpoint has no "force fresh consent"
-    // parameter -- revoking this app's authorization grant now is the only
-    // genuine way to make the *next* sign-in re-show GitHub's consent
-    // screen instead of silently reusing this one. Fire-and-forget: local
-    // state always wins, a failed revocation never blocks logging out.
+    // Revokes only this device's token, so the owner stays signed in on
+    // their other devices. Fire-and-forget: local state always wins, a
+    // failed revocation never blocks logging out.
     if (githubAuth) {
       const host = import.meta.env.VITE_SYNCED_SHARE_HOST ?? ''
-      void revokeSyncedShareGithubGrant({
+      void revokeSyncedShareGithubToken({
         host,
         identityToken: githubAuth.token,
       })

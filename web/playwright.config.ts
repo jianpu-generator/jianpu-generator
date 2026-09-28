@@ -81,6 +81,11 @@ export default defineConfig({
       // server above instead of real GitHub -- see
       // `crates/live-share-worker/src/oauth.rs` and
       // `src/identity/github.rs` for the env vars they read.
+      // `SYNCED_SHARE_SESSION_TTL_MILLIS:0` disables the worker's hour-long
+      // cache of a token's last successful GitHub check (see
+      // `src/identity.rs`), so a token the mock server has revoked is
+      // rejected on its very next use, as it would be in prod once that
+      // cache expires.
       //
       // Deliberately NOT port 8787 (`just dev`'s port, see `dekit.yaml`) and
       // deliberately NOT the default `--persist-to` D1 state dir: both are
@@ -96,7 +101,8 @@ export default defineConfig({
         'npx wrangler dev --port 8797 --persist-to .wrangler/e2e-state ' +
         '--var SYNCED_SHARE_GITHUB_USER_URL:http://localhost:8788/user ' +
         '--var SYNCED_SHARE_GITHUB_TOKEN_URL:http://localhost:8788/login/oauth/access_token ' +
-        '--var SYNCED_SHARE_GITHUB_GRANT_URL:http://localhost:8788/applications/{client_id}/grant',
+        '--var SYNCED_SHARE_GITHUB_TOKEN_REVOCATION_URL:http://localhost:8788/applications/{client_id}/token ' +
+        '--var SYNCED_SHARE_SESSION_TTL_MILLIS:0',
       cwd: '../crates/live-share-worker',
       port: 8797,
       reuseExistingServer: true,

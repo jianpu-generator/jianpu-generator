@@ -29,15 +29,12 @@
 //! calling convention (see `identity::github::fetch_github_user` for the
 //! same pattern against `GET /user`).
 //!
-//! Also home to `POST /auth/github/revoke` (`github_revoke` below): GitHub's
-//! real `/authorize` endpoint has no "force fresh consent" parameter, so the
-//! only genuine way to make a *later* sign-in re-show the consent screen is
-//! revoking this app's authorization grant now, via GitHub's
-//! `DELETE /applications/{client_id}/grant`. Called from logout
-//! (`disconnectGithub` in `useSyncedShareOwner.ts`), not from sign-in
-//! itself -- see `github_revoke`'s own doc comment. This disconnects the
-//! account as a whole (both storage and sharing), since it is one shared
-//! sign-in.
+//! Also home to `POST /auth/github/revoke` (`github_revoke` below), which
+//! revokes the one token being signed out, via GitHub's
+//! `DELETE /applications/{client_id}/token`. Called from logout
+//! (`disconnectGithub` in `useSyncedShareOwner.ts`) -- see `github_revoke`'s
+//! own doc comment. This disconnects the account as a whole (both storage
+//! and sharing) on this device only, since it is one shared sign-in.
 
 use base64::Engine;
 use serde::{Deserialize, Serialize};
@@ -57,23 +54,23 @@ const DEFAULT_GITHUB_TOKEN_URL: &str = "https://github.com/login/oauth/access_to
 /// run ever makes a real GitHub API call (task 11).
 const GITHUB_TOKEN_URL_VAR: &str = "SYNCED_SHARE_GITHUB_TOKEN_URL";
 
-/// Optional `[vars]` override for the grant-revocation endpoint, same
+/// Optional `[vars]` override for the token-revocation endpoint, same
 /// mocking purpose as `GITHUB_TOKEN_URL_VAR` above. `{client_id}` in the
 /// resolved value is substituted with the real client id (see
-/// `grant_url_from_env`) since GitHub's revoke endpoint embeds it in the
-/// path, not the query string or body.
-const GITHUB_GRANT_URL_VAR: &str = "SYNCED_SHARE_GITHUB_GRANT_URL";
-const DEFAULT_GITHUB_GRANT_URL_TEMPLATE: &str =
-    "https://api.github.com/applications/{client_id}/grant";
+/// `token_revocation_url_from_env`) since GitHub's revoke endpoint embeds it
+/// in the path, not the query string or body.
+const GITHUB_TOKEN_REVOCATION_URL_VAR: &str = "SYNCED_SHARE_GITHUB_TOKEN_REVOCATION_URL";
+const DEFAULT_GITHUB_TOKEN_REVOCATION_URL_TEMPLATE: &str =
+    "https://api.github.com/applications/{client_id}/token";
 
-/// Resolves the grant-revocation endpoint to call, substituting `client_id`
+/// Resolves the token-revocation endpoint to call, substituting `client_id`
 /// into the `{client_id}` placeholder -- GitHub's real revoke endpoint
 /// embeds it in the URL path itself.
-fn grant_url_from_env(ctx: &RouteContext<()>, client_id: &str) -> String {
+fn token_revocation_url_from_env(ctx: &RouteContext<()>, client_id: &str) -> String {
     let template = ctx
-        .var(GITHUB_GRANT_URL_VAR)
+        .var(GITHUB_TOKEN_REVOCATION_URL_VAR)
         .map(|v| v.to_string())
-        .unwrap_or_else(|_| DEFAULT_GITHUB_GRANT_URL_TEMPLATE.to_string());
+        .unwrap_or_else(|_| DEFAULT_GITHUB_TOKEN_REVOCATION_URL_TEMPLATE.to_string());
     template.replace("{client_id}", client_id)
 }
 
@@ -214,8 +211,8 @@ async fn exchange_code_for_token(
     response.json::<GithubTokenResponse>().await
 }
 
-/// Body of `POST /auth/github/revoke`: the token being disconnected, so its
-/// underlying GitHub grant can be revoked server-side. Sent from
+/// Body of `POST /auth/github/revoke`: the token being disconnected, so it
+/// can be revoked server-side. Sent from
 /// `disconnectGithub` (`useSyncedShareOwner.ts`) at logout time -- see the
 /// module doc comment for why that's the only place a token to revoke ever
 /// exists.
@@ -225,14 +222,14 @@ pub(crate) struct GithubRevokeRequest {
     pub identity_token: String,
 }
 
-/// `POST /auth/github/revoke` -- GitHub OAuth Apps have no "force consent"
-/// request parameter (confirmed against GitHub's docs: `/login/oauth/authorize`
-/// only supports `client_id`, `redirect_uri`, `login`, `scope`, `state`,
-/// `allow_signup`, plus PKCE fields). The only real mechanism for forcing a
-/// fresh consent screen on a *later* sign-in is deleting this app's
-/// authorization grant now, via `DELETE /applications/{client_id}/grant` --
-/// so this route is called from logout (`disconnectGithub`), not from
-/// sign-in itself, where no token to revoke exists yet.
+/// `POST /auth/github/revoke` -- revokes just the one token being signed
+/// out, via GitHub's `DELETE /applications/{client_id}/token`. Deliberately
+/// not the app's whole authorization grant
+/// (`DELETE /applications/{client_id}/grant`): that revokes *every* token
+/// the account holds for this app, signing the owner out on all their other
+/// devices too -- whose next request then fails GitHub's `GET /user` with
+/// `401 Bad credentials`. The cost is that a later sign-in silently reuses
+/// the still-standing grant instead of re-showing GitHub's consent screen.
 ///
 /// This is a genuine (non-swallowed) error response on failure; the client
 /// treats the call as best-effort (never awaited, never blocks the local
@@ -245,10 +242,10 @@ pub(crate) async fn github_revoke(
 ) -> HandlerResult<NoContent> {
     let client_id: Var = ctx.var(CLIENT_ID_BINDING)?;
     let client_secret = ctx.secret(CLIENT_SECRET_BINDING)?;
-    let grant_url = grant_url_from_env(&ctx, &client_id.to_string());
+    let revocation_url = token_revocation_url_from_env(&ctx, &client_id.to_string());
 
-    match revoke_grant(
-        &grant_url,
+    match revoke_token(
+        &revocation_url,
         &client_id.to_string(),
         &client_secret.to_string(),
         &body.identity_token,
@@ -257,18 +254,19 @@ pub(crate) async fn github_revoke(
     {
         Ok(()) => Ok(NoContent),
         Err(error) => Err(ApiError::UpstreamFailed {
-            message: format!("GitHub grant revocation failed: {error}"),
+            message: format!("GitHub token revocation failed: {error}"),
         }),
     }
 }
 
-/// Calls `DELETE {grant_url}` with HTTP Basic auth (`client_id:client_secret`)
-/// and a JSON body of `{"access_token": identity_token}`, matching GitHub's
-/// real revoke-grant API. GitHub responds `204 No Content` on success; `200`
+/// Calls `DELETE {revocation_url}` with HTTP Basic auth
+/// (`client_id:client_secret`) and a JSON body of
+/// `{"access_token": identity_token}`, matching GitHub's real revoke-token
+/// API. GitHub responds `204 No Content` on success; `200`
 /// is also accepted defensively. Same `Headers`/`RequestInit`/`Fetch::Request`
 /// pattern as `identity::github::fetch_github_user`.
-async fn revoke_grant(
-    grant_url: &str,
+async fn revoke_token(
+    revocation_url: &str,
     client_id: &str,
     client_secret: &str,
     identity_token: &str,
@@ -288,7 +286,7 @@ async fn revoke_grant(
         .with_headers(headers)
         .with_body(Some(JsValue::from_str(&payload.to_string())));
 
-    let request = Request::new_with_init(grant_url, &init)?;
+    let request = Request::new_with_init(revocation_url, &init)?;
     let mut response = Fetch::Request(request).send().await?;
 
     match response.status_code() {
@@ -296,7 +294,7 @@ async fn revoke_grant(
         status => {
             let text = response.text().await.unwrap_or_default();
             Err(Error::RustError(format!(
-                "GitHub grant revocation request failed: status={status}, body={text}"
+                "GitHub token revocation request failed: status={status}, body={text}"
             )))
         }
     }

@@ -1,5 +1,6 @@
-import { expect, type Page } from '@playwright/test'
+import { type BrowserContext, expect, type Page } from '@playwright/test'
 import { fulfillWithApiError, workerRouteGlob } from '../../cloudFileHelpers'
+import { authorizationCodeFor } from '../../mockGithubIdentity.mjs'
 import { Given, Then, When } from './fixtures'
 import {
   openSyncedTab,
@@ -39,37 +40,48 @@ import { syncedShareButtonState } from './synced-share-button-state'
 // (e.g. `putBodies` in `autosave-github.steps.ts`).
 let lastSignInPopup: Page | null = null
 
+/** Routes `context`'s popup navigation to GitHub's authorization endpoint
+ * straight back to the app's callback with a fresh authorization code (see
+ * the comment above). With `login`, the code makes the mock server mint a
+ * distinct, revocable token for that account (see `authorizationCodeFor`);
+ * without it, the exchange returns the legacy shared token. Exported for
+ * `synced-share-multi-device.steps.ts`, whose devices each sign in through
+ * their own browser context. */
+export async function mockGithubAuthorizationRedirect(
+  context: BrowserContext,
+  login?: string,
+): Promise<void> {
+  await context.route(
+    'https://github.com/login/oauth/authorize**',
+    async (route) => {
+      const requestUrl = new URL(route.request().url())
+      const state = requestUrl.searchParams.get('state') ?? ''
+      const redirectUri = requestUrl.searchParams.get('redirect_uri')
+      if (!redirectUri) {
+        await route.abort()
+        return
+      }
+      const target = new URL(redirectUri)
+      // Unique per attempt, not a fixed string: the mock token-exchange
+      // server (`mock-github-oauth-server.mjs`) enforces real GitHub's
+      // single-use-code behavior, and that server process (and its
+      // used-codes set) persists across the whole suite run -- a fixed
+      // code would make one scenario's exchange poison every other
+      // scenario's (or retry's) use of this same route.
+      target.searchParams.set('code', authorizationCodeFor(login))
+      target.searchParams.set('state', state)
+      await route.fulfill({
+        status: 302,
+        headers: { Location: target.toString() },
+      })
+    },
+  )
+}
+
 Given(
   'the GitHub authorization popup is mocked to redirect back successfully',
   async ({ context }) => {
-    await context.route(
-      'https://github.com/login/oauth/authorize**',
-      async (route) => {
-        const requestUrl = new URL(route.request().url())
-        const state = requestUrl.searchParams.get('state') ?? ''
-        const redirectUri = requestUrl.searchParams.get('redirect_uri')
-        if (!redirectUri) {
-          await route.abort()
-          return
-        }
-        const target = new URL(redirectUri)
-        // Unique per attempt, not a fixed string: the mock token-exchange
-        // server (`mock-github-oauth-server.mjs`) enforces real GitHub's
-        // single-use-code behavior, and that server process (and its
-        // used-codes set) persists across the whole suite run -- a fixed
-        // code would make one scenario's exchange poison every other
-        // scenario's (or retry's) use of this same route.
-        target.searchParams.set(
-          'code',
-          `e2e-fake-authorization-code-${crypto.randomUUID()}`,
-        )
-        target.searchParams.set('state', state)
-        await route.fulfill({
-          status: 302,
-          headers: { Location: target.toString() },
-        })
-      },
-    )
+    await mockGithubAuthorizationRedirect(context)
   },
 )
 
@@ -231,7 +243,7 @@ Then(
   },
 )
 
-// This fetch (`revokeSyncedShareGithubGrant`, fired from `disconnectGithub`
+// This fetch (`revokeSyncedShareGithubToken`, fired from `disconnectGithub`
 // in `useSyncedShareOwner.ts`) runs on the opener page itself, not inside a
 // popup -- so `page.route`, not `context.route`, is what catches it (same
 // reasoning as the start-share mock further down this file). Module-level
@@ -239,7 +251,7 @@ Then(
 // `lastSignInPopup` above).
 let lastRevokeRequestBody: { identityToken?: string } | null = null
 
-Given('the GitHub grant-revocation endpoint is mocked', async ({ page }) => {
+Given('the GitHub token-revocation endpoint is mocked', async ({ page }) => {
   await page.route(workerRouteGlob('/auth/github/revoke'), async (route) => {
     lastRevokeRequestBody = route.request().postDataJSON()
     await route.fulfill({ status: 204 })
@@ -247,7 +259,7 @@ Given('the GitHub grant-revocation endpoint is mocked', async ({ page }) => {
 })
 
 Then(
-  'the worker was asked to revoke the GitHub grant for {string}',
+  'the worker was asked to revoke the GitHub token {string}',
   async ({}, token: string) => {
     expect(lastRevokeRequestBody?.identityToken).toBe(token)
   },

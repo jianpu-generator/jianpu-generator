@@ -39,7 +39,7 @@ use worker::{D1Database, RouteContext};
 
 use crate::api_error::ApiError;
 use crate::identity::github::GithubIdentityProvider;
-use crate::identity::resolve_verified_user_id;
+use crate::identity::{resolve_verified_user_id, session_ttl_millis_from_env};
 use crate::oauth;
 use routes::{HandlerResult, Routes};
 
@@ -83,7 +83,8 @@ async fn resolve_files_caller(
     identity_token: &str,
 ) -> HandlerResult<String> {
     let identity_provider = GithubIdentityProvider::from_env(ctx);
-    resolve_verified_user_id(d1, &identity_provider, identity_token)
+    let session_ttl_millis = session_ttl_millis_from_env(ctx);
+    resolve_verified_user_id(d1, &identity_provider, identity_token, session_ttl_millis)
         .await?
         .map_err(ApiError::Unauthorized)
 }

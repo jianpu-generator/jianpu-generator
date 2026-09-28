@@ -17,11 +17,25 @@
 // known fixed test identities (see `mockGithubIdentity.mjs`) -- needed so
 // idempotent-share e2e scenarios can prove two different GitHub accounts
 // don't collide, not just "is a verified identity present or not".
+//
+// Also a stateful fake of GitHub's token revocation, for tokens it minted
+// itself: an exchange of a login-bearing code (`authorizationCodeFor(login)`)
+// mints a distinct token per sign-in, like real GitHub does per device.
+// Revoking the app's *grant* (`DELETE /applications/{client_id}/grant`)
+// revokes every token minted for that login; revoking one *token*
+// (`DELETE /applications/{client_id}/token`) revokes just that one. A
+// revoked token then gets GitHub's real `401 Bad credentials` from
+// `GET /user`. Seeded tokens (`syncedShareIdentityTokenFor`) and the legacy
+// shared `mock-github-access-token` stay outside this tracking entirely --
+// many scenarios share them across parallel workers, so one scenario's
+// sign-out must never revoke them for everyone else.
 import { createServer } from 'node:http'
 import {
   DEFAULT_MOCK_GITHUB_LOGIN,
   DEFAULT_MOCK_GITHUB_USER_ID,
+  identityForLogin,
   identityForSyncedShareToken,
+  loginFromAuthorizationCode,
 } from './mockGithubIdentity.mjs'
 
 const PORT = Number(process.env.MOCK_GITHUB_PORT ?? 8788)
@@ -56,6 +70,24 @@ function sendJson(res, status, body) {
 // code repeatedly.
 const usedCodes = new Set()
 
+// Tokens minted by a login-bearing exchange, and which login each belongs to.
+const mintedTokenLogins = new Map()
+const revokedTokens = new Set()
+
+function revokeMintedTokensFor(login) {
+  for (const [token, tokenLogin] of mintedTokenLogins) {
+    if (tokenLogin === login) revokedTokens.add(token)
+  }
+}
+
+async function readAccessToken(req) {
+  try {
+    return JSON.parse(await readBody(req))?.access_token
+  } catch {
+    return undefined
+  }
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://localhost:${PORT}`)
 
@@ -85,18 +117,38 @@ const server = createServer(async (req, res) => {
     if (typeof code === 'string') {
       usedCodes.add(code)
     }
+    const login =
+      typeof code === 'string' ? loginFromAuthorizationCode(code) : null
+    if (login) {
+      const token = `mock-github-access-token:${login}:${crypto.randomUUID()}`
+      mintedTokenLogins.set(token, login)
+      sendJson(res, 200, { access_token: token })
+      return
+    }
     sendJson(res, 200, { access_token: 'mock-github-access-token' })
+    return
+  }
+
+  // Real GitHub responds `204 No Content` on a successful revocation; this
+  // mock doesn't bother validating the Basic-auth header, matching the scope
+  // of what these e2e scenarios need to exercise (see `oauth.rs`).
+  if (
+    req.method === 'DELETE' &&
+    url.pathname === '/applications/e2e-test-client-id/grant'
+  ) {
+    const login = mintedTokenLogins.get(await readAccessToken(req))
+    if (login) revokeMintedTokensFor(login)
+    res.writeHead(204)
+    res.end()
     return
   }
 
   if (
     req.method === 'DELETE' &&
-    url.pathname === '/applications/e2e-test-client-id/grant'
+    url.pathname === '/applications/e2e-test-client-id/token'
   ) {
-    // Real GitHub responds `204 No Content` on a successful grant
-    // revocation; this mock doesn't bother validating the Basic-auth header
-    // or body, matching the scope of what these e2e scenarios need to
-    // exercise (see `oauth.rs`'s `revoke_grant`).
+    const token = await readAccessToken(req)
+    if (mintedTokenLogins.has(token)) revokedTokens.add(token)
     res.writeHead(204)
     res.end()
     return
@@ -113,7 +165,18 @@ const server = createServer(async (req, res) => {
       return
     }
     const token = authorization.replace(/^Bearer\s+/i, '')
-    const { id, login } = identityForSyncedShareToken(token)
+    if (revokedTokens.has(token)) {
+      sendJson(res, 401, {
+        message: 'Bad credentials',
+        documentation_url: 'https://docs.github.com/rest',
+        status: '401',
+      })
+      return
+    }
+    const mintedLogin = mintedTokenLogins.get(token)
+    const { id, login } = mintedLogin
+      ? identityForLogin(mintedLogin)
+      : identityForSyncedShareToken(token)
     sendJson(res, 200, { id, login })
     return
   }

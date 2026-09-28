@@ -604,17 +604,18 @@ consent screen.
   set to this connection's token. It never sends content. While synced and
   connected, `ShareModal`'s Synced-link tab shows a small "Synced as
   @username" identity row, sourced from the cached `login`.
-- Forced re-consent (`src/oauth.rs`, route `POST /auth/github/revoke`;
+- Sign-out token revocation (`src/oauth.rs`, route `POST /auth/github/revoke`;
   client `web/src/storage/accountAuthRevoke.ts`'s
-  `revokeSyncedShareGithubGrant`): GitHub's real `/authorize` endpoint has no
-  request parameter that forces a fresh login/consent screen (only
-  `client_id`, `redirect_uri`, `login`, `scope`, `state`, `allow_signup`,
-  plus PKCE fields are supported) — so with a live github.com session and a
-  prior grant, GitHub always silently redirects back with a code, no prompt
-  at all. The only genuine mechanism is revoking this app's authorization
-  grant server-side (`DELETE /applications/{client_id}/grant`, HTTP Basic
-  auth with `client_id:client_secret`), which makes GitHub's *next*
-  `/authorize` call genuinely re-show consent. This fires from
+  `revokeSyncedShareGithubToken`): revokes just the one token being signed
+  out, server-side (`DELETE /applications/{client_id}/token`, HTTP Basic
+  auth with `client_id:client_secret`). Deliberately not the app's whole
+  authorization grant (`DELETE /applications/{client_id}/grant`): that
+  revokes every token the account holds, signing the owner out on all their
+  other devices, whose next request then fails `GET /user` with
+  `401 Bad credentials`. The trade-off: GitHub's `/authorize` has no
+  "force fresh consent" parameter, so with a live github.com session and
+  the grant still standing, a later sign-in silently redirects back without
+  re-showing consent. This fires from
   `disconnectGithub` (`useSyncedShareOwner.ts`) and from
   `StorageSettingsModal.tsx`'s "Disconnect" — both disconnect the one shared
   account, taking down cloud storage and Synced Share ownership together —

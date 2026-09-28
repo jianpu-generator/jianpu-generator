@@ -30,6 +30,11 @@ const KNOWN_GITHUB_USER_IDS = {
   // scenario's "untitled" file lands first is visible to the other's
   // assertion too, since both would otherwise share one cloud account.
   'e2e-test-user-create-error': 987654323,
+  // Dedicated to `synced-share-github-signin.feature`'s multi-device
+  // sign-out scenario -- revoking this account's GitHub grant revokes every
+  // token the mock server minted for it (see `mock-github-oauth-server.mjs`),
+  // so it must never be shared with a scenario running in parallel.
+  'e2e-test-user-multi-device': 987654324,
 }
 
 /** The bearer token `'the owner is signed in with GitHub as {string}'`
@@ -42,14 +47,11 @@ export function syncedShareIdentityTokenFor(login) {
     : `e2e-fake-synced-share-token:${login}`
 }
 
-/** Reverses `syncedShareIdentityTokenFor` -- the identity `GET /user` should
- * report for a given bearer token. Throws for a login with no known id
- * rather than silently falling back, so a scenario that introduces a new
+/** The fixed GitHub identity for `login`. Throws for a login with no known
+ * id rather than silently falling back, so a scenario that introduces a new
  * login without registering it here fails loudly instead of resolving to
  * the wrong account. */
-export function identityForSyncedShareToken(token) {
-  const match = /^e2e-fake-synced-share-token:(.+)$/.exec(token ?? '')
-  const login = match ? match[1] : DEFAULT_MOCK_GITHUB_LOGIN
+export function identityForLogin(login) {
   const id = KNOWN_GITHUB_USER_IDS[login]
   if (id === undefined) {
     throw new Error(
@@ -57,4 +59,34 @@ export function identityForSyncedShareToken(token) {
     )
   }
   return { id, login }
+}
+
+const AUTHORIZATION_CODE_PREFIX = 'e2e-fake-authorization-code-'
+const AUTHORIZATION_CODE_LOGIN_SEPARATOR = ':as:'
+
+/** A fresh single-use authorization code for the mocked GitHub popup to
+ * hand back. With `login`, the mock server's token exchange mints a
+ * distinct, revocable token for that account (`loginFromAuthorizationCode`)
+ * -- the way real GitHub's code identifies who approved the request.
+ * Without it, the exchange returns the legacy shared token for the default
+ * login, outside the mock's revocation tracking. */
+export function authorizationCodeFor(login) {
+  const code = `${AUTHORIZATION_CODE_PREFIX}${crypto.randomUUID()}`
+  return login ? `${code}${AUTHORIZATION_CODE_LOGIN_SEPARATOR}${login}` : code
+}
+
+/** Reverses `authorizationCodeFor`: the login a code was issued for, or
+ * `null` for a login-less code. */
+export function loginFromAuthorizationCode(code) {
+  const index = code.indexOf(AUTHORIZATION_CODE_LOGIN_SEPARATOR)
+  return index === -1
+    ? null
+    : code.slice(index + AUTHORIZATION_CODE_LOGIN_SEPARATOR.length)
+}
+
+/** Reverses `syncedShareIdentityTokenFor` -- the identity `GET /user` should
+ * report for a given bearer token (see `identityForLogin`). */
+export function identityForSyncedShareToken(token) {
+  const match = /^e2e-fake-synced-share-token:(.+)$/.exec(token ?? '')
+  return identityForLogin(match ? match[1] : DEFAULT_MOCK_GITHUB_LOGIN)
 }

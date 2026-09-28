@@ -13,7 +13,7 @@
 
 pub(crate) mod github;
 
-use worker::{D1Database, Delay, Result};
+use worker::{D1Database, Delay, Result, RouteContext};
 
 use sha2::{Digest, Sha256};
 
@@ -47,11 +47,28 @@ pub(crate) trait IdentityProvider {
     ) -> Result<ResolvedIdentity>;
 }
 
+/// Optional `[vars]` override for how long a cached `oauth_sessions`
+/// verification stays fresh, in milliseconds -- unset in production
+/// (`SESSION_TTL_MILLIS`), set to `0` by e2e's local `wrangler dev` run so
+/// every request re-verifies against the mock GitHub server. Without it, a
+/// token revoked on GitHub's side keeps passing on its cached verification
+/// for up to an hour, so e2e could never observe a revocation.
+const SESSION_TTL_MILLIS_VAR: &str = "SYNCED_SHARE_SESSION_TTL_MILLIS";
+
+/// Resolves the `oauth_sessions` freshness TTL: `SESSION_TTL_MILLIS_VAR` if
+/// set to a valid integer, otherwise `SESSION_TTL_MILLIS`.
+pub(crate) fn session_ttl_millis_from_env(ctx: &RouteContext<()>) -> i64 {
+    ctx.var(SESSION_TTL_MILLIS_VAR)
+        .ok()
+        .and_then(|value| value.to_string().parse().ok())
+        .unwrap_or(SESSION_TTL_MILLIS)
+}
+
 /// Resolves `identity_token` to an internal `user_id`, via the hashed-token
 /// cache + backoff-wrapped verification policy from TODO §0/§6:
 ///
 /// 1. Hash the token (SHA-256; the raw token is never persisted) and look
-///    up `oauth_sessions` for a fresh (within `SESSION_TTL_MILLIS`) cached
+///    up `oauth_sessions` for a fresh (within `session_ttl_millis`) cached
 ///    verification. On a hit, resolve straight to `user_id` via the cached
 ///    `(provider, provider_user_id)` -- no call to `identity_provider`.
 /// 2. On a cache miss or a stale entry, call `identity_provider`, retrying
@@ -65,12 +82,13 @@ pub(crate) async fn resolve_verified_user_id(
     db: &D1Database,
     identity_provider: &impl IdentityProvider,
     identity_token: &str,
+    session_ttl_millis: i64,
 ) -> Result<Result<String, VerificationFailure>> {
     let token_hash = hash_token(identity_token);
     let now = worker::Date::now().as_millis() as i64;
 
     if let Some(session) = db::get_oauth_session(db, &token_hash).await? {
-        if session_is_fresh(session.verified_at, now, SESSION_TTL_MILLIS) {
+        if session_is_fresh(session.verified_at, now, session_ttl_millis) {
             if let Some(user_id) =
                 db::get_user_id_for_identity(db, &session.provider, &session.provider_user_id)
                     .await?

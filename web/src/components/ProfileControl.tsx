@@ -31,7 +31,7 @@ export interface ProfileControlProps {
    * and `StorageSettingsModal` use as their own sign-in shortcut. */
   onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
   /** The only sign-out action in the app -- stops any active sync, revokes
-   * the GitHub grant, clears the token, and falls back to local storage if
+   * this device's GitHub token, clears it, and falls back to local storage if
    * cloud storage was active (see `App.tsx`'s `handleAccountSignOut`). */
   onSignOut: () => void
 }

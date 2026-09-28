@@ -82,15 +82,29 @@ Feature: Synced Share GitHub sign-in
     When the owner reopens the share modal
     Then the sign-in prompt is shown
 
-  Scenario: Signing out of the account revokes the grant, so a later sign-in genuinely needs fresh consent
+  Scenario: Signing out of the account revokes that device's GitHub token
     Given clipboard permissions are granted
     And the owner is signed in with GitHub as "e2e-test-user"
-    And the GitHub grant-revocation endpoint is mocked
+    And the GitHub token-revocation endpoint is mocked
     When the owner loads the app and clicks "Sync"
     And the owner closes the share modal
     And the owner clicks the account chip
     And the owner clicks "Sign out" in the profile popover
-    Then the worker was asked to revoke the GitHub grant for "e2e-fake-synced-share-token"
+    Then the worker was asked to revoke the GitHub token "e2e-fake-synced-share-token"
+
+  # Regression coverage for a prod report: "GitHub GET /user failed:
+  # status=401 ... Bad credentials" on a device that was still signed in,
+  # after signing out on another. Signing out revoked the app's whole GitHub
+  # grant, which revokes every token that account holds on every device --
+  # not just the one being signed out.
+  Scenario: Signing out on one device keeps the owner signed in and syncing on their other devices
+    Given the file store is seeded with the synced score for "e2e-test-user-multi-device"
+    And the owner signs in with GitHub as "e2e-test-user-multi-device" on device "B"
+    And the owner starts syncing the seeded file on device "B"
+    And the owner signs in with GitHub as "e2e-test-user-multi-device" on device "A"
+    When the owner signs out on device "A"
+    And the owner reopens the seeded file on device "B"
+    Then device "B" is still signed in and syncing the seeded file
 
   Scenario: A GitHub verification failure while starting a share shows the full-screen error dialog, with no automatic retry
     Given clipboard permissions are granted

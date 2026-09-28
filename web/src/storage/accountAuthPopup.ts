@@ -183,13 +183,12 @@ async function buildSyncedShareGithubAuthorizationUrl(
   authorizationUrl.searchParams.set('code_challenge_method', 'S256')
   // GitHub's real `/authorize` endpoint has no "force fresh consent"
   // parameter (only `client_id`, `redirect_uri`, `login`, `scope`, `state`,
-  // `allow_signup`, plus PKCE fields are supported) -- so this request
-  // alone can't force GitHub to re-show its login/consent screen when the
-  // browser still has a live github.com session and a prior grant for this
-  // app. Forced re-consent is instead achieved by revoking the grant at
-  // logout time (`disconnectGithub` in `useSyncedShareOwner.ts`, via
-  // `revokeSyncedShareGithubGrant`): the *next* call to this endpoint then
-  // genuinely has no grant to silently reuse.
+  // `allow_signup`, plus PKCE fields are supported) -- so with a live
+  // github.com session and a prior grant for this app, GitHub silently
+  // redirects back without re-showing its consent screen. That's accepted:
+  // logout deliberately revokes only its own token, never the whole grant
+  // (see `revokeSyncedShareGithubToken`), so signing out on one device
+  // can't sign the owner out everywhere else.
   // No `scope` parameter is sent at all -- GitHub's `GET /user` returns
   // public profile fields (including the numeric id this connection
   // actually needs) to an unscoped token, which is the minimal possible ask

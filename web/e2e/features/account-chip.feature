@@ -27,14 +27,14 @@ Feature: Account chip in the header
     Given clipboard permissions are granted
     And the owner is signed in with GitHub as "e2e-test-user"
     And the file store is seeded with the synced score
-    And the GitHub grant-revocation endpoint is mocked
+    And the GitHub token-revocation endpoint is mocked
     When the owner loads the app and clicks "Sync"
     Then the synced link is copied
     When I close the share modal
     And I click the account chip
     And I click "Sign out" in the profile popover
     Then the header shows a "Sign in" button and no account chip
-    And the worker was asked to revoke the GitHub grant for "e2e-fake-synced-share-token"
+    And the worker was asked to revoke the GitHub token "e2e-fake-synced-share-token"
     When the owner reopens the share modal
     Then the sign-in prompt is shown
     When I close the share modal

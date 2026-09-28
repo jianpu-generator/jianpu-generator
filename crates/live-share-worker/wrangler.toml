@@ -32,7 +32,10 @@ compatibility_date = "2024-09-23"
 # the same tool documented for local development, and the `sqruff` job in
 # `lefthook.yml` for the precedent this follows (gracefully skip if a
 # cargo-installable external tool isn't on `PATH`, rather than failing).
-command = "cargo install worker-build && worker-build --release"
+# Pinned: an unpinned install upgrades to whatever crates.io has newest,
+# and `worker-build` 0.8.7 requires a newer rustc (1.91) than the local
+# default toolchain, which broke `wrangler dev` for e2e.
+command = "cargo install worker-build --version 0.8.6 && worker-build --release"
 
 # D1 binding. Name ("DB") must match `D1_BINDING` in
 # `src/handlers.rs` (`ctx.d1(D1_BINDING)?`) -- do not rename one without the
