@@ -1,4 +1,4 @@
-#!/usr/bin/env -S pnpm exec tsx
+#!/usr/bin/env node
 // Wipes the local D1 cloud-backend rows owned by the synthetic e2e accounts
 // (`e2e-test-user`, `e2e-test-user-two` -- see `e2e/mockGithubIdentity.ts`)
 // before every local e2e run.

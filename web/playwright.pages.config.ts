@@ -30,7 +30,7 @@ export default defineConfig({
     baseURL: 'http://localhost:4174/jianpu-generator/',
   },
   webServer: {
-    command: 'tsx e2e-pages/static-pages-server.ts',
+    command: 'node e2e-pages/static-pages-server.ts',
     url: 'http://localhost:4174/jianpu-generator/',
     reuseExistingServer: true,
     timeout: 15_000,

@@ -1,4 +1,4 @@
-#!/usr/bin/env -S pnpm exec tsx
+#!/usr/bin/env node
 // Resolves e2e flakiness instead of masking it with in-run retries
 // (playwright.config.ts sets `retries: 0` for exactly this reason).
 //

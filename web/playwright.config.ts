@@ -59,7 +59,7 @@ export default defineConfig({
       // interception (those calls happen inside the `wrangler dev` process
       // below, not the browser). Ensures no Synced Share e2e run ever makes
       // a real GitHub API call (task 11).
-      command: 'tsx e2e/mock-github-oauth-server.ts',
+      command: 'node e2e/mock-github-oauth-server.ts',
       url: 'http://localhost:8788/health',
       reuseExistingServer: true,
       timeout: 15_000,

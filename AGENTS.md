@@ -14,7 +14,7 @@ Prefer functional programming style:
 
 ## Node scripts
 
-Node scripts (`web/scripts/`, e2e mock/static servers, Playwright reporters, anything run with `node`) are TypeScript (`.ts`) run with `tsx`, never untyped `.mjs`/`.js`, and must be covered by `tsc -b` (the pre-commit `web-typecheck` job) — add any new script's path to the matching `web/tsconfig.*.json` `include`. Parse CLI arguments with `commander`, not hand-rolled `process.argv` slicing. The only exception is config a tool requires in a fixed JS format (e.g. `web/.pnpmfile.cjs`).
+Node scripts (`web/scripts/`, e2e mock/static servers, Playwright reporters, anything run with `node`) are TypeScript (`.ts`) run directly with `node` (native type stripping — no `tsx`/`ts-node`, so stick to erasable syntax and explicit `.ts` import extensions), never untyped `.mjs`/`.js`, and must be covered by `tsc -b` (the pre-commit `web-typecheck` job) — add any new script's path to the matching `web/tsconfig.*.json` `include`. Parse CLI arguments with `commander`, not hand-rolled `process.argv` slicing. The only exception is config a tool requires in a fixed JS format (e.g. `web/.pnpmfile.cjs`).
 
 ## UI components
 
