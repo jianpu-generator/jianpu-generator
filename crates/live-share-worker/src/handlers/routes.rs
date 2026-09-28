@@ -95,6 +95,20 @@ impl IntoParams for NoPathParams {
     }
 }
 
+/// `Params` as OpenAPI path params, each marked `required` -- OpenAPI
+/// requires that of every path param, but utoipa leaves it unset on a field
+/// whose schema comes from `#[param(schema_with = ...)]` (e.g.
+/// `ShareIdPath::share_id`).
+fn path_params<Params: IntoParams>() -> Vec<Parameter> {
+    Params::into_params(|| Some(ParameterIn::Path))
+        .into_iter()
+        .map(|mut parameter| {
+            parameter.required = Required::True;
+            parameter
+        })
+        .collect()
+}
+
 /// `{name}` segments of an OpenAPI path template, e.g. `id` in
 /// `/files/{id}/rename`.
 fn template_param_names(path: &str) -> BTreeSet<String> {
@@ -174,7 +188,7 @@ impl Routes {
 
     fn operation<Params: IntoParams, R: Reply>(&mut self) -> OperationBuilder {
         let operation = OperationBuilder::new()
-            .parameters(Some(Params::into_params(|| Some(ParameterIn::Path))))
+            .parameters(Some(path_params::<Params>()))
             .response(
                 "default",
                 ResponseBuilder::new()

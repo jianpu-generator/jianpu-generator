@@ -1,8 +1,8 @@
 //! Unit tests for `generate_unique_id`'s collision-handling loop, covering
 //! the TODO §8 fix: a collision must re-roll a brand new, still-`length`-
 //! character candidate, never mint one that's longer than `length` (which
-//! `web/src/syncedShareUrl.ts`'s fixed-length `SHARE_ID_PATTERN` couldn't
-//! parse back out of a share link).
+//! the client's fixed-length `ShareIdFormat` pattern couldn't parse back out
+//! of a share link).
 //!
 //! Drives `generate_unique_id` with a fake, deterministic candidate
 //! generator (rather than the real `js_sys::Math::random()`-based one),

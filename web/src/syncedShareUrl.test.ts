@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { parseSyncedShareFromHash } from './syncedShareUrl'
 
-// A well-formed, 11-char share id (matches `SHARE_ID_LENGTH`/`SHARE_ID_PATTERN`
-// in `syncedShareUrl.ts`) -- shareIds are generated server-side now (task
+// A well-formed share id in the worker's generated `shareIdFormat.json`
+// shape (11 base64url chars) -- shareIds are generated server-side now (task
 // 11), so tests use a fixed sample instead of deriving one.
 const SAMPLE_SHARE_ID = 'abcDEF123_-'
 
@@ -21,6 +21,9 @@ describe('syncedShareUrl', () => {
   it('rejects a malformed share id', () => {
     expect(parseSyncedShareFromHash('#synced=not@valid@id')).toBeNull()
     expect(parseSyncedShareFromHash('#synced=')).toBeNull()
+    expect(
+      parseSyncedShareFromHash(`#synced=${SAMPLE_SHARE_ID.slice(0, -1)}`),
+    ).toBeNull()
   })
 
   it('parses a --filename suffix after the fixed-length share id, appending .jianpu', () => {

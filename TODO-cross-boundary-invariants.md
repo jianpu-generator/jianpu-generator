@@ -243,7 +243,7 @@ is deleted. `tests/main/span_part_abbreviation.rs` covers a hidden middle part.
 
 ---
 
-## [ ] 9. Share-id length/charset triplicated (silent functional)
+## [x] 9. Share-id length/charset triplicated (silent functional)
 
 - Rust: `crates/live-share-worker/src/share_id.rs:28` (`SHARE_ID_LENGTH = 11`), `:36`
   (`ID_CHARSET`).
@@ -256,6 +256,14 @@ the generic title.
 
 **Direction:** put a `pattern` on the `share_id` path param in the OpenAPI spec (or
 export a generated constant), and read it on the TS side.
+
+**Fix:** `share_id::share_id_format()` builds `{length, pattern}` from `SHARE_ID_LENGTH`
+and `ID_CHARSET`. The OpenAPI spec's `share_id` path param gets it as its schema
+(`pattern`, `minLength`/`maxLength`). `tests/export_openapi.rs` also writes it to the
+gitignored `web/src/generated/live-share-worker/shareIdFormat.json`, next to
+`openapi.json`, via `build:worker-types`. `syncedShareUrl.ts` and the Pages Function both
+import that JSON, so neither has its own length or charset. A missing file fails
+`tsc -b`.
 
 ---
 

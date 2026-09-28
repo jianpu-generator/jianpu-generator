@@ -1,3 +1,5 @@
+import shareIdFormat from './generated/live-share-worker/shareIdFormat.json'
+
 const SYNCED_HASH_PREFIX = '#synced='
 
 // Mirrors the hash payload in a query param too. A crawler that generates a
@@ -10,17 +12,11 @@ const SHARE_QUERY_PARAM = 's'
 
 const FILENAME_EXTENSION = '.jianpu'
 
-// Base64url encoding of 8 random bytes (64 bits) is *always* exactly this
-// many characters — base64 maps fixed-size byte groups to fixed-size char
-// groups, so length depends only on byte count, never byte values. The
-// worker only needs an opaque share name, not a UUID shape — 64 bits keeps
-// accidental collisions negligible (shares are never deleted, see
-// `crates/live-share-worker/src/share_id.rs`) while staying short, since
-// every char here lands directly in a copy-pasted URL. Must match
-// `SHARE_ID_LENGTH` in that Rust file — do not change one without the
-// other.
-const SHARE_ID_LENGTH = 11
-const SHARE_ID_PATTERN = new RegExp(`^[0-9A-Za-z_-]{${SHARE_ID_LENGTH}}$`)
+// Generated from `crates/live-share-worker/src/share_id.rs`
+// (`share_id_format`) by `build:worker-types` -- the worker mints every
+// share id in exactly this shape, and this is its only definition in TS.
+const SHARE_ID_LENGTH = shareIdFormat.length
+const SHARE_ID_PATTERN = new RegExp(shareIdFormat.pattern)
 
 // Purely cosmetic — separates the share id from the filename so a copied
 // link reads clearly. Parsing doesn't need it to find the boundary (the

@@ -172,9 +172,11 @@ pub struct FileIdPath {
     pub id: String,
 }
 
-/// Path parameters of `GET /shares/{share_id}`.
+/// Path parameters of `GET /shares/{share_id}`. `share_id`'s schema
+/// carries the `ShareIdFormat` constraints (`crate::share_id`).
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, IntoParams)]
 #[into_params(parameter_in = Path)]
 pub struct ShareIdPath {
+    #[param(schema_with = crate::share_id::share_id_schema)]
     pub share_id: String,
 }

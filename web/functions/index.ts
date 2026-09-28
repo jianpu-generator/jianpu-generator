@@ -12,13 +12,15 @@
 // with no way to run this, so share links opened there keep the generic
 // preview.
 
+import shareIdFormat from '../src/generated/live-share-worker/shareIdFormat.json'
+
 const SHARE_QUERY_PARAM = 's'
 
-// Must match `SHARE_ID_LENGTH` in `../src/syncedShareUrl.ts` and
-// `crates/live-share-worker/src/share_id.rs`. Duplicated rather than
-// imported so this edge function has no dependency on the SPA's bundle.
-const SHARE_ID_LENGTH = 11
-const SHARE_ID_PATTERN = new RegExp(`^[0-9A-Za-z_-]{${SHARE_ID_LENGTH}}$`)
+// Generated from `crates/live-share-worker/src/share_id.rs`
+// (`share_id_format`) by `build:worker-types` -- a standalone JSON file, so
+// importing it pulls nothing of the SPA's bundle into this edge function.
+const SHARE_ID_LENGTH = shareIdFormat.length
+const SHARE_ID_PATTERN = new RegExp(shareIdFormat.pattern)
 
 // Matches `VITE_SYNCED_SHARE_HOST` in `.github/workflows/pages.yml`. Not
 // read from an env binding: Pages Functions env vars would need their own
