@@ -1,9 +1,13 @@
 use crate::ast::parsed::Soundfont;
 use crate::error::{RecoverableError, Span};
+use crate::sound_label::{instrument_label, parse_label_program};
 
+/// One GM instrument catalog entry. `name` is the bare instrument name
+/// (e.g. `"Violin"`); the quoted `"N: Name"` form is built only by
+/// [`crate::sound_label`].
 #[derive(serde::Deserialize)]
 pub struct InstrumentInfo {
-    pub value: String,
+    pub name: String,
     pub program: u8,
     pub category: String,
     pub source: String,
@@ -38,7 +42,7 @@ fn fuzzy_score(query: &str, target: &str) -> u32 {
 
 fn instrument_fuzzy_score(query: &str, instrument: &InstrumentInfo) -> u32 {
     [
-        fuzzy_score(query, &instrument.value),
+        fuzzy_score(query, &instrument_label(instrument)),
         fuzzy_score(query, &instrument.category),
         fuzzy_score(query, &instrument.source),
         fuzzy_score(query, &instrument.role),
@@ -56,7 +60,10 @@ pub(super) fn validate_soundfont(
     instruments: &[InstrumentInfo],
     is_percussion: bool,
 ) -> Soundfont {
-    if !is_percussion && !instruments.is_empty() && !instruments.iter().any(|i| i.value == inner) {
+    if !is_percussion
+        && !instruments.is_empty()
+        && !instruments.iter().any(|i| instrument_label(i) == inner)
+    {
         let mut scored: Vec<(&InstrumentInfo, u32)> = instruments
             .iter()
             .filter_map(|instrument| {
@@ -72,7 +79,7 @@ pub(super) fn validate_soundfont(
         let suggestions: Vec<String> = scored
             .iter()
             .take(5)
-            .map(|(instrument, _)| instrument.value.clone())
+            .map(|(instrument, _)| instrument_label(instrument))
             .collect();
         errors.push(RecoverableError::parts_unknown_soundfont(
             span,
@@ -81,17 +88,10 @@ pub(super) fn validate_soundfont(
         ));
     }
 
-    if let Some(colon_pos) = inner.find(": ") {
-        inner[..colon_pos]
-            .trim()
-            .parse::<u8>()
-            .map(Soundfont)
-            .unwrap_or_else(|_| {
-                errors.push(RecoverableError::parts_invalid_columns(span, inner));
-                Soundfont::default()
-            })
-    } else {
-        errors.push(RecoverableError::parts_invalid_columns(span, inner));
-        Soundfont::default()
-    }
+    parse_label_program(inner)
+        .map(Soundfont)
+        .unwrap_or_else(|| {
+            errors.push(RecoverableError::parts_invalid_columns(span, inner));
+            Soundfont::default()
+        })
 }

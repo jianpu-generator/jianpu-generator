@@ -5,7 +5,7 @@ pub(super) fn instrument_info_from_wit(
     info: InstrumentInfo,
 ) -> jianpu_generator::parser::parts_parser::InstrumentInfo {
     jianpu_generator::parser::parts_parser::InstrumentInfo {
-        value: info.value,
+        name: info.name,
         program: info.program,
         category: info.category,
         source: info.source,
@@ -43,7 +43,7 @@ fn part_mode_from_wit(mode: PartMode) -> source_edit::PartMode {
 fn part_settings_to_wit(settings: source_edit::PartSettings) -> PartSettings {
     PartSettings {
         mode: part_mode_to_wit(settings.mode),
-        soundfont: settings.soundfont,
+        program: settings.program,
         volume: settings.volume,
         octave_offset: settings.octave_offset,
     }
@@ -52,7 +52,7 @@ fn part_settings_to_wit(settings: source_edit::PartSettings) -> PartSettings {
 pub(super) fn part_settings_from_wit(settings: PartSettings) -> source_edit::PartSettings {
     source_edit::PartSettings {
         mode: part_mode_from_wit(settings.mode),
-        soundfont: settings.soundfont,
+        program: settings.program,
         volume: settings.volume,
         octave_offset: settings.octave_offset,
     }
@@ -66,6 +66,31 @@ fn part_declaration_to_wit(
         display_name: declaration.display_name,
         line_number: declaration.line_number,
         settings: part_settings_to_wit(declaration.settings),
+        sound_label: declaration.sound_label,
+    }
+}
+
+fn sound_choice_to_wit(choice: jianpu_generator::sound_label::SoundChoice) -> SoundChoice {
+    SoundChoice {
+        program: choice.program,
+        label: choice.label,
+    }
+}
+
+pub(super) fn sound_choices_to_wit(
+    choices: jianpu_generator::sound_label::SoundChoices,
+) -> SoundChoices {
+    SoundChoices {
+        instruments: choices
+            .instruments
+            .into_iter()
+            .map(sound_choice_to_wit)
+            .collect(),
+        percussion: choices
+            .percussion
+            .into_iter()
+            .map(sound_choice_to_wit)
+            .collect(),
     }
 }
 

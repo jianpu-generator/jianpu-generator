@@ -1,5 +1,3 @@
-import type { SoundfontValue } from '../types'
-
 export type InstrumentCategory =
   | 'piano'
   | 'chromatic-perc'
@@ -28,8 +26,11 @@ export type InstrumentArticulation =
   | 'electronic'
   | 'vocal'
 
+/** One GM instrument catalog entry, passed to every Rust call that reads
+ * `# parts` sound labels (as the WIT `instrument-info`). `name` is the bare
+ * instrument name; Rust alone builds the quoted `"N: Name"` label from it. */
 export interface InstrumentEntry {
-  value: SoundfontValue
+  name: string
   program: number
   category: InstrumentCategory
   source: InstrumentSource
@@ -45,10 +46,7 @@ interface RawInstrumentEntry {
   articulation: InstrumentArticulation
 }
 
-// GM program numbers are the table's index (0–127), not a hand-typed field —
-// see TODO-cross-boundary-invariants.md item 1: the number embedded in
-// `value` is derived from that single source instead of being re-typed
-// per-entry, so it can't drift from it.
+// GM program numbers are the table's index (0–127), not a hand-typed field.
 // biome-ignore format: large data table — one entry per line for readability
 const RAW_GM_INSTRUMENTS: RawInstrumentEntry[] = [
   // Piano (0–7)
@@ -198,9 +196,5 @@ const RAW_GM_INSTRUMENTS: RawInstrumentEntry[] = [
 ]
 
 export const GM_INSTRUMENTS: InstrumentEntry[] = RAW_GM_INSTRUMENTS.map(
-  ({ name, ...rest }, program) => ({
-    ...rest,
-    program,
-    value: `${program}: ${name}` as SoundfontValue,
-  }),
+  (entry, program) => ({ ...entry, program }),
 )

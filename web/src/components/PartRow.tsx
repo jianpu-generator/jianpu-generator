@@ -6,7 +6,6 @@ import type {
   PartInfo,
   PartMode,
   PartSettings,
-  SoundfontValue,
 } from '../types'
 import type { EditPartsModalProps } from './EditPartsModal'
 import { RadixSelect, RadixSelectItem } from './RadixTableSelect'
@@ -71,10 +70,6 @@ export function PartRow({
     } else {
       change({ mode: { tag } })
     }
-  }
-
-  function handleSoundfontChange(value: string) {
-    change({ soundfont: value === '' ? undefined : (value as SoundfontValue) })
   }
 
   const rowBg = rowIndex % 2 === 0 ? '#fafafa' : '#fff'
@@ -148,7 +143,7 @@ export function PartRow({
             minWidth: '80px',
           }}
         >
-          {settings.soundfont ?? 'default sound'}
+          {declaration.soundLabel ?? 'default sound'}
         </button>
         <SoundfontSearchModal
           open={searchOpen}
@@ -156,9 +151,9 @@ export function PartRow({
           mode={
             settings.mode.tag === 'percussion' ? 'percussion' : 'instrument'
           }
-          currentValue={settings.soundfont ?? null}
-          onSelect={(value) => {
-            handleSoundfontChange(value ?? '')
+          currentProgram={settings.program ?? null}
+          onSelect={(program) => {
+            change({ program: program ?? undefined })
             setSearchOpen(false)
           }}
           previewInstrument={previewInstrument}

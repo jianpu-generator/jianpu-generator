@@ -1,6 +1,5 @@
 use crate::ast::parsed::ParsedTrack;
 use crate::error::IrrecoverableError;
-use crate::gm_percussion;
 use crate::parser::parts_parser::{
     self, InstrumentInfo, SourcePartMode, SourceRawPartDecl, DEFAULT_PART_OCTAVE_OFFSET,
     DEFAULT_PART_VOLUME,
@@ -27,45 +26,29 @@ pub struct SourcePartDeclaration {
     pub display_name: String,
     pub line_number: u32,
     pub settings: PartSettings,
-}
-
-fn instrument_program_to_label(program: u8, instruments: &[InstrumentInfo]) -> String {
-    instruments
-        .iter()
-        .find(|instrument| instrument.program == program)
-        .map(|instrument| instrument.value.clone())
-        .unwrap_or_else(|| format!("{program}: Unknown"))
-}
-
-fn soundfont_program_to_label(
-    program: u8,
-    mode: &SourcePartMode,
-    instruments: &[InstrumentInfo],
-) -> String {
-    if matches!(mode, SourcePartMode::Percussion) {
-        gm_percussion::percussion_program_to_label(program)
-    } else {
-        instrument_program_to_label(program, instruments)
-    }
+    /// Display label for `settings.program` (see [`crate::sound_label`]).
+    pub sound_label: Option<String>,
 }
 
 fn map_raw_to_source_declaration(
     raw: SourceRawPartDecl,
     instruments: &[InstrumentInfo],
 ) -> SourcePartDeclaration {
-    let soundfont = raw
-        .soundfont
-        .map(|soundfont| soundfont_program_to_label(soundfont.0, &raw.mode, instruments));
+    let program = raw.soundfont.map(|soundfont| soundfont.0);
+    let is_percussion = matches!(raw.mode, SourcePartMode::Percussion);
+    let sound_label =
+        program.map(|program| crate::sound_label::sound_label(program, is_percussion, instruments));
     SourcePartDeclaration {
         abbreviation: raw.abbreviation,
         display_name: raw.display_name,
         line_number: raw.line_number,
         settings: PartSettings {
             mode: PartMode::from_source_mode(raw.mode, raw.follow_target),
-            soundfont,
+            program,
             volume: raw.volume.unwrap_or(DEFAULT_PART_VOLUME),
             octave_offset: raw.octave_offset.unwrap_or(DEFAULT_PART_OCTAVE_OFFSET),
         },
+        sound_label,
     }
 }
 

@@ -320,9 +320,12 @@ world jianpu-wasm {
     // `jianpu_generator::source_edit::PartSettings`: a `# parts` line's
     // settings, with an omitted volume/octave suffix read as its default.
     // `update-part-declaration` takes it back, omitting default suffixes.
+    // `program` is the quoted sound's GM program number (a GM percussion key
+    // on a percussion part); Rust alone writes and reads the quoted
+    // `"N: Name"` source text for it.
     record part-settings {
         mode: part-mode,
-        soundfont: option<string>,
+        program: option<u8>,
         volume: u8,
         octave-offset: s8,
     }
@@ -332,6 +335,8 @@ world jianpu-wasm {
         display-name: string,
         line-number: u32,
         settings: part-settings,
+        // Display-only label for `settings.program`, e.g. `"40: Violin"`.
+        sound-label: option<string>,
     }
 
     record diagnostic-message {
@@ -378,14 +383,11 @@ world jianpu-wasm {
     }
 
     // `InstrumentInfo` (`jianpu_generator::parser::parts_parser::InstrumentInfo`)
-    // — input-only, decoded today via
-    // `serde_wasm_bindgen::from_value::<Vec<InstrumentInfo>>(...)`. `program`
-    // is the GM program number as a real field — the source of truth for
-    // matching by number — rather than being re-derived by splitting the
-    // leading `"N: "` off of `value` (see TODO-cross-boundary-invariants.md
-    // item 1).
+    // — input-only: one GM instrument catalog entry. `name` is the bare
+    // instrument name (e.g. `Violin`); Rust builds the quoted `"N: Name"`
+    // label from `program` and `name` (`jianpu_generator::sound_label`).
     record instrument-info {
-        value: string,
+        name: string,
         program: u8,
         category: string,
         source: string,
@@ -435,9 +437,27 @@ world jianpu-wasm {
     // Phase 3, group 7 of PLAN-wit-bindgen-migration.md.
     export list-part-declarations: func(source: string, raw-instruments: list<instrument-info>) -> list-part-declarations-response;
 
-    // Rewrites `abbreviation`'s `# parts` line to `settings`; returns
-    // `source` unchanged when no such part is declared.
-    export update-part-declaration: func(source: string, abbreviation: string, settings: part-settings) -> string;
+    // Rewrites `abbreviation`'s `# parts` line to `settings`, naming
+    // `settings.program` from `raw-instruments` (or the GM percussion map);
+    // returns `source` unchanged when no such part is declared.
+    export update-part-declaration: func(source: string, abbreviation: string, settings: part-settings, raw-instruments: list<instrument-info>) -> string;
+
+    // `jianpu_generator::sound_label::SoundChoice`: one sound the Edit Parts
+    // sound picker offers — its GM program number (or percussion key) and
+    // its display label.
+    record sound-choice {
+        program: u8,
+        label: string,
+    }
+
+    // `jianpu_generator::sound_label::SoundChoices`.
+    record sound-choices {
+        instruments: list<sound-choice>,
+        percussion: list<sound-choice>,
+    }
+
+    // Every sound the Edit Parts sound picker offers, labelled by Rust.
+    export list-sound-choices: func(raw-instruments: list<instrument-info>) -> sound-choices;
 
     enum symbol-kind {
         abbreviation,

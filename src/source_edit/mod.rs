@@ -12,7 +12,7 @@ pub use slur_toggle::toggle_range_slur;
 pub use tie_toggle::toggle_range_tie;
 
 use crate::parser::parts_parser::{
-    SourcePartMode, DEFAULT_PART_OCTAVE_OFFSET, DEFAULT_PART_VOLUME,
+    InstrumentInfo, SourcePartMode, DEFAULT_PART_OCTAVE_OFFSET, DEFAULT_PART_VOLUME,
 };
 use crate::parser::section_splitter::section_header_kind;
 
@@ -54,17 +54,22 @@ impl PartMode {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PartSettings {
     pub mode: PartMode,
-    pub soundfont: Option<String>,
+    /// The quoted sound's GM program number (a GM percussion key on a
+    /// percussion part); `None` when the line quotes no sound.
+    pub program: Option<u8>,
     pub volume: u8,
     pub octave_offset: i8,
 }
 
-/// Rewrites the `# parts` line declaring `abbreviation` to `settings`;
+/// Rewrites the `# parts` line declaring `abbreviation` to `settings`,
+/// quoting `settings.program` as its [`crate::sound_label`] label (named from
+/// `instruments`, or the GM percussion map on a percussion part);
 /// `None` when there's no such line.
 pub fn update_part_declaration(
     source: &str,
     abbreviation: &str,
     settings: &PartSettings,
+    instruments: &[InstrumentInfo],
 ) -> Option<String> {
     let lines: Vec<&str> = source.split('\n').collect();
 
@@ -101,10 +106,13 @@ pub fn update_part_declaration(
     let eq_pos = line.find('=')?;
     let lhs_with_eq = &line[..eq_pos + 1];
 
+    let is_percussion = settings.mode == PartMode::Percussion;
     let soundfont_suffix = settings
-        .soundfont
-        .as_ref()
-        .map(|sf| format!(" \"{sf}\""))
+        .program
+        .map(|program| {
+            let label = crate::sound_label::sound_label(program, is_percussion, instruments);
+            format!(" \"{label}\"")
+        })
         .unwrap_or_default();
 
     let volume_suffix = match settings.volume {

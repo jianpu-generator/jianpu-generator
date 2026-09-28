@@ -81,7 +81,7 @@ It applies on every channel:
 **Never keep such an agreement by hand.** Drift must be a compile, typecheck or build error, or impossible by construction. To get there, use one of these:
 
 - **Generated types:** the WIT/jco `.d.ts`, or the OpenAPI `schema.ts` from `handlers::routes()`. Use a WIT `variant`/`enum`/`record` rather than a bare `string`/`u32`/`list<u8>` whose meaning TS must know.
-- **One shared data file** that both sides read at build time, e.g. `fonts/fonts.json` or `web/src/data/gmPercussion.json`.
+- **One shared data file** that both sides read at build time, e.g. `fonts/fonts.json`.
 - **Logic on one side only.** If TS needs something Rust already computes (a part's name after hidden parts are filtered, a formatted label, which font measures which text, a section kind), make Rust return it. Don't re-derive it in TS.
 
 These do **not** count as a fix. They narrow the hand-matching instead of removing it:

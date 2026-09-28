@@ -283,7 +283,7 @@ fn source_level_follow_soundfont_is_explicit_only() {
     use crate::parser::parts_parser::InstrumentInfo;
 
     let instruments = [InstrumentInfo {
-        value: "40: Violin".to_owned(),
+        name: "Violin".to_owned(),
         program: 40,
         category: String::new(),
         source: String::new(),

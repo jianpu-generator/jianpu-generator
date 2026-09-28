@@ -1,8 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useState } from 'react'
-import type { SoundfontValue } from '../types'
+import { useSoundChoices } from '../hooks/useSoundChoices'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
-import { GM_PERCUSSION } from '../utils/gmPercussion'
 import { SoundfontSearchRow } from './SoundfontSearchRow'
 import {
   type ActiveTag,
@@ -15,7 +14,7 @@ export function SoundfontSearchModal({
   open,
   onOpenChange,
   mode,
-  currentValue,
+  currentProgram,
   onSelect,
   previewInstrument,
   previewPercussion,
@@ -25,8 +24,8 @@ export function SoundfontSearchModal({
   open: boolean
   onOpenChange: (open: boolean) => void
   mode: 'instrument' | 'percussion'
-  currentValue: SoundfontValue | null
-  onSelect: (value: SoundfontValue | null) => void
+  currentProgram: number | null
+  onSelect: (program: number | null) => void
   previewInstrument: (programNumber: number) => void
   previewPercussion: (key: number) => void
   stopPreviewInstrument: () => void
@@ -37,6 +36,13 @@ export function SoundfontSearchModal({
     new Map(),
   )
   const [previewingNumber, setPreviewingNumber] = useState<number | null>(null)
+  const soundChoices = useSoundChoices(open)
+  const instrumentLabels = new Map(
+    (soundChoices?.instruments ?? []).map((choice) => [
+      choice.program,
+      choice.label,
+    ]),
+  )
 
   function toggleTag(tag: ActiveTag) {
     const key = tagKey(tag)
@@ -54,6 +60,8 @@ export function SoundfontSearchModal({
   const filteredInstruments =
     mode === 'instrument'
       ? GM_INSTRUMENTS.flatMap((instrument) => {
+          const label = instrumentLabels.get(instrument.program)
+          if (label === undefined) return []
           for (const tag of activeTags.values()) {
             if (tag.kind === 'category' && instrument.category !== tag.value)
               return []
@@ -66,21 +74,23 @@ export function SoundfontSearchModal({
             )
               return []
           }
-          if (query.trim() === '') return [{ instrument, score: 0 }]
-          const score = instrumentFuzzyScore(query, instrument)
+          if (query.trim() === '') return [{ instrument, label, score: 0 }]
+          const score = instrumentFuzzyScore(query, instrument, label)
           if (score === 0) return []
-          return [{ instrument, score }]
+          return [{ instrument, label, score }]
         }).sort((a, b) => b.score - a.score)
       : []
 
   const filteredPercussion =
     mode === 'percussion'
-      ? GM_PERCUSSION.flatMap((entry) => {
-          if (query.trim() === '') return [{ entry, score: 0 }]
-          const score = percussionFuzzyScore(query, entry)
-          if (score === 0) return []
-          return [{ entry, score }]
-        }).sort((a, b) => b.score - a.score)
+      ? (soundChoices?.percussion ?? [])
+          .flatMap((choice) => {
+            if (query.trim() === '') return [{ choice, score: 0 }]
+            const score = percussionFuzzyScore(query, choice)
+            if (score === 0) return []
+            return [{ choice, score }]
+          })
+          .sort((a, b) => b.score - a.score)
       : []
 
   function handlePlay(number: number) {
@@ -191,39 +201,39 @@ export function SoundfontSearchModal({
               label="default sound"
               tags={null}
               activeTags={activeTags}
-              isSelected={currentValue === null}
+              isSelected={currentProgram === null}
               isPreviewing={false}
               onPlay={null}
               onSelect={() => onSelect(null)}
               onTagClick={toggleTag}
             />
-            {filteredInstruments.map(({ instrument }) => (
+            {filteredInstruments.map(({ instrument, label }) => (
               <SoundfontSearchRow
-                key={instrument.value}
-                label={instrument.value}
+                key={instrument.program}
+                label={label}
                 tags={instrument}
                 activeTags={activeTags}
-                isSelected={currentValue === instrument.value}
+                isSelected={currentProgram === instrument.program}
                 isPreviewing={
                   previewingNumber === instrument.program && previewAudioPlaying
                 }
                 onPlay={() => handlePlay(instrument.program)}
-                onSelect={() => onSelect(instrument.value)}
+                onSelect={() => onSelect(instrument.program)}
                 onTagClick={toggleTag}
               />
             ))}
-            {filteredPercussion.map(({ entry }) => (
+            {filteredPercussion.map(({ choice }) => (
               <SoundfontSearchRow
-                key={entry.value}
-                label={entry.value}
+                key={choice.program}
+                label={choice.label}
                 tags={null}
                 activeTags={activeTags}
-                isSelected={currentValue === entry.value}
+                isSelected={currentProgram === choice.program}
                 isPreviewing={
-                  previewingNumber === entry.key && previewAudioPlaying
+                  previewingNumber === choice.program && previewAudioPlaying
                 }
-                onPlay={() => handlePlay(entry.key)}
-                onSelect={() => onSelect(entry.value)}
+                onPlay={() => handlePlay(choice.program)}
+                onSelect={() => onSelect(choice.program)}
                 onTagClick={toggleTag}
               />
             ))}

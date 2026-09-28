@@ -20,7 +20,7 @@ fn percussion_soundfont_number_skips_instrument_catalog_validation() {
     // (38 = Acoustic Snare) is not among them and must not be rejected or
     // fuzzy-suggested against.
     let instruments = [InstrumentInfo {
-        value: "52: Choir Aahs".to_owned(),
+        name: "Choir Aahs".to_owned(),
         program: 52,
         category: String::new(),
         source: String::new(),

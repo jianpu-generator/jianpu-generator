@@ -111,7 +111,7 @@ const raceMessages: WorkerRequest[] = [
     abbreviation: 'S',
     settings: {
       mode: { tag: 'notes' },
-      soundfont: undefined,
+      program: undefined,
       volume: 100,
       octaveOffset: 0,
     },

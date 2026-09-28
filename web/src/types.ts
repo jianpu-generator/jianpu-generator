@@ -24,9 +24,6 @@ export type {
   Span as ByteSpan,
 } from './jianpuWasm'
 
-// Format: "N: Instrument Name" e.g. "48: String Ensemble 1"
-export type SoundfontValue = string
-
 export interface EditorSelection {
   start: number
   end: number

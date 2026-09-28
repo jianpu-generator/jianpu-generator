@@ -1,3 +1,4 @@
+import type { SoundChoice } from '../jianpuWasm'
 import type {
   InstrumentArticulation,
   InstrumentCategory,
@@ -5,7 +6,6 @@ import type {
   InstrumentRole,
   InstrumentSource,
 } from '../utils/gmInstruments'
-import type { PercussionEntry } from '../utils/gmPercussion'
 
 export type ActiveTag =
   | { kind: 'category'; value: InstrumentCategory }
@@ -39,9 +39,10 @@ export function fuzzyScore(query: string, target: string): number {
 export function instrumentFuzzyScore(
   query: string,
   instrument: InstrumentEntry,
+  label: string,
 ): number {
   return Math.max(
-    fuzzyScore(query, instrument.value),
+    fuzzyScore(query, label),
     fuzzyScore(query, instrument.category),
     fuzzyScore(query, instrument.source),
     fuzzyScore(query, instrument.role),
@@ -51,7 +52,7 @@ export function instrumentFuzzyScore(
 
 export function percussionFuzzyScore(
   query: string,
-  entry: PercussionEntry,
+  choice: SoundChoice,
 ): number {
-  return fuzzyScore(query, entry.value)
+  return fuzzyScore(query, choice.label)
 }

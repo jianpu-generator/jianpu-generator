@@ -301,7 +301,7 @@ through unchanged, so `sc`/`tc`/`mono` and their role comments are gone.
 
 ---
 
-## [ ] 11. `"N: Name"` soundfont label still carried as a string on the Edit Parts path
+## [x] 11. `"N: Name"` soundfont label still carried as a string on the Edit Parts path
 
 Item 1 added `program` to `instrument-info`. The settings round-trip is still string-based:
 
@@ -323,6 +323,15 @@ Item 1 added `program` to `instrument-info`. The settings round-trip is still st
 
 **Direction:** carry `program: u8` in `part-settings`, let Rust format the source text,
 and have TS look up entries by number.
+
+**Fix:** WIT `part-settings.program: option<u8>` replaces `soundfont: option<string>`.
+`update-part-declaration` takes `raw-instruments` and formats the quoted text itself.
+`src/sound_label.rs` is now the only place that formats or parses `"N: Name"` (instrument
+name, GM percussion name, or `"N: Unknown"`). `instrument-info.value` became the bare
+`name`. The picker gets its labels from the new `list-sound-choices` export, and the
+current sound's label from `part-declaration.sound-label` (display-only). It compares by
+program number. `GM_PERCUSSION`, `SoundfontValue` and `web/src/data/gmPercussion.json`
+are deleted: the JSON moved to `src/gm_percussion.json`, since only Rust reads it now.
 
 ---
 

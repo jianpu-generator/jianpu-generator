@@ -300,8 +300,13 @@ impl Guest for Component {
         source: String,
         abbreviation: String,
         settings: PartSettings,
+        raw_instruments: Vec<InstrumentInfo>,
     ) -> String {
-        update_part_declaration(source, abbreviation, settings)
+        update_part_declaration(source, abbreviation, settings, raw_instruments)
+    }
+
+    fn list_sound_choices(raw_instruments: Vec<InstrumentInfo>) -> SoundChoices {
+        list_sound_choices(raw_instruments)
     }
 
     fn extract_source_from_svg(svg_bytes: Vec<u8>) -> Option<String> {

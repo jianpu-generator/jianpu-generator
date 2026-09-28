@@ -143,12 +143,28 @@ pub(super) fn update_part_declaration(
     source: String,
     abbreviation: String,
     settings: PartSettings,
+    raw_instruments: Vec<InstrumentInfo>,
 ) -> String {
+    let instruments: Vec<jianpu_generator::parser::parts_parser::InstrumentInfo> = raw_instruments
+        .into_iter()
+        .map(instrument_info_from_wit)
+        .collect();
     crate::part_declarations::update_part_declaration_source(
         &source,
         &abbreviation,
         &part_settings_from_wit(settings),
+        &instruments,
     )
+}
+
+pub(super) fn list_sound_choices(raw_instruments: Vec<InstrumentInfo>) -> SoundChoices {
+    let instruments: Vec<jianpu_generator::parser::parts_parser::InstrumentInfo> = raw_instruments
+        .into_iter()
+        .map(instrument_info_from_wit)
+        .collect();
+    sound_choices_to_wit(jianpu_generator::sound_label::list_sound_choices(
+        &instruments,
+    ))
 }
 
 // `extract_source_from_svg`/`extract_source_from_pdf`'s logic was
