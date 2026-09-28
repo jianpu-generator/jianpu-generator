@@ -12,6 +12,10 @@ Prefer functional programming style:
 - **TypeScript**: use the `remeda` library (`import * as R from 'remeda'`)
 - **Rust**: use the `itertools` crate
 
+## Node scripts
+
+Node scripts (`web/scripts/`, e2e mock/static servers, Playwright reporters, anything run with `node`) are TypeScript (`.ts`) run with `tsx`, never untyped `.mjs`/`.js`, and must be covered by `tsc -b` (the pre-commit `web-typecheck` job) — add any new script's path to the matching `web/tsconfig.*.json` `include`. Parse CLI arguments with `commander`, not hand-rolled `process.argv` slicing. The only exception is config a tool requires in a fixed JS format (e.g. `web/.pnpmfile.cjs`).
+
 ## UI components
 
 Prefer Radix UI primitives over DIY implementations for interactive controls (sliders, selects, dialogs, checkboxes, tooltips, etc.). Available packages: `@radix-ui/react-dialog`, `@radix-ui/react-select`, `@radix-ui/react-slider`, `@radix-ui/react-tooltip`, `@radix-ui/react-progress`. Install additional Radix packages as needed rather than rolling custom components.
