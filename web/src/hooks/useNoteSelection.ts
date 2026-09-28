@@ -1,8 +1,9 @@
 import type { RefObject } from 'react'
 import { useMemo } from 'react'
 import { jianpuWasm } from '../jianpuWasm'
-import type { EditorHandle, NoteSpan, PartInfo } from '../types'
+import type { EditorHandle, NoteSpan } from '../types'
 import type { NoteCell, NoteSelectionRun } from '../utils/noteSpanSelection'
+import { distinctPartAbbreviations } from '../utils/partAbbreviations'
 import { ensureWasmInit } from '../wasmInit'
 import { useByteRangeSelectionCore } from './useByteRangeSelectionCore'
 
@@ -48,14 +49,6 @@ export interface SelectedNoteRangePlaybackInfo {
  */
 export function useNoteSelection(
   noteSpans: NoteSpan[],
-  parts: PartInfo[],
-  /** The same `enabledTracks` filter threaded through the `listNoteSpans`
-   * worker message (see `useJianpuWorkerRenderRequests.ts`) — needed to
-   * resolve `sourcePartIndex` correctly, since `noteSpans` is fetched with
-   * hidden parts filtered/compacted out while `parts` (from `list_parts`)
-   * always stays the full, unfiltered list. `undefined` means every part is
-   * enabled. */
-  enabledTracks: string[] | undefined,
   editorRef: RefObject<EditorHandle | null>,
 ) {
   // Synced/shared views never mount an Editor, so there's no Monaco
@@ -93,27 +86,14 @@ export function useNoteSelection(
     useMemo<SelectedNoteRangePlaybackInfo | null>(() => {
       if (lastRuns.length === 0) return null
       const measureIndices = lastRuns.map((run) => run.measureIndex)
-      const partIndices = new Set(lastRuns.map((run) => run.sourcePartIndex))
-      // `sourcePartIndex` comes from `noteSpans`, fetched via the
-      // `listNoteSpans` worker message *with* the current `enabledTracks` —
-      // hidden parts are filtered out of the compiled score before indices
-      // are assigned, so `sourcePartIndex` is a compacted, visible-parts-only
-      // index (see `list_note_spans_from_source`'s doc comment in
-      // `note_spans.rs`). `parts` (from `list_parts`, sent with no
-      // `enabledTracks`) is always the full, unfiltered declaration-order
-      // list, so it must be filtered the same way before indexing.
-      const visibleParts = enabledTracks
-        ? parts.filter((part) => enabledTracks.includes(part.abbreviation))
-        : parts
-      const selectedPartNames = Array.from(partIndices)
-        .map((partIndex) => visibleParts[partIndex]?.abbreviation)
-        .filter((abbreviation): abbreviation is string => abbreviation != null)
       return {
         minMeasureIndex: Math.min(...measureIndices),
         maxMeasureIndex: Math.max(...measureIndices),
-        selectedPartNames,
+        // Each run carries its part's abbreviation straight from Rust (see
+        // `note_spans::NoteSelectionRun::part_abbreviation`).
+        selectedPartNames: distinctPartAbbreviations(lastRuns),
       }
-    }, [lastRuns, parts, enabledTracks])
+    }, [lastRuns])
 
   return {
     handleNoteRangeSelect,

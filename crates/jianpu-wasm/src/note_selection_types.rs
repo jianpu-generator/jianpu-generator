@@ -16,6 +16,7 @@ pub(crate) struct NoteCellIn {
 #[serde(rename_all = "camelCase")]
 pub struct NoteSelectionRunOut {
     pub source_part_index: usize,
+    pub part_abbreviation: Option<String>,
     pub measure_index: usize,
     pub start_byte: usize,
     pub end_byte: usize,

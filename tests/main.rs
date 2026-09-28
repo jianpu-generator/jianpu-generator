@@ -18,3 +18,5 @@ mod note_highlight_identity_playback;
 mod orphan_lyric_row;
 #[path = "main/recoverable_directive_errors.rs"]
 mod recoverable_directive_errors;
+#[path = "main/span_part_abbreviation.rs"]
+mod span_part_abbreviation;

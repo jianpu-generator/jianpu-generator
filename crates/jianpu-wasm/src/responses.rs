@@ -235,6 +235,7 @@ pub(crate) fn list_note_spans_response(
                 .into_iter()
                 .map(|span| NoteSpanOut {
                     source_part_index: span.source_part_index,
+                    part_abbreviation: span.part_abbreviation,
                     note_id: span.note_id,
                     measure_index: span.measure_index,
                     start: span.start,
@@ -255,6 +256,7 @@ pub(crate) fn group_note_selection_response(
         .iter()
         .map(|s| jianpu_generator::note_spans::NoteSourceSpan {
             source_part_index: s.source_part_index,
+            part_abbreviation: s.part_abbreviation.clone(),
             note_id: s.note_id,
             measure_index: s.measure_index,
             start: s.start,
@@ -278,6 +280,7 @@ pub(crate) fn group_note_selection_response(
             .into_iter()
             .map(|r| NoteSelectionRunOut {
                 source_part_index: r.source_part_index,
+                part_abbreviation: r.part_abbreviation,
                 measure_index: r.measure_index,
                 start_byte: r.start_byte,
                 end_byte: r.end_byte,
@@ -297,6 +300,7 @@ pub(crate) fn list_lyric_spans_response(
                 .into_iter()
                 .map(|span| LyricSpanOut {
                     source_part_index: span.source_part_index,
+                    part_abbreviation: span.part_abbreviation,
                     note_id: span.note_id,
                     verse: span.verse,
                     measure_index: span.measure_index,
@@ -318,6 +322,7 @@ pub(crate) fn group_lyric_selection_response(
         .iter()
         .map(|s| jianpu_generator::lyric_spans::LyricSourceSpan {
             source_part_index: s.source_part_index,
+            part_abbreviation: s.part_abbreviation.clone(),
             note_id: s.note_id,
             verse: s.verse,
             measure_index: s.measure_index,
@@ -343,6 +348,7 @@ pub(crate) fn group_lyric_selection_response(
             .into_iter()
             .map(|r| LyricSelectionRunOut {
                 source_part_index: r.source_part_index,
+                part_abbreviation: r.part_abbreviation,
                 measure_index: r.measure_index,
                 start_byte: r.start_byte,
                 end_byte: r.end_byte,

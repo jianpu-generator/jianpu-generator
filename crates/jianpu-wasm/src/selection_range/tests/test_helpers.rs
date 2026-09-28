@@ -8,6 +8,7 @@ pub(super) fn note_span(
 ) -> NoteSpanOut {
     NoteSpanOut {
         source_part_index,
+        part_abbreviation: None,
         note_id,
         measure_index,
         start: Some(note_id * 10),
@@ -23,6 +24,7 @@ pub(super) fn lyric_span(
 ) -> LyricSpanOut {
     LyricSpanOut {
         source_part_index,
+        part_abbreviation: None,
         note_id,
         verse,
         measure_index,

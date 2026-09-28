@@ -93,6 +93,12 @@ one two
     assert_eq!(&source[verse1[0].start..verse1[0].end], "one");
 }
 
+/// Stand-in abbreviation for a hand-built span's part, so each test part
+/// carries a distinct name its grouped runs can be checked against.
+fn test_part_abbreviation(source_part_index: usize) -> String {
+    format!("P{source_part_index}")
+}
+
 fn span(
     source_part_index: usize,
     note_id: usize,
@@ -103,6 +109,7 @@ fn span(
 ) -> LyricSourceSpan {
     LyricSourceSpan {
         source_part_index,
+        part_abbreviation: Some(test_part_abbreviation(source_part_index)),
         note_id,
         verse,
         measure_index,
@@ -142,6 +149,7 @@ fn multiple_selected_cells_merge_into_one_run_per_part_verse_measure() {
         runs,
         vec![LyricSelectionRun {
             source_part_index: 0,
+            part_abbreviation: Some(test_part_abbreviation(0)),
             measure_index: 0,
             start_byte: 10,
             end_byte: 15,
@@ -172,12 +180,14 @@ fn different_verses_of_the_same_note_produce_separate_runs() {
         vec![
             LyricSelectionRun {
                 source_part_index: 0,
+                part_abbreviation: Some(test_part_abbreviation(0)),
                 measure_index: 0,
                 start_byte: 10,
                 end_byte: 11,
             },
             LyricSelectionRun {
                 source_part_index: 0,
+                part_abbreviation: Some(test_part_abbreviation(0)),
                 measure_index: 0,
                 start_byte: 40,
                 end_byte: 43,

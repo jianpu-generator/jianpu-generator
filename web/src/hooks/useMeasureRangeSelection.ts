@@ -7,8 +7,8 @@ import type {
   LyricSpan,
   MeasureSpan,
   NoteSpan,
-  PartInfo,
 } from '../types'
+import { distinctPartAbbreviations } from '../utils/partAbbreviations'
 import {
   groupSelectedLyricsIntoContiguousRuns,
   lyricRunByteRange,
@@ -98,13 +98,6 @@ export function useMeasureRangeSelection(
     endLine: number,
     isEmpty: boolean,
   ) => void,
-  parts: PartInfo[],
-  /** Same `enabledTracks` filter `useNoteSelection` takes — needed to
-   * compact `parts` down to the visible-parts-only index space `noteRuns`/
-   * `lyricRuns`' `sourcePartIndex` is already in (see
-   * `useNoteSelection.selectedNoteRangePlaybackInfo`'s doc comment).
-   * `undefined` means every part is enabled. */
-  enabledTracks: string[] | undefined,
 ): UseMeasureRangeSelectionResult {
   const [measureRangeNoteCells, setMeasureRangeNoteCells] = useState<
     NoteCell[]
@@ -166,29 +159,24 @@ export function useMeasureRangeSelection(
           setMeasureRangeSelectedPartNames([])
           return
         }
-        // Mirrors `useNoteSelection.selectedNoteRangePlaybackInfo`'s own
-        // part-name resolution, so a viewer's part-label/measure/bar-line
-        // selection mutes the same parts an equivalent editor selection
-        // would (see `measureRangeSelectedPartNames`'s doc comment).
-        const partIndices = new Set([
-          ...noteRuns.map((run) => run.sourcePartIndex),
-          ...lyricRuns.map((run) => run.sourcePartIndex),
+        // Each run carries its part's abbreviation straight from Rust (see
+        // `note_spans::NoteSelectionRun::part_abbreviation`), same as
+        // `useNoteSelection.selectedNoteRangePlaybackInfo`, so a viewer's
+        // part-label/measure/bar-line selection mutes the same parts an
+        // equivalent editor selection would (see
+        // `measureRangeSelectedPartNames`'s doc comment).
+        const selectedPartNames = distinctPartAbbreviations([
+          ...noteRuns,
+          ...lyricRuns,
         ])
-        const visibleParts = enabledTracks
-          ? parts.filter((part) => enabledTracks.includes(part.abbreviation))
-          : parts
-        const selectedPartNames = Array.from(partIndices)
-          .map((partIndex) => visibleParts[partIndex]?.abbreviation)
-          .filter(
-            (abbreviation): abbreviation is string => abbreviation != null,
-          )
         // A selection touching every visible part is equivalent to no
         // restriction at all — leave it empty so the playback override
         // below is skipped rather than redundantly re-specifying every part.
+        // `noteSpans` is fetched with hidden parts already filtered out in
+        // Rust, so its abbreviations are exactly the visible parts.
+        const visiblePartCount = distinctPartAbbreviations(noteSpans).length
         setMeasureRangeSelectedPartNames(
-          selectedPartNames.length < visibleParts.length
-            ? selectedPartNames
-            : [],
+          selectedPartNames.length < visiblePartCount ? selectedPartNames : [],
         )
         const startSpan = measureSpans[Math.min(...measureIndices)]
         const endSpan = measureSpans[Math.max(...measureIndices)]
@@ -217,8 +205,6 @@ export function useMeasureRangeSelection(
       notifySelection,
       applyNoteSelectionSilently,
       applyLyricSelectionSilently,
-      parts,
-      enabledTracks,
     ],
   )
 

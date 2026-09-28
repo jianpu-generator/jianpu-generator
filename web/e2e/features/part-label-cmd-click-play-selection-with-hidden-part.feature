@@ -23,6 +23,10 @@ Feature: Playing a Cmd/Ctrl-click part-label selection with a hidden part
   # compacted-index-1 run to Harmony (`parts[1]` in the unfiltered array),
   # so playback mutes Bass — a part the user actually selected — and unmutes
   # Harmony, a part that's hidden and was never selected at all.
+  #
+  # Fix: every note/lyric span and selection run now carries its part's
+  # `partAbbreviation` straight from Rust (resolved after hidden parts are
+  # filtered out), so the web never maps a part index back to a name itself.
 
   Scenario: Playing a Cmd/Ctrl-click part-label selection only enables the visible selected parts, even when another part is hidden
     Given the three-part hidden-part fixture is loaded with enabled-tracks capture

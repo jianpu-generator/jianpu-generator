@@ -12,6 +12,12 @@ pub struct NoteSourceSpan {
     /// the compiled `part_index`/`source_part_index` used throughout the
     /// renderer and MIDI pipeline.
     pub source_part_index: usize,
+    /// Abbreviation of the part at `source_part_index` (`PartRow::name`),
+    /// resolved here — after `apply_track_filter` has compacted hidden parts
+    /// out — so callers never have to map `source_part_index` back to a part
+    /// name themselves. `None` only for an unnamed part, which the grouper
+    /// never produces from real source.
+    pub part_abbreviation: Option<String>,
     /// Same id a tied run of notes shares in `ColumnElement::note_id`: a tie
     /// continuation reuses the id of the note it continues from rather than
     /// allocating a fresh one.
@@ -101,6 +107,7 @@ pub fn list_note_spans_from_source(
 
                 spans.push(NoteSourceSpan {
                     source_part_index: part_idx,
+                    part_abbreviation: part_row.name().cloned(),
                     note_id,
                     measure_index,
                     start: span.map(|s| s.start),
@@ -128,6 +135,8 @@ pub struct NoteCell {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NoteSelectionRun {
     pub source_part_index: usize,
+    /// Copied from the run's `NoteSourceSpan::part_abbreviation`.
+    pub part_abbreviation: Option<String>,
     pub measure_index: usize,
     pub start_byte: usize,
     pub end_byte: usize,
@@ -166,8 +175,9 @@ pub fn group_selected_notes_into_contiguous_runs(
                 run.start_byte = run.start_byte.min(start);
                 run.end_byte = run.end_byte.max(end);
             })
-            .or_insert(NoteSelectionRun {
+            .or_insert_with(|| NoteSelectionRun {
                 source_part_index: span.source_part_index,
+                part_abbreviation: span.part_abbreviation.clone(),
                 measure_index: span.measure_index,
                 start_byte: start,
                 end_byte: end,

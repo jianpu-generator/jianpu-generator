@@ -515,6 +515,10 @@ world jianpu-wasm {
 
     record note-span {
         source-part-index: u32,
+        // The part's abbreviation as Rust resolved it after hidden parts
+        // were filtered out, so the web never maps `source-part-index` back
+        // to a part name itself. `none` only for an unnamed part.
+        part-abbreviation: option<string>,
         note-id: u32,
         measure-index: u32,
         start: option<u32>,
@@ -535,6 +539,8 @@ world jianpu-wasm {
 
     record lyric-span {
         source-part-index: u32,
+        // See `note-span.part-abbreviation`.
+        part-abbreviation: option<string>,
         note-id: u32,
         verse: u32,
         measure-index: u32,
@@ -590,6 +596,8 @@ world jianpu-wasm {
 
     record note-selection-run {
         source-part-index: u32,
+        // Copied from the run's `note-span.part-abbreviation`.
+        part-abbreviation: option<string>,
         measure-index: u32,
         start-byte: u32,
         end-byte: u32,
@@ -615,6 +623,8 @@ world jianpu-wasm {
 
     record lyric-selection-run {
         source-part-index: u32,
+        // Copied from the run's `lyric-span.part-abbreviation`.
+        part-abbreviation: option<string>,
         measure-index: u32,
         start-byte: u32,
         end-byte: u32,

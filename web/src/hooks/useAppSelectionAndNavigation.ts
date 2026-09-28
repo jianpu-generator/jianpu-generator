@@ -6,7 +6,6 @@ import type {
   LyricSpan,
   MeasureSpan,
   NoteSpan,
-  PartInfo,
   RangeEditOperation,
   SectionRange,
   SequenceEntry,
@@ -40,8 +39,6 @@ export function useAppSelectionAndNavigation(
     entryEndIndex: number
   } | null>,
   noteSpans: NoteSpan[],
-  parts: PartInfo[],
-  enabledTracks: string[] | undefined,
   lyricSpans: LyricSpan[],
   playNoteSelection: (
     minMeasureIndex: number,
@@ -74,7 +71,7 @@ export function useAppSelectionAndNavigation(
     selectedNoteRuns: noteSelectionRuns,
     applyNoteSelectionSilently,
     clearNoteSelection,
-  } = useNoteSelection(noteSpans, parts, enabledTracks, editorRef)
+  } = useNoteSelection(noteSpans, editorRef)
 
   const {
     handleLyricRangeSelect,
@@ -99,8 +96,6 @@ export function useAppSelectionAndNavigation(
     applyLyricSelectionSilently,
     measureSpans,
     notifySelection,
-    parts,
-    enabledTracks,
   )
 
   // `measureRangeSelectedPartNames` is only read at click time by

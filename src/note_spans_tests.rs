@@ -111,6 +111,12 @@ Melody [M] = notes
     assert_eq!(&source[rest_start..rest_end], "0");
 }
 
+/// Stand-in abbreviation for a hand-built span's part, so each test part
+/// carries a distinct name its grouped runs can be checked against.
+fn test_part_abbreviation(source_part_index: usize) -> String {
+    format!("P{source_part_index}")
+}
+
 fn span(
     source_part_index: usize,
     note_id: usize,
@@ -120,6 +126,7 @@ fn span(
 ) -> NoteSourceSpan {
     NoteSourceSpan {
         source_part_index,
+        part_abbreviation: Some(test_part_abbreviation(source_part_index)),
         note_id,
         measure_index,
         start: Some(start),
@@ -138,6 +145,7 @@ fn unmappable_span(
 ) -> NoteSourceSpan {
     NoteSourceSpan {
         source_part_index,
+        part_abbreviation: Some(test_part_abbreviation(source_part_index)),
         note_id,
         measure_index,
         start: None,
@@ -173,6 +181,7 @@ fn multiple_selected_cells_merge_into_one_run_per_part_measure() {
         runs,
         vec![NoteSelectionRun {
             source_part_index: 0,
+            part_abbreviation: Some(test_part_abbreviation(0)),
             measure_index: 0,
             start_byte: 10,
             end_byte: 15,
@@ -208,6 +217,7 @@ fn selected_cell_with_no_mappable_span_does_not_break_contiguity() {
         runs,
         vec![NoteSelectionRun {
             source_part_index: 0,
+            part_abbreviation: Some(test_part_abbreviation(0)),
             measure_index: 0,
             start_byte: 10,
             end_byte: 15,
@@ -272,18 +282,21 @@ fn different_parts_and_measures_produce_separate_runs() {
         vec![
             NoteSelectionRun {
                 source_part_index: 0,
+                part_abbreviation: Some(test_part_abbreviation(0)),
                 measure_index: 0,
                 start_byte: 10,
                 end_byte: 11,
             },
             NoteSelectionRun {
                 source_part_index: 0,
+                part_abbreviation: Some(test_part_abbreviation(0)),
                 measure_index: 1,
                 start_byte: 30,
                 end_byte: 31,
             },
             NoteSelectionRun {
                 source_part_index: 1,
+                part_abbreviation: Some(test_part_abbreviation(1)),
                 measure_index: 0,
                 start_byte: 20,
                 end_byte: 21,

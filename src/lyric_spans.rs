@@ -12,6 +12,9 @@ pub struct LyricSourceSpan {
     /// the compiled `part_index`/`source_part_index` used throughout the
     /// renderer.
     pub source_part_index: usize,
+    /// Abbreviation of the part at `source_part_index` — see
+    /// `note_spans::NoteSourceSpan::part_abbreviation`.
+    pub part_abbreviation: Option<String>,
     /// Same id the syllable's underlying note carries in
     /// `ColumnElement::note_id` (see `compiler::types::ElementContent::Lyric`).
     pub note_id: usize,
@@ -115,6 +118,7 @@ pub fn list_lyric_spans_from_source(
                         if let Some(syllable) = it.next() {
                             spans.push(LyricSourceSpan {
                                 source_part_index: part_idx,
+                                part_abbreviation: part_row.name().cloned(),
                                 note_id,
                                 verse,
                                 measure_index,
@@ -152,6 +156,8 @@ pub struct LyricCell {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LyricSelectionRun {
     pub source_part_index: usize,
+    /// Copied from the run's `LyricSourceSpan::part_abbreviation`.
+    pub part_abbreviation: Option<String>,
     pub measure_index: usize,
     pub start_byte: usize,
     pub end_byte: usize,
@@ -190,8 +196,9 @@ pub fn group_selected_lyrics_into_contiguous_runs(
                 run.start_byte = run.start_byte.min(span.start);
                 run.end_byte = run.end_byte.max(span.end);
             })
-            .or_insert(LyricSelectionRun {
+            .or_insert_with(|| LyricSelectionRun {
                 source_part_index: span.source_part_index,
+                part_abbreviation: span.part_abbreviation.clone(),
                 measure_index: span.measure_index,
                 start_byte: span.start,
                 end_byte: span.end,

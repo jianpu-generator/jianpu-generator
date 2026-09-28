@@ -187,6 +187,10 @@ pub struct NoteSpanOut {
     /// Index into the compiled score's parts, matching the SVG's
     /// `data-part-index` attribute on a `Tag::Note` group.
     pub source_part_index: usize,
+    /// The part's abbreviation as Rust resolved it after hidden parts were
+    /// filtered out — see `note_spans::NoteSourceSpan::part_abbreviation`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub part_abbreviation: Option<String>,
     /// Matches the SVG's `data-note-id` attribute on a `Tag::Note` group.
     pub note_id: usize,
     /// Index into the score's measures, in source order.
@@ -213,6 +217,9 @@ pub struct LyricSpanOut {
     /// Index into the compiled score's parts, matching the SVG's
     /// `data-part-index` attribute on a `Tag::Lyric` group.
     pub source_part_index: usize,
+    /// See `NoteSpanOut::part_abbreviation`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub part_abbreviation: Option<String>,
     /// Matches the SVG's `data-note-id` attribute on a `Tag::Lyric` group.
     pub note_id: usize,
     /// Matches the SVG's `data-verse` attribute on a `Tag::Lyric` group.

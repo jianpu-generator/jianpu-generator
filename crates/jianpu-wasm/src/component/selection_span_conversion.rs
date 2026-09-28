@@ -3,6 +3,7 @@ use super::*;
 pub(super) fn note_span_from_wit(span: NoteSpan) -> crate::types::NoteSpanOut {
     crate::types::NoteSpanOut {
         source_part_index: span.source_part_index as usize,
+        part_abbreviation: span.part_abbreviation,
         note_id: span.note_id as usize,
         measure_index: span.measure_index as usize,
         start: span.start.map(|v| v as usize),
@@ -27,6 +28,7 @@ pub(super) fn group_note_selection_response_to_wit(
                     .into_iter()
                     .map(|run| NoteSelectionRun {
                         source_part_index: run.source_part_index as u32,
+                        part_abbreviation: run.part_abbreviation,
                         measure_index: run.measure_index as u32,
                         start_byte: run.start_byte as u32,
                         end_byte: run.end_byte as u32,
@@ -43,6 +45,7 @@ pub(super) fn group_note_selection_response_to_wit(
 pub(super) fn lyric_span_from_wit(span: LyricSpan) -> crate::types::LyricSpanOut {
     crate::types::LyricSpanOut {
         source_part_index: span.source_part_index as usize,
+        part_abbreviation: span.part_abbreviation,
         note_id: span.note_id as usize,
         verse: span.verse as usize,
         measure_index: span.measure_index as usize,
@@ -71,6 +74,7 @@ pub(super) fn group_lyric_selection_response_to_wit(
                     .into_iter()
                     .map(|run| LyricSelectionRun {
                         source_part_index: run.source_part_index as u32,
+                        part_abbreviation: run.part_abbreviation,
                         measure_index: run.measure_index as u32,
                         start_byte: run.start_byte as u32,
                         end_byte: run.end_byte as u32,
@@ -137,6 +141,7 @@ pub(super) fn list_measure_spans_response_to_wit(
 pub(super) fn note_span_to_wit(span: &crate::types::NoteSpanOut) -> NoteSpan {
     NoteSpan {
         source_part_index: span.source_part_index as u32,
+        part_abbreviation: span.part_abbreviation.clone(),
         note_id: span.note_id as u32,
         measure_index: span.measure_index as u32,
         start: span.start.map(|v| v as u32),
@@ -160,6 +165,7 @@ pub(super) fn list_note_spans_response_to_wit(
 pub(super) fn lyric_span_to_wit(span: &crate::types::LyricSpanOut) -> LyricSpan {
     LyricSpan {
         source_part_index: span.source_part_index as u32,
+        part_abbreviation: span.part_abbreviation.clone(),
         note_id: span.note_id as u32,
         verse: span.verse as u32,
         measure_index: span.measure_index as u32,

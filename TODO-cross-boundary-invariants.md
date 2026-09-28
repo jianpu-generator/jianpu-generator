@@ -117,7 +117,12 @@ fails when the two lists diverge.
 
 ---
 
-## [ ] 5. Monaco directive-keyword regex vs. Rust directive lexer (low/cosmetic)
+## [x] 5. Monaco directive-keyword regex vs. Rust directive lexer (low/cosmetic)
+
+**Fixed** in `3abeb0a`: the wasm `highlight-tokens` export reports keywords from the
+real Rust lexers, which drive Monaco semantic tokens. Monarch keeps only
+vocabulary-free rules. (The Edit Parts/Metadata CodeLens regex is a separate
+leftover — see item 14.)
 
 - Rust lexes directive keys structurally, e.g. `src/parser/score/timed_parser/timed_lexer.rs:174-175`
   plus scattered handling for `key=`, `time=`, `label=`,
@@ -194,3 +199,237 @@ response and the `ApiError` failure union from the handler's own signature;
 `web/` generates `schema.ts` from that spec (openapi-typescript) and calls
 the worker only through `syncedShare/workerClient.ts` (openapi-fetch). See
 ARCHITECTURE.md's "Route list and generated client".
+
+---
+
+# Audit 2026-09-28: remaining hand-kept invariants
+
+These came from a read-only audit covering every `world.wit` export, the Rust diagnostic
+text, Rust-produced formats, duplicated constants, the worker ↔ D1 ↔ web path, and
+`web/e2e` + `web/scripts`. The items are ordered by severity. The areas found clean are
+listed at the end.
+
+---
+
+## [x] 8. Part index → part name remapping re-derived in TS (silent functional)
+
+- Rust drops hidden parts, then re-numbers the rest: `src/filters.rs:6-17`
+  (`apply_track_filter`), applied before indices are assigned in
+  `src/note_spans.rs:64-65` (lyric spans likewise). Part order comes from `doc.tracks`
+  (`src/grouper/mod.rs:44`), but `list-parts` returns `doc.declarations` order
+  (`src/part_info.rs:124`).
+- TS re-implements that compaction to map `sourcePartIndex` → abbreviation:
+  `web/src/hooks/useNoteSelection.ts:105-110`,
+  `web/src/hooks/useMeasureRangeSelection.ts:177-182`. A third, unused copy is in
+  `web/src/utils/noteTimingsPartIndex.ts`.
+
+**Failure mode:** suppose the filter semantics change (e.g. hidden parts keep their
+index) or declaration order stops matching track order. Then "play selection" mutes or
+solos the wrong parts. The `?.abbreviation` + `.filter` drops unknown indices, so
+nothing errors.
+
+**Direction:** have note/lyric spans (or the selection runs) carry the part
+abbreviation, so TS never maps index → name itself. Delete
+`noteTimingsPartIndex.ts`.
+
+**Fix:** Rust resolves each part's name from `PartRow::name` in the same loop that
+assigns the compacted index, after `apply_track_filter` has run. It carries the name as
+`part-abbreviation` on `note-span`, `lyric-span`, `note-selection-run` and
+`lyric-selection-run` (WIT). `useNoteSelection` and `useMeasureRangeSelection` read
+`partAbbreviation` off the runs through `distinctPartAbbreviations`. They no longer take
+`parts`/`enabledTracks`. The "selection touches every visible part" check counts the
+distinct abbreviations in the already-filtered `noteSpans`. `noteTimingsPartIndex.ts`
+is deleted. `tests/main/span_part_abbreviation.rs` covers a hidden middle part.
+
+---
+
+## [ ] 9. Share-id length/charset triplicated (silent functional)
+
+- Rust: `crates/live-share-worker/src/share_id.rs:28` (`SHARE_ID_LENGTH = 11`), `:36`
+  (`ID_CHARSET`).
+- TS: `web/src/syncedShareUrl.ts:22-23`, `web/functions/index.ts:20-21`. They are linked
+  only by "must match" comments.
+
+**Failure mode:** new share links stop parsing (`parseSyncedShareFromHash` returns
+`null`), so the viewer silently opens the plain app. Link previews also fall back to
+the generic title.
+
+**Direction:** put a `pattern` on the `share_id` path param in the OpenAPI spec (or
+export a generated constant), and read it on the TS side.
+
+---
+
+## [ ] 10. `set-layout-fonts` takes three positional `list<u8>`s; TS picks the role for each (silent layout)
+
+- WIT `world.wit:829`: `(directive-line-font, lyric-font, monospace-font)`, all
+  `list<u8>` (`crates/jianpu-wasm/src/component/guest_metadata_and_misc.rs:45-53`).
+  Which role each text kind renders in is decided in
+  `src/serializer/text.rs:70,81`.
+- TS: `web/src/worker/jianpu.worker.ts:66-73` calls
+  `setLayoutFonts(fonts.tc, fonts.sc, fonts.mono)`. Here `tc` is the sansSerif role and
+  `sc` is the serif role (`web/src/hooks/useFontsLoader.ts:25-27`). The mapping is kept
+  only by a comment.
+- The `generate-pdf`/`generate-split-pdfs` WIT param names `sans-serif-sc`/`sans-serif-tc`
+  are stale: `sc` actually carries the serif font (`src/pdf.rs:146`). The PDF itself is
+  unaffected, because fontdb loads all three fonts and resolves them by name
+  (`src/pdf.rs:50-54`).
+
+**Failure mode:** suppose Rust changes which role lyrics or directive lines use. The
+preview then measures glyph widths with the wrong font, so spacing is slightly off or
+text overlaps, and nothing errors.
+
+**Direction:** take a record keyed by the `font-family` role (serif/sans-serif/monospace),
+and let Rust decide which role measures which text. Rename the PDF params to match.
+
+---
+
+## [ ] 11. `"N: Name"` soundfont label still carried as a string on the Edit Parts path
+
+Item 1 added `program` to `instrument-info`. The settings round-trip is still string-based:
+
+- TS builds the label: `web/src/utils/gmInstruments.ts:204`,
+  `web/src/utils/gmPercussion.ts:12`.
+- Rust builds it too: `src/gm_percussion.rs:21`, and `src/part_info.rs:37` for the
+  `"{program}: Unknown"` fallback.
+- Rust parses it back: `src/parser/parts_parser/instrument_matching.rs:84`
+  (`find(": ")` + `u8` parse).
+- `part-settings.soundfont` is `option<string>` (`world.wit:325`), and
+  `web/src/components/SoundfontSearchModal.tsx:206,221` compares strings to highlight the
+  current sound.
+
+**Failure mode:**
+- If the TS format drifts, a picked sound is written to the source in an unparseable
+  form. Rust then shows a diagnostic and falls back to program 52 (Choir Aahs).
+- If the percussion format drifts on either side, the modal stops highlighting the
+  current sound (cosmetic).
+
+**Direction:** carry `program: u8` in `part-settings`, let Rust format the source text,
+and have TS look up entries by number.
+
+---
+
+## [ ] 12. Link-preview Pages function bypasses the OpenAPI client (cosmetic)
+
+- `web/functions/index.ts:29-32,45-52` does a raw `fetch` of `/shares/${shareId}` with a
+  hand-typed `SyncedDocSummary {filename, ended}` and an untyped `.json()`.
+- The Rust side is `SyncedDoc` (generated `web/src/generated/live-share-worker/schema.ts:770`).
+
+**Failure mode:** crawler previews silently show the generic "簡譜" title.
+
+**Direction:** `import type { components }` from the generated schema (type-only, adds
+nothing to the bundle), or use openapi-fetch.
+
+---
+
+## [ ] 13. `web/scripts/reset-e2e-cloud-db.ts` runs raw SQL against the worker's D1 schema (silent, test infra)
+
+- Lines 45-54 hard-code `shares.file_id`, `files.owner_user_id`,
+  `user_identities(user_id, provider, provider_user_id)` and the `'github'` literal.
+  The Rust side is `GITHUB_PROVIDER` in `crates/live-share-worker/src/identity/github.rs:19`,
+  and the worker's own queries are in `crates/live-share-worker/queries/*.sql`.
+- The `catch` at lines 71-79 treats every error as "no local D1 yet".
+
+**Failure mode:** after a schema rename, the reset silently does nothing. Rows pile up
+across local runs, and "source 2"-style name assertions start failing in a way that
+looks like flakiness.
+
+**Direction:** move the reset next to the worker's checked queries (or into a test-only
+route). At minimum, only swallow "no such table".
+
+---
+
+## [ ] 14. Edit Parts / Edit Metadata CodeLens uses its own section-header regex (minor)
+
+- TS: `web/src/components/Editor.tsx:230,239` trims the line, then tests
+  `/^#\s*parts$/` and `/^#\s*metadata$/`.
+- Rust: `section_header_kind` (`src/parser/section_splitter.rs:58-59`) requires `#` at
+  column 0 and runs after `//` comments are stripped.
+
+**Failure mode (already diverges):**
+- `  # parts` gets a lens that Rust ignores.
+- `# parts // note` is a real section in Rust but gets no lens.
+
+**Direction:** drive the lenses from the `section-header` spans that `highlight-tokens`
+already returns. This may need the section kind added to the token.
+
+---
+
+## [ ] 15. Part volume/octave limits exist only in TS (cosmetic, plus a Rust bug)
+
+- TS: `web/src/components/PartRow.tsx:173-174` (volume 1–100), `:15-25` (octave ±4).
+- Rust accepts volume 0–255 (`src/parser/parts_parser/lexer.rs:302-308`) and any `i8`
+  octave (`:310-322`).
+
+**Failure mode:** a source with `+5` or `150%` shows a blank select or a pinned slider
+in the modal.
+
+**Direction:** expose the limits from Rust, and report out-of-range values as a
+diagnostic.
+
+**Related Rust-only bug:** `src/midi/mod.rs:193` computes `(volume * 127 / 100) as u8`,
+so any volume above 100% emits a MIDI data byte above 127, which is invalid.
+
+---
+
+## [ ] 16. Deployment config duplicated across the worker and web (loud / cosmetic)
+
+- GitHub OAuth client id: `crates/live-share-worker/wrangler.toml:72`,
+  `.github/workflows/pages.yml:60,151`, `web/.env:19`.
+- Worker host: `.github/workflows/pages.yml:65,152`, `web/.env:20`, and hard-coded in
+  `web/functions/index.ts:27`.
+
+**Failure mode:** GitHub rejects the sign-in (loud), or link previews fall back to the
+generic title (cosmetic).
+
+**Direction:** read each value from a single source at build time.
+
+---
+
+## [ ] 17. e2e-only couplings to Rust output (fail loudly in e2e, never in prod)
+
+- `data-guitar-frets`: `src/pitch_description/guitar_diagram_svg.rs:37` ↔
+  `web/e2e/features/steps/selection-pitch-drawer.steps.ts:337`.
+- `web/playwright.config.ts:102-105` hard-codes the worker's variable names and the
+  `{client_id}` placeholder. These must match
+  `crates/live-share-worker/src/oauth.rs:55,62,74`, `identity/github.rs:29` and
+  `identity.rs:56`.
+- The mock server's `/applications/e2e-test-client-id/...` paths
+  (`web/e2e/mock-github-oauth-server.ts:144,156`) must equal the client id the worker
+  runs with in e2e.
+
+**Direction:** low priority. Export the variable names from one place, or add a check
+that the worker actually read each override.
+
+---
+
+## Checked in that audit and found clean
+
+- **Every WIT export:**
+  - `enabled-tracks`/`disabled-lyrics` are abbreviations that round-trip from `list-parts`.
+  - `directive-row-offset` is passed through unchanged.
+  - Rename, range edits and whole-source rewrites are typed.
+  - The `describe-selection` strings are display-only.
+  - SVG/PDF source embedding and extraction are both in Rust.
+  - `highlight-tokens` is typed.
+  - Two exports have no TS caller: `get-measure-index-at-offset` and `greet`.
+- **Diagnostic text:** nothing in `web/src` or `web/e2e` matches on Rust messages. The
+  error strings e2e asserts are written by TS.
+- **Export output:** TS never parses WAV/MP3/MIDI/PDF bytes. Download names are built in
+  TS, and the names inside the zip are Rust-only. There are no duplicated audio
+  constants.
+- **Instruments:**
+  - The category/role/articulation unions are owned by TS; Rust only fuzzy-matches them.
+  - Percussion names come from the shared `web/src/data/gmPercussion.json`.
+  - Every parse call passes `GM_INSTRUMENTS`.
+- **Fonts:** file names and family names come from `fonts/fonts.json` on both sides
+  (Rust via `build.rs`), keyed by the generated `FontFamily` type.
+- **Demo and new-file templates:** covered by `tests/main/demo_source.rs` and
+  `tests/main/new_file_template.rs`.
+- **Worker:**
+  - CORS allows GET/POST and only `Content-Type`, which covers every route in the
+    schema; the token travels in the body.
+  - The OAuth code, state and `redirect_uri` go through typed bodies.
+  - The e2e mocks use the generated `ApiError` and the typed `WorkerPath`.
+- **Section labels:** the preview click (`previewSelection.ts:38`) and the section
+  toolbar both use labels from the same parsed directive. The only weakness is that
+  duplicate labels collide in `find`.

@@ -24,12 +24,12 @@ import { Given, Then, When } from './fixtures'
  * index, which no longer exists there — so its notes' cursor highlight
  * never appeared at all.
  *
- * Fix: the worker now remaps each returned `NoteTiming.source_part_index`
- * from the true written index into the same hidden-parts-compacted space
- * the SVG uses, via `remapNoteTimingsToVisiblePartIndex` (see
- * `worker/audioMessageHandlers.ts`), using a `visibleTracks` field that
- * always carries the part-visibility toggle's own state — independent of
- * whatever narrower subset this particular clip further muted for playback.
+ * Fix: the worker passes a `visibleTracks` field (always the
+ * part-visibility toggle's own state — independent of whatever narrower
+ * subset this particular clip further muted for playback) through to Rust's
+ * `visible_tracks` parameter (see `worker/audioMessageHandlers.ts`), so each
+ * returned `NoteTiming.source_part_index` is already in the same
+ * hidden-parts-compacted space the SVG uses.
  *
  * Fixture: three parts, Melody / Harmony / Bass. Harmony (the middle part)
  * is hidden, which compacts Bass from written part-index 2 down to rendered
