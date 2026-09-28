@@ -40,6 +40,15 @@ const PASS_CACHE_REPORTER = './scripts/e2e-pass-cache-reporter.mjs'
 const NO_PASS_CACHE_FLAG = '--no-pass-cache'
 const STABLE_STREAK_TO_CONFIRM = 3
 const MAX_PASSES = 15
+// Written into LAST_RUN_FILE before every pass, so a file still carrying it
+// afterwards is one Playwright never rewrote — i.e. the pass never got as far
+// as running tests — rather than a genuine (possibly stale) result.
+const SEEDED_STATUS = 'seeded-by-resolve-e2e-flakes'
+
+function fail(message) {
+  console.error(`e2e: ${message}`)
+  process.exit(1)
+}
 
 function run(args, passCacheFile) {
   const result = spawnSync(
@@ -57,6 +66,7 @@ function run(args, passCacheFile) {
     },
   )
   if (result.error) throw result.error
+  return result.status
 }
 
 function git(args, { cwd, input } = {}) {
@@ -135,17 +145,47 @@ function listTestIds(args) {
   return JSON.parse(result.stdout).suites.flatMap(collectIds)
 }
 
-function readFailingSet() {
-  let parsed
+function seedLastRun(failedTests) {
+  mkdirSync('test-results', { recursive: true })
+  writeFileSync(
+    LAST_RUN_FILE,
+    JSON.stringify({ status: SEEDED_STATUS, failedTests }),
+  )
+}
+
+// Runs one pass and returns the set of tests still failing after it. Fails
+// closed: anything short of Playwright actually running the tests and
+// reporting on them (webServer that never starts, config error, no tests
+// matched, missing/unparseable/unrewritten .last-run.json) aborts the whole
+// script instead of being read as "nothing failed". Playwright reports all of
+// those as a non-zero exit with an empty `failedTests`, which is
+// indistinguishable from a clean run unless the exit code is checked too.
+function runPass(args, passCacheFile) {
+  const exitCode = run(args, passCacheFile)
+  let lastRun
   try {
-    parsed = JSON.parse(readFileSync(LAST_RUN_FILE, 'utf-8'))
+    lastRun = JSON.parse(readFileSync(LAST_RUN_FILE, 'utf-8'))
   } catch {
-    // No file (or unreadable) means playwright didn't get far enough to
-    // write one — treat as "everything still failing" so the caller doesn't
-    // mistake this for a clean run.
-    return null
+    fail(
+      `Playwright exited ${exitCode} without writing a readable ${LAST_RUN_FILE}; ` +
+        'no test results to go on, aborting.',
+    )
   }
-  return new Set(parsed.failedTests ?? [])
+  if (lastRun.status === SEEDED_STATUS) {
+    fail(
+      `Playwright exited ${exitCode} without rewriting ${LAST_RUN_FILE} — ` +
+        'it never got as far as running tests; aborting.',
+    )
+  }
+  const failedTests = lastRun.failedTests ?? []
+  if (exitCode !== 0 && failedTests.length === 0) {
+    fail(
+      `Playwright exited ${exitCode} (run status "${lastRun.status}") without any failing test — ` +
+        'it failed before running tests (e.g. a webServer that did not start, a config error, ' +
+        'or no tests matched). See the Playwright output above; aborting.',
+    )
+  }
+  return new Set(failedTests)
 }
 
 function setsEqual(a, b) {
@@ -173,12 +213,16 @@ function main() {
   const fresh = extraArgs.length !== cliArgs.length
 
   const passCache = openPassCache(codeFingerprint(), { fresh })
+  let failing
   if (passCache.passed.size === 0) {
-    run(extraArgs, passCache.file)
+    seedLastRun([])
+    failing = runPass(extraArgs, passCache.file)
   } else {
-    const notYetPassed = listTestIds(extraArgs).filter(
-      (id) => !passCache.passed.has(id),
-    )
+    const testIds = listTestIds(extraArgs)
+    if (testIds.length === 0) {
+      fail('no tests matched; nothing was run, aborting.')
+    }
+    const notYetPassed = testIds.filter((id) => !passCache.passed.has(id))
     if (notYetPassed.length === 0) {
       console.error(
         'e2e: every test already passed against this exact code in an earlier run; skipping.',
@@ -191,19 +235,8 @@ function main() {
     )
     // Seeds --last-failed with exactly the not-yet-passed tests, so this
     // first pass skips everything the cache already vouches for.
-    mkdirSync('test-results', { recursive: true })
-    writeFileSync(
-      LAST_RUN_FILE,
-      JSON.stringify({ status: 'failed', failedTests: notYetPassed }),
-    )
-    run(['--last-failed'], passCache.file)
-  }
-  let failing = readFailingSet()
-  if (failing === null) {
-    console.error(
-      'e2e: no test-results/.last-run.json after the first pass; aborting.',
-    )
-    process.exit(1)
+    seedLastRun(notYetPassed)
+    failing = runPass(['--last-failed'], passCache.file)
   }
 
   const everFailed = new Set(failing)
@@ -240,8 +273,8 @@ function main() {
     console.error(
       `e2e: pass ${pass}, re-running ${failing.size} previously-failing test(s)...`,
     )
-    run(['--last-failed'], passCache.file)
-    failing = readFailingSet() ?? failing
+    seedLastRun([...failing])
+    failing = runPass(['--last-failed'], passCache.file)
     for (const id of failing) everFailed.add(id)
     history.push(failing)
   }
