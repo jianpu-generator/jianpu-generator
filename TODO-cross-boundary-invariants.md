@@ -267,7 +267,7 @@ import that JSON, so neither has its own length or charset. A missing file fails
 
 ---
 
-## [ ] 10. `set-layout-fonts` takes three positional `list<u8>`s; TS picks the role for each (silent layout)
+## [x] 10. `set-layout-fonts` takes three positional `list<u8>`s; TS picks the role for each (silent layout)
 
 - WIT `world.wit:829`: `(directive-line-font, lyric-font, monospace-font)`, all
   `list<u8>` (`crates/jianpu-wasm/src/component/guest_metadata_and_misc.rs:45-53`).
@@ -288,6 +288,16 @@ text overlaps, and nothing errors.
 
 **Direction:** take a record keyed by the `font-family` role (serif/sans-serif/monospace),
 and let Rust decide which role measures which text. Rename the PDF params to match.
+
+**Fix:** WIT `record font-bytes-by-family { serif, sans-serif, monospace }` uses the
+`font-family` role names, which are also the `fonts/fonts.json` keys. It is the only font
+parameter of `set-layout-fonts`, `generate-pdf` and `generate-split-pdfs`. The stale
+`sans-serif-sc`/`sans-serif-tc` params are gone. On the Rust side,
+`fonts::FontBytesByFamily` replaces `PdfFonts`, and `font_source` stores one face per
+`FontFamily`, reached only through `face_for_family`. The "directive line font" and
+"lyric font" concepts are deleted: each measuring function asks for the role its text
+renders in. `useFontsLoader` and the worker pass the jco-typed `FontBytesByFamily`
+through unchanged, so `sc`/`tc`/`mono` and their role comments are gone.
 
 ---
 

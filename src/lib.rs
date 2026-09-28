@@ -110,27 +110,14 @@ pub fn compile(
     grouper::group(doc)
 }
 
-/// Supply the directive-line font's raw bytes for real glyph-advance
-/// measurement during layout. Only meaningful on `wasm32`, where the wasm
-/// binary doesn't embed the font at compile time (see `font_metrics`); a
-/// no-op on the host CLI build, which embeds the font via `include_bytes!`
+/// Supply every `FontFamily` role's raw font bytes for real glyph-advance
+/// measurement during layout. Which role measures which text is decided by
+/// `font_metrics`, not by the caller. Only meaningful on `wasm32`, where the
+/// wasm binary doesn't embed the fonts at compile time (see `font_metrics`);
+/// a no-op on the host CLI build, which embeds them via `include_bytes!`
 /// instead.
-pub fn set_directive_line_font_bytes(bytes: Vec<u8>) {
-    font_metrics::set_directive_line_font_bytes(bytes);
-}
-
-/// Supply the lyric font's raw bytes for real glyph-advance measurement
-/// during layout. Only meaningful on `wasm32` — see
-/// [`set_directive_line_font_bytes`].
-pub fn set_lyric_font_bytes(bytes: Vec<u8>) {
-    font_metrics::set_lyric_font_bytes(bytes);
-}
-
-/// Supply the monospace font's raw bytes for real glyph-advance measurement
-/// during layout. Only meaningful on `wasm32` — see
-/// [`set_directive_line_font_bytes`].
-pub fn set_monospace_font_bytes(bytes: Vec<u8>) {
-    font_metrics::set_monospace_font_bytes(bytes);
+pub fn set_layout_font_bytes(fonts: fonts::FontBytesByFamily) {
+    font_metrics::set_layout_font_bytes(fonts);
 }
 
 /// Drop parts whose abbreviation is not in `enabled_tracks`, so the header's part-list
@@ -353,7 +340,7 @@ pub fn write_pdf_from_source_filtered_with_lyrics(
     filename: &str,
     enabled_tracks: Option<&[String]>,
     disabled_lyrics: Option<&[String]>,
-    fonts: &pdf::PdfFonts,
+    fonts: &fonts::FontBytesByFamily,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<u8>, IrrecoverableError> {
     let render_output = render_svgs_from_source_filtered_with_lyrics(

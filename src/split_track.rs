@@ -106,7 +106,7 @@ pub fn write_split_pdfs_from_source(
     filename: &str,
     base_name: &str,
     tracks_filter: &[String],
-    fonts: &crate::pdf::PdfFonts,
+    fonts: &crate::fonts::FontBytesByFamily,
 ) -> Result<Vec<SplitPdfEntry>, IrrecoverableError> {
     let score = crate::compile(source, filename, &[])?;
     let track_names = split_track_names(source, filename, &score, tracks_filter)?;

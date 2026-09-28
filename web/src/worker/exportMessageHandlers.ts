@@ -1,14 +1,11 @@
-import { type Diagnostic, jianpuWasm } from '../jianpuWasm'
+import {
+  type Diagnostic,
+  type FontBytesByFamily,
+  jianpuWasm,
+} from '../jianpuWasm'
 import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
 
-// `sc` holds the `title` role's font — the song title/lyric font; `tc`
-// holds the `sansSerif` role's font, the default/body font for everything
-// else — see `fonts/fonts.json` and `useFontsLoader`.
-type LoadedFonts = {
-  sc: Uint8Array
-  tc: Uint8Array
-  mono: Uint8Array
-} | null
+type LoadedFonts = FontBytesByFamily | null
 
 export function binaryBufferFromResult(bytes: Uint8Array): ArrayBuffer {
   return bytes.slice().buffer
@@ -34,9 +31,7 @@ export function handleGeneratePdf(
     msg.source,
     msg.enabledTracks,
     msg.disabledLyrics,
-    loadedFonts.sc,
-    loadedFonts.tc,
-    loadedFonts.mono,
+    loadedFonts,
   )
   if (result.tag === 'ok') {
     const pdfBuffer = binaryBufferFromResult(result.val.pdf)
@@ -73,9 +68,7 @@ export function handleGenerateSplitPdf(
   const result = jianpuWasm().generateSplitPdfs(
     msg.source,
     msg.baseName,
-    loadedFonts.sc,
-    loadedFonts.tc,
-    loadedFonts.mono,
+    loadedFonts,
   )
   if (result.tag === 'ok') {
     const zipBuffer = binaryBufferFromResult(result.val.zip)

@@ -42,14 +42,8 @@ pub(super) fn highlight_tokens(source: String) -> Vec<HighlightToken> {
 // this duplicates that same one/three-line call rather than extracting
 // a new shared function for it.
 
-pub(super) fn set_layout_fonts(
-    directive_line_font: Vec<u8>,
-    lyric_font: Vec<u8>,
-    monospace_font: Vec<u8>,
-) {
-    jianpu_generator::set_directive_line_font_bytes(directive_line_font);
-    jianpu_generator::set_lyric_font_bytes(lyric_font);
-    jianpu_generator::set_monospace_font_bytes(monospace_font);
+pub(super) fn set_layout_fonts(fonts: FontBytesByFamily) {
+    jianpu_generator::set_layout_font_bytes(font_bytes_by_family_from_wit(fonts));
 }
 
 pub(super) fn shift_part_octave(source: String, abbreviation: String, delta: i32) -> String {

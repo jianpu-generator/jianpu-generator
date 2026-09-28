@@ -5,7 +5,7 @@
 //! and the family name each one is addressed by in SVG/PDF output. Every
 //! other consumer — `font_metrics` (glyph-advance measurement),
 //! `serializer::mod` (inline SVG `font-family`), `pdf` (PDF export's
-//! `fontdb` setup), and `cli` (default PDF fonts) — references the constants
+//! `fontdb` setup), and `FontBytesByFamily::embedded` (the CLI's PDF fonts) — references the constants
 //! below instead of its own copy of a filename or family-name literal.
 //!
 //! To experiment with a different Chinese font for a role, edit
@@ -23,3 +23,32 @@
 //! font's own name-table family), so it has no `_FONT_NAME` constant.
 
 include!(concat!(env!("OUT_DIR"), "/fonts_generated.rs"));
+
+/// One font file's raw bytes per `FontFamily` role, keyed by role rather
+/// than by what text each role happens to render — which role measures or
+/// renders which text is decided on the Rust side only (see
+/// `font_metrics` and `serializer::text::font_family_css`). Used both for
+/// PDF export (`pdf::write_pdf` loads all three into `fontdb`) and, on the
+/// `wasm32` build, for layout glyph measurement (`set_layout_font_bytes`),
+/// where the bytes arrive at runtime through the wasm component's
+/// `font-bytes-by-family` WIT record.
+pub struct FontBytesByFamily {
+    /// Backs `FontFamily::Serif`.
+    pub serif: Vec<u8>,
+    /// Backs `FontFamily::SansSerif`.
+    pub sans_serif: Vec<u8>,
+    /// Backs `FontFamily::Monospace`.
+    pub monospace: Vec<u8>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl FontBytesByFamily {
+    /// The fonts embedded at compile time from `fonts/fonts.json`.
+    pub fn embedded() -> Self {
+        Self {
+            serif: SERIF_FONT_BYTES.to_vec(),
+            sans_serif: SANS_SERIF_FONT_BYTES.to_vec(),
+            monospace: MONOSPACE_FONT_BYTES.to_vec(),
+        }
+    }
+}

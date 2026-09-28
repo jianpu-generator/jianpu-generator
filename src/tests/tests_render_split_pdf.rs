@@ -2,14 +2,6 @@ use super::*;
 use std::io::Read;
 use zip::ZipArchive;
 
-fn test_pdf_fonts() -> pdf::PdfFonts {
-    pdf::PdfFonts {
-        sans_serif_sc: fonts::SERIF_FONT_BYTES.to_vec(),
-        sans_serif_tc: fonts::SANS_SERIF_FONT_BYTES.to_vec(),
-        monospace: fonts::MONOSPACE_FONT_BYTES.to_vec(),
-    }
-}
-
 fn multi_track_input() -> &'static str {
     concat!(
         "# metadata\n",
@@ -36,7 +28,7 @@ fn write_split_pdfs_from_source_produces_one_pdf_per_track() {
         "test.jianpu",
         "test_split",
         &[],
-        &test_pdf_fonts(),
+        &fonts::FontBytesByFamily::embedded(),
     )
     .unwrap();
     assert_eq!(entries.len(), 2);
@@ -63,8 +55,14 @@ fn write_split_pdfs_from_source_single_part_uses_split_naming() {
         "[Melody] 1 2 3 4\n",
         "a b c d\n",
     );
-    let entries =
-        write_split_pdfs_from_source(input, "test.jianpu", "song", &[], &test_pdf_fonts()).unwrap();
+    let entries = write_split_pdfs_from_source(
+        input,
+        "test.jianpu",
+        "song",
+        &[],
+        &fonts::FontBytesByFamily::embedded(),
+    )
+    .unwrap();
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].filename, "song - Melody.pdf");
     assert_eq!(&entries[0].pdf[0..4], b"%PDF");
@@ -74,9 +72,14 @@ fn write_split_pdfs_from_source_single_part_uses_split_naming() {
 fn write_split_pdfs_from_source_no_sections_returns_empty() {
     // Source with no section headers: section-structure errors are recoverable,
     // so no Err is returned; the missing # parts section means no tracks exist.
-    let entries =
-        write_split_pdfs_from_source("not valid", "test.jianpu", "song", &[], &test_pdf_fonts())
-            .unwrap();
+    let entries = write_split_pdfs_from_source(
+        "not valid",
+        "test.jianpu",
+        "song",
+        &[],
+        &fonts::FontBytesByFamily::embedded(),
+    )
+    .unwrap();
     assert!(entries.is_empty());
 }
 
@@ -126,7 +129,7 @@ fn write_pdf_from_source_filtered_with_lyrics_includes_part_legend() {
         "test.jianpu",
         None,
         None,
-        &test_pdf_fonts(),
+        &fonts::FontBytesByFamily::embedded(),
         &[],
     )
     .unwrap();
@@ -135,7 +138,7 @@ fn write_pdf_from_source_filtered_with_lyrics_includes_part_legend() {
         "test.jianpu",
         None,
         None,
-        &test_pdf_fonts(),
+        &fonts::FontBytesByFamily::embedded(),
         &[],
     )
     .unwrap();
@@ -155,7 +158,7 @@ fn write_split_pdfs_from_source_includes_part_legend() {
         "test.jianpu",
         "song",
         &[],
-        &test_pdf_fonts(),
+        &fonts::FontBytesByFamily::embedded(),
     )
     .unwrap();
     let without_legend_entries = write_split_pdfs_from_source(
@@ -163,7 +166,7 @@ fn write_split_pdfs_from_source_includes_part_legend() {
         "test.jianpu",
         "song",
         &[],
-        &test_pdf_fonts(),
+        &fonts::FontBytesByFamily::embedded(),
     )
     .unwrap();
     assert_eq!(with_legend_entries.len(), 1);
@@ -184,7 +187,7 @@ fn zip_split_pdfs_contains_named_entries() {
         "test.jianpu",
         "test_split",
         &[],
-        &test_pdf_fonts(),
+        &fonts::FontBytesByFamily::embedded(),
     )
     .unwrap();
     let zip_bytes = zip_split_pdfs(&entries).unwrap();

@@ -832,11 +832,21 @@ world jianpu-wasm {
     // parser's own lexers. Drives the editor's semantic highlighting.
     export highlight-tokens: func(source: string) -> list<highlight-token>;
 
+    // Raw OTF/TTF bytes of each `font-family` role's font (see
+    // `fonts/fonts.json`, keyed by the same role names). Keyed by role, not
+    // by what text a role renders: which role measures/renders which text
+    // is decided on the Rust side only.
+    record font-bytes-by-family {
+        serif: list<u8>,
+        sans-serif: list<u8>,
+        monospace: list<u8>,
+    }
+
     // `set_layout_fonts` supplies the raw font bytes used for layout glyph
     // measurement — no return value, so this is the first `export` in this
     // file with no return type at all (a plain `func(...)`, matching the old
     // `#[wasm_bindgen] fn`'s `()` return).
-    export set-layout-fonts: func(directive-line-font: list<u8>, lyric-font: list<u8>, monospace-font: list<u8>);
+    export set-layout-fonts: func(fonts: font-bytes-by-family);
 
     // `shift_part_octave`/`format_score` are both plain source-string
     // rewrites with no response-shaped type, same reasoning as
@@ -973,10 +983,8 @@ world jianpu-wasm {
         err(diagnostics-error),
     }
 
-    // Phase 3, group 5 of PLAN-wit-bindgen-migration.md. `sans-serif-sc`/
-    // `sans-serif-tc`/`monospace` are raw OTF/TTF font bytes, same semantics
-    // as the `#[wasm_bindgen] fn generate_pdf` original.
-    export generate-pdf: func(source: string, enabled-tracks: option<list<string>>, disabled-lyrics: option<list<string>>, sans-serif-sc: list<u8>, sans-serif-tc: list<u8>, monospace: list<u8>) -> generate-pdf-response;
+    // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
+    export generate-pdf: func(source: string, enabled-tracks: option<list<string>>, disabled-lyrics: option<list<string>>, fonts: font-bytes-by-family) -> generate-pdf-response;
 
     record generate-split-pdfs-success {
         zip: list<u8>,
@@ -988,7 +996,7 @@ world jianpu-wasm {
     }
 
     // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
-    export generate-split-pdfs: func(source: string, base-name: string, sans-serif-sc: list<u8>, sans-serif-tc: list<u8>, monospace: list<u8>) -> generate-split-pdfs-response;
+    export generate-split-pdfs: func(source: string, base-name: string, fonts: font-bytes-by-family) -> generate-split-pdfs-response;
 
     record generate-midi-success {
         midi: list<u8>,

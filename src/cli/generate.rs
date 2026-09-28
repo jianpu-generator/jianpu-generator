@@ -114,7 +114,7 @@ pub fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
             &filename,
             &base_name,
             &opts.tracks,
-            &super::default_pdf_fonts(),
+            &crate::fonts::FontBytesByFamily::embedded(),
         )?;
         if entries.is_empty() {
             eprintln!(
@@ -143,7 +143,7 @@ pub fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
         &filename,
         enabled_tracks,
         None,
-        &super::default_pdf_fonts(),
+        &crate::fonts::FontBytesByFamily::embedded(),
         &[],
     )?;
     let output_path =

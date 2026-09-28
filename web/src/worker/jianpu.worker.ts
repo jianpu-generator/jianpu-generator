@@ -1,4 +1,4 @@
-import type { ByteRange } from '../jianpuWasm'
+import type { ByteRange, FontBytesByFamily } from '../jianpuWasm'
 import { jianpuWasm, setWasmRoot } from '../jianpuWasm'
 import type { EditorSelection, PartDeclaration } from '../types'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
@@ -58,31 +58,12 @@ function ensureInit(): Promise<void> {
 // same graceful degradation as a font fetch that fails outright. Blocking
 // render on a network fetch would turn a slow or failed fetch into a stuck
 // preview instead of a merely imprecise one.
-function applyCoreFontsWhenReady(fonts: {
-  sc: Uint8Array
-  tc: Uint8Array
-  mono: Uint8Array
-}): void {
-  // `setLayoutFonts(directiveLineFont, lyricFont, monospaceFont)` —
-  // directive-line text measures against `tc` (the `sansSerif` role's
-  // font), lyrics against `sc` (the `serif` role's font, shared with the
-  // song title) — see `fonts/fonts.json` and
-  // `DIRECTIVE_LINE_FONT_FAMILY`/`SERIF_FONT_FAMILY` in
-  // src/serializer/mod.rs.
-  ensureInit().then(() =>
-    jianpuWasm().setLayoutFonts(fonts.tc, fonts.sc, fonts.mono),
-  )
+function applyCoreFontsWhenReady(fonts: FontBytesByFamily): void {
+  ensureInit().then(() => jianpuWasm().setLayoutFonts(fonts))
 }
 
 let loadedSoundfont: Uint8Array | null = null
-// `sc` holds the `serif` role's font — the song title/lyric font; `tc`
-// holds the `sansSerif` role's font, the default/body font for everything
-// else — see `fonts/fonts.json` and `useFontsLoader`.
-let loadedFonts: {
-  sc: Uint8Array
-  tc: Uint8Array
-  mono: Uint8Array
-} | null = null
+let loadedFonts: FontBytesByFamily | null = null
 
 function toByteRanges(ranges: EditorSelection[]): ByteRange[] {
   return ranges.map((range) => ({ startByte: range.start, endByte: range.end }))
@@ -107,11 +88,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'loadPdfFonts') {
-    const sc = new Uint8Array(msg.scFont)
-    const tc = new Uint8Array(msg.tcFont)
-    const mono = new Uint8Array(msg.monoFont)
-    loadedFonts = { sc, tc, mono }
-    applyCoreFontsWhenReady({ sc, tc, mono })
+    loadedFonts = msg.fonts
+    applyCoreFontsWhenReady(msg.fonts)
     return
   }
 

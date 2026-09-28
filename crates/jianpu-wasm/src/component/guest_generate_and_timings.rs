@@ -86,33 +86,25 @@ pub(super) fn generate_pdf(
     source: String,
     enabled_tracks: Option<Vec<String>>,
     disabled_lyrics: Option<Vec<String>>,
-    sans_serif_sc: Vec<u8>,
-    sans_serif_tc: Vec<u8>,
-    monospace: Vec<u8>,
+    fonts: FontBytesByFamily,
 ) -> GeneratePdfResponse {
     generate_pdf_response_to_wit(crate::responses::generate_pdf_response(
         &source,
         enabled_tracks.as_deref(),
         disabled_lyrics.as_deref(),
-        sans_serif_sc,
-        sans_serif_tc,
-        monospace,
+        &font_bytes_by_family_from_wit(fonts),
     ))
 }
 
 pub(super) fn generate_split_pdfs(
     source: String,
     base_name: String,
-    sans_serif_sc: Vec<u8>,
-    sans_serif_tc: Vec<u8>,
-    monospace: Vec<u8>,
+    fonts: FontBytesByFamily,
 ) -> GenerateSplitPdfsResponse {
     generate_split_pdfs_response_to_wit(crate::responses::generate_split_pdfs_response(
         &source,
         &base_name,
-        sans_serif_sc,
-        sans_serif_tc,
-        monospace,
+        &font_bytes_by_family_from_wit(fonts),
     ))
 }
 

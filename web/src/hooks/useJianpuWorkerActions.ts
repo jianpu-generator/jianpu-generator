@@ -1,4 +1,5 @@
 import type { RefObject } from 'react'
+import type { FontBytesByFamily } from '../jianpuWasm'
 import { useInstrumentPreview } from './useInstrumentPreview'
 import { useJianpuWorkerAudioActions } from './useJianpuWorkerAudioActions'
 import { useJianpuWorkerDescribeSelection } from './useJianpuWorkerDescribeSelection'
@@ -25,7 +26,7 @@ interface UseJianpuWorkerActionsParams {
   source: string
   activeFile: string
   soundfontBytes: Uint8Array | null
-  fontBytes: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null
+  fontBytes: FontBytesByFamily | null
   debounceMs: number
 }
 

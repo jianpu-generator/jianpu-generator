@@ -33,14 +33,6 @@ mod pdf_embedding {
     use super::*;
     use crate::source_embed::extract_embedded_source_from_pdf;
 
-    fn test_pdf_fonts() -> pdf::PdfFonts {
-        pdf::PdfFonts {
-            sans_serif_sc: fonts::SERIF_FONT_BYTES.to_vec(),
-            sans_serif_tc: fonts::SANS_SERIF_FONT_BYTES.to_vec(),
-            monospace: fonts::MONOSPACE_FONT_BYTES.to_vec(),
-        }
-    }
-
     #[test]
     fn round_trip_recovers_original_source_from_pdf() {
         let source =
@@ -50,7 +42,7 @@ mod pdf_embedding {
             "test.jianpu",
             None,
             None,
-            &test_pdf_fonts(),
+            &fonts::FontBytesByFamily::embedded(),
             &[],
         )
         .unwrap();
@@ -66,7 +58,7 @@ mod pdf_embedding {
             "# metadata\ntitle = \"Testing\"\n\n# parts\nMelody = notes\n\n# score\n[Melody] 1 2 3 4\n";
         let score = compile(source, "test.jianpu", &[]).unwrap();
         let svgs = render_svgs(&score).unwrap();
-        let pdf_bytes = pdf::write_pdf(&svgs, &test_pdf_fonts(), None).unwrap();
+        let pdf_bytes = pdf::write_pdf(&svgs, &fonts::FontBytesByFamily::embedded(), None).unwrap();
         assert_eq!(extract_embedded_source_from_pdf(&pdf_bytes), None);
     }
 }

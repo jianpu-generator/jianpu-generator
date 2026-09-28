@@ -171,7 +171,7 @@ fn cjk_label_gets_a_wider_background_than_an_equal_length_ascii_label() {
         // Same character count as the CJK label below (3) rather than a
         // longer ASCII label like "Verse" (5 chars), so a difference in
         // per-glyph width between the pinned font's Latin and CJK glyphs
-        // (see `DIRECTIVE_LINE_FONT` in `src/font_metrics.rs`) can't
+        // (the `FontFamily::SansSerif` face in `src/font_metrics/`) can't
         // out-measure a short CJK label and defeat this test's point.
         label: Some("abc".to_string()),
         label_font_size: 12.0,
@@ -238,7 +238,7 @@ fn cjk_label_gets_a_wider_background_than_an_equal_length_ascii_label() {
 #[test]
 fn label_background_width_matches_real_font_metrics() {
     // Cross-check against the pinned font's own `hmtx` advances (see
-    // `DIRECTIVE_LINE_FONT` in `src/font_metrics.rs`), independent of the
+    // the `FontFamily::SansSerif` face in `src/font_metrics/`), independent of the
     // renderer's internal helpers, so this asserts an exact width rather
     // than only a relative CJK-vs-ASCII comparison.
     let face = ttf_parser::Face::parse(crate::fonts::SANS_SERIF_FONT_BYTES, 0)

@@ -125,28 +125,17 @@ impl Guest for Component {
         source: String,
         enabled_tracks: Option<Vec<String>>,
         disabled_lyrics: Option<Vec<String>>,
-        sans_serif_sc: Vec<u8>,
-        sans_serif_tc: Vec<u8>,
-        monospace: Vec<u8>,
+        fonts: FontBytesByFamily,
     ) -> GeneratePdfResponse {
-        generate_pdf(
-            source,
-            enabled_tracks,
-            disabled_lyrics,
-            sans_serif_sc,
-            sans_serif_tc,
-            monospace,
-        )
+        generate_pdf(source, enabled_tracks, disabled_lyrics, fonts)
     }
 
     fn generate_split_pdfs(
         source: String,
         base_name: String,
-        sans_serif_sc: Vec<u8>,
-        sans_serif_tc: Vec<u8>,
-        monospace: Vec<u8>,
+        fonts: FontBytesByFamily,
     ) -> GenerateSplitPdfsResponse {
-        generate_split_pdfs(source, base_name, sans_serif_sc, sans_serif_tc, monospace)
+        generate_split_pdfs(source, base_name, fonts)
     }
 
     fn generate_midi(source: String, enabled_tracks: Option<Vec<String>>) -> GenerateMidiResponse {
@@ -272,12 +261,8 @@ impl Guest for Component {
         highlight_tokens(source)
     }
 
-    fn set_layout_fonts(
-        directive_line_font: Vec<u8>,
-        lyric_font: Vec<u8>,
-        monospace_font: Vec<u8>,
-    ) {
-        set_layout_fonts(directive_line_font, lyric_font, monospace_font)
+    fn set_layout_fonts(fonts: FontBytesByFamily) {
+        set_layout_fonts(fonts)
     }
 
     fn shift_part_octave(source: String, abbreviation: String, delta: i32) -> String {

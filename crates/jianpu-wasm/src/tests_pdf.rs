@@ -1,20 +1,14 @@
 use crate::responses::{generate_pdf_response, generate_split_pdfs_response};
 use crate::types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
 
-fn test_pdf_fonts() -> (Vec<u8>, Vec<u8>, Vec<u8>) {
-    (
-        jianpu_generator::fonts::SERIF_FONT_BYTES.to_vec(),
-        jianpu_generator::fonts::SANS_SERIF_FONT_BYTES.to_vec(),
-        jianpu_generator::fonts::MONOSPACE_FONT_BYTES.to_vec(),
-    )
-}
+use jianpu_generator::fonts::FontBytesByFamily;
 
 #[test]
 fn reference_jianpu_generates_pdf() {
-    let (sc, tc, mono) = test_pdf_fonts();
+    let fonts = FontBytesByFamily::embedded();
     for path in super::demo_file_paths() {
         let source = super::read_demo_file(&path);
-        let resp = generate_pdf_response(&source, None, None, sc.clone(), tc.clone(), mono.clone());
+        let resp = generate_pdf_response(&source, None, None, &fonts);
         match resp {
             GeneratePdfResponse::Ok { pdf } => {
                 assert!(pdf.len() > 4);
@@ -35,12 +29,11 @@ fn reference_jianpu_generates_split_pdf_zip() {
     use std::io::Read;
     use zip::ZipArchive;
 
-    let (sc, tc, mono) = test_pdf_fonts();
+    let fonts = FontBytesByFamily::embedded();
     for path in super::demo_file_paths() {
         let source = super::read_demo_file(&path);
         let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("demo");
-        let resp =
-            generate_split_pdfs_response(&source, stem, sc.clone(), tc.clone(), mono.clone());
+        let resp = generate_split_pdfs_response(&source, stem, &fonts);
         match resp {
             GenerateSplitPdfsResponse::Ok { zip } => {
                 assert!(zip.len() > 4);

@@ -1,4 +1,5 @@
 import type { RefObject } from 'react'
+import type { FontBytesByFamily } from '../jianpuWasm'
 import { useJianpuWorkerActions } from './useJianpuWorkerActions'
 import { useJianpuWorkerState } from './useJianpuWorkerState'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
@@ -12,7 +13,7 @@ export function useJianpuWorker(
   soloedParts: ReadonlySet<string>,
   activeFile: string,
   soundfontBytes: Uint8Array | null,
-  fontBytes: { sc: Uint8Array; tc: Uint8Array; mono: Uint8Array } | null,
+  fontBytes: FontBytesByFamily | null,
   /**
    * Owned by the caller (`useAppController`, which also feeds it to its own
    * `useSequenceNavigation` call) rather than this hook, since

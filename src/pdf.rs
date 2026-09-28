@@ -1,33 +1,8 @@
 use crate::error::{IrrecoverableError, IrrecoverableErrorKind, Span};
+use crate::fonts::FontBytesByFamily;
 use base64::Engine;
 use pdf_writer::{Content, Finish, Name, Pdf, Rect, Ref, TextStr};
 use std::collections::HashMap;
-
-pub struct PdfFonts {
-    /// The `serif` role's font bytes (currently Zhuque Fangsong — see
-    /// `fonts/fonts.json`, the single source of truth for which file backs
-    /// each role) — despite the field's name, no longer Source Han Sans SC
-    /// or TW-Kai. Backs `FontFamily::Serif` (the song title, subtitle,
-    /// author, and lyric syllables/lines, see its doc comment in
-    /// `src/compositor/types.rs`), addressed by its own literal family name
-    /// in the SVG's `font-family` (`SERIF_FONT_FAMILY` in
-    /// `src/serializer/mod.rs`) rather than via `set_sans_serif_family` —
-    /// `fontdb` resolves a literal name by matching a loaded font's own
-    /// name-table family, so whatever font backs this role just needs to be
-    /// loaded here, not bound to a generic alias (see `fonts/fonts.json`'s
-    /// comment on this).
-    pub sans_serif_sc: Vec<u8>,
-    /// The `sansSerif` role's font bytes (currently Source Han Sans SC —
-    /// see `fonts/fonts.json`) — the default/body CJK font PDF export
-    /// resolves `sans-serif` to (see `set_sans_serif_family` below),
-    /// covering everything except `FontFamily::Serif`'s text (directive
-    /// line, part legend, footer). Loaded separately from `sans_serif_sc`
-    /// since the two roles can be backed by different font files (and
-    /// currently are — see `fonts/fonts.json`'s comment on why the split
-    /// exists).
-    pub sans_serif_tc: Vec<u8>,
-    pub monospace: Vec<u8>,
-}
 
 /// Writes PDF bytes for the given rendered SVG pages, optionally embedding
 /// `source` (the original `.jianpu` text) as a base64-encoded `/JianpuSource`
@@ -37,7 +12,7 @@ pub struct PdfFonts {
 /// for the matching extraction side.
 pub fn write_pdf(
     svgs: &[String],
-    fonts: &PdfFonts,
+    fonts: &FontBytesByFamily,
     source: Option<&str>,
 ) -> Result<Vec<u8>, IrrecoverableError> {
     if svgs.is_empty() {
@@ -47,8 +22,11 @@ pub fn write_pdf(
     let mut options = svg2pdf::usvg::Options::default();
     {
         let db = options.fontdb_mut();
-        db.load_font_data(fonts.sans_serif_sc.clone());
-        db.load_font_data(fonts.sans_serif_tc.clone());
+        // Loads every role's font; `Serif` is then resolved by its own
+        // literal name-table family (see `fonts/fonts.json`'s comment), the
+        // other two through the generic aliases bound below.
+        db.load_font_data(fonts.serif.clone());
+        db.load_font_data(fonts.sans_serif.clone());
         db.load_font_data(fonts.monospace.clone());
         db.set_sans_serif_family(crate::fonts::SANS_SERIF_FONT_NAME);
         db.set_monospace_family(crate::fonts::MONOSPACE_FONT_NAME);
@@ -142,12 +120,7 @@ mod tests {
         let svgs = crate::render_svgs_from_source(&input, "test.jianpu", &[])
             .unwrap()
             .svgs;
-        let fonts = PdfFonts {
-            sans_serif_sc: crate::fonts::SERIF_FONT_BYTES.to_vec(),
-            sans_serif_tc: crate::fonts::SANS_SERIF_FONT_BYTES.to_vec(),
-            monospace: crate::fonts::MONOSPACE_FONT_BYTES.to_vec(),
-        };
-        write_pdf(&svgs, &fonts, None).unwrap()
+        write_pdf(&svgs, &FontBytesByFamily::embedded(), None).unwrap()
     }
 
     #[test]

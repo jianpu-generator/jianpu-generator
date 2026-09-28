@@ -154,3 +154,20 @@ pub(super) fn generate_split_midis_response_to_wit(
         }
     }
 }
+
+/// The WIT `font-bytes-by-family` record → the core crate's same-shaped
+/// role-keyed struct.
+pub(super) fn font_bytes_by_family_from_wit(
+    fonts: FontBytesByFamily,
+) -> jianpu_generator::fonts::FontBytesByFamily {
+    let FontBytesByFamily {
+        serif,
+        sans_serif,
+        monospace,
+    } = fonts;
+    jianpu_generator::fonts::FontBytesByFamily {
+        serif,
+        sans_serif,
+        monospace,
+    }
+}

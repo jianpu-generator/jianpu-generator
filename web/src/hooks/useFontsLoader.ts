@@ -1,49 +1,53 @@
 import fontsManifest from '../../../fonts/fonts.json'
-import type { AssetStatus } from './useAssetLoader'
+import type { FontBytesByFamily } from '../jianpuWasm'
+import type { AssetLoaderState, AssetStatus } from './useAssetLoader'
 import { useAssetLoader } from './useAssetLoader'
 
 export interface FontsLoaderState {
-  fonts: {
-    sc: Uint8Array
-    tc: Uint8Array
-    mono: Uint8Array
-  } | null
+  fonts: FontBytesByFamily | null
   status: AssetStatus
   loadedBytes: number
   totalBytes: number
 }
 
+type FontRole = keyof FontBytesByFamily
+
+function useFontRoleLoader(role: FontRole): AssetLoaderState {
+  return useAssetLoader(`/fonts/${fontsManifest[role].filename}`)
+}
+
+/** Fetches every `font-family` role's font (filenames from
+ * `fonts/fonts.json`, keyed by the same role names as the wasm component's
+ * generated `FontBytesByFamily`). Which role measures or renders which text
+ * is decided on the Rust side. */
 export function useFontsLoader(): FontsLoaderState {
-  // `sc` holds the `serif` role's font — the song title/subtitle/author/
-  // lyric font (see `FontFamily::Serif` in src/compositor/types.rs),
-  // despite the name; `tc` holds the `sansSerif` role's font, the separate
-  // default/body font for everything else (directive line, part legend,
-  // footer) — currently Source Han Sans SC, a different file from `sc`'s
-  // Zhuque Fangsong. Filenames/family names come from `fonts/fonts.json`,
-  // the single source of truth for which font backs each role — see its own
-  // comments and `src/fonts.rs` on the Rust side.
-  const sc = useAssetLoader(`/fonts/${fontsManifest.serif.filename}`)
-  const tc = useAssetLoader(`/fonts/${fontsManifest.sansSerif.filename}`)
-  const mono = useAssetLoader(`/fonts/${fontsManifest.monospace.filename}`)
+  const loaders: Record<FontRole, AssetLoaderState> = {
+    serif: useFontRoleLoader('serif'),
+    sansSerif: useFontRoleLoader('sansSerif'),
+    monospace: useFontRoleLoader('monospace'),
+  }
+  const { serif, sansSerif, monospace } = loaders
+  const all = Object.values(loaders)
 
-  const status: AssetStatus =
-    sc.status === 'error' || tc.status === 'error' || mono.status === 'error'
-      ? 'error'
-      : sc.status === 'ready' &&
-          tc.status === 'ready' &&
-          mono.status === 'ready'
-        ? 'ready'
-        : 'loading'
+  const status: AssetStatus = all.some((loader) => loader.status === 'error')
+    ? 'error'
+    : all.every((loader) => loader.status === 'ready')
+      ? 'ready'
+      : 'loading'
 
-  const fonts =
-    sc.bytes && tc.bytes && mono.bytes
-      ? { sc: sc.bytes, tc: tc.bytes, mono: mono.bytes }
+  const fonts: FontBytesByFamily | null =
+    serif.bytes && sansSerif.bytes && monospace.bytes
+      ? {
+          serif: serif.bytes,
+          sansSerif: sansSerif.bytes,
+          monospace: monospace.bytes,
+        }
       : null
 
   return {
     fonts,
     status,
-    loadedBytes: sc.loadedBytes + tc.loadedBytes + mono.loadedBytes,
-    totalBytes: sc.totalBytes + tc.totalBytes + mono.totalBytes,
+    loadedBytes: all.reduce((sum, loader) => sum + loader.loadedBytes, 0),
+    totalBytes: all.reduce((sum, loader) => sum + loader.totalBytes, 0),
   }
 }

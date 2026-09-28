@@ -8,15 +8,6 @@ pub use generate::GenerateInput;
 #[cfg(feature = "wav")]
 pub static SF2_BYTES: &[u8] = include_bytes!("../../fonts/GeneralUser_GS.sf2");
 
-#[cfg(feature = "pdf")]
-pub fn default_pdf_fonts() -> crate::pdf::PdfFonts {
-    crate::pdf::PdfFonts {
-        sans_serif_sc: crate::fonts::SERIF_FONT_BYTES.to_vec(),
-        sans_serif_tc: crate::fonts::SANS_SERIF_FONT_BYTES.to_vec(),
-        monospace: crate::fonts::MONOSPACE_FONT_BYTES.to_vec(),
-    }
-}
-
 /// Outcome of checking a `.jianpu` file for diagnostics.
 pub struct CheckOutcome {
     /// `true` when the file parses with no errors (warnings are still allowed).

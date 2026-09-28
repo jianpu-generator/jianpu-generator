@@ -6,13 +6,11 @@
 //! matches what actually renders (see Task 3/4 of
 //! `PLAN-section-label-engraving-quality.md`).
 //!
-//! Two separate pinned faces back this, mirroring the
-//! `DIRECTIVE_LINE_FONT_FAMILY`/`SERIF_FONT_FAMILY` split in
-//! `src/serializer/mod.rs`: `directive_line_font()` (the `sansSerif` role in
-//! `fonts/fonts.json`) for the directive line's own text, and `lyric_font()`
-//! (the `serif` role) for lyric syllables, which render in the same font as
-//! the song title instead — currently Zhuque Fangsong, a different file from
-//! `directive_line_font()`'s Source Han Sans SC.
+//! Faces are looked up by `FontFamily` role only (`font_source::face_for_family`,
+//! one pinned face per role in `fonts/fonts.json`, the same roles
+//! `serializer::text::font_family_css` renders with): the directive line's
+//! own text measures against `FontFamily::SansSerif`, and lyric syllables
+//! against `FontFamily::Serif`, the song title's role.
 //!
 //! Also used by `grid_layout::layout_spacing` for measure-spacing weights
 //! (notehead/rest/chord-symbol/note-dash/lyric glyph widths, via
@@ -28,9 +26,7 @@ mod font_source;
 #[cfg(test)]
 mod tests;
 
-pub(crate) use font_source::{
-    set_directive_line_font_bytes, set_lyric_font_bytes, set_monospace_font_bytes,
-};
+pub(crate) use font_source::set_layout_font_bytes;
 
 /// The pinned font only ships a Regular weight, so bold text (e.g. a section
 /// label) is approximated by scaling Regular advance widths up, rather than
@@ -88,22 +84,26 @@ fn face_vertical_extent(face: Option<&ttf_parser::Face<'static>>, font_size: f32
     measured.unwrap_or(font_size * FALLBACK_VERTICAL_EXTENT_RATIO)
 }
 
-/// Left-side bearing (in points) of one character in the pinned lyric font
-/// (see `lyric_font`), used to compensate a lyric syllable's configured
+/// Left-side bearing (in points) of one character in the pinned
+/// `FontFamily::Serif` (lyric) font, used to compensate a lyric syllable's configured
 /// horizontal padding (`Metadata::lyrics_horizontal_padding_pt`) for CJK
 /// syllables' own built-in inset — see
 /// `coordinate_resolver::resolve::flush_left_padding`.
 pub(crate) fn cjk_glyph_left_bearing(c: char, font_size: f32) -> f32 {
-    face_glyph_left_bearing(font_source::lyric_font(), c, font_size)
+    face_glyph_left_bearing(
+        font_source::face_for_family(FontFamily::Serif),
+        c,
+        font_size,
+    )
 }
 
 /// Real vertical extent (in points, ascender to descender) of the pinned
-/// lyric font (see `lyric_font`) at the given font size — used to size a
+/// `FontFamily::Serif` (lyric) font at the given font size — used to size a
 /// lyric syllable's click-target row tall enough for its actual glyph
 /// height instead of a hardcoded ratio (see `grid_layout::layout_heights::
 /// lyric_row_height`).
 pub(crate) fn lyric_vertical_extent(font_size: f32) -> f32 {
-    face_vertical_extent(font_source::lyric_font(), font_size)
+    face_vertical_extent(font_source::face_for_family(FontFamily::Serif), font_size)
 }
 
 /// Whether `c` falls in the CJK Unified Ideographs block, the single check
@@ -128,9 +128,14 @@ pub(crate) fn lyric_font_size(text: &str, base: f32, cjk: f32) -> f32 {
 }
 
 /// Real advance width (in points) of one character at the given font size,
-/// measured from the pinned font's `hmtx` table (see `font_source::directive_line_font`).
+/// measured from the pinned `FontFamily::SansSerif` (directive line) font's
+/// `hmtx` table.
 pub(crate) fn char_advance_width(c: char, font_size: f32, bold: bool) -> f32 {
-    let width = face_char_advance_width(font_source::directive_line_font(), c, font_size);
+    let width = face_char_advance_width(
+        font_source::face_for_family(FontFamily::SansSerif),
+        c,
+        font_size,
+    );
     if bold {
         width * SYNTHETIC_BOLD_WIDTH_RATIO
     } else {
@@ -149,10 +154,14 @@ pub(crate) fn span_width(span: &TextSpan) -> f32 {
 }
 
 /// Real advance width (in points) of one character in the pinned monospace
-/// font (see `font_source::monospace_font`), used for
+/// font (`FontFamily::Monospace`), used for
 /// notehead/rest/chord/dash/Latin-lyric glyphs.
 pub(crate) fn monospace_char_advance_width(c: char, font_size: f32) -> f32 {
-    face_char_advance_width(font_source::monospace_font(), c, font_size)
+    face_char_advance_width(
+        font_source::face_for_family(FontFamily::Monospace),
+        c,
+        font_size,
+    )
 }
 
 /// Real rendered width (in points) of a string in the pinned monospace font,
@@ -163,27 +172,13 @@ pub(crate) fn monospace_text_width(s: &str, font_size: f32) -> f32 {
         .sum()
 }
 
-/// The pinned face backing `family` — the same three-way split
-/// `font_source` already exposes by role (`monospace_font`/
-/// `directive_line_font`/`lyric_font`), just addressed by the
-/// `FontFamily` a `notes`/`chords`/`note_dash` style resolves to instead of
-/// by a fixed call site, so those three kinds' glyph widths can be measured
-/// against whichever font their `font_family` override actually renders in.
-fn face_for_family(family: FontFamily) -> Option<&'static ttf_parser::Face<'static>> {
-    match family {
-        FontFamily::Monospace => font_source::monospace_font(),
-        FontFamily::SansSerif => font_source::directive_line_font(),
-        FontFamily::Serif => font_source::lyric_font(),
-    }
-}
-
 /// Real advance width (in points) of one character in `family`'s pinned
 /// font, at the given font size — the `notes`/`chords`/`note_dash`
 /// counterpart to `monospace_char_advance_width`, family-aware since those
 /// three kinds now accept a `font_family` override (see
 /// `RenderConfig::glyph_font_families`).
 pub(crate) fn advance_width_for_family(family: FontFamily, c: char, font_size: f32) -> f32 {
-    face_char_advance_width(face_for_family(family), c, font_size)
+    face_char_advance_width(font_source::face_for_family(family), c, font_size)
 }
 
 /// Real rendered width (in points) of a string in `family`'s pinned font,
@@ -246,16 +241,22 @@ pub(crate) fn chord_leading_accidental_width_for_family(
 /// `note_dash` counterpart to `cjk_glyph_left_bearing`, family-aware for the
 /// same reason as `advance_width_for_family`.
 pub(crate) fn glyph_left_bearing_for_family(family: FontFamily, c: char, font_size: f32) -> f32 {
-    face_glyph_left_bearing(face_for_family(family), c, font_size)
+    face_glyph_left_bearing(font_source::face_for_family(family), c, font_size)
 }
 
-/// Real rendered width (in points) of a string in the pinned lyric font (see
-/// `LYRIC_FONT`), used for CJK lyric syllables. A plain-`&str` counterpart
-/// to `span_width`, which requires a `TextSpan` and measures against
-/// `DIRECTIVE_LINE_FONT` instead.
+/// Real rendered width (in points) of a string in the pinned
+/// `FontFamily::Serif` (lyric) font, used for CJK lyric syllables. A
+/// plain-`&str` counterpart to `span_width`, which requires a `TextSpan` and
+/// measures against `FontFamily::SansSerif` instead.
 pub(crate) fn cjk_text_width(s: &str, font_size: f32) -> f32 {
     s.chars()
-        .map(|c| face_char_advance_width(font_source::lyric_font(), c, font_size))
+        .map(|c| {
+            face_char_advance_width(
+                font_source::face_for_family(FontFamily::Serif),
+                c,
+                font_size,
+            )
+        })
         .sum()
 }
 

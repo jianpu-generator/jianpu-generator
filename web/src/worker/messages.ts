@@ -1,4 +1,4 @@
-import type { NoteTiming, SvgDocument } from '../jianpuWasm'
+import type { FontBytesByFamily, NoteTiming, SvgDocument } from '../jianpuWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -24,9 +24,7 @@ export type WorkerRequest =
     }
   | {
       type: 'loadPdfFonts'
-      scFont: ArrayBuffer
-      tcFont: ArrayBuffer
-      monoFont: ArrayBuffer
+      fonts: FontBytesByFamily
     }
   | {
       type: 'render'
