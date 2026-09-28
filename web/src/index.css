@@ -3,7 +3,7 @@
    fonts bundled for PDF export — see Task 1 of
    PLAN-section-label-engraving-quality.md) are now generated at runtime by
    `injectFontFaces` (see src/injectFontFaces.ts, called once from
-   src/main.tsx) straight from `fonts/fonts.json` — the single source of
+   src/appEntry.tsx) straight from `fonts/fonts.json` — the single source of
    truth for which font backs each role, on both the Rust and web side (see
    that file's own comments, and src/fonts.rs). CSS can't import a JS/JSON
    constant, which is why this moved to TS instead of staying a static rule

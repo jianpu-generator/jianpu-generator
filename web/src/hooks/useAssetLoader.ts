@@ -35,9 +35,10 @@ function siblingUrl(resolvedUrl: string, fileName: string): string {
 // Assets without a manifest fall back to a plain single-file fetch below.
 async function fetchManifest(
   resolvedUrl: string,
+  signal: AbortSignal,
 ): Promise<AssetManifest | null> {
   try {
-    const response = await fetch(`${resolvedUrl}.manifest.json`)
+    const response = await fetch(`${resolvedUrl}.manifest.json`, { signal })
     if (!response.ok) return null
     return (await response.json()) as AssetManifest
   } catch {
@@ -49,6 +50,7 @@ async function fetchChunked(
   resolvedUrl: string,
   manifest: AssetManifest,
   onProgress: (loadedBytes: number) => void,
+  signal: AbortSignal,
 ): Promise<Uint8Array> {
   const merged = new Uint8Array(manifest.totalBytes)
   const offsets: number[] = []
@@ -61,7 +63,7 @@ async function fetchChunked(
   let loaded = 0
   await Promise.all(
     manifest.parts.map(async (part, i) => {
-      const response = await fetch(siblingUrl(resolvedUrl, part))
+      const response = await fetch(siblingUrl(resolvedUrl, part), { signal })
       if (!response.ok) {
         throw new Error(`HTTP ${response.status} fetching ${part}`)
       }
@@ -113,6 +115,16 @@ export function useAssetLoader(url: string): AssetLoaderState {
 
   useEffect(() => {
     let cancelled = false
+    // Aborts this effect's in-flight downloads once it's cleaned up, rather
+    // than letting them run to completion only for `cancelled` to discard
+    // the bytes. These assets are tens of MB each (fonts, soundfont), and
+    // `StrictMode` runs every effect twice in development -- so without
+    // this, every page load downloaded each one twice over, holding
+    // several of the browser's six per-host connections for seconds and
+    // starving everything else the page (or a same-origin popup, like the
+    // GitHub sign-in callback) needed to fetch meanwhile.
+    const controller = new AbortController()
+    const { signal } = controller
     const resolvedUrl = resolveAssetUrl(url)
 
     async function load() {
@@ -128,16 +140,21 @@ export function useAssetLoader(url: string): AssetLoaderState {
           return
         }
 
-        const manifest = await fetchManifest(resolvedUrl)
+        const manifest = await fetchManifest(resolvedUrl, signal)
 
         let merged: Uint8Array
         if (manifest) {
           if (!cancelled) setTotalBytes(manifest.totalBytes)
-          merged = await fetchChunked(resolvedUrl, manifest, (loaded) => {
-            if (!cancelled) setLoadedBytes(loaded)
-          })
+          merged = await fetchChunked(
+            resolvedUrl,
+            manifest,
+            (loaded) => {
+              if (!cancelled) setLoadedBytes(loaded)
+            },
+            signal,
+          )
         } else {
-          const response = await fetch(resolvedUrl)
+          const response = await fetch(resolvedUrl, { signal })
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`)
           }
@@ -164,6 +181,7 @@ export function useAssetLoader(url: string): AssetLoaderState {
     load()
     return () => {
       cancelled = true
+      controller.abort()
     }
   }, [url])
 

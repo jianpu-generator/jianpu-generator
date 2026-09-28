@@ -1,15 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './monacoSetup.ts'
 import './index.css'
-import App from './App.tsx'
-import { SyncedShareGithubCallbackPage } from './components/SyncedShareGithubCallbackPage.tsx'
-import { injectFontFaces } from './injectFontFaces.ts'
-import { injectPreviewInteractionStyles } from './injectPreviewInteractionStyles.ts'
 import { syncedShareGithubCallbackPathname } from './storage/accountAuthPopup.ts'
-
-injectFontFaces()
-injectPreviewInteractionStyles()
 
 const root = document.getElementById('root')
 if (root == null) {
@@ -25,8 +17,18 @@ if (root == null) {
 const isSyncedShareGithubCallback =
   window.location.pathname === syncedShareGithubCallbackPathname()
 
-createRoot(root).render(
-  <StrictMode>
-    {isSyncedShareGithubCallback ? <SyncedShareGithubCallbackPage /> : <App />}
-  </StrictMode>,
-)
+// Each route's tree is imported dynamically so the popup only fetches the
+// handful of modules it needs to finish the token exchange, not the whole
+// editor (Monaco, the wasm bindings, every `<App/>` module). The popup
+// shares its opener's per-host connection pool, which the opener is still
+// using to download its own modules and assets -- so the more the popup
+// fetches, the longer the opener's "Signing in…" button waits.
+const page = isSyncedShareGithubCallback
+  ? import('./components/SyncedShareGithubCallbackPage.tsx').then(
+      ({ SyncedShareGithubCallbackPage }) => <SyncedShareGithubCallbackPage />,
+    )
+  : import('./appEntry.tsx').then(({ AppEntry }) => <AppEntry />)
+
+void page.then((element) => {
+  createRoot(root).render(<StrictMode>{element}</StrictMode>)
+})
