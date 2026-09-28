@@ -1,4 +1,5 @@
-import type { LyricCellIn, NoteCellIn } from '../jianpuWasm'
+import { groupTagSelector, tagFromElement } from '../dataAttributes'
+import type { LyricCellIn, NoteCellIn, Tag } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import { clickableElementIdFromElement } from './clickableElementId'
 
@@ -9,14 +10,18 @@ export type NoteCell = NoteCellIn
 /**
  * Generic hit-test behind `getNoteAtPoint`/`getLyricAtPoint`/
  * `getPartLabelAtPoint`/`getLyricLabelAtPoint`: reads the element under
- * `(x, y)`, walks up to its nearest `[data-tag="{tag}"]` ancestor group, and
+ * `(x, y)`, walks up to its nearest `tagType` group, and
  * resolves a `ClickableElementId` off it via `clickableElementIdFromElement`
  * — the point-based counterpart of that function's own delegated-event use
  * (`mouseover`'s `event.target.closest(...)` in `usePreviewClickSelection.ts`).
  */
-function getClickableElementIdAtPoint(x: number, y: number, tag: string) {
+export function getClickableElementIdAtPoint(
+  x: number,
+  y: number,
+  tagType: Tag['tag'],
+) {
   const el = document.elementFromPoint(x, y)
-  const group = el?.closest(`[data-tag="${tag}"]`)
+  const group = el?.closest(groupTagSelector(tagType))
   if (!group) return undefined
   return clickableElementIdFromElement(group)
 }
@@ -27,9 +32,10 @@ export function getSectionLabelAtPoint(
 ): string | undefined {
   const el = document.elementFromPoint(x, y)
   if (!el) return undefined
-  const group = el.closest('[data-tag="section-label"]')
+  const group = el.closest(groupTagSelector('section-label'))
   if (!group) return undefined
-  return (group as HTMLElement).dataset.sectionLabel
+  const tag = tagFromElement(group)
+  return tag?.tag === 'section-label' ? tag.val.label : undefined
 }
 
 export interface MeasureRange {
@@ -100,7 +106,10 @@ export function getBarNumberMeasureAtPoint(
  * so several e2e tests' `[data-tag="measure"]` DOM-order/count assumptions
  * stay unaffected).
  */
-const MEASURE_RANGE_SELECTOR = '[data-tag="measure"], [data-tag="bar-number"]'
+const MEASURE_RANGE_SELECTOR = [
+  groupTagSelector('measure'),
+  groupTagSelector('bar-number'),
+].join(', ')
 
 /**
  * The `MeasureRange` of the whole *system* that `measureIndex` belongs to —
@@ -120,17 +129,14 @@ export function systemRangeContainingMeasure(
   container: HTMLElement,
   measureIndex: number,
 ): MeasureRange | undefined {
-  for (const label of Array.from(
-    container.querySelectorAll<HTMLElement>('[data-tag="part-label"]'),
-  )) {
-    const { measureIndexStart, measureIndexEnd } = label.dataset
-    if (measureIndexStart === undefined || measureIndexEnd === undefined)
-      continue
-    const start = Number.parseInt(measureIndexStart, 10)
-    const end = Number.parseInt(measureIndexEnd, 10)
-    if (measureIndex >= start && measureIndex <= end) return { start, end }
-  }
-  return undefined
+  return Array.from(container.querySelectorAll(groupTagSelector('part-label')))
+    .map((label) => tagFromElement(label))
+    .filter((tag) => tag?.tag === 'part-label')
+    .map((tag) => ({
+      start: tag.val.measureIndexStart,
+      end: tag.val.measureIndexEnd,
+    }))
+    .find(({ start, end }) => measureIndex >= start && measureIndex <= end)
 }
 
 export function getMeasureAtPoint(

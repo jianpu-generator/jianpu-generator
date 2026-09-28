@@ -1,26 +1,10 @@
-import { groupTagSelector } from '../dataAttributes'
-import type {
-  LyricLabelElementId,
-  PartLabelElementId,
-  Tag,
-} from '../jianpuWasm'
+import type { LyricLabelElementId, PartLabelElementId } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
-import { clickableElementIdFromElement } from './clickableElementId'
-import type { LyricCell, NoteCell } from './previewSelection'
-
-/** The point-based counterpart of `clickableElementIdFromElement` used by
- * both label hit-tests below — mirrors `previewSelection.ts`'s own private
- * `getClickableElementIdAtPoint`. */
-function getClickableElementIdAtPoint(
-  x: number,
-  y: number,
-  tagType: Tag['tag'],
-) {
-  const el = document.elementFromPoint(x, y)
-  const group = el?.closest(groupTagSelector(tagType))
-  if (!group) return undefined
-  return clickableElementIdFromElement(group)
-}
+import {
+  getClickableElementIdAtPoint,
+  type LyricCell,
+  type NoteCell,
+} from './previewSelection'
 
 /** One rendered part-label click target, keyed the same way as
  * `Tag` `part-label`'s `data-part-index`/`data-measure-index-start`/
