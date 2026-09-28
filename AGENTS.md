@@ -56,4 +56,46 @@ To run local dev, use `mprocs -c dekit.yaml`.
 
 ## Cross-boundary invariants (Rust ↔ TS)
 
-Data crossing the Rust/TS boundary (wasm bindings, serde JSON, worker `postMessage` protocol) can carry an invariant a simple type system could enforce — a finite set of string tags, a field name, a fixed-arity shape — but that's instead left as a bare `string`/`number`/generic object on one or both sides (e.g. `TagOut` in `crates/jianpu-wasm/src/svg_types.rs` becoming hand-typed `data-tag` strings re-embedded in ~7 TS files' `querySelector` calls, with no shared type), so a typo or rename compiles clean on both sides and only breaks at runtime; never add a new instance of this — represent such data as a tagged union (Rust `enum` with `#[serde(tag = "...")]` matched by an exhaustive TS `switch`/`never` check) or, failing that, a shared narrow type/constant every consumer references, tighten any existing instance you touch rather than adding another hand-typed occurrence, and ask the user first if the right enforcement mechanism isn't obvious.
+A cross-boundary invariant is any value, shape or rule that two sides must agree on. The two sides can be Rust and TS, or either of them and config/scripts. Examples:
+
+- a string tag
+- a field name
+- an index space
+- an id format
+- a numeric limit
+- a URL path or status code
+- a SQL column
+- an env var name
+- a label format like `"N: Name"`
+
+It applies on every channel:
+
+- wasm/WIT exports and their jco `.d.ts`
+- serde JSON and worker `postMessage` messages
+- the live-share worker's HTTP API
+- the D1 schema, including test scripts that query it
+- deploy/build config (`wrangler.toml`, workflows, `.env`)
+- Pages Functions
+- e2e selectors and mocks
+
+**Never keep such an agreement by hand.** Drift must be a compile, typecheck or build error, or impossible by construction. To get there, use one of these:
+
+- **Generated types:** the WIT/jco `.d.ts`, or the OpenAPI `schema.ts` from `handlers::routes()`. Use a WIT `variant`/`enum`/`record` rather than a bare `string`/`u32`/`list<u8>` whose meaning TS must know.
+- **One shared data file** that both sides read at build time, e.g. `fonts/fonts.json` or `web/src/data/gmPercussion.json`.
+- **Logic on one side only.** If TS needs something Rust already computes (a part's name after hidden parts are filtered, a formatted label, which font measures which text, a section kind), make Rust return it. Don't re-derive it in TS.
+
+These do **not** count as a fix. They narrow the hand-matching instead of removing it:
+
+- "must match X" / "mirrors Y" comments
+- a TS constant or `satisfies Record<…>` restating a Rust value
+- a hand-typed interface or cast on a raw `fetch`/`.json()`
+- a regex re-implementing a Rust lexer rule
+- positional parameters whose meaning the caller must know
+- a test asserting that two hand-written copies agree
+
+Rules:
+
+- Never add a new instance.
+- Remove any existing instance you touch rather than adding another occurrence.
+- If none of the options above fits (e.g. values fixed by an external deploy platform), stop and ask the user before settling for less.
+- `TODO-cross-boundary-invariants.md` tracks the known instances and how each was fixed.
