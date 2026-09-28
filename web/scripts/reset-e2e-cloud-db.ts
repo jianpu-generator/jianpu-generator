@@ -1,6 +1,6 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S pnpm exec tsx
 // Wipes the local D1 cloud-backend rows owned by the synthetic e2e accounts
-// (`e2e-test-user`, `e2e-test-user-two` -- see `mockGithubIdentity.mjs`)
+// (`e2e-test-user`, `e2e-test-user-two` -- see `e2e/mockGithubIdentity.ts`)
 // before every local e2e run.
 //
 // Why this exists: unlike CI (`.github/workflows/pages.yml`), which never
@@ -32,15 +32,15 @@
 // synthetic accounts have no "bin" a real user could want restored from.
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { KNOWN_GITHUB_USER_IDS } from '../e2e/mockGithubIdentity.ts'
 
 const workerDir = fileURLToPath(
   new URL('../../crates/live-share-worker', import.meta.url),
 )
 
-// Keep in sync with `e2e/mockGithubIdentity.mjs`'s `KNOWN_GITHUB_USER_IDS`
-// -- every login an e2e scenario ever signs in as needs its GitHub id
-// listed here too, or its leftover rows won't be cleaned up.
-const SYNTHETIC_GITHUB_USER_IDS = [987654321, 987654322, 987654323]
+// Every login an e2e scenario ever signs in as, so none of their leftover
+// rows survive into the next run.
+const SYNTHETIC_GITHUB_USER_IDS = Object.values(KNOWN_GITHUB_USER_IDS)
 
 const syntheticOwners = `SELECT user_id FROM user_identities
   WHERE provider = 'github'

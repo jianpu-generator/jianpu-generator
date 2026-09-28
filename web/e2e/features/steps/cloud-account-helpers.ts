@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { DEFAULT_MOCK_GITHUB_LOGIN } from '../../mockGithubIdentity.mjs'
+import { DEFAULT_MOCK_GITHUB_LOGIN } from '../../mockGithubIdentity.ts'
 
 // Shared, non-glue helpers for the cloud (D1) storage backend's e2e
 // coverage -- imported by several `.steps.ts` files across

@@ -45,7 +45,9 @@ export function ensureMeasure(index: number): MeasureSpec {
   while (state.measures.length <= index) {
     state.measures.push({ notesFor: [] })
   }
-  return state.measures[index]
+  const measure = state.measures[index]
+  if (!measure) throw new Error(`Measure ${index} was not created.`)
+  return measure
 }
 
 /** Default note tokens written for a part in a measure with plain notes.

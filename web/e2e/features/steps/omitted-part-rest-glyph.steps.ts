@@ -155,8 +155,8 @@ async function hasOmittedPartRestGlyph(
     // `render_omitted_part_rest`: `block_stroke_width` is roughly
     // `cap_stroke_width * 3.6`) — a written `0`/other glyphs in this same
     // region don't produce this two-tier, closely-stacked pairing.
-    const thinnest = strokeWidths[0]
-    const thickest = strokeWidths[strokeWidths.length - 1]
+    const thinnest = strokeWidths[0] ?? 0
+    const thickest = strokeWidths.at(-1) ?? 0
     return thinnest > 0 && thickest > thinnest * 2
   }, region)
 }

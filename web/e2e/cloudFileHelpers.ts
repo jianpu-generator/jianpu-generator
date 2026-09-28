@@ -4,7 +4,7 @@ import type {
   components,
   paths,
 } from '../src/generated/live-share-worker/schema'
-import { syncedShareIdentityTokenFor } from './mockGithubIdentity.mjs'
+import { syncedShareIdentityTokenFor } from './mockGithubIdentity.ts'
 
 export type WorkerSchemas = components['schemas']
 type PublicFile = WorkerSchemas['PublicFile']
@@ -99,7 +99,7 @@ export const DEFAULT_CLOUD_FILE_CONTENT = [
  * in `protocol.rs`), so any unique string works here too.
  *
  * Idempotent across reruns of the same scenario: `scripts/resolve-e2e-
- * flakes.mjs` reruns a still-failing scenario against the very same
+ * flakes.ts` reruns a still-failing scenario against the very same
  * already-running `wrangler dev` + local D1 instance (see
  * `playwright.config.ts`'s `reuseExistingServer`), so a plain `POST /files`
  * would fail with `name_taken` on any rerun once the first attempt's row is

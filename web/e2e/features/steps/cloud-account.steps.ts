@@ -5,7 +5,7 @@ import {
 import {
   DEFAULT_MOCK_GITHUB_LOGIN,
   syncedShareIdentityTokenFor,
-} from '../../mockGithubIdentity.mjs'
+} from '../../mockGithubIdentity.ts'
 import { BeforeScenario, Given } from './fixtures'
 
 // Shared account sign-in + cloud-file-seeding `Given` steps, used as the

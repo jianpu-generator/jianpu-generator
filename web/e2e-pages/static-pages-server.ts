@@ -9,17 +9,17 @@
 // is exactly the thing `github-callback-production-routing.feature` exists
 // to catch a regression in.
 //
-// Modeled directly on `../e2e/mock-github-oauth-server.mjs`'s style: no
+// Modeled directly on `../e2e/mock-github-oauth-server.ts`'s style: no
 // framework, `PORT` from env, plain `if` route blocks.
 import { createReadStream, existsSync, statSync } from 'node:fs'
-import { createServer } from 'node:http'
+import { createServer, type ServerResponse } from 'node:http'
 import { extname, join, normalize } from 'node:path'
 
 const PORT = Number(process.env.PORT ?? 4174)
 const DIST_DIR = process.env.DIST_DIR ?? 'dist'
 const BASE_PATH = process.env.BASE_PATH ?? '/jianpu-generator/'
 
-const CONTENT_TYPES = {
+const CONTENT_TYPES: Readonly<Record<string, string>> = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -31,11 +31,15 @@ const CONTENT_TYPES = {
   '.ico': 'image/x-icon',
 }
 
-function contentTypeFor(filePath) {
+function contentTypeFor(filePath: string): string {
   return CONTENT_TYPES[extname(filePath)] ?? 'application/octet-stream'
 }
 
-function serveFile(res, status, filePath) {
+function serveFile(
+  res: ServerResponse,
+  status: number,
+  filePath: string,
+): void {
   res.writeHead(status, { 'Content-Type': contentTypeFor(filePath) })
   createReadStream(filePath).pipe(res)
 }

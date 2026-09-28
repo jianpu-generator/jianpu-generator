@@ -14,7 +14,7 @@
 // GitHub API call (task 11).
 //
 // Resolves the bearer token sent to `GET /user` to one of a small set of
-// known fixed test identities (see `mockGithubIdentity.mjs`) -- needed so
+// known fixed test identities (see `mockGithubIdentity.ts`) -- needed so
 // idempotent-share e2e scenarios can prove two different GitHub accounts
 // don't collide, not just "is a verified identity present or not".
 //
@@ -29,20 +29,24 @@
 // shared `mock-github-access-token` stay outside this tracking entirely --
 // many scenarios share them across parallel workers, so one scenario's
 // sign-out must never revoke them for everyone else.
-import { createServer } from 'node:http'
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from 'node:http'
 import {
   DEFAULT_MOCK_GITHUB_LOGIN,
   DEFAULT_MOCK_GITHUB_USER_ID,
   identityForLogin,
   identityForSyncedShareToken,
   loginFromAuthorizationCode,
-} from './mockGithubIdentity.mjs'
+} from './mockGithubIdentity.ts'
 
 const PORT = Number(process.env.MOCK_GITHUB_PORT ?? 8788)
 export const MOCK_GITHUB_LOGIN = DEFAULT_MOCK_GITHUB_LOGIN
 export const MOCK_GITHUB_USER_ID = DEFAULT_MOCK_GITHUB_USER_ID
 
-function readBody(req) {
+function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve) => {
     let data = ''
     req.on('data', (chunk) => {
@@ -52,7 +56,7 @@ function readBody(req) {
   })
 }
 
-function sendJson(res, status, body) {
+function sendJson(res: ServerResponse, status: number, body: unknown): void {
   const text = JSON.stringify(body)
   res.writeHead(status, {
     'Content-Type': 'application/json',
@@ -68,21 +72,24 @@ function sendJson(res, status, body) {
 // regression (`SyncedShareGithubCallbackPage`'s `useEffect` firing the
 // exchange twice under `StrictMode`) instead of masking it by accepting any
 // code repeatedly.
-const usedCodes = new Set()
+const usedCodes = new Set<string>()
 
 // Tokens minted by a login-bearing exchange, and which login each belongs to.
-const mintedTokenLogins = new Map()
-const revokedTokens = new Set()
+const mintedTokenLogins = new Map<string, string>()
+const revokedTokens = new Set<string>()
 
-function revokeMintedTokensFor(login) {
+function revokeMintedTokensFor(login: string): void {
   for (const [token, tokenLogin] of mintedTokenLogins) {
     if (tokenLogin === login) revokedTokens.add(token)
   }
 }
 
-async function readAccessToken(req) {
+async function readAccessToken(
+  req: IncomingMessage,
+): Promise<string | undefined> {
   try {
-    return JSON.parse(await readBody(req))?.access_token
+    const accessToken: unknown = JSON.parse(await readBody(req))?.access_token
+    return typeof accessToken === 'string' ? accessToken : undefined
   } catch {
     return undefined
   }
@@ -101,7 +108,7 @@ const server = createServer(async (req, res) => {
 
   if (req.method === 'POST' && url.pathname === '/login/oauth/access_token') {
     const raw = await readBody(req)
-    let code
+    let code: unknown
     try {
       code = JSON.parse(raw)?.code
     } catch {
@@ -136,7 +143,8 @@ const server = createServer(async (req, res) => {
     req.method === 'DELETE' &&
     url.pathname === '/applications/e2e-test-client-id/grant'
   ) {
-    const login = mintedTokenLogins.get(await readAccessToken(req))
+    const token = await readAccessToken(req)
+    const login = token && mintedTokenLogins.get(token)
     if (login) revokeMintedTokensFor(login)
     res.writeHead(204)
     res.end()
@@ -148,7 +156,7 @@ const server = createServer(async (req, res) => {
     url.pathname === '/applications/e2e-test-client-id/token'
   ) {
     const token = await readAccessToken(req)
-    if (mintedTokenLogins.has(token)) revokedTokens.add(token)
+    if (token && mintedTokenLogins.has(token)) revokedTokens.add(token)
     res.writeHead(204)
     res.end()
     return

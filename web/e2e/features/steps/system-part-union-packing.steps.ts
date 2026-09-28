@@ -237,18 +237,20 @@ Then(
 Then(
   'the rows are ordered top to bottom: {word}, {word}, {word}',
   async ({ page }, first: string, second: string, third: string) => {
-    const boxes: number[] = []
-    for (const part of [first, second, third]) {
+    const labelY = async (part: string): Promise<number> => {
       const label = partLabelsFor(page, part).first()
       await expect(label).toBeVisible({ timeout: 10_000 })
       const box = await stableBoundingBox(label)
       if (!box) {
         throw new Error(`Could not get bounding box for ${part} label.`)
       }
-      boxes.push(box.y)
+      return box.y
     }
-    expect(boxes[0]).toBeLessThan(boxes[1])
-    expect(boxes[1]).toBeLessThan(boxes[2])
+    const firstY = await labelY(first)
+    const secondY = await labelY(second)
+    const thirdY = await labelY(third)
+    expect(firstY).toBeLessThan(secondY)
+    expect(secondY).toBeLessThan(thirdY)
   },
 )
 

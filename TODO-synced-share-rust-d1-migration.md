@@ -272,7 +272,7 @@ off in both places.
       Rust worker's GitHub token-exchange/`GET /user` endpoints made
       env-var-overridable (`SYNCED_SHARE_GITHUB_TOKEN_URL`/
       `SYNCED_SHARE_GITHUB_USER_URL`, unset in production) so e2e never
-      makes a real GitHub call -- `web/e2e/mock-github-oauth-server.mjs` is
+      makes a real GitHub call -- `web/e2e/mock-github-oauth-server.ts` is
       a tiny local mock of both endpoints, wired into
       `web/playwright.config.ts`'s webServer list alongside a `wrangler dev`
       run of `crates/live-share-worker` (replacing the old worker's

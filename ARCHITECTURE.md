@@ -637,7 +637,7 @@ consent screen.
   an optional `[vars]` override (`SYNCED_SHARE_GITHUB_TOKEN_URL`/
   `SYNCED_SHARE_GITHUB_USER_URL`), falling back to the real GitHub endpoints
   when unset. Unset in production; Playwright e2e's local `wrangler dev` run
-  points both at `web/e2e/mock-github-oauth-server.mjs` (task 11) so no e2e
+  points both at `web/e2e/mock-github-oauth-server.ts` (task 11) so no e2e
   run ever makes a real GitHub API call.
 
 ### D1 query checking

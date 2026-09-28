@@ -16,7 +16,7 @@ export default defineConfig({
   globalTeardown: './e2e/global-teardown.ts',
   // No in-run retries: a flaky test masked here would just report "passed"
   // with no record that it ever failed. Flakiness is instead resolved across
-  // whole-suite passes by scripts/resolve-e2e-flakes.mjs (see
+  // whole-suite passes by scripts/resolve-e2e-flakes.ts (see
   // `test:e2e:resolve`), which reruns only the tests still failing after
   // each pass until the same set fails 3 times in a row.
   retries: 0,
@@ -54,12 +54,12 @@ export default defineConfig({
     {
       // Mock of the two GitHub HTTP endpoints the Synced Share worker calls
       // server-side (token exchange + `GET /user`) -- see
-      // `e2e/mock-github-oauth-server.mjs`'s own doc comment for why this
+      // `e2e/mock-github-oauth-server.ts`'s own doc comment for why this
       // has to be a real local server rather than `page.route()`
       // interception (those calls happen inside the `wrangler dev` process
       // below, not the browser). Ensures no Synced Share e2e run ever makes
       // a real GitHub API call (task 11).
-      command: 'node e2e/mock-github-oauth-server.mjs',
+      command: 'tsx e2e/mock-github-oauth-server.ts',
       url: 'http://localhost:8788/health',
       reuseExistingServer: true,
       timeout: 15_000,

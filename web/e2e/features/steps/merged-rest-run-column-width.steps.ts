@@ -13,7 +13,9 @@ function ensureMeasure(index: number): MeasureSpec {
   while (state.measures.length <= index) {
     state.measures.push({ kind: 'rest' })
   }
-  return state.measures[index]
+  const measure = state.measures[index]
+  if (!measure) throw new Error(`Measure ${index} was not created.`)
+  return measure
 }
 
 /** `n` sixteenth notes (`=` suffix), cycling pitches 1-7, summing to exactly
@@ -129,12 +131,13 @@ async function mergedRestBarBoundingBox(page: import('@playwright/test').Page) {
         strokeWidth > 2
       )
     })
-    if (horizontal.length !== 1) {
+    const [bar] = horizontal
+    if (horizontal.length !== 1 || !bar) {
       throw new Error(
         `Expected exactly one thick horizontal line (the merged rest bar), found ${horizontal.length}.`,
       )
     }
-    const rect = horizontal[0].getBoundingClientRect()
+    const rect = bar.getBoundingClientRect()
     return { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
   })
   return box

@@ -10,7 +10,7 @@ import {
   fileTabByExactName,
   openFileList,
 } from '../../fileSwitcherHelpers'
-import { DEFAULT_MOCK_GITHUB_LOGIN } from '../../mockGithubIdentity.mjs'
+import { DEFAULT_MOCK_GITHUB_LOGIN } from '../../mockGithubIdentity.ts'
 import { BeforeScenario, Given, Then, When } from './fixtures'
 import { syncedShareButtonState as sharedState } from './synced-share-button-state'
 

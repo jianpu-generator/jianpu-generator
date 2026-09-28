@@ -18,7 +18,7 @@ import { mockGithubAuthorizationRedirect } from './synced-share-github-signin.st
 // sign-in and its own GitHub token, the way two real browsers would be --
 // signing in through the real popup flow against the mock GitHub server,
 // which mints a distinct, revocable token per sign-in (see
-// `mock-github-oauth-server.mjs`). Pre-seeded tokens can't be used here:
+// `mock-github-oauth-server.ts`). Pre-seeded tokens can't be used here:
 // those are deliberately outside the mock's revocation tracking.
 
 interface Device {

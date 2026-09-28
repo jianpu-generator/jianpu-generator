@@ -1,6 +1,6 @@
 import type { BrowserContext, Page } from '@playwright/test'
 import { seedCloudFile } from '../../cloudFileHelpers'
-import { DEFAULT_MOCK_GITHUB_LOGIN } from '../../mockGithubIdentity.mjs'
+import { DEFAULT_MOCK_GITHUB_LOGIN } from '../../mockGithubIdentity.ts'
 
 export const SYNCED_FILE_BASE_NAME = 'synced-test'
 export const SYNCED_SOURCE = [

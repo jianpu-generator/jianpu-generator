@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S pnpm exec tsx
 // Resolves e2e flakiness instead of masking it with in-run retries
 // (playwright.config.ts sets `retries: 0` for exactly this reason).
 //
@@ -15,7 +15,7 @@
 // Passes are also remembered *across* invocations, keyed on a fingerprint of
 // the exact code under test (staged tree + unstaged diff + untracked files):
 // every test that passes is recorded in .e2e-pass-cache/<fingerprint> as soon
-// as it finishes (see e2e-pass-cache-reporter.mjs), and a later invocation on
+// as it finishes (see e2e-pass-cache-reporter.ts), and a later invocation on
 // the same fingerprint only runs the tests that haven't passed yet. This makes
 // re-attempting the same commit (after a killed hook, a failing non-e2e check,
 // or a genuine e2e failure that turned out to be a flake) cheap. Any change to
@@ -23,6 +23,8 @@
 // ever reused for byte-identical code. Pass `--no-pass-cache` to discard the
 // recorded passes for the current code and run everything fresh (the fresh
 // passes are still recorded for the next invocation).
+//
+// Usage: resolve-e2e-flakes [--no-pass-cache] [-- <playwright test args...>]
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import {
@@ -33,11 +35,11 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { Command } from 'commander'
 
 const LAST_RUN_FILE = join('test-results', '.last-run.json')
 const PASS_CACHE_DIR = '.e2e-pass-cache'
-const PASS_CACHE_REPORTER = './scripts/e2e-pass-cache-reporter.mjs'
-const NO_PASS_CACHE_FLAG = '--no-pass-cache'
+const PASS_CACHE_REPORTER = './scripts/e2e-pass-cache-reporter.ts'
 const STABLE_STREAK_TO_CONFIRM = 3
 const MAX_PASSES = 15
 // Written into LAST_RUN_FILE before every pass, so a file still carrying it
@@ -45,12 +47,33 @@ const MAX_PASSES = 15
 // as running tests — rather than a genuine (possibly stale) result.
 const SEEDED_STATUS = 'seeded-by-resolve-e2e-flakes'
 
-function fail(message) {
+// The shape Playwright writes to LAST_RUN_FILE (and reads back for
+// `--last-failed`).
+interface LastRun {
+  status: string
+  failedTests?: string[]
+}
+
+interface PassCache {
+  file: string
+  passed: Set<string>
+}
+
+interface JsonReportSuite {
+  specs?: { id: string }[]
+  suites?: JsonReportSuite[]
+}
+
+interface CliOptions {
+  passCache: boolean
+}
+
+function fail(message: string): never {
   console.error(`e2e: ${message}`)
   process.exit(1)
 }
 
-function run(args, passCacheFile) {
+function run(args: string[], passCacheFile: string): number | null {
   const result = spawnSync(
     'pnpm',
     [
@@ -69,7 +92,10 @@ function run(args, passCacheFile) {
   return result.status
 }
 
-function git(args, { cwd, input } = {}) {
+function git(
+  args: string[],
+  { cwd, input }: { cwd?: string; input?: string } = {},
+): Buffer {
   const result = spawnSync('git', args, { cwd, input, maxBuffer: 1 << 30 })
   if (result.error) throw result.error
   if (result.status !== 0) {
@@ -81,7 +107,7 @@ function git(args, { cwd, input } = {}) {
 // Identifies the exact code the suite is about to run against. The staged
 // tree alone isn't enough: the hook runs against the working tree, so
 // unstaged edits and untracked files can change what's under test too.
-function codeFingerprint() {
+function codeFingerprint(): string {
   const repoRoot = git(['rev-parse', '--show-toplevel']).toString().trim()
   const untrackedPaths = git(
     ['ls-files', '--others', '--exclude-standard', '-z'],
@@ -109,13 +135,16 @@ function codeFingerprint() {
 // passed in it. Cache files for any other fingerprint are stale (that code is
 // no longer what's being committed), so they're deleted rather than left to
 // accumulate; with `fresh`, the one for `fingerprint` is deleted too.
-function openPassCache(fingerprint, { fresh }) {
+function openPassCache(
+  fingerprint: string,
+  { fresh }: { fresh: boolean },
+): PassCache {
   mkdirSync(PASS_CACHE_DIR, { recursive: true })
   for (const entry of readdirSync(PASS_CACHE_DIR)) {
     if (fresh || entry !== fingerprint) rmSync(join(PASS_CACHE_DIR, entry))
   }
   const file = resolve(PASS_CACHE_DIR, fingerprint)
-  let passed = new Set()
+  let passed = new Set<string>()
   try {
     passed = new Set(
       readFileSync(file, 'utf-8')
@@ -128,7 +157,7 @@ function openPassCache(fingerprint, { fresh }) {
   return { file, passed }
 }
 
-function listTestIds(args) {
+function listTestIds(args: string[]): string[] {
   const result = spawnSync(
     'pnpm',
     ['exec', 'playwright', 'test', '--list', '--reporter=json', ...args],
@@ -138,18 +167,19 @@ function listTestIds(args) {
   if (result.status !== 0) {
     throw new Error(`playwright test --list failed:\n${result.stderr}`)
   }
-  const collectIds = (suite) => [
+  const collectIds = (suite: JsonReportSuite): string[] => [
     ...(suite.specs ?? []).map((spec) => spec.id),
     ...(suite.suites ?? []).flatMap(collectIds),
   ]
-  return JSON.parse(result.stdout).suites.flatMap(collectIds)
+  const report: { suites: JsonReportSuite[] } = JSON.parse(result.stdout)
+  return report.suites.flatMap(collectIds)
 }
 
-function seedLastRun(failedTests) {
+function seedLastRun(failedTests: string[]): void {
   mkdirSync('test-results', { recursive: true })
   writeFileSync(
     LAST_RUN_FILE,
-    JSON.stringify({ status: SEEDED_STATUS, failedTests }),
+    JSON.stringify({ status: SEEDED_STATUS, failedTests } satisfies LastRun),
   )
 }
 
@@ -160,9 +190,9 @@ function seedLastRun(failedTests) {
 // script instead of being read as "nothing failed". Playwright reports all of
 // those as a non-zero exit with an empty `failedTests`, which is
 // indistinguishable from a clean run unless the exit code is checked too.
-function runPass(args, passCacheFile) {
+function runPass(args: string[], passCacheFile: string): Set<string> {
   const exitCode = run(args, passCacheFile)
-  let lastRun
+  let lastRun: LastRun
   try {
     lastRun = JSON.parse(readFileSync(LAST_RUN_FILE, 'utf-8'))
   } catch {
@@ -188,37 +218,51 @@ function runPass(args, passCacheFile) {
   return new Set(failedTests)
 }
 
-function setsEqual(a, b) {
+function setsEqual(a: Set<string>, b: Set<string>): boolean {
   return a.size === b.size && [...a].every((id) => b.has(id))
 }
 
-function main() {
+function parseCli(): { options: CliOptions; playwrightArgs: string[] } {
+  const program = new Command()
+    .name('resolve-e2e-flakes')
+    .description(
+      'Run the Playwright e2e suite, re-running only still-failing tests until the failing set settles.',
+    )
+    .option(
+      '--no-pass-cache',
+      'discard the passes recorded for the current code and run every test fresh',
+    )
+    .argument(
+      '[playwright-args...]',
+      'extra `playwright test` args for the first pass (e.g. --grep), after a `--`',
+    )
+    .showHelpAfterError(
+      '(Playwright args such as --grep must come after a `--`, e.g. `pnpm test:e2e:resolve -- --grep foo`.)',
+    )
+    .parse()
+  return {
+    options: program.opts<CliOptions>(),
+    playwrightArgs: program.processedArgs[0] as string[],
+  }
+}
+
+function main(): void {
+  // Playwright args (e.g. --grep) scope only the first pass; --last-failed
+  // reruns are already scoped to that pass's failures, so they don't need
+  // repeating.
+  const { options, playwrightArgs } = parseCli()
+
   spawnSync('pnpm', ['exec', 'bddgen'], { stdio: 'inherit' })
 
-  // Extra CLI args (e.g. --grep) scope the first pass; --last-failed reruns
-  // are already scoped to that pass's failures, so they don't need repeating.
-  // `pnpm test:e2e:resolve -- --grep ...` forwards that separating `--`
-  // itself as a literal arg (unlike `npm run`, which swallows it) -- left
-  // in, it becomes `playwright test -- --grep ...`, and Playwright treats
-  // everything after a `--` as positional file-path filters rather than
-  // flags, silently discarding `--grep` and running the whole suite
-  // instead of just the scoped test. Stripping a single leading `--` here
-  // keeps both `pnpm run` (which already swallows it) and `pnpm` (which
-  // doesn't) working the same way.
-  const cliArgs = process.argv.slice(2)
-  if (cliArgs[0] === '--') cliArgs.shift()
-  // Our own flag is consumed here rather than forwarded, since Playwright
-  // would reject it as unknown.
-  const extraArgs = cliArgs.filter((arg) => arg !== NO_PASS_CACHE_FLAG)
-  const fresh = extraArgs.length !== cliArgs.length
-
-  const passCache = openPassCache(codeFingerprint(), { fresh })
-  let failing
+  const passCache = openPassCache(codeFingerprint(), {
+    fresh: !options.passCache,
+  })
+  let failing: Set<string>
   if (passCache.passed.size === 0) {
     seedLastRun([])
-    failing = runPass(extraArgs, passCache.file)
+    failing = runPass(playwrightArgs, passCache.file)
   } else {
-    const testIds = listTestIds(extraArgs)
+    const testIds = listTestIds(playwrightArgs)
     if (testIds.length === 0) {
       fail('no tests matched; nothing was run, aborting.')
     }
@@ -246,7 +290,7 @@ function main() {
     const last3 = history.slice(-STABLE_STREAK_TO_CONFIRM)
     if (
       last3.length === STABLE_STREAK_TO_CONFIRM &&
-      last3.every((s) => setsEqual(s, last3[0]))
+      last3.every((s) => setsEqual(s, failing))
     ) {
       const flaky = [...everFailed].filter((id) => !failing.has(id))
       console.error(

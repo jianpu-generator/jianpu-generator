@@ -8,7 +8,7 @@ Feature: File-op failure handling for the cloud storage backend
     # cloud backend" scenario's own "New" click produces. Sharing an
     # account would make that scenario's genuine "untitled" file, created
     # concurrently in another `fullyParallel` worker, leak into this one's
-    # assertion. See `mockGithubIdentity.mjs`'s doc comment on this login.
+    # assertion. See `mockGithubIdentity.ts`'s doc comment on this login.
     Given an account is signed in as "e2e-test-user-create-error"
 
   Scenario: A failed create shows the error modal, resets pending state, and a retry succeeds

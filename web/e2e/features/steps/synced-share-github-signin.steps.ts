@@ -1,6 +1,6 @@
 import { type BrowserContext, expect, type Page } from '@playwright/test'
 import { fulfillWithApiError, workerRouteGlob } from '../../cloudFileHelpers'
-import { authorizationCodeFor } from '../../mockGithubIdentity.mjs'
+import { authorizationCodeFor } from '../../mockGithubIdentity.ts'
 import { Given, Then, When } from './fixtures'
 import {
   openSyncedTab,
@@ -24,7 +24,7 @@ import { syncedShareButtonState } from './synced-share-button-state'
 // approving the request without ever making a real GitHub network call.
 // The callback page's own exchange (`POST /auth/github/callback`) still
 // hits the real local Synced Share worker, which is itself pointed at
-// `e2e/mock-github-oauth-server.mjs` (see `playwright.config.ts`) for the
+// `e2e/mock-github-oauth-server.ts` (see `playwright.config.ts`) for the
 // token exchange and `GET /user` calls that happen worker-side.
 
 // Captured by "the owner clicks \"Sign in with GitHub\" in the prompt" below
@@ -63,7 +63,7 @@ export async function mockGithubAuthorizationRedirect(
       }
       const target = new URL(redirectUri)
       // Unique per attempt, not a fixed string: the mock token-exchange
-      // server (`mock-github-oauth-server.mjs`) enforces real GitHub's
+      // server (`mock-github-oauth-server.ts`) enforces real GitHub's
       // single-use-code behavior, and that server process (and its
       // used-codes set) persists across the whole suite run -- a fixed
       // code would make one scenario's exchange poison every other

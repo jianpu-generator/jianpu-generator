@@ -26,7 +26,7 @@ The pre-commit hook runs the full e2e (Playwright) suite plus cargo checks, whic
 
 ## Running e2e tests
 
-Whenever you need to run Playwright e2e tests yourself — full suite or scoped with `--grep` — always run `cd web && pnpm test:e2e:resolve [-- --grep ...]`, never `pnpm test:e2e` or a raw `playwright test` invocation. The suite has known flaky tests; `test:e2e:resolve` (`web/scripts/resolve-e2e-flakes.mjs`) re-runs only the still-failing subset across passes until it settles, so you get a real pass/fail signal instead of getting stuck chasing flakes across manual re-runs. This applies everywhere e2e tests are run by hand, not just in the pre-commit hook.
+Whenever you need to run Playwright e2e tests yourself — full suite or scoped with `--grep` — always run `cd web && pnpm test:e2e:resolve [-- --grep ...]`, never `pnpm test:e2e` or a raw `playwright test` invocation. The suite has known flaky tests; `test:e2e:resolve` (`web/scripts/resolve-e2e-flakes.ts`) re-runs only the still-failing subset across passes until it settles, so you get a real pass/fail signal instead of getting stuck chasing flakes across manual re-runs. This applies everywhere e2e tests are run by hand, not just in the pre-commit hook.
 
 Avoid using uncommon abbreviations when naming (e.g. `TimedRdParser` for "recursive descent" — spell it out as `TimedRecursiveDescentParser` instead). Widely understood abbreviations (e.g. `Ast`, `Id`, `Http`) are fine.
 

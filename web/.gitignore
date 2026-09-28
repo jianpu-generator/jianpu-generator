@@ -27,5 +27,5 @@ test-results
 *.sln
 *.sw?
 
-# Per-code-fingerprint record of passed e2e tests (scripts/resolve-e2e-flakes.mjs)
+# Per-code-fingerprint record of passed e2e tests (scripts/resolve-e2e-flakes.ts)
 .e2e-pass-cache

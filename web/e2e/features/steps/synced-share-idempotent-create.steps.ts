@@ -9,7 +9,7 @@ import {
 import {
   DEFAULT_MOCK_GITHUB_LOGIN,
   syncedShareIdentityTokenFor,
-} from '../../mockGithubIdentity.mjs'
+} from '../../mockGithubIdentity.ts'
 import { gotoCloudApp } from './cloud-account-helpers'
 import { AfterScenario, BeforeScenario, Given, Then, When } from './fixtures'
 import { openSyncedTab } from './synced-share-button.steps'

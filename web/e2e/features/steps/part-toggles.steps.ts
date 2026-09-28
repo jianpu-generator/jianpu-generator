@@ -107,6 +107,16 @@ const CONTENT_BY_LABEL: Record<string, string> = {
   'chord content': CHORD_CONTENT,
 }
 
+function lookup(
+  table: Record<string, string>,
+  key: string,
+  what: string,
+): string {
+  const value = table[key]
+  if (value === undefined) throw new Error(`Unknown ${what}: ${key}`)
+  return value
+}
+
 const LEGEND_BY_LABEL: Record<string, string> = {
   Melody: MELODY_LEGEND,
   Harmony: HARMONY_LEGEND,
@@ -131,18 +141,18 @@ Given(
 When(
   'I hide the {string} part via its eye toggle, as seen in part toggles',
   async ({ page }, partName: string) => {
-    await toggleEye(page, PART_ABBREVIATIONS[partName])
+    await toggleEye(page, lookup(PART_ABBREVIATIONS, partName, 'part name'))
   },
 )
 
 When('I solo the {string} part', async ({ page }, partName: string) => {
-  await toggleSolo(page, PART_ABBREVIATIONS[partName])
+  await toggleSolo(page, lookup(PART_ABBREVIATIONS, partName, 'part name'))
 })
 
 When(
   "I toggle the {string} part's lyrics off",
   async ({ page }, partName: string) => {
-    await toggleLyrics(page, PART_ABBREVIATIONS[partName])
+    await toggleLyrics(page, lookup(PART_ABBREVIATIONS, partName, 'part name'))
   },
 )
 
@@ -179,7 +189,7 @@ Then(
   async ({ page }, partName: string) => {
     // The mic (lyrics) toggle only renders for an enabled part with lyrics.
     await expect(
-      partPill(page, PART_ABBREVIATIONS[partName]).locator(
+      partPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name')).locator(
         '.part-toggle-segment--mic',
       ),
     ).toHaveCount(0)
@@ -190,7 +200,7 @@ Then(
   'the {string} part pill has a mic toggle',
   async ({ page }, partName: string) => {
     await expect(
-      partPill(page, PART_ABBREVIATIONS[partName]).locator(
+      partPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name')).locator(
         '.part-toggle-segment--mic',
       ),
     ).toHaveCount(1)
@@ -201,7 +211,7 @@ Then(
   'the preview contains the {string} legend entry',
   async ({ page }, partName: string) => {
     await expect(page.locator('.preview-pages')).toContainText(
-      LEGEND_BY_LABEL[partName],
+      lookup(LEGEND_BY_LABEL, partName, 'legend label'),
     )
   },
 )
@@ -210,7 +220,7 @@ Then(
   'the preview does not contain the {string} legend entry',
   async ({ page }, partName: string) => {
     await expect(page.locator('.preview-pages')).not.toContainText(
-      LEGEND_BY_LABEL[partName],
+      lookup(LEGEND_BY_LABEL, partName, 'legend label'),
     )
   },
 )

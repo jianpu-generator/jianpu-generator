@@ -1,4 +1,9 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["e2e/features/steps/**/*.ts"]
+  "entry": [
+    "e2e/features/steps/**/*.ts",
+    "scripts/e2e-pass-cache-reporter.ts",
+    "e2e/mock-github-oauth-server.ts",
+    "e2e-pages/static-pages-server.ts"
+  ]
 }

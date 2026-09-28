@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test'
 import { fileSwitcherTrigger, openFileActions } from '../../fileSwitcherHelpers'
-import { syncedShareIdentityTokenFor } from '../../mockGithubIdentity.mjs'
+import { syncedShareIdentityTokenFor } from '../../mockGithubIdentity.ts'
 import { AfterScenario, Given, Then, When } from './fixtures'
 import {
   SYNCED_FILE_BASE_NAME,

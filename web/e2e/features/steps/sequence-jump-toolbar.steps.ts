@@ -84,8 +84,8 @@ Then(
   async ({ page }, labels: string) => {
     const buttons = sequenceToolbarButtons(page)
     const expected = labels.split(',').map((label) => label.trim())
-    for (let i = 0; i < expected.length; i++) {
-      await expect(buttons.nth(i)).toHaveText(expected[i])
+    for (const [i, label] of expected.entries()) {
+      await expect(buttons.nth(i)).toHaveText(label)
     }
   },
 )

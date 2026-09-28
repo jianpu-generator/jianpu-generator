@@ -34,7 +34,7 @@ function rememberLines(body: string) {
     .split('\n')
     .filter((line) => line.startsWith('['))
     .map((line) => {
-      const [label, ...tokens] = line.split(/\s+/)
+      const [label = '', ...tokens] = line.split(/\s+/)
       return {
         label: label.slice(1, -1),
         tokens: tokens.filter((token) => token !== '-'),
@@ -192,7 +192,9 @@ When(
   'I click-and-click select the note {string} in measure {int}',
   async ({ page }, token: string, measure: number) => {
     // Four notes per measure in that fixture.
-    const noteId = (measure - 1) * 4 + loadedLines[0].tokens.indexOf(token)
+    const [firstLine] = loadedLines
+    if (!firstLine) throw new Error('No source fixture has been loaded.')
+    const noteId = (measure - 1) * 4 + firstLine.tokens.indexOf(token)
     await selectNotes(page, noteId, noteId)
   },
 )

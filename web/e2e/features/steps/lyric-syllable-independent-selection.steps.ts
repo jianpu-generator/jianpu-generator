@@ -53,9 +53,10 @@ function lyricRect(
 
 async function monacoSelectionText(page: import('@playwright/test').Page) {
   return page.evaluate(() => {
-    const ed = window.monaco.editor.getEditors()[0]
-    const model = ed.getModel()
-    return model?.getValueInRange(ed.getSelection())
+    const ed = window.monaco?.editor.getEditors()[0]
+    const selection = ed?.getSelection()
+    if (!ed || !selection) return undefined
+    return ed.getModel()?.getValueInRange(selection)
   })
 }
 

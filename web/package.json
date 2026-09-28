@@ -17,7 +17,7 @@
     "lint:ast-grep": "ast-grep scan --config sgconfig.yml src",
     "format": "biome format --write .",
     "preview": "vite preview",
-    "test:e2e:resolve": "node scripts/reset-e2e-cloud-db.mjs && node scripts/resolve-e2e-flakes.mjs",
+    "test:e2e:resolve": "tsx scripts/reset-e2e-cloud-db.ts && tsx scripts/resolve-e2e-flakes.ts",
     "test:e2e:pages": "env VITE_BASE_PATH=/jianpu-generator/ pnpm build && cp dist/index.html dist/404.html && pnpm exec bddgen --config=playwright.pages.config.ts && playwright test --config=playwright.pages.config.ts",
     "test:unit": "vitest run"
   },
@@ -59,9 +59,11 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "commander": "^15.0.0",
     "knip": "^6.16.1",
     "openapi-typescript": "7.13.0",
     "playwright-bdd": "^9.2.0",
+    "tsx": "^4.23.15",
     "typescript": "~7.0.2",
     "vite": "^7.3.1",
     "vitest": "^4.1.9"

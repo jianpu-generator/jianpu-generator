@@ -10,7 +10,11 @@ export async function encodeShareHashOnPage(
 ): Promise<string> {
   return page.evaluate(
     async ({ filename, content }) => {
-      const { encodeShareHashSuffix } = await import('/src/shareUrl.ts')
+      // A Vite dev-server path resolved by the browser, not by tsc -- hence
+      // the variable plus a type-only import for the module's shape.
+      const shareUrlModulePath = '/src/shareUrl.ts'
+      const { encodeShareHashSuffix }: typeof import('../src/shareUrl.ts') =
+        await import(shareUrlModulePath)
       return encodeShareHashSuffix(filename, content)
     },
     { filename, content },
