@@ -152,6 +152,7 @@ export default function App() {
     handlePlayNoteSelection,
     noPartsSelected,
   } = useAppController()
+  const previewInteractive = wasm.status === 'ready'
 
   const handleAccountSignOut = useCallback(() => {
     syncedShare.onDisconnectGithub()
@@ -336,9 +337,12 @@ export default function App() {
         editMetadataOpen={editMetadataOpen}
         parsedMetadata={parsedMetadata}
         handleMetadataFieldChange={handleMetadataFieldChange}
-        documents={documents}
-        highlightedDocuments={highlightedDocuments}
-        rendering={rendering}
+        // The preview's click/hover resolvers call `jianpuWasm()`
+        // synchronously, so its SVG only appears once the main-thread
+        // component is instantiated — a click can never land before then.
+        documents={previewInteractive ? documents : []}
+        highlightedDocuments={previewInteractive ? highlightedDocuments : []}
+        rendering={rendering || !previewInteractive}
         handleSectionJump={handleSectionJump}
         handleNoteRangeSelect={handleNoteRangeSelect}
         handleEditorSelectionChange={handleEditorSelectionChange}
