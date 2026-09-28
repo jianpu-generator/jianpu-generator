@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
@@ -65,13 +66,13 @@ Given('the bar-number-click test fixture is loaded', async ({ page }) => {
   await page.waitForSelector('[data-testid="play-measure-button"]', {
     timeout: 15_000,
   })
-  await page.waitForSelector('[data-tag="bar-number"]', { timeout: 10_000 })
+  await page.waitForSelector(tagSelector('bar-number'), { timeout: 10_000 })
 })
 
 function barNumberRect(page: import('@playwright/test').Page) {
   return page
     .locator(
-      'g[data-tag="bar-number"] > rect[data-variant="bar-number-click-target"]',
+      `g${tagSelector('bar-number')} > ${rectVariantSelector('bar-number-click-target')}`,
     )
     .first()
 }
@@ -137,7 +138,7 @@ Then(
   async ({ page }, count: number) => {
     // Measure 0 ("1 2 3 4") has exactly 4 notes.
     const highlightedNotes = page.locator(
-      '[data-tag="note"][data-note-range-selected]',
+      `${tagSelector('note')}[data-note-range-selected]`,
     )
     await expect(highlightedNotes).toHaveCount(count)
   },

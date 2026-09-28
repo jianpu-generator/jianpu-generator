@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import {
   clickAndClickSelect,
   stableBoundingBox,
@@ -55,7 +56,7 @@ function lyricInPart(
   verse: number,
 ) {
   return page.locator(
-    `[data-tag="lyric"][data-part-index="${partIndex}"][data-verse="${verse}"]`,
+    tagSelector('lyric', { sourcePartIndex: partIndex, verse }),
   )
 }
 
@@ -118,14 +119,14 @@ Then(
   "Melody's and Harmony's verse 0 syllables in measures {int} through {int} are range-selected",
   async ({ page }, measureStart: number, measureEnd: number) => {
     const selectedLyrics = page.locator(
-      '[data-tag="lyric"][data-lyric-range-selected]',
+      `${tagSelector('lyric')}[data-lyric-range-selected]`,
     )
     const expectedCount = (measureEnd - measureStart + 1) * 2
     await expect(selectedLyrics).toHaveCount(expectedCount)
     for (const partIndex of [0, 1]) {
       await expect(
         page.locator(
-          `[data-tag="lyric"][data-lyric-range-selected][data-part-index="${partIndex}"][data-verse="0"]`,
+          `${tagSelector('lyric', { sourcePartIndex: partIndex, verse: 0 })}[data-lyric-range-selected]`,
         ),
       ).toHaveCount(measureEnd - measureStart + 1)
     }

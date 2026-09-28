@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import {
   clickAndClickSelect,
   stableBoundingBox,
@@ -40,15 +41,13 @@ const source = [
 
 function verseLabel(page: import('@playwright/test').Page, verse: number) {
   return page
-    .locator(
-      `[data-tag="lyric-label"][data-part-index="0"][data-verse="${verse}"]`,
-    )
+    .locator(tagSelector('lyric-label', { sourcePartIndex: 0, verse }))
     .first()
 }
 
 function verseLabelRect(page: import('@playwright/test').Page, verse: number) {
   return verseLabel(page, verse).locator(
-    'rect[data-variant="lyric-label-click-target"]',
+    rectVariantSelector('lyric-label-click-target'),
   )
 }
 
@@ -74,11 +73,11 @@ Given(
       timeout: 15_000,
     })
     await page.waitForSelector(
-      '[data-tag="lyric-label"][data-part-index="0"][data-verse="0"]',
+      tagSelector('lyric-label', { sourcePartIndex: 0, verse: 0 }),
       { timeout: 10_000 },
     )
     await page.waitForSelector(
-      '[data-tag="lyric-label"][data-part-index="0"][data-verse="1"]',
+      tagSelector('lyric-label', { sourcePartIndex: 0, verse: 1 }),
       { timeout: 10_000 },
     )
 
@@ -144,17 +143,17 @@ Then(
     // Verse 1 sounds 4 syllables total across both measures ("do re" + "la
     // ti"); none of verse 2's syllables should be selected.
     const highlightedLyrics = page.locator(
-      '[data-tag="lyric"][data-lyric-range-selected]',
+      `${tagSelector('lyric')}[data-lyric-range-selected]`,
     )
     await expect(highlightedLyrics).toHaveCount(4)
     await expect(
       page.locator(
-        '[data-tag="lyric"][data-lyric-range-selected][data-verse="0"]',
+        `${tagSelector('lyric', { verse: 0 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(4)
     await expect(
       page.locator(
-        '[data-tag="lyric"][data-lyric-range-selected][data-verse="1"]',
+        `${tagSelector('lyric', { verse: 1 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(0)
   },
@@ -181,7 +180,7 @@ Then(
   async ({ page }) => {
     // Verse 1's 4 syllables + verse 2's 4 syllables = 8.
     const highlightedLyrics = page.locator(
-      '[data-tag="lyric"][data-lyric-range-selected]',
+      `${tagSelector('lyric')}[data-lyric-range-selected]`,
     )
     await expect(highlightedLyrics).toHaveCount(8)
   },

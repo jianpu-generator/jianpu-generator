@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import {
   clickAndClickSelect,
   stableBoundingBox,
@@ -44,14 +45,14 @@ function noteClickTarget(
 ) {
   return page
     .locator(
-      `[data-tag="note"][data-part-index="0"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target"])`,
+      `${tagSelector('note', { sourcePartIndex: 0, noteId })}:has(${rectVariantSelector('note-click-target')})`,
     )
-    .locator('rect[data-variant="note-click-target"]')
+    .locator(rectVariantSelector('note-click-target'))
 }
 
 function noteAt(page: import('@playwright/test').Page, noteId: number) {
   return page.locator(
-    `[data-tag="note"][data-part-index="0"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target"])`,
+    `${tagSelector('note', { sourcePartIndex: 0, noteId })}:has(${rectVariantSelector('note-click-target')})`,
   )
 }
 
@@ -61,7 +62,7 @@ function lyricAt(
   noteId: number,
 ) {
   return page.locator(
-    `[data-tag="lyric"][data-part-index="0"][data-verse="${verse}"][data-note-id="${noteId}"]`,
+    tagSelector('lyric', { sourcePartIndex: 0, verse, noteId }),
   )
 }
 
@@ -88,10 +89,10 @@ Given(
       timeout: 15_000,
     })
     await expect(
-      page.locator('rect[data-variant="note-click-target"]'),
+      page.locator(rectVariantSelector('note-click-target')),
     ).toHaveCount(4, { timeout: 10_000 })
     await expect(
-      page.locator('[data-tag="lyric"][data-part-index="0"]'),
+      page.locator(tagSelector('lyric', { sourcePartIndex: 0 })),
     ).toHaveCount(8, { timeout: 10_000 })
     await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(200)

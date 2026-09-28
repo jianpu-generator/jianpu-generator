@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import {
   clickAndClickSelect,
@@ -63,11 +64,11 @@ async function primeMeasureSpans(page: import('@playwright/test').Page) {
 }
 
 function melodyLabel(page: import('@playwright/test').Page) {
-  return page.locator('[data-tag="part-label"][data-part-index="0"]').first()
+  return page.locator(tagSelector('part-label', { sourcePartIndex: 0 })).first()
 }
 
 function harmonyLabel(page: import('@playwright/test').Page) {
-  return page.locator('[data-tag="part-label"][data-part-index="1"]').first()
+  return page.locator(tagSelector('part-label', { sourcePartIndex: 1 })).first()
 }
 
 Given('the two-part click-test fixture is loaded', async ({ page }) => {
@@ -77,9 +78,7 @@ Given('the two-part click-test fixture is loaded', async ({ page }) => {
   await page.waitForSelector('[data-testid="play-measure-button"]', {
     timeout: 15_000,
   })
-  await page.waitForSelector('[data-tag="part-label"][data-part-index="1"]', {
-    timeout: 10_000,
-  })
+  await harmonyLabel(page).waitFor({ timeout: 10_000 })
   await primeMeasureSpans(page)
 })
 
@@ -126,9 +125,7 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await page.waitForSelector('[data-tag="part-label"][data-part-index="0"]', {
-      timeout: 10_000,
-    })
+    await melodyLabel(page).waitFor({ timeout: 10_000 })
     await primeMeasureSpans(page)
   },
 )
@@ -172,7 +169,7 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await page.waitForSelector('[data-tag="part-label"][data-part-index="0"]')
+    await melodyLabel(page).waitFor()
     await primeMeasureSpans(page)
   },
 )
@@ -270,7 +267,7 @@ Then(
   '{int} notes are range-selected in total',
   async ({ page }, count: number) => {
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -280,7 +277,7 @@ Then(
   async ({ page }, count: number, partIndex: number) => {
     await expect(
       page.locator(
-        `[data-tag="note"][data-note-range-selected][data-part-index="${partIndex}"]`,
+        `${tagSelector('note', { sourcePartIndex: partIndex })}[data-note-range-selected]`,
       ),
     ).toHaveCount(count)
   },
@@ -290,7 +287,7 @@ Then(
   '{int} lyrics are range-selected in total',
   async ({ page }, count: number) => {
     await expect(
-      page.locator('[data-tag="lyric"][data-lyric-range-selected]'),
+      page.locator(`${tagSelector('lyric')}[data-lyric-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -306,7 +303,7 @@ Then(
   "the Melody label's click-target rect is marked range-active",
   async ({ page }) => {
     await expect(
-      melodyLabel(page).locator('rect[data-variant="part-label-click-target"]'),
+      melodyLabel(page).locator(rectVariantSelector('part-label-click-target')),
     ).toHaveAttribute('data-part-label-range-active', '')
   },
 )
@@ -315,7 +312,7 @@ Then(
   "the Melody label's click-target rect is not marked range-active",
   async ({ page }) => {
     await expect(
-      melodyLabel(page).locator('rect[data-variant="part-label-click-target"]'),
+      melodyLabel(page).locator(rectVariantSelector('part-label-click-target')),
     ).not.toHaveAttribute('data-part-label-range-active', '')
   },
 )
@@ -325,7 +322,7 @@ Then(
   async ({ page }) => {
     await expect(
       harmonyLabel(page).locator(
-        'rect[data-variant="part-label-click-target"]',
+        rectVariantSelector('part-label-click-target'),
       ),
     ).toHaveAttribute('data-part-label-range-active', '')
   },
@@ -336,7 +333,7 @@ Then(
   async ({ page }) => {
     await expect(
       harmonyLabel(page).locator(
-        'rect[data-variant="part-label-click-target"]',
+        rectVariantSelector('part-label-click-target'),
       ),
     ).not.toHaveAttribute('data-part-label-range-active', '')
   },
@@ -347,12 +344,12 @@ Then(
   async ({ page }) => {
     const partLabelRect = page
       .locator(
-        '[data-tag="part-label"][data-part-index="0"] rect[data-variant="part-label-click-target"]',
+        `${tagSelector('part-label', { sourcePartIndex: 0 })} ${rectVariantSelector('part-label-click-target')}`,
       )
       .first()
     const lyricLabelRect = page
       .locator(
-        '[data-tag="lyric-label"][data-part-index="0"][data-verse="0"] rect[data-variant="lyric-label-click-target"]',
+        `${tagSelector('lyric-label', { sourcePartIndex: 0, verse: 0 })} ${rectVariantSelector('lyric-label-click-target')}`,
       )
       .first()
     const partBox = await stableBoundingBox(partLabelRect)
@@ -372,7 +369,7 @@ Then(
   "the Melody label's click-target rect has a visible hover fill",
   async ({ page }) => {
     const melodyRect = melodyLabel(page).locator(
-      'rect[data-variant="part-label-click-target"]',
+      rectVariantSelector('part-label-click-target'),
     )
     hoveredFill = await melodyRect.evaluate((el) => getComputedStyle(el).fill)
     expect(hoveredFill).not.toBe('none')
@@ -384,7 +381,7 @@ Then(
   "the Melody label's click-target rect keeps the same hover fill while the second click is pending",
   async ({ page }) => {
     const melodyRect = melodyLabel(page).locator(
-      'rect[data-variant="part-label-click-target"]',
+      rectVariantSelector('part-label-click-target'),
     )
     const fillWhilePending = await melodyRect.evaluate(
       (el) => getComputedStyle(el).fill,

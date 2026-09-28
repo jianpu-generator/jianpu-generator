@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import {
   clickAndClickSelect,
@@ -76,7 +77,7 @@ Given('the measure-click lyric test fixture is loaded', async ({ page }) => {
   await page.waitForSelector('[data-testid="play-measure-button"]', {
     timeout: 15_000,
   })
-  await page.waitForSelector('[data-tag="measure"][data-measure-index="1"]', {
+  await page.waitForSelector(tagSelector('measure', { index: 1 }), {
     timeout: 10_000,
   })
   await primeMeasureSpans(page)
@@ -85,9 +86,7 @@ Given('the measure-click lyric test fixture is loaded', async ({ page }) => {
 When(
   'I plain-click on the note row near the top of measure 1',
   async ({ page }) => {
-    const measure1 = page
-      .locator('[data-tag="measure"][data-measure-index="1"]')
-      .first()
+    const measure1 = page.locator(tagSelector('measure', { index: 1 })).first()
     await expect(measure1).toBeVisible({ timeout: 5_000 })
     const box = await stableBoundingBox(measure1)
     if (!box) throw new Error('Could not get bounding box for measure 1.')
@@ -106,9 +105,7 @@ When(
 When(
   'I Cmd\\/Ctrl-click on the note row near the top of measure 1',
   async ({ page }) => {
-    const measure1 = page
-      .locator('[data-tag="measure"][data-measure-index="1"]')
-      .first()
+    const measure1 = page.locator(tagSelector('measure', { index: 1 })).first()
     await expect(measure1).toBeVisible({ timeout: 5_000 })
     const box = await stableBoundingBox(measure1)
     if (!box) throw new Error('Could not get bounding box for measure 1.')
@@ -127,12 +124,8 @@ When(
 When(
   "I Cmd\\/Ctrl-click measure 0's note row then measure 1's note row",
   async ({ page }) => {
-    const measure0 = page
-      .locator('[data-tag="measure"][data-measure-index="0"]')
-      .first()
-    const measure1 = page
-      .locator('[data-tag="measure"][data-measure-index="1"]')
-      .first()
+    const measure0 = page.locator(tagSelector('measure', { index: 0 })).first()
+    const measure1 = page.locator(tagSelector('measure', { index: 1 })).first()
     await expect(measure0).toBeVisible({ timeout: 5_000 })
     await expect(measure1).toBeVisible({ timeout: 5_000 })
 
@@ -163,7 +156,7 @@ When(
 
 Then('{int} note is range-selected', async ({ page }, count: number) => {
   await expect(
-    page.locator('[data-tag="note"][data-note-range-selected]'),
+    page.locator(`${tagSelector('note')}[data-note-range-selected]`),
   ).toHaveCount(count)
 })
 
@@ -171,14 +164,14 @@ Then(
   '{int} notes are range-selected, as seen in measure click selects lyrics',
   async ({ page }, count: number) => {
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )
 
 Then('{int} lyrics are range-selected', async ({ page }, count: number) => {
   await expect(
-    page.locator('[data-tag="lyric"][data-lyric-range-selected]'),
+    page.locator(`${tagSelector('lyric')}[data-lyric-range-selected]`),
   ).toHaveCount(count)
 })
 
@@ -188,7 +181,7 @@ Then(
     for (const noteId of [a, b]) {
       await expect(
         page.locator(
-          `[data-tag="lyric"][data-lyric-range-selected][data-note-id="${noteId}"]`,
+          `${tagSelector('lyric', { noteId })}[data-lyric-range-selected]`,
         ),
       ).toHaveCount(1)
     }

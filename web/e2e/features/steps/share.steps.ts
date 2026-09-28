@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { fileSwitcherTrigger, openFileActions } from '../../fileSwitcherHelpers'
 import {
   clickAndClickSelect,
@@ -210,11 +211,11 @@ When(
 )
 
 When('I tap the first note, as seen in share', async ({ page }) => {
-  await page.waitForSelector('[data-tag="measure"][data-measure-index="0"]', {
+  await page.waitForSelector(tagSelector('measure', { index: 0 }), {
     timeout: 15_000,
   })
   const noteRect = page
-    .locator('rect[data-variant="note-click-target"]')
+    .locator(rectVariantSelector('note-click-target'))
     .first()
   await expect(noteRect).toBeVisible()
   const box = await stableBoundingBox(noteRect)
@@ -235,7 +236,7 @@ When('I tap the first note, as seen in share', async ({ page }) => {
 
 Then('the tapped note is highlighted, as seen in share', async ({ page }) => {
   await expect(
-    page.locator('[data-tag="note"][data-note-range-selected]'),
+    page.locator(`${tagSelector('note')}[data-note-range-selected]`),
   ).toHaveCount(1, { timeout: 5_000 })
 })
 
@@ -305,9 +306,7 @@ When(
   'I click the section label {string} in the SVG preview, as seen in share',
   async ({ page }, label: string) => {
     const svgLabel = page
-      .locator(
-        `.preview-pages g[data-tag="section-label"][data-section-label="${label}"]`,
-      )
+      .locator(`.preview-pages g${tagSelector('section-label', { label })}`)
       .first()
     await svgLabel.waitFor({ timeout: 15_000 })
     await svgLabel.click()

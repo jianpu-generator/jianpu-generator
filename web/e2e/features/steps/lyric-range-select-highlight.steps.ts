@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector, variantSelector } from '../../../src/dataAttributes'
 import {
   clickAndClickSelect,
   stableBoundingBox,
@@ -39,7 +40,7 @@ function lyricTexts(page: import('@playwright/test').Page) {
   // Lyric syllables are the only text glyphs tagged with the "lyric" data
   // variant (see `render_lyric`), so this selector picks them out reliably
   // regardless of their actual text content.
-  return page.locator('svg text[data-variant="lyric"]')
+  return page.locator(`svg text${variantSelector('lyric')}`)
 }
 
 Given(
@@ -61,7 +62,7 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="0"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 0 }), {
       timeout: 10_000,
     })
 
@@ -108,13 +109,13 @@ Then(
     // targets — lyric selection is independent of note selection, so no
     // note cell gets highlighted by this range-select at all.
     const highlightedLyrics = page.locator(
-      '[data-tag="lyric"][data-lyric-range-selected]',
+      `${tagSelector('lyric')}[data-lyric-range-selected]`,
     )
     await expect(highlightedLyrics).toHaveCount(3)
     for (const noteId of [a, b, c]) {
       await expect(
         page.locator(
-          `[data-tag="lyric"][data-lyric-range-selected][data-note-id="${noteId}"]`,
+          `${tagSelector('lyric', { noteId })}[data-lyric-range-selected]`,
         ),
       ).toHaveCount(1)
     }
@@ -125,11 +126,11 @@ Then(
   'only lyric syllable {int} is range-selected',
   async ({ page }, noteId: number) => {
     await expect(
-      page.locator('[data-tag="lyric"][data-lyric-range-selected]'),
+      page.locator(`${tagSelector('lyric')}[data-lyric-range-selected]`),
     ).toHaveCount(1)
     await expect(
       page.locator(
-        `[data-tag="lyric"][data-lyric-range-selected][data-note-id="${noteId}"]`,
+        `${tagSelector('lyric', { noteId })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(1)
   },
@@ -137,6 +138,6 @@ Then(
 
 Then('no note is range-selected', async ({ page }) => {
   await expect(
-    page.locator('[data-tag="note"][data-note-range-selected]'),
+    page.locator(`${tagSelector('note')}[data-note-range-selected]`),
   ).toHaveCount(0)
 })

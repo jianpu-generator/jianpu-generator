@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { Given, Then, When } from './fixtures'
 
 // Padded with filler measures so "Intro" and "C" can't both fit in one
@@ -36,7 +37,7 @@ function sequenceToolbarButtons(page: import('@playwright/test').Page) {
 }
 
 function lastMeasure(page: import('@playwright/test').Page) {
-  return page.locator('[data-tag="measure"]').last()
+  return page.locator(tagSelector('measure')).last()
 }
 
 Given(
@@ -67,7 +68,7 @@ When(
     })
     // "C" is the last written measure (index 61): "Intro" (index 0) plus 60
     // filler measures (indices 1-60).
-    await expect(page.locator('[data-tag="measure"]')).toHaveCount(62, {
+    await expect(page.locator(tagSelector('measure'))).toHaveCount(62, {
       timeout: 15_000,
     })
   },

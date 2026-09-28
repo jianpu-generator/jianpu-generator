@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import {
   clickAndClickSelect,
   stableBoundingBox,
@@ -45,7 +46,7 @@ function partLabelInSystem(
   measureIndexStart: number,
 ) {
   return page.locator(
-    `[data-tag="part-label"][data-part-index="0"][data-measure-index-start="${measureIndexStart}"]`,
+    tagSelector('part-label', { sourcePartIndex: 0, measureIndexStart }),
   )
 }
 
@@ -74,11 +75,11 @@ Given(
     // System 0's Melody label sits at measure-index-start 0, system 1's at
     // measure-index-start 1 — see `partLabelInSystem`.
     await page.waitForSelector(
-      '[data-tag="part-label"][data-part-index="0"][data-measure-index-start="0"]',
+      tagSelector('part-label', { sourcePartIndex: 0, measureIndexStart: 0 }),
       { timeout: 10_000 },
     )
     await page.waitForSelector(
-      '[data-tag="part-label"][data-part-index="0"][data-measure-index-start="1"]',
+      tagSelector('part-label', { sourcePartIndex: 0, measureIndexStart: 1 }),
       { timeout: 10_000 },
     )
   },
@@ -117,7 +118,7 @@ Then(
     // range should cover every one of them, not just the anchor's own
     // system.
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -127,7 +128,7 @@ Then(
   async ({ page }, count: number, partIndex: number) => {
     await expect(
       page.locator(
-        `[data-tag="note"][data-note-range-selected][data-part-index="${partIndex}"]`,
+        `${tagSelector('note', { sourcePartIndex: partIndex })}[data-note-range-selected]`,
       ),
     ).toHaveCount(count)
   },

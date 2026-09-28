@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import {
   clickAndClickSelect,
@@ -60,10 +61,10 @@ Given('the rest-click test fixture is loaded', async ({ page }) => {
   await page.waitForSelector('[data-testid="play-measure-button"]', {
     timeout: 15_000,
   })
-  await page.waitForSelector('[data-tag="measure"][data-measure-index="0"]', {
+  await page.waitForSelector(tagSelector('measure', { index: 0 }), {
     timeout: 10_000,
   })
-  const noteRects = page.locator('rect[data-variant="note-click-target"]')
+  const noteRects = page.locator(rectVariantSelector('note-click-target'))
   await expect(noteRects).toHaveCount(4, { timeout: 10_000 })
 
   // Prime the editor/worker round-trip the same way the other click-select
@@ -87,7 +88,7 @@ Given('the rest-click test fixture is loaded', async ({ page }) => {
 When(
   "I click-and-click just past the note-range-select arm threshold inside the rest's own click target",
   async ({ page }) => {
-    const noteRects = page.locator('rect[data-variant="note-click-target"]')
+    const noteRects = page.locator(rectVariantSelector('note-click-target'))
     // Note index 1 is the rest ("0" in "1 0 3 4").
     const restBox = await stableBoundingBox(noteRects.nth(1))
     if (!restBox) {
@@ -117,7 +118,7 @@ Then(
   '{int} note is range-selected, as seen in rest click selects source token',
   async ({ page }, count: number) => {
     const highlightedNotes = page.locator(
-      '[data-tag="note"][data-note-range-selected]',
+      `${tagSelector('note')}[data-note-range-selected]`,
     )
     await expect(highlightedNotes).toHaveCount(count)
   },

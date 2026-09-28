@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -223,7 +224,7 @@ When('I release the mouse button', async ({ page }) => {
 // one regardless.)
 When('I click a bar line in the SVG preview', async ({ page }) => {
   const barLine = page
-    .locator('rect[data-variant="bar-line-click-target"]')
+    .locator(rectVariantSelector('bar-line-click-target'))
     .first()
   await expect(barLine).toHaveCount(1, { timeout: 15_000 })
   await barLine.click()
@@ -238,9 +239,7 @@ When(
     // that backs the button toolbar. Cover that path separately, since it
     // goes through a different DOM element than `button.section-jump-btn`.
     const svgLabel = page
-      .locator(
-        `.preview-pages g[data-tag="section-label"][data-section-label="${label}"]`,
-      )
+      .locator(`.preview-pages g${tagSelector('section-label', { label })}`)
       .first()
     await svgLabel.waitFor({ timeout: 15_000 })
     await svgLabel.click()

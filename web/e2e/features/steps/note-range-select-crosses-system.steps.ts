@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -34,7 +35,7 @@ const crossSystemSource = [
 ].join('\n')
 
 function noteRects(page: import('@playwright/test').Page) {
-  return page.locator('rect[data-variant="note-click-target"]')
+  return page.locator(rectVariantSelector('note-click-target'))
 }
 
 // A note renders two sibling `[data-tag="note"]` groups (the click-target
@@ -44,7 +45,7 @@ function noteRects(page: import('@playwright/test').Page) {
 // carries the click-target rect and gets the `noteRangeSelected` flag.
 function noteGroup(page: import('@playwright/test').Page, noteId: number) {
   return page.locator(
-    `[data-tag="note"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target"])`,
+    `${tagSelector('note', { noteId })}:has(${rectVariantSelector('note-click-target')})`,
   )
 }
 
@@ -69,7 +70,7 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="1"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 1 }), {
       timeout: 10_000,
     })
     await expect(noteRects(page)).toHaveCount(8, { timeout: 10_000 })

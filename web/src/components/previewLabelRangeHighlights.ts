@@ -1,8 +1,8 @@
 import {
   DATA_RANGE_ACTIVE_FLAG,
-  groupTagSelector,
   rectVariantSelector,
   tagFromElement,
+  tagSelector,
 } from '../dataAttributes'
 import type { LyricSpan, NoteSpan } from '../types'
 import {
@@ -76,7 +76,7 @@ export function partLabelsInMarquee(
       bounds.top < maxY &&
       bounds.bottom > minY
     if (!intersects) continue
-    const group = rect.closest(groupTagSelector('part-label'))
+    const group = rect.closest(tagSelector('part-label'))
     const hit = group && partLabelHitFromGroup(group)
     if (!hit) continue
     if (
@@ -117,7 +117,7 @@ export function partLabelsInMarqueeAcrossSystems(
       rectVariantSelector('part-label-click-target'),
     ),
   )) {
-    const group = rect.closest(groupTagSelector('part-label'))
+    const group = rect.closest(tagSelector('part-label'))
     const hit = group && partLabelHitFromGroup(group)
     if (!hit) continue
     allHits.push(hit)
@@ -158,7 +158,7 @@ export function applyPartLabelRangeHighlight(
       rectVariantSelector('part-label-click-target'),
     ),
   )) {
-    const group = rect.closest(groupTagSelector('part-label'))
+    const group = rect.closest(tagSelector('part-label'))
     const hit = group && partLabelHitFromGroup(group)
     const key =
       hit &&
@@ -201,7 +201,7 @@ export function lyricLabelsInMarquee(
       bounds.top < maxY &&
       bounds.bottom > minY
     if (!intersects) continue
-    const group = rect.closest(groupTagSelector('lyric-label'))
+    const group = rect.closest(tagSelector('lyric-label'))
     const hit = group && lyricLabelHitFromGroup(group)
     if (!hit) continue
     if (
@@ -232,7 +232,7 @@ export function applyLyricLabelRangeHighlight(
       rectVariantSelector('lyric-label-click-target'),
     ),
   )) {
-    const group = rect.closest(groupTagSelector('lyric-label'))
+    const group = rect.closest(tagSelector('lyric-label'))
     const hit = group && lyricLabelHitFromGroup(group)
     const key =
       hit &&
@@ -265,7 +265,7 @@ export function applyPersistedLyricLabelHighlights(
       rectVariantSelector('lyric-label-click-target'),
     ),
   )) {
-    const group = rect.closest(groupTagSelector('lyric-label'))
+    const group = rect.closest(tagSelector('lyric-label'))
     const hit = group && lyricLabelHitFromGroup(group)
     if (!hit) continue
     const cells = lyricCellsForLyricLabels(lyricSpans, [hit])
@@ -306,7 +306,7 @@ export function applyPersistedPartLabelHighlights(
       rectVariantSelector('part-label-click-target'),
     ),
   )) {
-    const group = rect.closest(groupTagSelector('part-label'))
+    const group = rect.closest(tagSelector('part-label'))
     const hit = group && partLabelHitFromGroup(group)
     if (!hit) continue
     const cells = noteCellsForPartLabels(noteSpans, [hit])

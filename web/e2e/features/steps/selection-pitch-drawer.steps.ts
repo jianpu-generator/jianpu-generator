@@ -1,5 +1,6 @@
 import type { Locator, Page } from '@playwright/test'
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import {
   clickThenStableClick,
@@ -68,7 +69,7 @@ async function loadScore(page: Page, source: string) {
     timeout: 15_000,
   })
   await expect(
-    page.locator('rect[data-variant="note-click-target"]').first(),
+    page.locator(rectVariantSelector('note-click-target')).first(),
   ).toBeVisible({ timeout: 10_000 })
   const isMobile = (page.viewportSize()?.width ?? 1280) <= 768
   if (isMobile) {
@@ -105,7 +106,7 @@ function noteGroup(page: Page, partIndex: number, noteId: number) {
   // holding the click target.
   return page
     .locator(
-      `[data-tag="note"][data-part-index="${partIndex}"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target"])`,
+      `${tagSelector('note', { sourcePartIndex: partIndex, noteId })}:has(${rectVariantSelector('note-click-target')})`,
     )
     .first()
 }
@@ -113,7 +114,7 @@ function noteGroup(page: Page, partIndex: number, noteId: number) {
 function clickTarget(page: Page, noteId: number) {
   // Every score here has a single part, so it's always part index 0.
   return noteGroup(page, 0, noteId).locator(
-    'rect[data-variant="note-click-target"]',
+    rectVariantSelector('note-click-target'),
   )
 }
 
@@ -153,7 +154,7 @@ Given(
       timeout: 15_000,
     })
     await expect(
-      page.locator('rect[data-variant="note-click-target"]').first(),
+      page.locator(rectVariantSelector('note-click-target')).first(),
     ).toBeVisible({ timeout: 10_000 })
     // No editor to prime the worker round-trip through, so just give
     // `listNoteSpans` time to land before hit-testing.
@@ -296,7 +297,7 @@ Then('the pitch drawer is hidden', async ({ page }) => {
   // The selection itself must have landed first, or "hidden" would pass
   // before the drawer ever had a chance to open.
   await expect(
-    page.locator('[data-tag="note"][data-note-range-selected]').first(),
+    page.locator(`${tagSelector('note')}[data-note-range-selected]`).first(),
   ).toBeVisible({ timeout: 5_000 })
   // Longer than the worker round-trip plus the slide-up animation.
   await page.waitForTimeout(1_000)
@@ -353,7 +354,7 @@ Then(
     await expect(
       page
         .locator(
-          `[data-tag="note"][data-part-index="0"][data-note-id="${noteId}"][data-note-range-selected]`,
+          `${tagSelector('note', { sourcePartIndex: 0, noteId })}[data-note-range-selected]`,
         )
         .first(),
     ).toBeAttached()

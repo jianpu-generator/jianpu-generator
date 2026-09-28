@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -44,7 +45,9 @@ function pages(page: import('@playwright/test').Page) {
 function notesOnPage(page: import('@playwright/test').Page, pageIndex: number) {
   return pages(page)
     .nth(pageIndex)
-    .locator('[data-tag="note"]:has(rect[data-variant="note-click-target"])')
+    .locator(
+      `${tagSelector('note')}:has(${rectVariantSelector('note-click-target')})`,
+    )
 }
 
 Given(
@@ -68,7 +71,7 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="0"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 0 }), {
       timeout: 10_000,
     })
     await expect

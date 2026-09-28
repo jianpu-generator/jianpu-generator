@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { clickThenStableClick } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
@@ -84,8 +85,8 @@ function barNumberRect(
   measureIndex: number,
 ) {
   return page
-    .locator(`[data-tag="bar-number"][data-measure-index="${measureIndex}"]`)
-    .locator('rect[data-variant="bar-number-click-target"]')
+    .locator(tagSelector('bar-number', { index: measureIndex }))
+    .locator(rectVariantSelector('bar-number-click-target'))
     .first()
 }
 
@@ -100,9 +101,7 @@ function note(
   noteId: number,
 ) {
   return page
-    .locator(
-      `[data-tag="note"][data-part-index="${partIndex}"][data-note-id="${noteId}"]`,
-    )
+    .locator(tagSelector('note', { sourcePartIndex: partIndex, noteId }))
     .first()
 }
 
@@ -114,7 +113,7 @@ function lyric(
 ) {
   return page
     .locator(
-      `[data-tag="lyric"][data-part-index="${partIndex}"][data-note-id="${noteId}"][data-verse="${verse}"]`,
+      tagSelector('lyric', { sourcePartIndex: partIndex, noteId, verse }),
     )
     .first()
 }
@@ -128,10 +127,9 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await page.waitForSelector(
-      '[data-tag="bar-number"][data-measure-index="2"]',
-      { timeout: 10_000 },
-    )
+    await page.waitForSelector(tagSelector('bar-number', { index: 2 }), {
+      timeout: 10_000,
+    })
     await primeMeasureSpans(page)
   },
 )
@@ -174,7 +172,7 @@ Then(
   async ({ page }, count: number, partIndex: number) => {
     await expect(
       page.locator(
-        `[data-tag="note"][data-note-range-selected][data-part-index="${partIndex}"]`,
+        `${tagSelector('note', { sourcePartIndex: partIndex })}[data-note-range-selected]`,
       ),
     ).toHaveCount(count)
   },
@@ -184,7 +182,7 @@ Then(
   '{int} notes are range-selected in total, as seen in bar number click-and-click selects whole systems',
   async ({ page }, count: number) => {
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )

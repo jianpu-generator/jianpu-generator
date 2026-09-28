@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import {
+  rectVariantSelector,
+  tagFieldAttribute,
+  tagSelector,
+} from '../../../src/dataAttributes'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -83,7 +88,7 @@ Given(
     await page.goto('/')
 
     await page.waitForSelector('button.play-all-btn', { timeout: 15_000 })
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="2"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 2 }), {
       timeout: 10_000,
     })
   },
@@ -111,15 +116,13 @@ Then(
     // `Tag::Measure` in `renderer/new_types.rs`), so this is the DOM's own
     // signal that measures 0-1 collapsed into one bar.
     await expect(
-      page.locator(
-        '[data-tag="measure"][data-measure-index="0"][data-measure-index-end="1"]',
-      ),
+      page.locator(tagSelector('measure', { index: 0, end: 1 })),
     ).toHaveCount(1, { timeout: 10_000 })
     // Melody now has exactly 5 rendered note/rest cells: the merged rest
     // (spanning measures 0-1) plus measure 2's 4 notes — not 6, which would
     // mean the merge never happened.
     await expect(
-      page.locator('rect[data-variant="note-click-target"]'),
+      page.locator(rectVariantSelector('note-click-target')),
     ).toHaveCount(5)
   },
 )
@@ -150,16 +153,12 @@ Then(
     // 0-1's merged bar, the same way the later steps locate measure 2's
     // first note by position rather than assuming DOM order.
     const mergedRestBox = await stableBoundingBox(
-      page
-        .locator(
-          '[data-tag="measure"][data-measure-index="0"][data-measure-index-end="1"]',
-        )
-        .first(),
+      page.locator(tagSelector('measure', { index: 0, end: 1 })).first(),
     )
     if (!mergedRestBox) {
       throw new Error('Could not get bounding box for the merged rest bar.')
     }
-    const noteRects = page.locator('rect[data-variant="note-click-target"]')
+    const noteRects = page.locator(rectVariantSelector('note-click-target'))
     const rectCount = await noteRects.count()
     let noteId: string | null = null
     let partIndex: string | null = null
@@ -172,8 +171,10 @@ Then(
         box.x < mergedRestBox.x + mergedRestBox.width
       ) {
         const group = rect.locator('xpath=..')
-        noteId = await group.getAttribute('data-note-id')
-        partIndex = await group.getAttribute('data-part-index')
+        noteId = await group.getAttribute(tagFieldAttribute('note', 'noteId'))
+        partIndex = await group.getAttribute(
+          tagFieldAttribute('note', 'sourcePartIndex'),
+        )
         break
       }
     }
@@ -183,14 +184,14 @@ Then(
 
     await expect(
       page.locator(
-        `[data-tag="note"][data-part-index="${partIndex}"][data-note-id="${noteId}"] rect[data-variant="playback-cursor-rect"]`,
+        `${tagSelector('note', { sourcePartIndex: Number(partIndex), noteId: Number(noteId) })} ${rectVariantSelector('playback-cursor-rect')}`,
       ),
     ).toHaveAttribute('fill', PLAYBACK_CURSOR_FILL, { timeout: 5_000 })
     // Nothing else should be highlighted yet — only the merged rest, since
     // we're still at the very start of the 8-second all-rest run.
     await expect(
       page.locator(
-        `rect[data-variant="playback-cursor-rect"][fill="${PLAYBACK_CURSOR_FILL}"]`,
+        `${rectVariantSelector('playback-cursor-rect')}[fill="${PLAYBACK_CURSOR_FILL}"]`,
       ),
     ).toHaveCount(1)
   },
@@ -200,7 +201,7 @@ Then(
   "Melody's first note in measure 2 shows the playback cursor highlight",
   async ({ page }) => {
     const measure2Box = await stableBoundingBox(
-      page.locator('[data-tag="measure"][data-measure-index="2"]').first(),
+      page.locator(tagSelector('measure', { index: 2 })).first(),
     )
     if (!measure2Box)
       throw new Error('Could not get bounding box for measure 2.')
@@ -209,7 +210,7 @@ Then(
     // click-target belongs to Melody — the merged rest (spanning measures
     // 0-1) plus measure 2's four notes. Pick the one whose x falls inside
     // measure 2's own bounds rather than assuming DOM order.
-    const noteRects = page.locator('rect[data-variant="note-click-target"]')
+    const noteRects = page.locator(rectVariantSelector('note-click-target'))
     const rectCount = await noteRects.count()
     let noteId: string | null = null
     let partIndex: string | null = null
@@ -222,8 +223,10 @@ Then(
         box.x < measure2Box.x + measure2Box.width
       ) {
         const group = rect.locator('xpath=..')
-        noteId = await group.getAttribute('data-note-id')
-        partIndex = await group.getAttribute('data-part-index')
+        noteId = await group.getAttribute(tagFieldAttribute('note', 'noteId'))
+        partIndex = await group.getAttribute(
+          tagFieldAttribute('note', 'sourcePartIndex'),
+        )
         break
       }
     }
@@ -238,7 +241,7 @@ Then(
     // `usePlaybackCursor.ts`'s own lookup, which does the same thing.
     await expect(
       page.locator(
-        `[data-tag="note"][data-part-index="${partIndex}"][data-note-id="${noteId}"] rect[data-variant="playback-cursor-rect"]`,
+        `${tagSelector('note', { sourcePartIndex: Number(partIndex), noteId: Number(noteId) })} ${rectVariantSelector('playback-cursor-rect')}`,
       ),
     ).toHaveAttribute('fill', PLAYBACK_CURSOR_FILL, { timeout: 20_000 })
   },
@@ -249,7 +252,7 @@ Then(
   async ({ page }) => {
     await expect(
       page.locator(
-        `rect[data-variant="playback-cursor-rect"][fill="${PLAYBACK_CURSOR_FILL}"]`,
+        `${rectVariantSelector('playback-cursor-rect')}[fill="${PLAYBACK_CURSOR_FILL}"]`,
       ),
     ).toHaveCount(1)
   },

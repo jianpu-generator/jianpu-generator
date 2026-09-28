@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import {
   clickAndClickSelect,
   stableBoundingBox,
@@ -31,11 +32,11 @@ const rangeTestSource = [
 ].join('\n')
 
 function noteRects(page: import('@playwright/test').Page) {
-  return page.locator('rect[data-variant="note-click-target"]')
+  return page.locator(rectVariantSelector('note-click-target'))
 }
 
 function highlightedNotes(page: import('@playwright/test').Page) {
-  return page.locator('[data-tag="note"][data-note-range-selected]')
+  return page.locator(`${tagSelector('note')}[data-note-range-selected]`)
 }
 
 Given(
@@ -59,7 +60,7 @@ Given(
     })
 
     // Wait for the SVG preview to render note click targets for measure 0.
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="0"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 0 }), {
       timeout: 10_000,
     })
     await expect(noteRects(page)).toHaveCount(4, { timeout: 10_000 })

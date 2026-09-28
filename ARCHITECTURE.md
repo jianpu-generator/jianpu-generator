@@ -305,6 +305,13 @@ a runtime `JsValue`/`any` surprise.
   `web/src/injectPreviewInteractionStyles.ts` from the typed selector
   helpers, never hand-typed in a `.css` file (`dataAttributes.test.ts`
   guards this).
+- Each `Tag` field's `data-*` attribute name lives only in
+  `TAG_FIELD_ATTRIBUTES` (`web/src/dataAttributes.ts`, checked against the
+  generated `Tag` field set). The writer (`groupAttributesForTag`), the
+  reader (`tagFromElement`) and the selector builders (`tagSelector`,
+  `variantSelector`, `rectVariantSelector`, `tagFieldAttribute`) all derive
+  from it. The Playwright step files use the same builders, so they never
+  hand-type a `[data-tag=…]` selector either.
 
 ### WASM exports (`crates/jianpu-wasm`)
 

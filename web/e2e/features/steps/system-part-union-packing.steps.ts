@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagFieldAttribute, tagSelector } from '../../../src/dataAttributes'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 import {
@@ -139,9 +140,12 @@ When('the score is laid out', async ({ page }) => {
   await page.waitForSelector('[data-testid="play-measure-button"]', {
     timeout: 15_000,
   })
-  await page.waitForSelector('[data-tag="part-label"][data-part-index="0"]', {
-    timeout: 10_000,
-  })
+  await page.waitForSelector(
+    tagSelector('part-label', { sourcePartIndex: 0 }),
+    {
+      timeout: 10_000,
+    },
+  )
   await primeMeasureSpans(page, firstMeasureLine)
 })
 
@@ -150,7 +154,10 @@ Then(
   async ({ page }, part: string, from: number, to: number) => {
     const label = partLabelAt(page, part, from)
     await expect(label).toHaveCount(1, { timeout: 10_000 })
-    await expect(label).toHaveAttribute('data-measure-index-end', String(to))
+    await expect(label).toHaveAttribute(
+      tagFieldAttribute('part-label', 'measureIndexEnd'),
+      String(to),
+    )
   },
 )
 
@@ -159,7 +166,10 @@ Then(
   async ({ page }, part: string, from: number, to: number) => {
     const label = partLabelAt(page, part, from)
     await expect(label).toHaveCount(1, { timeout: 10_000 })
-    await expect(label).toHaveAttribute('data-measure-index-end', String(to))
+    await expect(label).toHaveAttribute(
+      tagFieldAttribute('part-label', 'measureIndexEnd'),
+      String(to),
+    )
   },
 )
 
@@ -180,7 +190,7 @@ Then(
       m.notesFor.includes(part),
     ).length
     await expect(
-      page.locator(`[data-tag="note"][data-part-index="${PART_INDEX[part]}"]`),
+      page.locator(tagSelector('note', { sourcePartIndex: PART_INDEX[part] })),
     ).toHaveCount(totalReal * NOTE_TOKEN_COUNT * 2, { timeout: 10_000 })
   },
 )
@@ -198,10 +208,16 @@ Then(
     await expect(partLabelsFor(page, part)).toHaveCount(2, { timeout: 10_000 })
     const first = partLabelAt(page, part, aStart)
     await expect(first).toHaveCount(1)
-    await expect(first).toHaveAttribute('data-measure-index-end', String(aEnd))
+    await expect(first).toHaveAttribute(
+      tagFieldAttribute('part-label', 'measureIndexEnd'),
+      String(aEnd),
+    )
     const second = partLabelAt(page, part, bStart)
     await expect(second).toHaveCount(1)
-    await expect(second).toHaveAttribute('data-measure-index-end', String(bEnd))
+    await expect(second).toHaveAttribute(
+      tagFieldAttribute('part-label', 'measureIndexEnd'),
+      String(bEnd),
+    )
   },
 )
 
@@ -211,7 +227,10 @@ Then(
     for (const part of ['Melody', 'Harmony', 'Bass']) {
       const label = partLabelAt(page, part, from)
       await expect(label).toHaveCount(1, { timeout: 10_000 })
-      await expect(label).toHaveAttribute('data-measure-index-end', String(to))
+      await expect(label).toHaveAttribute(
+        tagFieldAttribute('part-label', 'measureIndexEnd'),
+        String(to),
+      )
     }
   },
 )
@@ -262,14 +281,17 @@ Then(
     })
     const label = partLabelAt(page, 'Bass', index)
     await expect(label).toHaveCount(1, { timeout: 10_000 })
-    await expect(label).toHaveAttribute('data-measure-index-end', String(index))
+    await expect(label).toHaveAttribute(
+      tagFieldAttribute('part-label', 'measureIndexEnd'),
+      String(index),
+    )
   },
 )
 
 Then('the first system has no Bass row', async ({ page }) => {
   await expect(
     page.locator(
-      '[data-tag="part-label"][data-part-index="2"][data-measure-index-start="0"]',
+      tagSelector('part-label', { sourcePartIndex: 2, measureIndexStart: 0 }),
     ),
   ).toHaveCount(0, { timeout: 10_000 })
 })
@@ -278,10 +300,17 @@ Then(
   "Melody's verse-{int} lyric label spans measures {int} to {int} in one system",
   async ({ page }, verse: number, from: number, to: number) => {
     const label = page.locator(
-      `[data-tag="lyric-label"][data-part-index="0"][data-verse="${verse}"][data-measure-index-start="${from}"]`,
+      tagSelector('lyric-label', {
+        sourcePartIndex: 0,
+        verse,
+        measureIndexStart: from,
+      }),
     )
     await expect(label).toHaveCount(1, { timeout: 10_000 })
-    await expect(label).toHaveAttribute('data-measure-index-end', String(to))
+    await expect(label).toHaveAttribute(
+      tagFieldAttribute('lyric-label', 'measureIndexEnd'),
+      String(to),
+    )
   },
 )
 
@@ -289,10 +318,17 @@ Then(
   "Melody's verse-{int} lyric label spans measures {int} to {int} in the same system",
   async ({ page }, verse: number, from: number, to: number) => {
     const label = page.locator(
-      `[data-tag="lyric-label"][data-part-index="0"][data-verse="${verse}"][data-measure-index-start="${from}"]`,
+      tagSelector('lyric-label', {
+        sourcePartIndex: 0,
+        verse,
+        measureIndexStart: from,
+      }),
     )
     await expect(label).toHaveCount(1, { timeout: 10_000 })
-    await expect(label).toHaveAttribute('data-measure-index-end', String(to))
+    await expect(label).toHaveAttribute(
+      tagFieldAttribute('lyric-label', 'measureIndexEnd'),
+      String(to),
+    )
   },
 )
 
@@ -313,9 +349,7 @@ Then(
       (m) => m.melodyVerses && m.melodyVerses.length > verse,
     ).length
     await expect(
-      page.locator(
-        `[data-tag="lyric"][data-part-index="0"][data-verse="${verse}"]`,
-      ),
+      page.locator(tagSelector('lyric', { sourcePartIndex: 0, verse })),
     ).toHaveCount(totalRealSyllables * NOTE_TOKEN_COUNT, { timeout: 10_000 })
   },
 )

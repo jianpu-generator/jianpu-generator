@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 import {
@@ -90,7 +91,7 @@ When(
     await captureEnabledTracks(state.viewerPage)
     await state.viewerPage.goto(state.syncedShareLink)
     await state.viewerPage.waitForSelector(
-      '[data-tag="measure"][data-measure-index="1"]',
+      tagSelector('measure', { index: 1 }),
       { timeout: 15_000 },
     )
   },
@@ -99,7 +100,7 @@ When(
 When('the viewer plain-clicks the Melody part label', async ({}) => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   const label = state.viewerPage
-    .locator('[data-tag="part-label"][data-part-index="0"]')
+    .locator(tagSelector('part-label', { sourcePartIndex: 0 }))
     .first()
   await expect(label).toBeVisible({ timeout: 5_000 })
   const box = await stableBoundingBox(label)

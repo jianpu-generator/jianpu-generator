@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { rectVariantSelector } from '../../../src/dataAttributes'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { Given, When } from './fixtures'
 
 const SINGLE_MEASURE_SOURCE = [
@@ -230,9 +230,12 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await page.waitForSelector('[data-tag="part-label"][data-part-index="1"]', {
-      timeout: 10_000,
-    })
+    await page.waitForSelector(
+      tagSelector('part-label', { sourcePartIndex: 1 }),
+      {
+        timeout: 10_000,
+      },
+    )
     // Primes measureSpans (same priming dance the part-label-click specs
     // use) so the SVG has settled before the click step hit-tests it.
     await focusEditor()

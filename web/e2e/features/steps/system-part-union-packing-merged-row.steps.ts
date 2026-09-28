@@ -1,4 +1,9 @@
 import { expect } from '@playwright/test'
+import {
+  rectVariantSelector,
+  tagFieldAttribute,
+  tagSelector,
+} from '../../../src/dataAttributes'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Then, When } from './fixtures'
 import { partLabelsFor } from './system-part-union-packing.fixture'
@@ -27,7 +32,7 @@ Then('all notes in the first system are highlighted', async ({ page }) => {
   // `data-note-range-selected` — asserting over *every* glyph in the system
   // catches that regardless of which part/measure it lands on.
   const firstSystemLabels = page.locator(
-    '[data-tag="part-label"][data-measure-index-start="0"]',
+    tagSelector('part-label', { measureIndexStart: 0 }),
   )
   const labelCount = await firstSystemLabels.count()
   if (labelCount === 0) {
@@ -40,14 +45,16 @@ Then('all notes in the first system are highlighted', async ({ page }) => {
     const box = await stableBoundingBox(label)
     if (!box) continue
     rowBoxes.push(box)
-    const end = await label.getAttribute('data-measure-index-end')
+    const end = await label.getAttribute(
+      tagFieldAttribute('part-label', 'measureIndexEnd'),
+    )
     systemEnd = Math.max(systemEnd, Number.parseInt(end ?? '0', 10))
   }
 
   const measureBoxes: { x: number; width: number }[] = []
   for (let m = 0; m <= systemEnd; m++) {
     const box = await stableBoundingBox(
-      page.locator(`[data-tag="measure"][data-measure-index="${m}"]`),
+      page.locator(tagSelector('measure', { index: m })),
     )
     if (box) measureBoxes.push(box)
   }
@@ -56,12 +63,12 @@ Then('all notes in the first system are highlighted', async ({ page }) => {
     measureBoxes.some((m) => cx >= m.x && cx <= m.x + m.width) &&
     rowBoxes.some((r) => cy >= r.y && cy <= r.y + r.height)
 
-  const highlightedRectBoxes = await page.evaluate(() =>
-    Array.from(
-      document.querySelectorAll<SVGRectElement>(
-        '[data-tag="note"][data-note-range-selected] rect[data-variant="note-click-target"]',
+  const highlightedRectBoxes = await page.evaluate(
+    (selector) =>
+      Array.from(document.querySelectorAll<SVGRectElement>(selector)).map(
+        (el) => el.getBoundingClientRect().toJSON(),
       ),
-    ).map((el) => el.getBoundingClientRect().toJSON()),
+    `${tagSelector('note')}[data-note-range-selected] ${rectVariantSelector('note-click-target')}`,
   )
 
   const digitGlyphs = page.locator('text').getByText(/^[1-7]$/)
@@ -101,7 +108,7 @@ Then(
     // center fall inside the intersection of this measure's column and this
     // part's row?
     const measureBox = await stableBoundingBox(
-      page.locator(`[data-tag="measure"][data-measure-index="${index}"]`),
+      page.locator(tagSelector('measure', { index })),
     )
     const rowBox = await stableBoundingBox(partLabelsFor(page, part).first())
     if (!measureBox || !rowBox) {
@@ -147,7 +154,7 @@ Then(
     // `[data-tag="measure"]` click-target rect) and this part's row
     // (y-range, from its part-label click-target rect)?
     const measureBox = await stableBoundingBox(
-      page.locator(`[data-tag="measure"][data-measure-index="${index}"]`),
+      page.locator(tagSelector('measure', { index })),
     )
     const rowBox = await stableBoundingBox(partLabelsFor(page, part).first())
     if (!measureBox || !rowBox) {

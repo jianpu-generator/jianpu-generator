@@ -1,7 +1,7 @@
 import {
-  groupTagSelector,
   rectVariantSelector,
   tagFromElement,
+  tagSelector,
 } from '../dataAttributes'
 import type { Tag } from '../jianpuWasm'
 import type { LyricCell, NoteCell } from './previewSelection'
@@ -26,7 +26,7 @@ interface RangeHighlightSpec<Cell> {
    * `rect[data-variant="note-click-target"]`. */
   rectSelector: string
   /** `Tag['tag']` of the rect's enclosing group, e.g. `'note'` — the
-   * selector itself is built from this via `groupTagSelector`. */
+   * selector itself is built from this via `tagSelector`. */
   tagType: Tag['tag']
   /** Narrows the enclosing group's own `Tag` (already known to be
    * `tagType`, via `tagFromElement`) into a `Cell`, or `undefined` if a
@@ -62,7 +62,7 @@ function cellsInMarquee<Cell>(
       bounds.top < maxY &&
       bounds.bottom > minY
     if (!intersects) continue
-    const group = rect.closest(groupTagSelector(spec.tagType))
+    const group = rect.closest(tagSelector(spec.tagType))
     if (!group) continue
     const tag = tagFromElement(group)
     const cell = tag && spec.parseCell(tag)
@@ -87,9 +87,7 @@ function applyPersistedHighlights<Cell>(
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(spec.rectSelector),
   )) {
-    const group = rect.closest(
-      groupTagSelector(spec.tagType),
-    ) as HTMLElement | null
+    const group = rect.closest(tagSelector(spec.tagType)) as HTMLElement | null
     if (!group) continue
     const tag = tagFromElement(group)
     const cell = tag && spec.parseCell(tag)

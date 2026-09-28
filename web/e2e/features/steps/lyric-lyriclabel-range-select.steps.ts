@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { clickThenStableClick } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -44,9 +45,7 @@ const source = [
 ].join('\n')
 
 function lyricInVerse(page: import('@playwright/test').Page, verse: number) {
-  return page.locator(
-    `[data-tag="lyric"][data-part-index="0"][data-verse="${verse}"]`,
-  )
+  return page.locator(tagSelector('lyric', { sourcePartIndex: 0, verse }))
 }
 
 function verseLabelInSystem(
@@ -55,7 +54,11 @@ function verseLabelInSystem(
   measureIndexStart: number,
 ) {
   return page.locator(
-    `[data-tag="lyric-label"][data-part-index="0"][data-verse="${verse}"][data-measure-index-start="${measureIndexStart}"]`,
+    tagSelector('lyric-label', {
+      sourcePartIndex: 0,
+      verse,
+      measureIndexStart,
+    }),
   )
 }
 
@@ -84,7 +87,11 @@ Given(
     await expect(lyricInVerse(page, 0)).toHaveCount(3, { timeout: 10_000 })
     await expect(lyricInVerse(page, 1)).toHaveCount(3, { timeout: 10_000 })
     await page.waitForSelector(
-      '[data-tag="lyric-label"][data-part-index="0"][data-verse="1"][data-measure-index-start="1"]',
+      tagSelector('lyric-label', {
+        sourcePartIndex: 0,
+        verse: 1,
+        measureIndexStart: 1,
+      }),
       { timeout: 10_000 },
     )
     await page.evaluate(() => document.fonts.ready)
@@ -108,7 +115,7 @@ Then(
   '{int} syllables are range-selected in total, as seen in lyric lyriclabel range select',
   async ({ page }, count: number) => {
     await expect(
-      page.locator('[data-tag="lyric"][data-lyric-range-selected]'),
+      page.locator(`${tagSelector('lyric')}[data-lyric-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -132,7 +139,7 @@ Then(
   'no note is range-selected, as seen in lyric lyriclabel range select',
   async ({ page }) => {
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(0)
   },
 )

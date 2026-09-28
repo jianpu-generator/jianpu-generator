@@ -1,5 +1,10 @@
 import { expect } from '@playwright/test'
 import {
+  rectVariantSelector,
+  tagSelector,
+  variantSelector,
+} from '../../../src/dataAttributes'
+import {
   clickAndClickSelect,
   stableBoundingBox,
 } from '../../rangeSelectHelpers'
@@ -49,14 +54,14 @@ const rangeTestSource = [
 ].join('\n')
 
 function noteRects(page: import('@playwright/test').Page) {
-  return page.locator('rect[data-variant="note-click-target"]')
+  return page.locator(rectVariantSelector('note-click-target'))
 }
 
 function lyricTexts(page: import('@playwright/test').Page) {
   // Lyric syllables are the only text glyphs tagged with the "lyric" data
   // variant (see `render_lyric`), so this selector picks them out reliably
   // regardless of their actual text content.
-  return page.locator('svg text[data-variant="lyric"]')
+  return page.locator(`svg text${variantSelector('lyric')}`)
 }
 
 Given(
@@ -81,7 +86,7 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="0"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 0 }), {
       timeout: 10_000,
     })
 
@@ -157,7 +162,7 @@ Then(
     // 0-2 get selected as expected. (Symmetric case: notes selected via the
     // lyric-mode cross-row bug being asserted against.)
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -169,7 +174,7 @@ Then(
     // the range-select is locked into a single mode, the other cell type
     // never gets marked as range-selected.
     await expect(
-      page.locator('[data-tag="lyric"][data-lyric-range-selected]'),
+      page.locator(`${tagSelector('lyric')}[data-lyric-range-selected]`),
     ).toHaveCount(count)
   },
 )

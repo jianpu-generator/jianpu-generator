@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
@@ -66,7 +67,10 @@ function partLabel(
   measureIndexStart: number,
 ) {
   return page.locator(
-    `[data-tag="part-label"][data-part-index="${partIndex}"][data-measure-index-start="${measureIndexStart}"]`,
+    tagSelector('part-label', {
+      sourcePartIndex: partIndex,
+      measureIndexStart,
+    }),
   )
 }
 
@@ -106,9 +110,12 @@ Given('the part-label copy-paste fixture is loaded', async ({ page }) => {
   await page.waitForSelector('[data-testid="play-measure-button"]', {
     timeout: 15_000,
   })
-  await page.waitForSelector('[data-tag="part-label"][data-part-index="0"]', {
-    timeout: 10_000,
-  })
+  await page.waitForSelector(
+    tagSelector('part-label', { sourcePartIndex: 0 }),
+    {
+      timeout: 10_000,
+    },
+  )
   await primeMeasureSpans(page)
 })
 

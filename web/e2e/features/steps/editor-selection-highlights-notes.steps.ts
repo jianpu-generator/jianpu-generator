@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -55,7 +56,7 @@ Given('the editor-selection test fixture is loaded', async ({ page }) => {
   await page.waitForSelector('[data-testid="play-measure-button"]', {
     timeout: 15_000,
   })
-  await page.waitForSelector('[data-tag="measure"][data-measure-index="1"]', {
+  await page.waitForSelector(tagSelector('measure', { index: 1 }), {
     timeout: 10_000,
   })
 })
@@ -89,7 +90,7 @@ Then(
   '{int} notes are range-selected, as seen in editor selection highlights notes',
   async ({ page }, count: number) => {
     const highlightedNotes = page.locator(
-      '[data-tag="note"][data-note-range-selected]',
+      `${tagSelector('note')}[data-note-range-selected]`,
     )
     await expect(highlightedNotes).toHaveCount(count)
   },

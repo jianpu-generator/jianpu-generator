@@ -1,4 +1,9 @@
 import { expect } from '@playwright/test'
+import {
+  ancestorTagXpath,
+  rectVariantSelector,
+  tagSelector,
+} from '../../../src/dataAttributes'
 import { Given, Then } from './fixtures'
 
 /**
@@ -33,7 +38,7 @@ const crossPartSource = [
 ].join('\n')
 
 function noteRects(page: import('@playwright/test').Page) {
-  return page.locator('rect[data-variant="note-click-target"]')
+  return page.locator(rectVariantSelector('note-click-target'))
 }
 
 // `data-note-id` restarts at 0 within each part (see `noteRects`' two note
@@ -42,9 +47,7 @@ function noteRects(page: import('@playwright/test').Page) {
 // group instead, the same "index" ordering `noteRects(page).nth(...)` already
 // uses to pick the click point.
 function noteGroup(page: import('@playwright/test').Page, index: number) {
-  return noteRects(page)
-    .nth(index)
-    .locator('xpath=ancestor::*[@data-tag="note"][1]')
+  return noteRects(page).nth(index).locator(ancestorTagXpath('note'))
 }
 
 Given(
@@ -68,7 +71,7 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="1"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 1 }), {
       timeout: 10_000,
     })
     await expect(noteRects(page)).toHaveCount(8, { timeout: 10_000 })

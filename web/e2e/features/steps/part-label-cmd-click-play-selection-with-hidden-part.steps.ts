@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
@@ -97,7 +98,7 @@ Given(
       timeout: 15_000,
     })
     await page.waitForSelector(
-      '[data-tag="part-label"][data-part-index="0"][data-measure-index-start="0"]',
+      tagSelector('part-label', { sourcePartIndex: 0, measureIndexStart: 0 }),
       { timeout: 10_000 },
     )
   },
@@ -113,7 +114,7 @@ When(
     })
     await harmonyPill.locator('.part-toggle-segment--eye').click()
 
-    const noteRects = page.locator('rect[data-variant="note-click-target"]')
+    const noteRects = page.locator(rectVariantSelector('note-click-target'))
     // Melody (2) + Bass (2), Harmony hidden = 4 rendered notes.
     await expect(noteRects).toHaveCount(4, { timeout: 10_000 })
     // Give the debounced listNoteSpans worker round-trip time to catch up
@@ -126,7 +127,7 @@ When(
 
 When('I Ctrl-click the Melody part label', async ({ page }) => {
   const melodyLabel = page.locator(
-    '[data-tag="part-label"][data-part-index="0"][data-measure-index-start="0"]',
+    tagSelector('part-label', { sourcePartIndex: 0, measureIndexStart: 0 }),
   )
   await expect(melodyLabel).toBeVisible({ timeout: 5_000 })
 
@@ -149,7 +150,7 @@ Then(
     // index 1) — and nothing else.
     await expect(
       page.locator(
-        `[data-tag="note"][data-note-range-selected][data-part-index="${partIndex}"]`,
+        `${tagSelector('note', { sourcePartIndex: partIndex })}[data-note-range-selected]`,
       ),
     ).toHaveCount(count)
   },
@@ -159,7 +160,7 @@ Then(
   '{int} notes are range-selected in total, as seen in part label cmd click play selection with hidden part',
   async ({ page }, count: number) => {
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )

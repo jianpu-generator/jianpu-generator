@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
@@ -86,7 +87,7 @@ Given('the bar-line-click test fixture is loaded', async ({ page }) => {
   await page.waitForSelector('[data-testid="play-measure-button"]', {
     timeout: 15_000,
   })
-  await page.waitForSelector('[data-tag="measure"][data-measure-index="1"]', {
+  await page.waitForSelector(tagSelector('measure', { index: 1 }), {
     timeout: 10_000,
   })
   await primeMeasureSpans(page)
@@ -95,13 +96,11 @@ Given('the bar-line-click test fixture is loaded', async ({ page }) => {
 When(
   "I Cmd\\/Ctrl-click a few pixels left of measure 1's left edge",
   async ({ page }) => {
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="1"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 1 }), {
       timeout: 10_000,
     })
 
-    const measure1 = page
-      .locator('[data-tag="measure"][data-measure-index="1"]')
-      .first()
+    const measure1 = page.locator(tagSelector('measure', { index: 1 })).first()
     const box1 = await stableBoundingBox(measure1)
     if (!box1) throw new Error('Could not get bounding box for measure 1.')
 
@@ -120,13 +119,11 @@ When(
 When(
   "I Cmd\\/Ctrl-click measure 1's right edge, which is the last bar line of its system",
   async ({ page }) => {
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="2"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 2 }), {
       timeout: 10_000,
     })
 
-    const measure1 = page
-      .locator('[data-tag="measure"][data-measure-index="1"]')
-      .first()
+    const measure1 = page.locator(tagSelector('measure', { index: 1 })).first()
     const box1 = await stableBoundingBox(measure1)
     if (!box1) throw new Error('Could not get bounding box for measure 1.')
 
@@ -144,7 +141,7 @@ Then('{int} notes are range-selected', async ({ page }, count: number) => {
   // Measure 1 ("5 6") has exactly 2 notes; measure 0 ("1 2 3 4") has 4 — a
   // fall-back to measure 0 would show 4 notes selected instead.
   const highlightedNotes = page.locator(
-    '[data-tag="note"][data-note-range-selected]',
+    `${tagSelector('note')}[data-note-range-selected]`,
   )
   await expect(highlightedNotes).toHaveCount(count)
 })
@@ -155,7 +152,7 @@ Then('note ids {int} and {int} are range-selected', async ({ page }, a, b) => {
   for (const noteId of [a, b]) {
     await expect(
       page.locator(
-        `[data-tag="note"][data-note-range-selected][data-note-id="${noteId}"]`,
+        `${tagSelector('note', { noteId })}[data-note-range-selected]`,
       ),
     ).toHaveCount(1)
   }

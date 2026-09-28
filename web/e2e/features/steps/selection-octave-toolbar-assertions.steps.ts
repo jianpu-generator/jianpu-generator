@@ -1,4 +1,9 @@
 import { expect } from '@playwright/test'
+import {
+  rectVariantSelector,
+  tagFieldAttribute,
+  tagSelector,
+} from '../../../src/dataAttributes'
 import { Then, When } from './fixtures'
 
 // "the editor source contains {string}", "the stored source contains
@@ -41,15 +46,21 @@ Then(
  * that doesn't scope to the click-target rect the same way the CSS does
  * would misread that inert leftover as a real highlighted note. */
 async function highlightedNoteCellKeys(page: import('@playwright/test').Page) {
-  return page.evaluate(() =>
-    Array.from(
-      document.querySelectorAll(
-        '[data-tag="note"][data-note-range-selected] rect[data-variant="note-click-target"]',
-      ),
-    )
-      .map((rect) => rect.closest('[data-tag="note"]') as HTMLElement)
-      .map((group) => `${group.dataset.partIndex}:${group.dataset.noteId}`)
-      .sort(),
+  return page.evaluate(
+    ({ highlightedRect, noteGroup, partIndexAttribute, noteIdAttribute }) =>
+      Array.from(document.querySelectorAll(highlightedRect))
+        .map((rect) => rect.closest(noteGroup) as Element)
+        .map(
+          (group) =>
+            `${group.getAttribute(partIndexAttribute)}:${group.getAttribute(noteIdAttribute)}`,
+        )
+        .sort(),
+    {
+      highlightedRect: `${tagSelector('note')}[data-note-range-selected] ${rectVariantSelector('note-click-target')}`,
+      noteGroup: tagSelector('note'),
+      partIndexAttribute: tagFieldAttribute('note', 'sourcePartIndex'),
+      noteIdAttribute: tagFieldAttribute('note', 'noteId'),
+    },
   )
 }
 

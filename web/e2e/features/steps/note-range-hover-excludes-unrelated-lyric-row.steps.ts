@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -39,14 +40,14 @@ const source = [
 // `note-lyriclabel-range-select.steps.ts`'s `noteInPart` convention.
 function noteInPart(page: import('@playwright/test').Page, partIndex: number) {
   return page
-    .locator(`[data-tag="note"][data-part-index="${partIndex}"]`)
+    .locator(tagSelector('note', { sourcePartIndex: partIndex }))
     .filter({
-      has: page.locator('rect[data-variant="note-click-target"]'),
+      has: page.locator(rectVariantSelector('note-click-target')),
     })
 }
 
 function lyricInPart(page: import('@playwright/test').Page, partIndex: number) {
-  return page.locator(`[data-tag="lyric"][data-part-index="${partIndex}"]`)
+  return page.locator(tagSelector('lyric', { sourcePartIndex: partIndex }))
 }
 
 Given(
@@ -107,7 +108,7 @@ When(
 Then("Harmony's lyric syllables are not range-selected", async ({ page }) => {
   await expect(
     page.locator(
-      '[data-tag="lyric"][data-part-index="1"][data-lyric-range-selected]',
+      `${tagSelector('lyric', { sourcePartIndex: 1 })}[data-lyric-range-selected]`,
     ),
   ).toHaveCount(0)
 })

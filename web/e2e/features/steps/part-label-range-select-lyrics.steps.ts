@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import {
   clickAndClickSelect,
@@ -73,9 +74,12 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await page.waitForSelector('[data-tag="part-label"][data-part-index="1"]', {
-      timeout: 10_000,
-    })
+    await page.waitForSelector(
+      tagSelector('part-label', { sourcePartIndex: 1 }),
+      {
+        timeout: 10_000,
+      },
+    )
     await primeMeasureSpans(page)
   },
 )
@@ -84,10 +88,10 @@ When(
   'I click-and-click select from the Melody part label to the Harmony part label, as seen in part label click selects lyrics',
   async ({ page }) => {
     const melodyLabel = page
-      .locator('[data-tag="part-label"][data-part-index="0"]')
+      .locator(tagSelector('part-label', { sourcePartIndex: 0 }))
       .first()
     const harmonyLabel = page
-      .locator('[data-tag="part-label"][data-part-index="1"]')
+      .locator(tagSelector('part-label', { sourcePartIndex: 1 }))
       .first()
     await expect(melodyLabel).toBeVisible({ timeout: 5_000 })
     await expect(harmonyLabel).toBeVisible({ timeout: 5_000 })
@@ -113,7 +117,7 @@ Then(
   async ({ page }, count: number) => {
     // Melody's 4 notes + Harmony's 4 notes = 8.
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -124,7 +128,7 @@ Then(
     // Only Melody carries lyrics (4 syllables); Harmony has none, so the total
     // stays 4 rather than erroring or double-counting.
     await expect(
-      page.locator('[data-tag="lyric"][data-lyric-range-selected]'),
+      page.locator(`${tagSelector('lyric')}[data-lyric-range-selected]`),
     ).toHaveCount(count)
   },
 )

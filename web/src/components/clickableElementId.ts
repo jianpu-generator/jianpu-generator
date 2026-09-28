@@ -1,8 +1,4 @@
-import {
-  measureGroupByEndSelector,
-  measureGroupSelector,
-  tagFromElement,
-} from '../dataAttributes'
+import { tagFromElement, tagSelector } from '../dataAttributes'
 import type { ClickableElementId } from '../jianpuWasm'
 
 /**
@@ -53,11 +49,11 @@ export function clickableElementIdFromElement(
       const measureEl =
         measureIndexNext !== undefined
           ? document.querySelector<HTMLElement>(
-              measureGroupSelector({ index: measureIndexNext }),
+              tagSelector('measure', { index: measureIndexNext }),
             )
           : measureIndexPrev !== undefined
             ? document.querySelector<HTMLElement>(
-                measureGroupByEndSelector({ end: measureIndexPrev }),
+                tagSelector('measure', { end: measureIndexPrev }),
               )
             : null
       const measureTag = measureEl && tagFromElement(measureEl)

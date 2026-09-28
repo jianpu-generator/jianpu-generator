@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -62,7 +63,7 @@ Given(
     await page.waitForSelector('button.section-jump-btn', { timeout: 15_000 })
 
     await page.waitForSelector(
-      `[data-tag="measure"][data-measure-index="${LAST_MEASURE_INDEX}"]`,
+      tagSelector('measure', { index: LAST_MEASURE_INDEX }),
       { timeout: 15_000 },
     )
   },
@@ -103,9 +104,7 @@ Then(
       .not.toBe(scrollTopBeforeJump)
 
     const lastMeasureGroup = page
-      .locator(
-        `[data-tag="measure"][data-measure-index="${LAST_MEASURE_INDEX}"]`,
-      )
+      .locator(tagSelector('measure', { index: LAST_MEASURE_INDEX }))
       .first()
     await expect(lastMeasureGroup).toBeInViewport({ timeout: 5_000 })
   },

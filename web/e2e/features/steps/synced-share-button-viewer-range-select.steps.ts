@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { fileSwitcherTrigger } from '../../fileSwitcherHelpers'
 import {
   clickAndClickSelect,
@@ -84,7 +85,7 @@ When(
     state.viewerPage = await state.viewerContext.newPage()
     await state.viewerPage.goto(state.syncedShareLink)
     await state.viewerPage.waitForSelector(
-      '[data-tag="measure"][data-measure-index="2"]',
+      tagSelector('measure', { index: 2 }),
       { timeout: 15_000 },
     )
   },
@@ -115,10 +116,10 @@ When(
   async ({}, fromIndex: number, toIndex: number) => {
     if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
     const measureFrom = state.viewerPage
-      .locator(`[data-tag="measure"][data-measure-index="${fromIndex}"]`)
+      .locator(tagSelector('measure', { index: fromIndex }))
       .first()
     const measureTo = state.viewerPage
-      .locator(`[data-tag="measure"][data-measure-index="${toIndex}"]`)
+      .locator(tagSelector('measure', { index: toIndex }))
       .first()
     await expect(measureFrom).toBeVisible()
     await expect(measureTo).toBeVisible()
@@ -148,7 +149,7 @@ When(
 When('the viewer taps the first note', async ({}) => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   const noteRect = state.viewerPage
-    .locator('rect[data-variant="note-click-target"]')
+    .locator(rectVariantSelector('note-click-target'))
     .first()
   await expect(noteRect).toBeVisible()
   const box = await stableBoundingBox(noteRect)
@@ -170,7 +171,7 @@ When('the viewer taps the first note', async ({}) => {
 When('the viewer taps a bar line', async ({}) => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   const barLineRect = state.viewerPage
-    .locator('rect[data-variant="bar-line-click-target"]')
+    .locator(rectVariantSelector('bar-line-click-target'))
     .first()
   await expect(barLineRect).toBeVisible()
   const box = await stableBoundingBox(barLineRect)
@@ -198,9 +199,7 @@ When(
     // owner's page — the SVG's `<g data-tag="section-label">` group is
     // clickable identically in a no-mounted-editor Synced/shared viewer.
     const svgLabel = state.viewerPage
-      .locator(
-        `.preview-pages g[data-tag="section-label"][data-section-label="${label}"]`,
-      )
+      .locator(`.preview-pages g${tagSelector('section-label', { label })}`)
       .first()
     await svgLabel.waitFor({ timeout: 15_000 })
     await svgLabel.click()
@@ -218,14 +217,18 @@ Then("the viewer's note highlight is cleared", async () => {
   // Monaco selection in this view to round-trip back through
   // `handleEditorSelectionChange` and naturally re-derive it empty).
   await expect(
-    state.viewerPage.locator('[data-tag="note"][data-note-range-selected]'),
+    state.viewerPage.locator(
+      `${tagSelector('note')}[data-note-range-selected]`,
+    ),
   ).toHaveCount(0, { timeout: 5_000 })
 })
 
 Then("the viewer's tapped note is highlighted", async () => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   await expect(
-    state.viewerPage.locator('[data-tag="note"][data-note-range-selected]'),
+    state.viewerPage.locator(
+      `${tagSelector('note')}[data-note-range-selected]`,
+    ),
   ).toHaveCount(1, { timeout: 5_000 })
 })
 
@@ -242,7 +245,7 @@ Then("the viewer's note highlight still shows after settling", async () => {
   // asserting the highlight is still there.
   await state.viewerPage.waitForTimeout(800)
   const highlightedNotes = state.viewerPage.locator(
-    '[data-tag="note"][data-note-range-selected]',
+    `${tagSelector('note')}[data-note-range-selected]`,
   )
   await expect(highlightedNotes.first()).toBeVisible()
 })

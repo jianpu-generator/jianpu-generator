@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import {
   clickAndClickSelect,
   stableBoundingBox,
@@ -46,7 +47,7 @@ function lyricInVerse(
   noteId: number,
 ) {
   return page.locator(
-    `[data-tag="lyric"][data-part-index="0"][data-verse="${verse}"][data-note-id="${noteId}"]`,
+    tagSelector('lyric', { sourcePartIndex: 0, verse, noteId }),
   )
 }
 
@@ -73,7 +74,7 @@ Given(
       timeout: 15_000,
     })
     await expect(
-      page.locator('[data-tag="lyric"][data-part-index="0"]'),
+      page.locator(tagSelector('lyric', { sourcePartIndex: 0 })),
     ).toHaveCount(12, { timeout: 10_000 })
     await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(200)
@@ -122,7 +123,7 @@ Then(
     noteIdEnd: number,
   ) => {
     const selectedLyrics = page.locator(
-      '[data-tag="lyric"][data-lyric-range-selected]',
+      `${tagSelector('lyric')}[data-lyric-range-selected]`,
     )
     const expectedCount = (verseB - verseA + 1) * (noteIdEnd - noteIdStart + 1)
     await expect(selectedLyrics).toHaveCount(expectedCount)
@@ -130,7 +131,7 @@ Then(
       for (let noteId = noteIdStart; noteId <= noteIdEnd; noteId++) {
         await expect(
           page.locator(
-            `[data-tag="lyric"][data-lyric-range-selected][data-verse="${verse}"][data-note-id="${noteId}"]`,
+            `${tagSelector('lyric', { verse, noteId })}[data-lyric-range-selected]`,
           ),
         ).toHaveCount(1)
       }
@@ -143,7 +144,7 @@ Then(
   async ({ page }, verse: number) => {
     await expect(
       page.locator(
-        `[data-tag="lyric"][data-lyric-range-selected][data-verse="${verse}"]`,
+        `${tagSelector('lyric', { verse })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(0)
   },
@@ -154,7 +155,7 @@ Then(
   async ({ page }, noteId: number) => {
     await expect(
       page.locator(
-        `[data-tag="lyric"][data-lyric-range-selected][data-note-id="${noteId}"]`,
+        `${tagSelector('lyric', { noteId })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(0)
   },

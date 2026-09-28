@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import {
   clickAndClickSelect,
   stableBoundingBox,
@@ -80,7 +81,7 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="0"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 0 }), {
       timeout: 10_000,
     })
   },
@@ -99,7 +100,7 @@ When(
 )
 
 Then('{int} notes render with Harmony hidden', async ({ page }, count) => {
-  const noteRects = page.locator('rect[data-variant="note-click-target"]')
+  const noteRects = page.locator(rectVariantSelector('note-click-target'))
   // Melody (2) + Bass (2), Harmony hidden = 4 rendered notes.
   await expect(noteRects).toHaveCount(count, { timeout: 10_000 })
   // Give the debounced listNoteSpans worker round-trip time to catch up
@@ -113,7 +114,7 @@ When(
     // Click-and-click select only Bass's two notes (rendered/compacted
     // part-index 1), never touching Melody's row above.
     const bassNotes = page.locator(
-      '[data-tag="note"][data-part-index="1"] rect[data-variant="note-click-target"]',
+      `${tagSelector('note', { sourcePartIndex: 1 })} ${rectVariantSelector('note-click-target')}`,
     )
     await expect(bassNotes).toHaveCount(2)
     const firstBox = await stableBoundingBox(bassNotes.nth(0))
@@ -142,7 +143,7 @@ Then(
   async ({ page }, count: number) => {
     await expect(
       page.locator(
-        '[data-tag="note"][data-note-range-selected][data-part-index="1"]',
+        `${tagSelector('note', { sourcePartIndex: 1 })}[data-note-range-selected]`,
       ),
     ).toHaveCount(count)
   },
@@ -152,7 +153,7 @@ Then(
   '{int} notes are range-selected in total, as seen in playback cursor selection with hidden part',
   async ({ page }, count) => {
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -176,7 +177,7 @@ Then(
     // rendered element has, so this never happened.
     await expect(
       page.locator(
-        '[data-tag="note"][data-part-index="1"][data-note-id="0"] rect[data-variant="playback-cursor-rect"]',
+        `${tagSelector('note', { sourcePartIndex: 1, noteId: 0 })} ${rectVariantSelector('playback-cursor-rect')}`,
       ),
     ).toHaveAttribute('fill', 'rgba(220,38,38,0.25)', { timeout: 20_000 })
   },

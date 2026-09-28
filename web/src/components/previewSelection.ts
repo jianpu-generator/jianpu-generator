@@ -1,4 +1,4 @@
-import { groupTagSelector, tagFromElement } from '../dataAttributes'
+import { tagFromElement, tagSelector } from '../dataAttributes'
 import type { LyricCellIn, NoteCellIn, Tag } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import { clickableElementIdFromElement } from './clickableElementId'
@@ -21,7 +21,7 @@ export function getClickableElementIdAtPoint(
   tagType: Tag['tag'],
 ) {
   const el = document.elementFromPoint(x, y)
-  const group = el?.closest(groupTagSelector(tagType))
+  const group = el?.closest(tagSelector(tagType))
   if (!group) return undefined
   return clickableElementIdFromElement(group)
 }
@@ -32,7 +32,7 @@ export function getSectionLabelAtPoint(
 ): string | undefined {
   const el = document.elementFromPoint(x, y)
   if (!el) return undefined
-  const group = el.closest(groupTagSelector('section-label'))
+  const group = el.closest(tagSelector('section-label'))
   if (!group) return undefined
   const tag = tagFromElement(group)
   return tag?.tag === 'section-label' ? tag.val.label : undefined
@@ -107,8 +107,8 @@ export function getBarNumberMeasureAtPoint(
  * stay unaffected).
  */
 const MEASURE_RANGE_SELECTOR = [
-  groupTagSelector('measure'),
-  groupTagSelector('bar-number'),
+  tagSelector('measure'),
+  tagSelector('bar-number'),
 ].join(', ')
 
 /**
@@ -129,7 +129,7 @@ export function systemRangeContainingMeasure(
   container: HTMLElement,
   measureIndex: number,
 ): MeasureRange | undefined {
-  return Array.from(container.querySelectorAll(groupTagSelector('part-label')))
+  return Array.from(container.querySelectorAll(tagSelector('part-label')))
     .map((label) => tagFromElement(label))
     .filter((tag) => tag?.tag === 'part-label')
     .map((tag) => ({

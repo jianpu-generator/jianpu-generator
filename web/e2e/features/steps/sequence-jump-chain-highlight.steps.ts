@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -130,9 +131,7 @@ Then(
 
     const measureBox = async (measureIndex: number) =>
       stableBoundingBox(
-        page
-          .locator(`[data-tag="measure"][data-measure-index="${measureIndex}"]`)
-          .first(),
+        page.locator(tagSelector('measure', { index: measureIndex })).first(),
       )
 
     const cBox = await measureBox(2)

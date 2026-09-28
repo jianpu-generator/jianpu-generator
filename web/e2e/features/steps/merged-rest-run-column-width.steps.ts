@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -95,7 +96,7 @@ When('the merged-rest-run-column-width score is laid out', async ({ page }) => {
   await page.waitForSelector('[data-testid="play-measure-button"]', {
     timeout: 15_000,
   })
-  await page.waitForSelector('[data-tag="measure"]', { timeout: 10_000 })
+  await page.waitForSelector(tagSelector('measure'), { timeout: 10_000 })
 })
 
 /** The count label is the only text node in this fixture with this exact
@@ -182,11 +183,7 @@ Then(
 async function mergedRestMeasureBox(page: import('@playwright/test').Page) {
   const { start, end } = mergedRestMeasureIndexRange()
   const measureBox = await stableBoundingBox(
-    page
-      .locator(
-        `[data-tag="measure"][data-measure-index="${start}"][data-measure-index-end="${end}"]`,
-      )
-      .first(),
+    page.locator(tagSelector('measure', { index: start, end })).first(),
   )
   if (!measureBox) {
     throw new Error('Could not get bounding box for the merged rest measure.')

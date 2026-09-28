@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import {
   clickAndClickSelect,
   stableBoundingBox,
@@ -49,7 +50,11 @@ function verseLabelInSystem(
   measureIndexStart: number,
 ) {
   return page.locator(
-    `[data-tag="lyric-label"][data-part-index="0"][data-verse="${verse}"][data-measure-index-start="${measureIndexStart}"]`,
+    tagSelector('lyric-label', {
+      sourcePartIndex: 0,
+      verse,
+      measureIndexStart,
+    }),
   )
 }
 
@@ -78,11 +83,19 @@ Given(
     // System 0's verse-0 label sits at measure-index-start 0, system 1's at
     // measure-index-start 1 — see `verseLabelInSystem`.
     await page.waitForSelector(
-      '[data-tag="lyric-label"][data-part-index="0"][data-verse="0"][data-measure-index-start="0"]',
+      tagSelector('lyric-label', {
+        sourcePartIndex: 0,
+        verse: 0,
+        measureIndexStart: 0,
+      }),
       { timeout: 10_000 },
     )
     await page.waitForSelector(
-      '[data-tag="lyric-label"][data-part-index="0"][data-verse="0"][data-measure-index-start="1"]',
+      tagSelector('lyric-label', {
+        sourcePartIndex: 0,
+        verse: 0,
+        measureIndexStart: 1,
+      }),
       { timeout: 10_000 },
     )
   },
@@ -121,7 +134,7 @@ Then(
     // ti") — the range should cover every one of them, not just the
     // anchor's own system.
     const highlightedLyrics = page.locator(
-      '[data-tag="lyric"][data-lyric-range-selected][data-verse="0"]',
+      `${tagSelector('lyric', { verse: 0 })}[data-lyric-range-selected]`,
     )
     await expect(highlightedLyrics).toHaveCount(4)
   },

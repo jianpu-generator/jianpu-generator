@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
@@ -59,7 +60,7 @@ Given('a 60-measure autoscroll test fixture is loaded', async ({ page }) => {
 
   const lastMeasureIndex = measureCount - 1
   await page.waitForSelector(
-    `[data-tag="measure"][data-measure-index="${lastMeasureIndex}"]`,
+    tagSelector('measure', { index: lastMeasureIndex }),
     { timeout: 15_000 },
   )
 })
@@ -118,7 +119,7 @@ Then(
     // against the last measure group's bounding box, then assert it is
     // within the preview viewport.
     const lastMeasureGroup = page
-      .locator(`[data-tag="measure"][data-measure-index="${lastMeasureIndex}"]`)
+      .locator(tagSelector('measure', { index: lastMeasureIndex }))
       .first()
     const highlightRect = page
       .locator('.preview-page [data-testid="measure-highlight"]')

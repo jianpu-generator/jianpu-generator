@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { clickThenStableClick } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -52,9 +53,9 @@ const source = [
 // `note-range-select-crosses-part.steps.ts`'s `noteGroup` convention.
 function noteInPart(page: import('@playwright/test').Page, partIndex: number) {
   return page
-    .locator(`[data-tag="note"][data-part-index="${partIndex}"]`)
+    .locator(tagSelector('note', { sourcePartIndex: partIndex }))
     .filter({
-      has: page.locator('rect[data-variant="note-click-target"]'),
+      has: page.locator(rectVariantSelector('note-click-target')),
     })
 }
 
@@ -64,7 +65,10 @@ function partLabelInSystem(
   measureIndexStart: number,
 ) {
   return page.locator(
-    `[data-tag="part-label"][data-part-index="${partIndex}"][data-measure-index-start="${measureIndexStart}"]`,
+    tagSelector('part-label', {
+      sourcePartIndex: partIndex,
+      measureIndexStart,
+    }),
   )
 }
 
@@ -93,7 +97,7 @@ Given(
     await expect(noteInPart(page, 0)).toHaveCount(3, { timeout: 10_000 })
     await expect(noteInPart(page, 1)).toHaveCount(3, { timeout: 10_000 })
     await page.waitForSelector(
-      '[data-tag="part-label"][data-part-index="1"][data-measure-index-start="1"]',
+      tagSelector('part-label', { sourcePartIndex: 1, measureIndexStart: 1 }),
       { timeout: 10_000 },
     )
   },
@@ -115,7 +119,7 @@ Then(
   '{int} notes are range-selected in total, as seen in note partlabel range select',
   async ({ page }, count: number) => {
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )

@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import {
   clickAndClickSelect,
@@ -12,7 +13,7 @@ import { Given, Then, When } from './fixtures'
  * click-and-click range starting exactly on the divider pixel between
  * measure 0 and measure 1 must select whole measures, not fall into a
  * per-note marquee (see `Tag::BarLine`/`AbsoluteContent::BarLineClickTarget`,
- * consumed by `PreviewSvgRenderer.tsx`'s `groupAttrsForTag`). Grabbing the
+ * consumed by `PreviewSvgRenderer.tsx`'s `groupAttributesForTag`). Grabbing the
  * divider itself always starts this gesture, with or without Cmd/Ctrl held —
  * a plain click-and-click elsewhere (off the divider) resolves to
  * note/chord/syllable granularity instead, and needs Cmd/Ctrl to reach
@@ -82,14 +83,12 @@ Given('the bar-line-range-select test fixture is loaded', async ({ page }) => {
 When(
   'I hover the bar line between measure 0 and measure 1',
   async ({ page }) => {
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="1"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 1 }), {
       timeout: 10_000,
     })
     await primeMeasureSpans(page)
 
-    const measure1 = page
-      .locator('[data-tag="measure"][data-measure-index="1"]')
-      .first()
+    const measure1 = page.locator(tagSelector('measure', { index: 1 })).first()
     const box = await stableBoundingBox(measure1)
     if (!box) throw new Error('Could not get bounding box for measure 1.')
 
@@ -103,7 +102,7 @@ Then(
   'the bar-line click-target shows a col-resize cursor',
   async ({ page }) => {
     const handle = page
-      .locator('rect[data-variant="bar-line-click-target"]')
+      .locator(rectVariantSelector('bar-line-click-target'))
       .first()
     await expect(handle).toHaveCSS('cursor', 'col-resize')
   },
@@ -112,17 +111,13 @@ Then(
 When(
   "I Cmd\\/Ctrl-click-and-click from the bar line before measure 1 into measure 2's interior",
   async ({ page }) => {
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="2"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 2 }), {
       timeout: 10_000,
     })
     await primeMeasureSpans(page)
 
-    const measure1 = page
-      .locator('[data-tag="measure"][data-measure-index="1"]')
-      .first()
-    const measure2 = page
-      .locator('[data-tag="measure"][data-measure-index="2"]')
-      .first()
+    const measure1 = page.locator(tagSelector('measure', { index: 1 })).first()
+    const measure2 = page.locator(tagSelector('measure', { index: 2 })).first()
     const box1 = await stableBoundingBox(measure1)
     const box2 = await stableBoundingBox(measure2)
     if (!box1 || !box2) {
@@ -148,17 +143,13 @@ When(
 When(
   "I plain click-and-click from the bar line before measure 1 into measure 2's interior",
   async ({ page }) => {
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="2"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 2 }), {
       timeout: 10_000,
     })
     await primeMeasureSpans(page)
 
-    const measure1 = page
-      .locator('[data-tag="measure"][data-measure-index="1"]')
-      .first()
-    const measure2 = page
-      .locator('[data-tag="measure"][data-measure-index="2"]')
-      .first()
+    const measure1 = page.locator(tagSelector('measure', { index: 1 })).first()
+    const measure2 = page.locator(tagSelector('measure', { index: 2 })).first()
     const box1 = await stableBoundingBox(measure1)
     const box2 = await stableBoundingBox(measure2)
     if (!box1 || !box2) {
@@ -185,7 +176,7 @@ Then(
     // Measures 1-2 have 2 + 2 = 4 notes in total — the full measure range, not
     // a partial note marquee.
     const highlightedNotes = page.locator(
-      '[data-tag="note"][data-note-range-selected]',
+      `${tagSelector('note')}[data-note-range-selected]`,
     )
     await expect(highlightedNotes).toHaveCount(count)
   },

@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { Given, Then, When } from './fixtures'
 
 /**
@@ -42,7 +43,7 @@ Given('the playback-cursor export test fixture is loaded', async ({ page }) => {
   }, source)
   await page.goto('/')
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
-  await page.waitForSelector('[data-tag="measure"][data-measure-index="0"]', {
+  await page.waitForSelector(tagSelector('measure', { index: 0 }), {
     timeout: 10_000,
   })
 })
@@ -64,7 +65,7 @@ When('I play the inline audio player', async ({ page }) => {
 Then('the first note shows the playback cursor highlight', async ({ page }) => {
   await expect(
     page.locator(
-      '[data-tag="note"][data-part-index="0"][data-note-id="0"] rect[data-variant="playback-cursor-rect"]',
+      `${tagSelector('note', { sourcePartIndex: 0, noteId: 0 })} ${rectVariantSelector('playback-cursor-rect')}`,
     ),
   ).toHaveAttribute('fill', 'rgba(220,38,38,0.25)', { timeout: 20_000 })
 })

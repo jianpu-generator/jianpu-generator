@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import {
   clickAndClickSelect,
   stableBoundingBox,
@@ -96,7 +97,7 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="1"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 1 }), {
       timeout: 10_000,
     })
   },
@@ -112,7 +113,7 @@ When('I hide the Harmony part', async ({ page }) => {
 })
 
 Then('{int} notes render across both measures', async ({ page }, count) => {
-  const noteRects = page.locator('rect[data-variant="note-click-target"]')
+  const noteRects = page.locator(rectVariantSelector('note-click-target'))
   // Melody (2/measure) + Bass (2/measure), 2 measures = 8 rendered notes.
   await expect(noteRects).toHaveCount(count, { timeout: 10_000 })
   // Give the debounced listNoteSpans worker round-trip time to catch up
@@ -123,7 +124,7 @@ Then('{int} notes render across both measures', async ({ page }, count) => {
 When(
   "I Cmd\\/Ctrl-click-and-click from measure 0's left bar line into measure 1's interior",
   async ({ page }) => {
-    const measures = page.locator('[data-tag="measure"]')
+    const measures = page.locator(tagSelector('measure'))
     const firstBox = await stableBoundingBox(measures.nth(0))
     const lastMeasureIndex = (await measures.count()) - 1
     const lastBox = await stableBoundingBox(measures.nth(lastMeasureIndex))
@@ -154,7 +155,7 @@ Then(
     // is a fully visible part and both its measures sit inside the
     // range-selected range.
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -170,7 +171,7 @@ Then(
     for (const noteId of [a, b]) {
       await expect(
         page.locator(
-          `[data-tag="note"][data-note-range-selected][data-part-index="1"][data-note-id="${noteId}"]`,
+          `${tagSelector('note', { sourcePartIndex: 1, noteId })}[data-note-range-selected]`,
         ),
       ).toHaveCount(1)
     }

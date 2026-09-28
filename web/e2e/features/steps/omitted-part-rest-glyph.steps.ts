@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -82,7 +83,7 @@ When('the omitted-part-rest-glyph score is laid out', async ({ page }) => {
   await page.waitForSelector('[data-testid="play-measure-button"]', {
     timeout: 15_000,
   })
-  await page.waitForSelector('[data-tag="measure"]', { timeout: 10_000 })
+  await page.waitForSelector(tagSelector('measure'), { timeout: 10_000 })
 })
 
 /** The rectangular region measure `index`'s Harmony row occupies: x-bounds
@@ -94,18 +95,14 @@ async function harmonyRowRegion(
   index: number,
 ) {
   const measureBox = await stableBoundingBox(
-    page
-      .locator(
-        `[data-tag="measure"][data-measure-index="${index}"][data-measure-index-end="${index}"]`,
-      )
-      .first(),
+    page.locator(tagSelector('measure', { index, end: index })).first(),
   )
   if (!measureBox) throw new Error(`Could not find measure ${index}.`)
 
   const labelBox = await stableBoundingBox(
     page
       .locator(
-        `[data-tag="part-label"][data-part-index="${HARMONY_PART_INDEX}"]`,
+        tagSelector('part-label', { sourcePartIndex: HARMONY_PART_INDEX }),
       )
       .first(),
   )

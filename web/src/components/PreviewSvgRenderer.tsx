@@ -1,5 +1,9 @@
 import type { ReactNode } from 'react'
-import { type DataVariant, groupAttrsForTag } from '../dataAttributes'
+import {
+  type DataVariant,
+  groupAttributesForTag,
+  tagHasPointerCursor,
+} from '../dataAttributes'
 import { previewFontFamilyCss } from '../fontRoles'
 import type { SvgDocument } from '../jianpuWasm'
 
@@ -166,21 +170,13 @@ function renderSvgElement(doc: SvgDocument, index: number): ReactNode {
         />
       )
     case 'group': {
-      const attrs = groupAttrsForTag(kind.tag)
       return (
         <g
           key={key}
-          data-tag={attrs.dataTag}
-          data-measure-index={attrs.dataMeasureIndex}
-          data-measure-index-end={attrs.dataMeasureIndexEnd}
-          data-section-label={attrs.dataSectionLabel}
-          data-part-index={attrs.dataPartIndex}
-          data-note-id={attrs.dataNoteId}
-          data-verse={attrs.dataVerse}
-          data-measure-index-start={attrs.dataMeasureIndexStart}
-          data-measure-index-next={attrs.dataMeasureIndexNext}
-          data-measure-index-prev={attrs.dataMeasureIndexPrev}
-          style={attrs.cursor ? { cursor: 'pointer' } : undefined}
+          {...groupAttributesForTag(kind.tag)}
+          style={
+            tagHasPointerCursor(kind.tag) ? { cursor: 'pointer' } : undefined
+          }
         >
           {Array.from(kind.childIndices, (child) =>
             renderSvgElement(doc, child),

@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import {
   clickAndClickSelect,
@@ -79,16 +80,14 @@ Given('the measure-click test fixture is loaded', async ({ page }) => {
   await page.waitForSelector('[data-testid="play-measure-button"]', {
     timeout: 15_000,
   })
-  await page.waitForSelector('[data-tag="measure"][data-measure-index="1"]', {
+  await page.waitForSelector(tagSelector('measure', { index: 1 }), {
     timeout: 10_000,
   })
   await primeMeasureSpans(page)
 })
 
 When('I plain-click the center of measure 1', async ({ page }) => {
-  const measure1 = page
-    .locator('[data-tag="measure"][data-measure-index="1"]')
-    .first()
+  const measure1 = page.locator(tagSelector('measure', { index: 1 })).first()
   await expect(measure1).toBeVisible({ timeout: 5_000 })
   const box = await stableBoundingBox(measure1)
   if (!box) throw new Error('Could not get bounding box for measure 1.')
@@ -103,9 +102,7 @@ When('I plain-click the center of measure 1', async ({ page }) => {
 })
 
 When('I Cmd\\/Ctrl-click the center of measure 1', async ({ page }) => {
-  const measure1 = page
-    .locator('[data-tag="measure"][data-measure-index="1"]')
-    .first()
+  const measure1 = page.locator(tagSelector('measure', { index: 1 })).first()
   await expect(measure1).toBeVisible({ timeout: 5_000 })
   const box = await stableBoundingBox(measure1)
   if (!box) throw new Error('Could not get bounding box for measure 1.')
@@ -121,9 +118,7 @@ When('I Cmd\\/Ctrl-click the center of measure 1', async ({ page }) => {
 })
 
 When("I Cmd\\/Ctrl-click measure 1's own left edge pixel", async ({ page }) => {
-  const measure1 = page
-    .locator('[data-tag="measure"][data-measure-index="1"]')
-    .first()
+  const measure1 = page.locator(tagSelector('measure', { index: 1 })).first()
   await expect(measure1).toBeVisible({ timeout: 5_000 })
   const box = await stableBoundingBox(measure1)
   if (!box) throw new Error('Could not get bounding box for measure 1.')
@@ -147,16 +142,12 @@ When("I Cmd\\/Ctrl-click measure 1's own left edge pixel", async ({ page }) => {
 When(
   'I click corner-to-corner from measure 0 to measure 2',
   async ({ page }) => {
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="2"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 2 }), {
       timeout: 10_000,
     })
 
-    const measure0 = page
-      .locator('[data-tag="measure"][data-measure-index="0"]')
-      .first()
-    const measure2 = page
-      .locator('[data-tag="measure"][data-measure-index="2"]')
-      .first()
+    const measure0 = page.locator(tagSelector('measure', { index: 0 })).first()
+    const measure2 = page.locator(tagSelector('measure', { index: 2 })).first()
     await expect(measure0).toBeVisible({ timeout: 5_000 })
     await expect(measure2).toBeVisible({ timeout: 5_000 })
 
@@ -187,7 +178,7 @@ Then(
   '{int} note is range-selected, as seen in measure click selects notes',
   async ({ page }, count: number) => {
     const highlightedNotes = page.locator(
-      '[data-tag="note"][data-note-range-selected]',
+      `${tagSelector('note')}[data-note-range-selected]`,
     )
     await expect(highlightedNotes).toHaveCount(count)
   },
@@ -197,7 +188,7 @@ Then(
   '{int} notes are range-selected, as seen in measure click selects notes',
   async ({ page }, count: number) => {
     const highlightedNotes = page.locator(
-      '[data-tag="note"][data-note-range-selected]',
+      `${tagSelector('note')}[data-note-range-selected]`,
     )
     await expect(highlightedNotes).toHaveCount(count)
   },
@@ -209,7 +200,7 @@ Then(
     for (const noteId of [a, b]) {
       await expect(
         page.locator(
-          `[data-tag="note"][data-note-range-selected][data-note-id="${noteId}"]`,
+          `${tagSelector('note', { noteId })}[data-note-range-selected]`,
         ),
       ).toHaveCount(1)
     }
@@ -235,7 +226,7 @@ Then(
     // the highlight must survive that swap.
     await page.waitForTimeout(700)
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -298,9 +289,7 @@ Given('the merged-rest test fixture is loaded', async ({ page }) => {
   // The merged run (measures 1-3) renders as a single bar whose click target
   // carries measure_index=1 (the run's first source measure) and
   // measure_index_end=3 (the run's last source measure).
-  const mergedBar = page.locator(
-    '[data-tag="measure"][data-measure-index="1"][data-measure-index-end="3"]',
-  )
+  const mergedBar = page.locator(tagSelector('measure', { index: 1, end: 3 }))
   await expect(mergedBar.first()).toBeVisible({ timeout: 10_000 })
   await primeMeasureSpans(page)
 })
@@ -308,9 +297,7 @@ Given('the merged-rest test fixture is loaded', async ({ page }) => {
 When(
   'I plain-click the center of the merged rest bar spanning measures 1 to 3',
   async ({ page }) => {
-    const mergedBar = page.locator(
-      '[data-tag="measure"][data-measure-index="1"][data-measure-index-end="3"]',
-    )
+    const mergedBar = page.locator(tagSelector('measure', { index: 1, end: 3 }))
     const box = await stableBoundingBox(mergedBar.first())
     if (!box) {
       throw new Error('Could not get bounding box for the merged rest bar.')

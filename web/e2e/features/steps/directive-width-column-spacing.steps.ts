@@ -1,4 +1,9 @@
 import { expect, type Locator } from '@playwright/test'
+import {
+  rectVariantSelector,
+  tagSelector,
+  variantSelector,
+} from '../../../src/dataAttributes'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then } from './fixtures'
 
@@ -62,7 +67,7 @@ Given(
     // each with a directive line produce 4 `directive-line` text elements
     // (bar number + trailing spans, per measure) in document order.
     await expect(
-      page.locator('text[data-variant="directive-line"]'),
+      page.locator(`text${variantSelector('directive-line')}`),
     ).toHaveCount(4, { timeout: 10_000 })
   },
 )
@@ -70,7 +75,9 @@ Given(
 Then(
   "the first measure's directive line does not overlap the second measure's directive line",
   async ({ page }) => {
-    const directiveTexts = page.locator('text[data-variant="directive-line"]')
+    const directiveTexts = page.locator(
+      `text${variantSelector('directive-line')}`,
+    )
 
     function requireBox(box: Awaited<ReturnType<Locator['boundingBox']>>) {
       if (!box) {
@@ -158,7 +165,7 @@ Given(
     // Every measure here carries a `label=` directive, so 3 measures produce
     // 3 section-label groups (one click-target rect each).
     await expect(
-      page.locator('rect[data-variant="section-label-click-target"]'),
+      page.locator(rectVariantSelector('section-label-click-target')),
     ).toHaveCount(3, { timeout: 10_000 })
   },
 )
@@ -166,7 +173,7 @@ Given(
 Then(
   "no measure's directive line overlaps the next measure's directive line",
   async ({ page }) => {
-    const sectionLabelGroups = page.locator('g[data-tag="section-label"]')
+    const sectionLabelGroups = page.locator(`g${tagSelector('section-label')}`)
     const groupCount = await sectionLabelGroups.count()
     expect(groupCount).toBe(3)
 
@@ -190,9 +197,11 @@ Then(
       const group = sectionLabelGroups.nth(groupIndex)
       const boxes = await Promise.all(
         [
-          ...(await group.locator('text[data-variant="directive-line"]').all()),
           ...(await group
-            .locator('rect[data-variant="section-label-click-target"]')
+            .locator(`text${variantSelector('directive-line')}`)
+            .all()),
+          ...(await group
+            .locator(rectVariantSelector('section-label-click-target'))
             .all()),
         ].map((locator) => stableBoundingBox(locator)),
       )

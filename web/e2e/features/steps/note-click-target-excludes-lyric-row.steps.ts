@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then } from './fixtures'
 
@@ -55,10 +56,10 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="0"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 0 }), {
       timeout: 10_000,
     })
-    await expect(page.locator('[data-tag="lyric"]')).toHaveCount(4, {
+    await expect(page.locator(tagSelector('lyric'))).toHaveCount(4, {
       timeout: 10_000,
     })
   },
@@ -68,10 +69,10 @@ Then(
   "note 0's click-target rect ends at or above its lyric row's top edge",
   async ({ page }) => {
     const noteClickRect = page
-      .locator('[data-tag="note"][data-note-id="0"]')
-      .locator('rect[data-variant="note-click-target"]')
+      .locator(tagSelector('note', { noteId: 0 }))
+      .locator(rectVariantSelector('note-click-target'))
     const lyricRect = page
-      .locator('[data-tag="lyric"][data-note-id="0"][data-verse="0"]')
+      .locator(tagSelector('lyric', { noteId: 0, verse: 0 }))
       .locator('rect')
 
     const noteBox = await stableBoundingBox(noteClickRect)

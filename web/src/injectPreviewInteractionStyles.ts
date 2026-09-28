@@ -1,7 +1,7 @@
 import {
   DATA_RANGE_ACTIVE_FLAG,
-  groupTagSelector,
   rectVariantSelector,
+  tagSelector,
 } from './dataAttributes'
 
 // The hover/selection fills painted onto the preview SVG's click-target
@@ -22,43 +22,43 @@ interface FillRule {
 const PREVIEW_INTERACTION_RULES: FillRule[] = [
   {
     selectors: [
-      `.preview-page svg g${groupTagSelector('section-label')}:hover > ${rectVariantSelector('section-label-background')}`,
+      `.preview-page svg g${tagSelector('section-label')}:hover > ${rectVariantSelector('section-label-background')}`,
     ],
     fill: HOVER_FILL,
   },
   {
     selectors: [
-      `.preview-page svg g${groupTagSelector('note')}:hover > ${rectVariantSelector('note-click-target')}`,
+      `.preview-page svg g${tagSelector('note')}:hover > ${rectVariantSelector('note-click-target')}`,
     ],
     fill: HOVER_FILL,
   },
   {
     selectors: [
-      `.preview-page svg g${groupTagSelector('lyric')}:hover > ${rectVariantSelector('lyric-click-target')}`,
+      `.preview-page svg g${tagSelector('lyric')}:hover > ${rectVariantSelector('lyric-click-target')}`,
     ],
     fill: HOVER_FILL,
   },
   {
     selectors: [
-      `.preview-page svg g${groupTagSelector('bar-number')}:hover > ${rectVariantSelector('bar-number-click-target')}`,
+      `.preview-page svg g${tagSelector('bar-number')}:hover > ${rectVariantSelector('bar-number-click-target')}`,
     ],
     fill: HOVER_FILL,
   },
   {
     selectors: [
-      `.preview-page svg g${groupTagSelector('bar-line')}:hover > ${rectVariantSelector('bar-line-click-target')}`,
+      `.preview-page svg g${tagSelector('bar-line')}:hover > ${rectVariantSelector('bar-line-click-target')}`,
     ],
     fill: 'rgba(100, 160, 255, 0.45)',
   },
   {
     selectors: [
-      `${groupTagSelector('note')}[data-note-range-selected] ${rectVariantSelector('note-click-target')}`,
+      `${tagSelector('note')}[data-note-range-selected] ${rectVariantSelector('note-click-target')}`,
     ],
     fill: SELECTED_FILL,
   },
   {
     selectors: [
-      `${groupTagSelector('lyric')}[data-lyric-range-selected] ${rectVariantSelector('lyric-click-target')}`,
+      `${tagSelector('lyric')}[data-lyric-range-selected] ${rectVariantSelector('lyric-click-target')}`,
     ],
     fill: SELECTED_FILL,
   },
@@ -71,13 +71,13 @@ const PREVIEW_INTERACTION_RULES: FillRule[] = [
   // container carries the pending flag.
   {
     selectors: [
-      `[data-pending-selection] ${groupTagSelector('note')}[data-note-range-selected] ${rectVariantSelector('note-click-target')}`,
+      `[data-pending-selection] ${tagSelector('note')}[data-note-range-selected] ${rectVariantSelector('note-click-target')}`,
     ],
     fill: 'rgba(217, 119, 6, 0.25)',
   },
   {
     selectors: [
-      `[data-pending-selection] ${groupTagSelector('lyric')}[data-lyric-range-selected] ${rectVariantSelector('lyric-click-target')}`,
+      `[data-pending-selection] ${tagSelector('lyric')}[data-lyric-range-selected] ${rectVariantSelector('lyric-click-target')}`,
     ],
     fill: 'rgba(217, 119, 6, 0.25)',
   },

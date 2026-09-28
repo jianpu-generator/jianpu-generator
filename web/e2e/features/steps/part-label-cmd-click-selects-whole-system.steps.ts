@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import {
   clickAndClickSelect,
@@ -69,7 +70,10 @@ function partLabel(
   measureIndexStart: number,
 ) {
   return page.locator(
-    `[data-tag="part-label"][data-part-index="${partIndex}"][data-measure-index-start="${measureIndexStart}"]`,
+    tagSelector('part-label', {
+      sourcePartIndex: partIndex,
+      measureIndexStart,
+    }),
   )
 }
 
@@ -81,7 +85,7 @@ Given('the cmd-click system fixture is loaded', async ({ page }) => {
     timeout: 15_000,
   })
   await page.waitForSelector(
-    '[data-tag="part-label"][data-part-index="0"][data-measure-index-start="1"]',
+    tagSelector('part-label', { sourcePartIndex: 0, measureIndexStart: 1 }),
     { timeout: 10_000 },
   )
   await primeMeasureSpans(page)
@@ -134,7 +138,7 @@ Then(
   async ({ page }, count: number, partIndex: number) => {
     await expect(
       page.locator(
-        `[data-tag="note"][data-note-range-selected][data-part-index="${partIndex}"]`,
+        `${tagSelector('note', { sourcePartIndex: partIndex })}[data-note-range-selected]`,
       ),
     ).toHaveCount(count)
   },
@@ -144,7 +148,7 @@ Then(
   '{int} notes are range-selected in total, as seen in part label cmd click selects whole system',
   async ({ page }, count: number) => {
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -154,7 +158,7 @@ Then(
   async ({ page }) => {
     await expect(
       partLabel(page, 0, 0).locator(
-        'rect[data-variant="part-label-click-target"]',
+        rectVariantSelector('part-label-click-target'),
       ),
     ).toHaveAttribute('data-part-label-range-active', '')
   },
@@ -165,7 +169,7 @@ Then(
   async ({ page }) => {
     await expect(
       partLabel(page, 1, 0).locator(
-        'rect[data-variant="part-label-click-target"]',
+        rectVariantSelector('part-label-click-target'),
       ),
     ).toHaveAttribute('data-part-label-range-active', '')
   },
@@ -176,7 +180,7 @@ Then(
   async ({ page }) => {
     await expect(
       partLabel(page, 0, 1).locator(
-        'rect[data-variant="part-label-click-target"]',
+        rectVariantSelector('part-label-click-target'),
       ),
     ).toHaveAttribute('data-part-label-range-active', '')
   },
@@ -187,7 +191,7 @@ Then(
   async ({ page }) => {
     await expect(
       partLabel(page, 1, 1).locator(
-        'rect[data-variant="part-label-click-target"]',
+        rectVariantSelector('part-label-click-target'),
       ),
     ).toHaveAttribute('data-part-label-range-active', '')
   },

@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import {
   clickAndClickSelect,
   stableBoundingBox,
@@ -44,11 +45,7 @@ function lyricRect(
   noteId: number,
   verse: number,
 ) {
-  return page
-    .locator(
-      `[data-tag="lyric"][data-note-id="${noteId}"][data-verse="${verse}"]`,
-    )
-    .locator('rect')
+  return page.locator(tagSelector('lyric', { noteId, verse })).locator('rect')
 }
 
 async function monacoSelectionText(page: import('@playwright/test').Page) {
@@ -80,11 +77,11 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await page.waitForSelector('[data-tag="measure"][data-measure-index="0"]', {
+    await page.waitForSelector(tagSelector('measure', { index: 0 }), {
       timeout: 10_000,
     })
     // Wait for both verses' click targets (4 syllables x 2 verses) to render.
-    await expect(page.locator('[data-tag="lyric"]')).toHaveCount(8, {
+    await expect(page.locator(tagSelector('lyric'))).toHaveCount(8, {
       timeout: 10_000,
     })
     // Let layout fully settle before any bounding-box reads below — under
@@ -134,8 +131,8 @@ When(
     // of the rect instead — solidly inside the note glyph's own zone, above
     // where the lyric rows start.
     const noteRect = page
-      .locator(`[data-tag="note"][data-note-id="${noteId}"]`)
-      .locator('rect[data-variant="note-click-target"]')
+      .locator(tagSelector('note', { noteId }))
+      .locator(rectVariantSelector('note-click-target'))
     const box = await stableBoundingBox(noteRect)
     if (!box) throw new Error('no box')
     await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.15)
@@ -155,8 +152,8 @@ When(
     // of the rect instead — solidly inside the note glyph's own zone, above
     // where the lyric rows start.
     const noteRect = page
-      .locator(`[data-tag="note"][data-note-id="${noteId}"]`)
-      .locator('rect[data-variant="note-click-target"]')
+      .locator(tagSelector('note', { noteId }))
+      .locator(rectVariantSelector('note-click-target'))
     const box = await stableBoundingBox(noteRect)
     if (!box) throw new Error('no box')
     await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.15)
@@ -173,11 +170,11 @@ Then(
   'only syllable {int} of verse {int} is range-selected',
   async ({ page }, noteId: number, verse: number) => {
     await expect(
-      page.locator('[data-tag="lyric"][data-lyric-range-selected]'),
+      page.locator(`${tagSelector('lyric')}[data-lyric-range-selected]`),
     ).toHaveCount(1)
     await expect(
       page.locator(
-        `[data-tag="lyric"][data-lyric-range-selected][data-note-id="${noteId}"][data-verse="${verse}"]`,
+        `${tagSelector('lyric', { noteId, verse })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(1)
   },
@@ -187,14 +184,14 @@ Then(
   'no note is range-selected by the syllable-level interaction',
   async ({ page }) => {
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(0)
   },
 )
 
 Then('no lyric syllable is range-selected', async ({ page }) => {
   await expect(
-    page.locator('[data-tag="lyric"][data-lyric-range-selected]'),
+    page.locator(`${tagSelector('lyric')}[data-lyric-range-selected]`),
   ).toHaveCount(0)
 })
 
@@ -202,7 +199,7 @@ Then(
   '{int} lyric syllables in total are range-selected',
   async ({ page }, count: number) => {
     await expect(
-      page.locator('[data-tag="lyric"][data-lyric-range-selected]'),
+      page.locator(`${tagSelector('lyric')}[data-lyric-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -211,7 +208,7 @@ Then(
   'exactly {int} note is range-selected via the note click target',
   async ({ page }, count: number) => {
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -220,7 +217,7 @@ Then(
   'exactly {int} notes are range-selected via the note click target',
   async ({ page }, count: number) => {
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -244,13 +241,13 @@ Then(
   ) => {
     await expect(
       page.locator(
-        `[data-tag="lyric"][data-lyric-range-selected][data-note-id="${noteIdA}"][data-verse="${verseA}"]`,
+        `${tagSelector('lyric', { noteId: noteIdA, verse: verseA })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(1)
     // Verse 0's corresponding syllable must not also be marked selected.
     await expect(
       page.locator(
-        `[data-tag="lyric"][data-lyric-range-selected][data-note-id="${noteIdB}"][data-verse="${verseB}"]`,
+        `${tagSelector('lyric', { noteId: noteIdB, verse: verseB })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(0)
   },

@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import {
   clickAndClickSelect,
@@ -68,7 +69,10 @@ function partLabel(
   measureIndexStart: number,
 ) {
   return page.locator(
-    `[data-tag="part-label"][data-part-index="${partIndex}"][data-measure-index-start="${measureIndexStart}"]`,
+    tagSelector('part-label', {
+      sourcePartIndex: partIndex,
+      measureIndexStart,
+    }),
   )
 }
 
@@ -80,7 +84,7 @@ Given('the part-label system-boundary fixture is loaded', async ({ page }) => {
     timeout: 15_000,
   })
   await page.waitForSelector(
-    '[data-tag="part-label"][data-part-index="0"][data-measure-index-start="1"]',
+    tagSelector('part-label', { sourcePartIndex: 0, measureIndexStart: 1 }),
     { timeout: 10_000 },
   )
   await primeMeasureSpans(page)
@@ -127,7 +131,7 @@ Then(
     // sweep, so Harmony is never picked up by this range-select.
     await expect(
       page.locator(
-        `[data-tag="note"][data-note-range-selected][data-part-index="${partIndex}"]`,
+        `${tagSelector('note', { sourcePartIndex: partIndex })}[data-note-range-selected]`,
       ),
     ).toHaveCount(count)
   },
@@ -137,7 +141,7 @@ Then(
   '{int} notes are range-selected in total, as seen in part label click system boundary',
   async ({ page }, count: number) => {
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -147,7 +151,7 @@ Then(
   async ({ page }) => {
     await expect(
       partLabel(page, 0, 0).locator(
-        'rect[data-variant="part-label-click-target"]',
+        rectVariantSelector('part-label-click-target'),
       ),
     ).toHaveAttribute('data-part-label-range-active', '')
   },
@@ -159,7 +163,7 @@ Then(
     // Harmony was never swept — see the feature file's header comment.
     await expect(
       partLabel(page, 1, 0).locator(
-        'rect[data-variant="part-label-click-target"]',
+        rectVariantSelector('part-label-click-target'),
       ),
     ).not.toHaveAttribute('data-part-label-range-active', '')
   },
@@ -172,7 +176,7 @@ Then(
     // range spans both systems' Melody notes.
     await expect(
       partLabel(page, 0, 1).locator(
-        'rect[data-variant="part-label-click-target"]',
+        rectVariantSelector('part-label-click-target'),
       ),
     ).toHaveAttribute('data-part-label-range-active', '')
   },

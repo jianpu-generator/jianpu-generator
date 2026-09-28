@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 import {
   clickThenStableClick,
@@ -75,9 +76,9 @@ function noteClickTargetRect(
 ) {
   return page
     .locator(
-      `[data-tag="note"][data-part-index="0"][data-note-id="${noteId}"]:has(rect[data-variant="note-click-target"])`,
+      `${tagSelector('note', { sourcePartIndex: 0, noteId })}:has(${rectVariantSelector('note-click-target')})`,
     )
-    .locator('rect[data-variant="note-click-target"]')
+    .locator(rectVariantSelector('note-click-target'))
     .first()
 }
 
@@ -88,7 +89,7 @@ Given('the pending-second-click fixture is loaded', async ({ page }) => {
   await page.waitForSelector('[data-testid="play-measure-button"]', {
     timeout: 15_000,
   })
-  await page.waitForSelector('[data-tag="note"][data-note-id="0"]', {
+  await page.waitForSelector(tagSelector('note', { noteId: 0 }), {
     timeout: 10_000,
   })
   await primeMeasureSpans(page)
@@ -182,10 +183,12 @@ Then(
 Then(
   'the range-selected notes are highlighted in the committed-selection color',
   async ({ page }) => {
-    const selected = page.locator('[data-tag="note"][data-note-range-selected]')
+    const selected = page.locator(
+      `${tagSelector('note')}[data-note-range-selected]`,
+    )
     await expect(selected.first()).toBeVisible()
     const fills = await selected
-      .locator('rect[data-variant="note-click-target"]')
+      .locator(rectVariantSelector('note-click-target'))
       .evaluateAll((els) => els.map((el) => getComputedStyle(el).fill))
     for (const fill of fills) {
       expect(fill).toBe(COMMITTED_FILL)

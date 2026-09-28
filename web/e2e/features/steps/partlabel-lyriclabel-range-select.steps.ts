@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
 import { clickThenStableClick } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -54,9 +55,9 @@ const source = [
 // `note-range-select-crosses-part.steps.ts`'s `noteGroup` convention.
 function noteInPart(page: import('@playwright/test').Page, partIndex: number) {
   return page
-    .locator(`[data-tag="note"][data-part-index="${partIndex}"]`)
+    .locator(tagSelector('note', { sourcePartIndex: partIndex }))
     .filter({
-      has: page.locator('rect[data-variant="note-click-target"]'),
+      has: page.locator(rectVariantSelector('note-click-target')),
     })
 }
 
@@ -66,7 +67,10 @@ function partLabelInSystem(
   measureIndexStart: number,
 ) {
   return page.locator(
-    `[data-tag="part-label"][data-part-index="${partIndex}"][data-measure-index-start="${measureIndexStart}"]`,
+    tagSelector('part-label', {
+      sourcePartIndex: partIndex,
+      measureIndexStart,
+    }),
   )
 }
 
@@ -77,7 +81,11 @@ function verseLabelInSystem(
   measureIndexStart: number,
 ) {
   return page.locator(
-    `[data-tag="lyric-label"][data-part-index="${partIndex}"][data-verse="${verse}"][data-measure-index-start="${measureIndexStart}"]`,
+    tagSelector('lyric-label', {
+      sourcePartIndex: partIndex,
+      verse,
+      measureIndexStart,
+    }),
   )
 }
 
@@ -106,11 +114,15 @@ Given(
     await expect(noteInPart(page, 0)).toHaveCount(3, { timeout: 10_000 })
     await expect(noteInPart(page, 1)).toHaveCount(3, { timeout: 10_000 })
     await page.waitForSelector(
-      '[data-tag="part-label"][data-part-index="0"][data-measure-index-start="0"]',
+      tagSelector('part-label', { sourcePartIndex: 0, measureIndexStart: 0 }),
       { timeout: 10_000 },
     )
     await page.waitForSelector(
-      '[data-tag="lyric-label"][data-part-index="1"][data-verse="0"][data-measure-index-start="1"]',
+      tagSelector('lyric-label', {
+        sourcePartIndex: 1,
+        verse: 0,
+        measureIndexStart: 1,
+      }),
       { timeout: 10_000 },
     )
     await page.evaluate(() => document.fonts.ready)
@@ -134,7 +146,7 @@ Then(
   '{int} notes are range-selected in total, as seen in partlabel lyriclabel range select',
   async ({ page }, count: number) => {
     await expect(
-      page.locator('[data-tag="note"][data-note-range-selected]'),
+      page.locator(`${tagSelector('note')}[data-note-range-selected]`),
     ).toHaveCount(count)
   },
 )
@@ -145,12 +157,12 @@ Then(
     // Only Harmony's verse 0 (the label's own verse) should be selected —
     // verse 1 sits in range but on the wrong verse.
     const selected = page.locator(
-      '[data-tag="lyric"][data-lyric-range-selected]',
+      `${tagSelector('lyric')}[data-lyric-range-selected]`,
     )
     await expect(selected).toHaveCount(count)
     await expect(
       page.locator(
-        '[data-tag="lyric"][data-lyric-range-selected][data-part-index="1"][data-verse="1"]',
+        `${tagSelector('lyric', { sourcePartIndex: 1, verse: 1 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(0)
   },

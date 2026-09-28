@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { tagSelector } from '../../../src/dataAttributes'
 import { focusEditor } from '../../fileSwitcherHelpers'
 
 /**
@@ -165,7 +166,7 @@ export function partLabelsFor(
   part: string,
 ) {
   return page.locator(
-    `[data-tag="part-label"][data-part-index="${PART_INDEX[part]}"]`,
+    tagSelector('part-label', { sourcePartIndex: PART_INDEX[part] }),
   )
 }
 
@@ -175,6 +176,9 @@ export function partLabelAt(
   measureIndexStart: number,
 ) {
   return page.locator(
-    `[data-tag="part-label"][data-part-index="${PART_INDEX[part]}"][data-measure-index-start="${measureIndexStart}"]`,
+    tagSelector('part-label', {
+      sourcePartIndex: PART_INDEX[part],
+      measureIndexStart,
+    }),
   )
 }
