@@ -469,7 +469,7 @@ intentional local override.
 
 ---
 
-## [ ] 17. e2e-only couplings to Rust output (fail loudly in e2e, never in prod)
+## [x] 17. e2e-only couplings to Rust output (fail loudly in e2e, never in prod)
 
 - `data-guitar-frets`: `src/pitch_description/guitar_diagram_svg.rs:37` ↔
   `web/e2e/features/steps/selection-pitch-drawer.steps.ts:337`.
@@ -483,6 +483,22 @@ intentional local override.
 
 **Direction:** low priority. Export the variable names from one place, or add a check
 that the worker actually read each override.
+
+**Fix:** the worker now publishes the names itself: `e2e_reset_config` became
+`e2e_worker_config` (`crates/live-share-worker/src/e2e_worker_config.rs`), which reads
+the now-`pub(crate)` consts in `oauth.rs`, `identity/github.rs` and `identity.rs` (plus
+the new `CLIENT_ID_PLACEHOLDER`) and `tests/export_openapi.rs` writes them to
+`e2eWorkerConfig.json` (replacing `e2eResetConfig.json`). `web/playwright.config.ts`
+builds every `--var` from that JSON. The e2e client id is defined once in
+`web/e2e/e2eGithubClientId.ts`: playwright passes it to the worker as the client-id var
+(dropped from the committed `.dev.vars`) and the mock GitHub server builds its
+`/applications/<id>/{grant,token}` paths from it.
+
+Not removed: `data-guitar-frets`. It is a test-only attribute written by a Rust format
+string and read by one Playwright step; the WASM component isn't reachable from the
+e2e step process, so the name can't be imported from a generated type. The Rust unit
+tests in `src/pitch_description/tests.rs` pin the attribute, and a rename fails the
+e2e step loudly, so drift is caught, not prevented.
 
 ---
 

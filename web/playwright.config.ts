@@ -1,19 +1,36 @@
 import { defineConfig, devices } from '@playwright/test'
 import { defineBddConfig } from 'playwright-bdd'
 import { CHROMIUM_CACHE_DIR_PREFIX } from './e2e/chromiumCachePrefix'
+import { E2E_GITHUB_CLIENT_ID } from './e2e/e2eGithubClientId.ts'
 import { KNOWN_GITHUB_USER_IDS } from './e2e/mockGithubIdentity.ts'
-import e2eResetConfig from './src/generated/live-share-worker/e2eResetConfig.json' with {
+import e2eWorkerConfig from './src/generated/live-share-worker/e2eWorkerConfig.json' with {
   type: 'json',
 }
 
-// Enables the worker's test-only `POST /e2e/reset` route (see
+const MOCK_GITHUB_ORIGIN = 'http://localhost:8788'
+
+// The `wrangler dev` `--var` overrides that point the worker's GitHub calls
+// at the mock server (`e2e/mock-github-oauth-server.ts`) instead of real
+// GitHub, using the var names the worker itself publishes
+// (`e2eWorkerConfig.json`, from `crates/live-share-worker/src/e2e_worker_config.rs`).
+// The session TTL of `0` disables the worker's hour-long cache of a token's
+// last successful GitHub check, so a token the mock has revoked is rejected
+// on its very next use, as it would be in prod once that cache expires. The
+// reset var enables the worker's test-only `POST /e2e/reset` route (see
 // `crates/live-share-worker/src/e2e_reset.rs`), allowlisting every synthetic
 // account an e2e scenario signs in as -- `e2e/global-setup.ts` calls it to
-// wipe their rows left over from the previous local run. Single-quoted for
-// the shell, since the value is a JSON array.
-const e2eResetVar = `'${e2eResetConfig.githubUserIdsVar}:${JSON.stringify(
-  Object.values(KNOWN_GITHUB_USER_IDS),
-)}'`
+// wipe their rows left over from the previous local run. Its value is a JSON
+// array, so it is single-quoted for the shell.
+const workerVars = [
+  `${e2eWorkerConfig.githubClientIdVar}:${E2E_GITHUB_CLIENT_ID}`,
+  `${e2eWorkerConfig.githubUserUrlVar}:${MOCK_GITHUB_ORIGIN}/user`,
+  `${e2eWorkerConfig.githubTokenUrlVar}:${MOCK_GITHUB_ORIGIN}/login/oauth/access_token`,
+  `${e2eWorkerConfig.githubTokenRevocationUrlVar}:${MOCK_GITHUB_ORIGIN}/applications/${e2eWorkerConfig.clientIdPlaceholder}/token`,
+  `${e2eWorkerConfig.sessionTtlMillisVar}:0`,
+  `'${e2eWorkerConfig.resetGithubUserIdsVar}:${JSON.stringify(
+    Object.values(KNOWN_GITHUB_USER_IDS),
+  )}'`,
+]
 
 const testDir = defineBddConfig({
   features: 'e2e/features/**/*.feature',
@@ -116,11 +133,7 @@ export default defineConfig({
       command:
         'npx wrangler d1 migrations apply DB --local --persist-to .wrangler/e2e-state && ' +
         'npx wrangler dev --port 8797 --persist-to .wrangler/e2e-state ' +
-        '--var SYNCED_SHARE_GITHUB_USER_URL:http://localhost:8788/user ' +
-        '--var SYNCED_SHARE_GITHUB_TOKEN_URL:http://localhost:8788/login/oauth/access_token ' +
-        '--var SYNCED_SHARE_GITHUB_TOKEN_REVOCATION_URL:http://localhost:8788/applications/{client_id}/token ' +
-        '--var SYNCED_SHARE_SESSION_TTL_MILLIS:0 ' +
-        `--var ${e2eResetVar}`,
+        workerVars.map((variable) => `--var ${variable}`).join(' '),
       cwd: '../crates/live-share-worker',
       port: 8797,
       reuseExistingServer: true,

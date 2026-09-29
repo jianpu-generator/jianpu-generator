@@ -26,7 +26,7 @@ const DEFAULT_GITHUB_USER_ENDPOINT: &str = "https://api.github.com/user";
 /// ever makes a real GitHub API call (see
 /// `TODO-synced-share-rust-d1-migration.md` task 11 and
 /// `web/e2e/mock-github-oauth-server.ts`).
-const GITHUB_USER_URL_VAR: &str = "SYNCED_SHARE_GITHUB_USER_URL";
+pub(crate) const GITHUB_USER_URL_VAR: &str = "SYNCED_SHARE_GITHUB_USER_URL";
 
 /// Resolves the `GET /user` endpoint to call: `GITHUB_USER_URL_VAR` if set,
 /// otherwise the real GitHub API. Shared with `crate::oauth`'s best-effort

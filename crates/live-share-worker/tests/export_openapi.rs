@@ -12,9 +12,9 @@
 //! value, not a type, and keeps the whole spec out of the SPA/Pages
 //! Function bundles.
 //!
-//! And `e2eResetConfig.json` (`live_share_worker::e2e_reset::e2e_reset_config`):
-//! the `--var` that `web/playwright.config.ts` passes to enable the
-//! test-only `POST /e2e/reset` route.
+//! And `e2eWorkerConfig.json` (`live_share_worker::e2e_worker_config`): the
+//! `--var` names `web/playwright.config.ts` overrides to point the worker at
+//! the mock GitHub server and enable the test-only `POST /e2e/reset` route.
 //!
 //! And `deployConfig.json`, read straight out of `wrangler.toml`'s `[vars]`:
 //! the GitHub OAuth client id and public worker host that the web build and
@@ -25,7 +25,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use live_share_worker::e2e_reset::e2e_reset_config;
+use live_share_worker::e2e_worker_config::e2e_worker_config;
 use live_share_worker::share_id::share_id_format;
 
 #[derive(Deserialize)]
@@ -60,8 +60,8 @@ fn export_openapi() -> Result<(), Box<dyn std::error::Error>> {
         serde_json::to_string_pretty(&share_id_format())?,
     )?;
     fs::write(
-        out_dir.join("e2eResetConfig.json"),
-        serde_json::to_string_pretty(&e2e_reset_config())?,
+        out_dir.join("e2eWorkerConfig.json"),
+        serde_json::to_string_pretty(&e2e_worker_config())?,
     )?;
     let wrangler: WranglerConfig = toml::from_str(&fs::read_to_string(
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("wrangler.toml"),

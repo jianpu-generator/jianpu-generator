@@ -11,7 +11,7 @@
 //! (real `GET /user` verification), per
 //! `TODO-synced-share-rust-d1-migration.md` §0/§6.
 //!
-//! `api_error`, `e2e_reset`, `files`, `protocol`, `share`, `share_id`, and
+//! `api_error`, `e2e_reset`, `e2e_worker_config`, `files`, `protocol`, `share`, `share_id`, and
 //! `verification` are `pub`
 //! (and D1/JsValue-free) so `tests/*.rs` can unit-test them directly, per
 //! this repo's convention of keeping tests in separate files rather than inline
@@ -30,6 +30,7 @@ mod oauth;
 
 pub mod api_error;
 pub mod e2e_reset;
+pub mod e2e_worker_config;
 pub mod files;
 pub mod protocol;
 pub mod share;

@@ -15,28 +15,10 @@
 //!
 //! D1-free, so `tests/e2e_reset.rs` can test the parsing directly.
 
-use serde::Serialize;
-
 /// `[vars]` name that both enables the route and lists the GitHub user ids
-/// it resets. Published to the web through `e2e_reset_config` (see there),
-/// never copied.
+/// it resets. Published to the web through
+/// `e2e_worker_config::e2e_worker_config`, never copied.
 pub const GITHUB_USER_IDS_VAR: &str = "SYNCED_SHARE_E2E_RESET_GITHUB_USER_IDS";
-
-/// What `web/playwright.config.ts` needs to enable the route, written to
-/// `web/src/generated/live-share-worker/e2eResetConfig.json` by
-/// `tests/export_openapi.rs`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct E2eResetConfig {
-    /// The `--var` name; its value is a JSON array of GitHub user ids.
-    pub github_user_ids_var: String,
-}
-
-pub fn e2e_reset_config() -> E2eResetConfig {
-    E2eResetConfig {
-        github_user_ids_var: GITHUB_USER_IDS_VAR.to_string(),
-    }
-}
 
 /// Parses `GITHUB_USER_IDS_VAR`'s value (a JSON array of GitHub's numeric
 /// user ids) into `user_identities.provider_user_id` values -- stored as

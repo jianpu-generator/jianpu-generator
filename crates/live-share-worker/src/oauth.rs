@@ -52,14 +52,17 @@ const DEFAULT_GITHUB_TOKEN_URL: &str = "https://github.com/login/oauth/access_to
 /// `identity::github`'s `GITHUB_USER_URL_VAR` -- unset in production, set by
 /// e2e's local `wrangler dev` run to a mock GitHub server so no Playwright
 /// run ever makes a real GitHub API call (task 11).
-const GITHUB_TOKEN_URL_VAR: &str = "SYNCED_SHARE_GITHUB_TOKEN_URL";
+pub(crate) const GITHUB_TOKEN_URL_VAR: &str = "SYNCED_SHARE_GITHUB_TOKEN_URL";
 
 /// Optional `[vars]` override for the token-revocation endpoint, same
 /// mocking purpose as `GITHUB_TOKEN_URL_VAR` above. `{client_id}` in the
 /// resolved value is substituted with the real client id (see
 /// `token_revocation_url_from_env`) since GitHub's revoke endpoint embeds it
 /// in the path, not the query string or body.
-const GITHUB_TOKEN_REVOCATION_URL_VAR: &str = "SYNCED_SHARE_GITHUB_TOKEN_REVOCATION_URL";
+pub(crate) const GITHUB_TOKEN_REVOCATION_URL_VAR: &str = "SYNCED_SHARE_GITHUB_TOKEN_REVOCATION_URL";
+/// The placeholder in a token-revocation URL template that is replaced by
+/// the client id.
+pub(crate) const CLIENT_ID_PLACEHOLDER: &str = "{client_id}";
 const DEFAULT_GITHUB_TOKEN_REVOCATION_URL_TEMPLATE: &str =
     "https://api.github.com/applications/{client_id}/token";
 
@@ -71,7 +74,7 @@ fn token_revocation_url_from_env(ctx: &RouteContext<()>, client_id: &str) -> Str
         .var(GITHUB_TOKEN_REVOCATION_URL_VAR)
         .map(|v| v.to_string())
         .unwrap_or_else(|_| DEFAULT_GITHUB_TOKEN_REVOCATION_URL_TEMPLATE.to_string());
-    template.replace("{client_id}", client_id)
+    template.replace(CLIENT_ID_PLACEHOLDER, client_id)
 }
 
 /// Worker binding names this route expects. `CLIENT_ID` is not secret --
@@ -80,7 +83,7 @@ fn token_revocation_url_from_env(ctx: &RouteContext<()>, client_id: &str) -> Str
 /// alongside the secret since both are needed together for the token
 /// exchange. `CLIENT_SECRET` MUST be set via `wrangler secret put`, never
 /// committed to `wrangler.toml`.
-const CLIENT_ID_BINDING: &str = "SYNCED_SHARE_GITHUB_CLIENT_ID";
+pub(crate) const CLIENT_ID_BINDING: &str = "SYNCED_SHARE_GITHUB_CLIENT_ID";
 const CLIENT_SECRET_BINDING: &str = "SYNCED_SHARE_GITHUB_CLIENT_SECRET";
 
 /// Body of `POST /auth/github/callback`: what the browser sends once

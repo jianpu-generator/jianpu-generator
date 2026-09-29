@@ -53,7 +53,7 @@ pub(crate) trait IdentityProvider {
 /// every request re-verifies against the mock GitHub server. Without it, a
 /// token revoked on GitHub's side keeps passing on its cached verification
 /// for up to an hour, so e2e could never observe a revocation.
-const SESSION_TTL_MILLIS_VAR: &str = "SYNCED_SHARE_SESSION_TTL_MILLIS";
+pub(crate) const SESSION_TTL_MILLIS_VAR: &str = "SYNCED_SHARE_SESSION_TTL_MILLIS";
 
 /// Resolves the `oauth_sessions` freshness TTL: `SESSION_TTL_MILLIS_VAR` if
 /// set to a valid integer, otherwise `SESSION_TTL_MILLIS`.

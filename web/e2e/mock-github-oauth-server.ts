@@ -34,6 +34,7 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from 'node:http'
+import { E2E_GITHUB_CLIENT_ID } from './e2eGithubClientId.ts'
 import {
   DEFAULT_MOCK_GITHUB_LOGIN,
   DEFAULT_MOCK_GITHUB_USER_ID,
@@ -141,7 +142,7 @@ const server = createServer(async (req, res) => {
   // of what these e2e scenarios need to exercise (see `oauth.rs`).
   if (
     req.method === 'DELETE' &&
-    url.pathname === '/applications/e2e-test-client-id/grant'
+    url.pathname === `/applications/${E2E_GITHUB_CLIENT_ID}/grant`
   ) {
     const token = await readAccessToken(req)
     const login = token && mintedTokenLogins.get(token)
@@ -153,7 +154,7 @@ const server = createServer(async (req, res) => {
 
   if (
     req.method === 'DELETE' &&
-    url.pathname === '/applications/e2e-test-client-id/token'
+    url.pathname === `/applications/${E2E_GITHUB_CLIENT_ID}/token`
   ) {
     const token = await readAccessToken(req)
     if (token && mintedTokenLogins.has(token)) revokedTokens.add(token)
