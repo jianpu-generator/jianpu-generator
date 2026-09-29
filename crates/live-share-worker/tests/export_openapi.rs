@@ -11,10 +11,15 @@
 //! file (rather than read out of `openapi.json`) because it's a runtime
 //! value, not a type, and keeps the whole spec out of the SPA/Pages
 //! Function bundles.
+//!
+//! And `e2eResetConfig.json` (`live_share_worker::e2e_reset::e2e_reset_config`):
+//! the `--var` that `web/playwright.config.ts` passes to enable the
+//! test-only `POST /e2e/reset` route.
 
 use std::fs;
 use std::path::PathBuf;
 
+use live_share_worker::e2e_reset::e2e_reset_config;
 use live_share_worker::share_id::share_id_format;
 
 #[test]
@@ -27,6 +32,10 @@ fn export_openapi() -> Result<(), Box<dyn std::error::Error>> {
     fs::write(
         out_dir.join("shareIdFormat.json"),
         serde_json::to_string_pretty(&share_id_format())?,
+    )?;
+    fs::write(
+        out_dir.join("e2eResetConfig.json"),
+        serde_json::to_string_pretty(&e2e_reset_config())?,
     )?;
     Ok(())
 }

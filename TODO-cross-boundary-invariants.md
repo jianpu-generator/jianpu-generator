@@ -356,7 +356,7 @@ function import. The worker host is still hard-coded; item 16 covers it.
 
 ---
 
-## [ ] 13. `web/scripts/reset-e2e-cloud-db.ts` runs raw SQL against the worker's D1 schema (silent, test infra)
+## [x] 13. `web/scripts/reset-e2e-cloud-db.ts` runs raw SQL against the worker's D1 schema (silent, test infra)
 
 - Lines 45-54 hard-code `shares.file_id`, `files.owner_user_id`,
   `user_identities(user_id, provider, provider_user_id)` and the `'github'` literal.
@@ -370,6 +370,19 @@ looks like flakiness.
 
 **Direction:** move the reset next to the worker's checked queries (or into a test-only
 route). At minimum, only swallow "no such table".
+
+**Fix:** the reset is now the worker's test-only `POST /e2e/reset` route
+(`crates/live-share-worker/src/e2e_reset.rs`, `src/handlers/e2e_reset.rs`). Its two
+deletes are the checked queries `queries/delete_{shares,files}_of_provider_users.sql`,
+covered by `tests/query_syntax.rs` and bound with `GITHUB_PROVIDER`. The route is only
+registered when the var `SYNCED_SHARE_E2E_RESET_GITHUB_USER_IDS` is set. The real
+`wrangler.toml` never sets it, so without it the path answers like any unknown route.
+Its value is the allowlist of GitHub ids, which `playwright.config.ts` builds from
+`KNOWN_GITHUB_USER_IDS`. The var name reaches TS through the generated
+`e2eResetConfig.json`. `web/e2e/global-setup.ts` calls the route through the typed
+`openapi-fetch` client, after Playwright's `webServer` is up, and any failure aborts the
+run. `reset-e2e-cloud-db.ts` is deleted, so TS no longer names any table, column or
+provider.
 
 ---
 

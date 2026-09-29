@@ -230,7 +230,26 @@ impl Routes {
 
     /// A `POST` route with a JSON request body.
     pub(crate) fn post<Params, Body, R, F, Fut>(
+        self,
+        path: &str,
+        handler: F,
+    ) -> worker::Result<Self>
+    where
+        Params: DeserializeOwned + IntoParams + 'static,
+        Body: DeserializeOwned + ToSchema + 'static,
+        R: Reply + 'static,
+        F: Fn(RouteContext<()>, Params, Body) -> Fut + Copy + 'static,
+        Fut: Future<Output = HandlerResult<R>> + 'static,
+    {
+        self.post_if(true, path, handler)
+    }
+
+    /// Like `post`, but only served when `served` -- otherwise the router
+    /// has no such route at all (so it answers exactly like any unknown
+    /// path), while the spec documents it either way.
+    pub(crate) fn post_if<Params, Body, R, F, Fut>(
         mut self,
+        served: bool,
         path: &str,
         handler: F,
     ) -> worker::Result<Self>
@@ -252,6 +271,9 @@ impl Routes {
         self.paths = self
             .paths
             .path(path, PathItem::new(HttpMethod::Post, operation));
+        if !served {
+            return Ok(self);
+        }
         self.router =
             self.router
                 .post_async(&router_pattern(path), move |mut req: Request, ctx| {

@@ -16,7 +16,7 @@ use crate::db;
 use crate::identity::{IdentityProvider, ResolvedIdentity};
 use crate::share_id::{generate_id, USER_ID_LENGTH};
 
-const GITHUB_PROVIDER: &str = "github";
+pub(crate) const GITHUB_PROVIDER: &str = "github";
 const DEFAULT_GITHUB_USER_ENDPOINT: &str = "https://api.github.com/user";
 
 /// Optional `[vars]` override for `GET /user`'s endpoint, read by

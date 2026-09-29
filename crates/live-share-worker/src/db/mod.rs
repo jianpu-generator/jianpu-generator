@@ -21,10 +21,12 @@
 //! drift is still uncaught -- but it's an honest, reasonable substitute
 //! given the constraint above, not a silent downgrade.
 
+mod e2e_reset;
 mod files;
 mod identity;
 mod shares;
 
+pub(crate) use e2e_reset::*;
 pub(crate) use files::*;
 pub(crate) use identity::*;
 pub(crate) use shares::*;

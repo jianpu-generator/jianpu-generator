@@ -180,3 +180,17 @@ pub struct ShareIdPath {
     #[param(schema_with = crate::share_id::share_id_schema)]
     pub share_id: String,
 }
+
+/// Body of the test-only `POST /e2e/reset` (see `crate::e2e_reset`) --
+/// empty: which accounts to reset comes from the worker's own env, never
+/// the caller.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
+pub struct E2eResetRequest {}
+
+/// Response of `POST /e2e/reset` -- how many rows it deleted.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct E2eResetResponse {
+    pub deleted_shares: usize,
+    pub deleted_files: usize,
+}

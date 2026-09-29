@@ -31,6 +31,7 @@
 //! submodules per Rust's ancestor-visibility rule -- no `pub(crate)`
 //! needed.
 
+mod e2e_reset;
 mod files;
 pub(crate) mod routes;
 mod shares;
@@ -48,7 +49,11 @@ use routes::{HandlerResult, Routes};
 /// "Update `wrangler.toml`" bullet) -- out of scope here.
 const D1_BINDING: &str = "DB";
 
-pub(crate) fn routes() -> worker::Result<Routes> {
+/// Every route, for both serving and the spec. `e2e_reset_enabled` (see
+/// `crate::e2e_reset`) decides only whether `POST /e2e/reset` is served;
+/// the spec always documents it, so the e2e setup calls it through the
+/// generated client.
+pub(crate) fn routes(e2e_reset_enabled: bool) -> worker::Result<Routes> {
     Routes::new()
         .get("/shares/{share_id}", shares::get_share)?
         .post("/auth/github/callback", oauth::github_oauth_callback)?
@@ -61,7 +66,8 @@ pub(crate) fn routes() -> worker::Result<Routes> {
         .post("/files/{id}/restore", files::restore_file)?
         .post("/files/{id}/share", shares::start_share)?
         .post("/files/{id}/share/stop", shares::stop_share)?
-        .post("/files/{id}/share/status", shares::share_status)
+        .post("/files/{id}/share/status", shares::share_status)?
+        .post_if(e2e_reset_enabled, "/e2e/reset", e2e_reset::reset)
 }
 
 /// D1 surfaces a SQLite `UNIQUE constraint failed` violation as a plain

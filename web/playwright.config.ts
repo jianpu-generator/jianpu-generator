@@ -1,6 +1,19 @@
 import { defineConfig, devices } from '@playwright/test'
 import { defineBddConfig } from 'playwright-bdd'
 import { CHROMIUM_CACHE_DIR_PREFIX } from './e2e/chromiumCachePrefix'
+import { KNOWN_GITHUB_USER_IDS } from './e2e/mockGithubIdentity.ts'
+import e2eResetConfig from './src/generated/live-share-worker/e2eResetConfig.json' with {
+  type: 'json',
+}
+
+// Enables the worker's test-only `POST /e2e/reset` route (see
+// `crates/live-share-worker/src/e2e_reset.rs`), allowlisting every synthetic
+// account an e2e scenario signs in as -- `e2e/global-setup.ts` calls it to
+// wipe their rows left over from the previous local run. Single-quoted for
+// the shell, since the value is a JSON array.
+const e2eResetVar = `'${e2eResetConfig.githubUserIdsVar}:${JSON.stringify(
+  Object.values(KNOWN_GITHUB_USER_IDS),
+)}'`
 
 const testDir = defineBddConfig({
   features: 'e2e/features/**/*.feature',
@@ -14,6 +27,9 @@ export default defineConfig({
   // `--disk-cache-dir`) after the run finishes. Runs regardless of whether
   // tests pass, fail, or time out.
   globalTeardown: './e2e/global-teardown.ts',
+  // Wipes the synthetic e2e accounts' leftover cloud rows. Playwright
+  // starts `webServer` (below) before running this, so the worker is up.
+  globalSetup: './e2e/global-setup.ts',
   // No in-run retries: a flaky test masked here would just report "passed"
   // with no record that it ever failed. Flakiness is instead resolved across
   // whole-suite passes by scripts/resolve-e2e-flakes.ts (see
@@ -85,7 +101,8 @@ export default defineConfig({
       // cache of a token's last successful GitHub check (see
       // `src/identity.rs`), so a token the mock server has revoked is
       // rejected on its very next use, as it would be in prod once that
-      // cache expires.
+      // cache expires. `e2eResetVar` (top of file) enables the test-only
+      // `POST /e2e/reset` route `e2e/global-setup.ts` calls.
       //
       // Deliberately NOT port 8787 (`just dev`'s port, see `dekit.yaml`) and
       // deliberately NOT the default `--persist-to` D1 state dir: both are
@@ -102,7 +119,8 @@ export default defineConfig({
         '--var SYNCED_SHARE_GITHUB_USER_URL:http://localhost:8788/user ' +
         '--var SYNCED_SHARE_GITHUB_TOKEN_URL:http://localhost:8788/login/oauth/access_token ' +
         '--var SYNCED_SHARE_GITHUB_TOKEN_REVOCATION_URL:http://localhost:8788/applications/{client_id}/token ' +
-        '--var SYNCED_SHARE_SESSION_TTL_MILLIS:0',
+        '--var SYNCED_SHARE_SESSION_TTL_MILLIS:0 ' +
+        `--var ${e2eResetVar}`,
       cwd: '../crates/live-share-worker',
       port: 8797,
       reuseExistingServer: true,

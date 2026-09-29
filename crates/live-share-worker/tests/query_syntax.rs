@@ -91,6 +91,14 @@ const QUERIES: &[(&str, &str)] = &[
         "restore_file.sql",
         include_str!("../queries/restore_file.sql"),
     ),
+    (
+        "delete_shares_of_provider_users.sql",
+        include_str!("../queries/delete_shares_of_provider_users.sql"),
+    ),
+    (
+        "delete_files_of_provider_users.sql",
+        include_str!("../queries/delete_files_of_provider_users.sql"),
+    ),
 ];
 
 #[tokio::test]
