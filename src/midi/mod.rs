@@ -3,9 +3,11 @@ use std::collections::HashMap;
 use crate::ast::grouped::Score;
 use crate::ast::parsed::{Accidental, KeyChange, NoteName, PartKind};
 use crate::error::IrrecoverableError;
+use crate::parser::parts_parser::DEFAULT_PART_VOLUME;
 
 pub use crate::ast::parsed::JianPuPitch;
 
+mod channel_volume;
 mod chord_voicing;
 mod event_processing;
 mod midi_notes;
@@ -14,6 +16,7 @@ mod timing;
 mod timing_note_events;
 mod timing_note_timings;
 mod timing_range;
+use channel_volume::channel_volume_control_value;
 use event_processing::{
     flush_pending_ties, flush_pending_ties_at_tick, process_chord_events, process_measure_notes,
     process_percussion_events,
@@ -190,7 +193,7 @@ fn write_program_change_preamble(
             kind: RawKind::ControlChange {
                 channel: assignment.channel,
                 controller: 7,
-                value: (assignment.volume as u32 * 127 / 100) as u8,
+                value: channel_volume_control_value(assignment.volume),
             },
         });
     }
@@ -202,7 +205,9 @@ fn write_program_change_preamble(
             .find(|r| r.slice().kind == PartKind::Chords)
     });
     let chord_program = chord_part.map(|r| r.slice().soundfont.0).unwrap_or(0);
-    let chord_volume = chord_part.map(|r| r.slice().volume).unwrap_or(100);
+    let chord_volume = chord_part
+        .map(|r| r.slice().volume)
+        .unwrap_or(DEFAULT_PART_VOLUME);
     raw.push(RawEvent {
         tick: 0,
         kind: RawKind::ProgramChange {
@@ -215,7 +220,7 @@ fn write_program_change_preamble(
         kind: RawKind::ControlChange {
             channel: CHORD_CHANNEL,
             controller: 7,
-            value: (chord_volume as u32 * 127 / 100) as u8,
+            value: channel_volume_control_value(chord_volume),
         },
     });
 
@@ -371,6 +376,8 @@ pub(crate) fn process_measure(
 mod smf_writer;
 use smf_writer::{build_track_events, sort_raw_events, write_smf};
 
+#[cfg(test)]
+mod channel_volume_tests;
 #[cfg(test)]
 mod percussion_tests;
 #[cfg(test)]
