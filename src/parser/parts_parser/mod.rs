@@ -1,12 +1,16 @@
 mod declaration_parsing;
 mod instrument_matching;
 mod lexer;
+mod setting_limits;
 
 use crate::ast::parsed::{PartDecl, PartKind, Soundfont};
 use crate::error::{RecoverableError, Span};
 
 pub use instrument_matching::InstrumentInfo;
 use lexer::lex_line;
+pub use setting_limits::{
+    ClampedSetting, PartSettingLimits, PartSettingRange, PART_SETTING_LIMITS,
+};
 
 use declaration_parsing::parse_declaration_line;
 
@@ -14,6 +18,8 @@ use declaration_parsing::parse_declaration_line;
 mod lexer_tests;
 #[cfg(test)]
 mod percussion_tests;
+#[cfg(test)]
+mod setting_limits_tests;
 #[cfg(test)]
 mod tests;
 

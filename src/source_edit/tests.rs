@@ -148,6 +148,14 @@ fn test_default_volume_and_octave_are_omitted() {
 }
 
 #[test]
+fn test_out_of_range_volume_and_octave_are_written_clamped() {
+    let source = source_with_parts("Melody [M] = notes");
+    let result =
+        update_part_declaration(&source, "M", &settings(PartMode::Notes, None, 150, -7)).unwrap();
+    assert!(result.contains("Melody [M] = notes -4\n"), "{result}");
+}
+
+#[test]
 fn test_parts_header_without_space_after_hash() {
     let source = "#parts\nAlto [A] = notes\n\n#score\n1\n";
     let result =

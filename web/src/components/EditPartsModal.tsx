@@ -1,4 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog'
+import { usePartSettingLimits } from '../hooks/usePartSettingLimits'
 import type { PartDeclaration, PartInfo, PartSettings } from '../types'
 import { PartRow } from './PartRow'
 
@@ -43,6 +44,7 @@ export function EditPartsModal({
   stopPreviewInstrument,
   previewAudioPlaying,
 }: EditPartsModalProps) {
+  const limits = usePartSettingLimits(open)
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -123,21 +125,23 @@ export function EditPartsModal({
                 </tr>
               </thead>
               <tbody>
-                {partDeclarations.map((declaration, index) => (
-                  <PartRow
-                    key={declaration.abbreviation}
-                    declaration={declaration}
-                    allParts={allParts}
-                    isFirstPart={index === 0}
-                    onPartDeclarationChange={onPartDeclarationChange}
-                    onShiftPartOctave={onShiftPartOctave}
-                    rowIndex={index}
-                    previewInstrument={previewInstrument}
-                    previewPercussion={previewPercussion}
-                    stopPreviewInstrument={stopPreviewInstrument}
-                    previewAudioPlaying={previewAudioPlaying}
-                  />
-                ))}
+                {limits !== null &&
+                  partDeclarations.map((declaration, index) => (
+                    <PartRow
+                      key={declaration.abbreviation}
+                      declaration={declaration}
+                      limits={limits}
+                      allParts={allParts}
+                      isFirstPart={index === 0}
+                      onPartDeclarationChange={onPartDeclarationChange}
+                      onShiftPartOctave={onShiftPartOctave}
+                      rowIndex={index}
+                      previewInstrument={previewInstrument}
+                      previewPercussion={previewPercussion}
+                      stopPreviewInstrument={stopPreviewInstrument}
+                      previewAudioPlaying={previewAudioPlaying}
+                    />
+                  ))}
               </tbody>
             </table>
           </div>

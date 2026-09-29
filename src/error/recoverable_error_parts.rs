@@ -112,10 +112,17 @@ impl RecoverableError {
         }
     }
 
-    pub fn parts_octave_offset_too_large(span: Span, offset: i8) -> Self {
+    pub fn parts_volume_out_of_range(span: Span, volume: u16) -> Self {
         Self {
             span,
-            kind: RecoverableErrorKind::PartsOctaveOffsetTooLarge { offset },
+            kind: RecoverableErrorKind::PartsVolumeOutOfRange { volume },
+        }
+    }
+
+    pub fn parts_octave_offset_out_of_range(span: Span, offset: i16) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsOctaveOffsetOutOfRange { offset },
         }
     }
 

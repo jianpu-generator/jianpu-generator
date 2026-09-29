@@ -13,6 +13,7 @@ pub use tie_toggle::toggle_range_tie;
 
 use crate::parser::parts_parser::{
     InstrumentInfo, SourcePartMode, DEFAULT_PART_OCTAVE_OFFSET, DEFAULT_PART_VOLUME,
+    PART_SETTING_LIMITS,
 };
 use crate::parser::section_splitter::section_header_kind;
 
@@ -63,7 +64,8 @@ pub struct PartSettings {
 
 /// Rewrites the `# parts` line declaring `abbreviation` to `settings`,
 /// quoting `settings.program` as its [`crate::sound_label`] label (named from
-/// `instruments`, or the GM percussion map on a percussion part);
+/// `instruments`, or the GM percussion map on a percussion part), with the
+/// volume and octave offset clamped into [`PART_SETTING_LIMITS`];
 /// `None` when there's no such line.
 pub fn update_part_declaration(
     source: &str,
@@ -115,12 +117,20 @@ pub fn update_part_declaration(
         })
         .unwrap_or_default();
 
-    let volume_suffix = match settings.volume {
+    let volume = PART_SETTING_LIMITS
+        .volume
+        .clamp(i32::from(settings.volume))
+        .value;
+    let volume_suffix = match volume {
         DEFAULT_PART_VOLUME => String::new(),
         volume => format!(" {volume}%"),
     };
 
-    let octave_suffix = match settings.octave_offset {
+    let octave_offset = PART_SETTING_LIMITS
+        .octave_offset
+        .clamp(i32::from(settings.octave_offset))
+        .value;
+    let octave_suffix = match octave_offset {
         DEFAULT_PART_OCTAVE_OFFSET => String::new(),
         offset if offset > 0 => format!(" +{offset}"),
         offset => format!(" {offset}"),

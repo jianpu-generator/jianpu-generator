@@ -3,7 +3,9 @@ use crate::error::{RecoverableError, Span, Spanned};
 
 use super::instrument_matching::validate_soundfont;
 use super::lexer::PartsToken;
-use super::{InstrumentInfo, LhsParsed, ParsedPartRhs, RawDecl, RawKind, RhsSuffixes};
+use super::{
+    InstrumentInfo, LhsParsed, ParsedPartRhs, RawDecl, RawKind, RhsSuffixes, PART_SETTING_LIMITS,
+};
 
 pub(super) fn parse_declaration_line(
     tokens: &[Spanned<PartsToken>],
@@ -184,9 +186,11 @@ fn parse_rhs_suffix_tokens(
                     is_percussion,
                 ));
             }
-            PartsToken::Volume(value) => volume = Some(*value),
-            PartsToken::OctaveOffset(offset) => {
-                octave_offset = clamp_octave_offset(Some(*offset), span, errors);
+            PartsToken::Volume(written) => {
+                volume = Some(checked_volume(*written, token.span, errors));
+            }
+            PartsToken::OctaveOffset(written) => {
+                octave_offset = Some(checked_octave_offset(*written, token.span, errors));
             }
             _ => return Err(RecoverableError::parts_invalid_columns(span, "")),
         }
@@ -199,19 +203,24 @@ fn parse_rhs_suffix_tokens(
     })
 }
 
-fn clamp_octave_offset(
-    octave: Option<i8>,
-    span: Span,
-    errors: &mut Vec<RecoverableError>,
-) -> Option<i8> {
-    octave.map(|offset| {
-        if offset.abs() > 4 {
-            errors.push(RecoverableError::parts_octave_offset_too_large(
-                span, offset,
-            ));
-            offset.clamp(-4, 4)
-        } else {
-            offset
-        }
-    })
+/// `written` clamped into [`PART_SETTING_LIMITS`]`.volume`, reporting a
+/// diagnostic at `span` when it had to move.
+fn checked_volume(written: u16, span: Span, errors: &mut Vec<RecoverableError>) -> u8 {
+    let clamped = PART_SETTING_LIMITS.volume.clamp(i32::from(written));
+    if clamped.was_out_of_range {
+        errors.push(RecoverableError::parts_volume_out_of_range(span, written));
+    }
+    clamped.value
+}
+
+/// `written` clamped into [`PART_SETTING_LIMITS`]`.octave_offset`, reporting
+/// a diagnostic at `span` when it had to move.
+fn checked_octave_offset(written: i16, span: Span, errors: &mut Vec<RecoverableError>) -> i8 {
+    let clamped = PART_SETTING_LIMITS.octave_offset.clamp(i32::from(written));
+    if clamped.was_out_of_range {
+        errors.push(RecoverableError::parts_octave_offset_out_of_range(
+            span, written,
+        ));
+    }
+    clamped.value
 }

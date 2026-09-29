@@ -15,8 +15,10 @@ pub(crate) enum PartsToken {
     Follow,
     FollowTarget(String),
     Soundfont(String),
-    Volume(u8),
-    OctaveOffset(i8),
+    /// As written; [`super::PART_SETTING_LIMITS`] is applied when parsing.
+    Volume(u16),
+    /// As written; [`super::PART_SETTING_LIMITS`] is applied when parsing.
+    OctaveOffset(i16),
 }
 
 /// The part-kind keyword that makes a part follow another (`follow[M]`).
@@ -299,7 +301,7 @@ fn parse_kind_token(text: &str) -> Option<PartKind> {
     }
 }
 
-fn parse_volume_token(text: &str) -> Option<u8> {
+fn parse_volume_token(text: &str) -> Option<u16> {
     let digits = text.strip_suffix('%')?;
     if digits.is_empty() || digits.len() > 3 || !digits.chars().all(|c| c.is_ascii_digit()) {
         return None;
@@ -307,7 +309,7 @@ fn parse_volume_token(text: &str) -> Option<u8> {
     digits.parse().ok()
 }
 
-fn parse_octave_token(text: &str) -> Option<i8> {
+fn parse_octave_token(text: &str) -> Option<i16> {
     if let Some(digits) = text.strip_prefix('+') {
         if (1..=4).contains(&digits.len()) && digits.chars().all(|c| c.is_ascii_digit()) {
             return digits.parse().ok();
@@ -315,7 +317,7 @@ fn parse_octave_token(text: &str) -> Option<i8> {
     }
     if let Some(digits) = text.strip_prefix('-') {
         if !digits.is_empty() && digits.len() <= 4 && digits.chars().all(|c| c.is_ascii_digit()) {
-            return digits.parse::<i8>().ok().map(|n| -n);
+            return digits.parse::<i16>().ok().map(|n| -n);
         }
     }
     None

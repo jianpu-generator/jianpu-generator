@@ -174,6 +174,10 @@ pub(super) fn list_sound_choices(raw_instruments: Vec<InstrumentInfo>) -> SoundC
     ))
 }
 
+pub(super) fn get_part_setting_limits() -> PartSettingLimits {
+    part_setting_limits_to_wit(jianpu_generator::parser::parts_parser::PART_SETTING_LIMITS)
+}
+
 // `extract_source_from_svg`/`extract_source_from_pdf`'s logic was
 // already a direct call into `jianpu_generator::source_embed` (no
 // separate `crate::` response function existed), so these duplicate that

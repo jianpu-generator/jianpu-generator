@@ -94,6 +94,21 @@ pub(super) fn sound_choices_to_wit(
     }
 }
 
+pub(super) fn part_setting_limits_to_wit(
+    limits: jianpu_generator::parser::parts_parser::PartSettingLimits,
+) -> PartSettingLimits {
+    PartSettingLimits {
+        volume: VolumeRange {
+            min: limits.volume.min,
+            max: limits.volume.max,
+        },
+        octave_offset: OctaveOffsetRange {
+            min: limits.octave_offset.min,
+            max: limits.octave_offset.max,
+        },
+    }
+}
+
 pub(super) fn list_parts_response_to_wit(
     response: crate::types::ListPartsResponse,
 ) -> ListPartsResponse {

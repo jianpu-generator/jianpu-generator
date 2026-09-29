@@ -192,19 +192,6 @@ fn octave_offset_with_volume() {
 }
 
 #[test]
-fn octave_offset_too_large_clamps() {
-    let content = "B = notes +5\n";
-    let (decls, errors) = parse_parts(content, 0, &[]);
-    assert_eq!(decls[0].octave_offset, 4);
-    assert!(errors.iter().any(|e| {
-        matches!(
-            e.kind,
-            RecoverableErrorKind::PartsOctaveOffsetTooLarge { offset: 5 }
-        )
-    }));
-}
-
-#[test]
 fn octave_offset_follow_part() {
     let content = "A = notes\nB = follow[A] -1\n";
     let (decls, errors) = parse_parts(content, 0, &[]);

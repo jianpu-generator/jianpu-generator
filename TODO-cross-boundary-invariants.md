@@ -413,7 +413,7 @@ typechecked against the generated enum. Both regexes are deleted. Covered by
 
 ---
 
-## [ ] 15. Part volume/octave limits exist only in TS (cosmetic, plus a Rust bug)
+## [x] 15. Part volume/octave limits exist only in TS (cosmetic, plus a Rust bug)
 
 - TS: `web/src/components/PartRow.tsx:173-174` (volume 1–100), `:15-25` (octave ±4).
 - Rust accepts volume 0–255 (`src/parser/parts_parser/lexer.rs:302-308`) and any `i8`
@@ -427,6 +427,18 @@ diagnostic.
 
 **Related Rust-only bug:** `src/midi/mod.rs:193` computes `(volume * 127 / 100) as u8`,
 so any volume above 100% emits a MIDI data byte above 127, which is invalid.
+
+**Fix:** `PART_SETTING_LIMITS` (`src/parser/parts_parser/setting_limits.rs`) is now the
+only definition of the ranges: volume `0%`–`100%`, octave offset `-4`–`+4`. The parser
+clamps an out-of-range value to the nearest bound and reports a diagnostic on its token
+(`PartsVolumeOutOfRange`, `PartsOctaveOffsetOutOfRange`), and `update_part_declaration`
+clamps too. So no `part-declaration` or MIDI input ever holds an out-of-range value. The
+new WIT export `get-part-setting-limits` feeds the Edit Parts slider bounds and octave
+options (`usePartSettingLimits`), and `OCTAVE_OPTIONS` and the literal `1`/`100` are
+deleted. The minimum volume is `0`, because Rust and `syntax.md` already accepted `0%`;
+the slider's old `min={1}` was the odd one out. Covered by
+`edit-parts-modal-setting-limits.feature` and `setting_limits_tests.rs`. The MIDI
+overflow is fixed separately, in the commit after this one.
 
 ---
 

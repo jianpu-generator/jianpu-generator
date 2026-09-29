@@ -1,6 +1,8 @@
 import * as Slider from '@radix-ui/react-slider'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
+import { range } from 'remeda'
+import type { OctaveOffsetRange, PartSettingLimits } from '../jianpuWasm'
 import type {
   PartDeclaration,
   PartInfo,
@@ -11,20 +13,20 @@ import type { EditPartsModalProps } from './EditPartsModal'
 import { RadixSelect, RadixSelectItem } from './RadixTableSelect'
 import { SoundfontSearchModal } from './SoundfontSearchModal'
 
-const OCTAVE_OPTIONS = [
-  { value: '4', label: '+4' },
-  { value: '3', label: '+3' },
-  { value: '2', label: '+2' },
-  { value: '1', label: '+1' },
-  { value: '0', label: '0' },
-  { value: '-1', label: '-1' },
-  { value: '-2', label: '-2' },
-  { value: '-3', label: '-3' },
-  { value: '-4', label: '-4' },
-] as const
+/** Every octave offset in `offsets`, highest first, labelled as the
+ * `# parts` line writes it (`+2`, `0`, `-1`). */
+function octaveOptions(offsets: OctaveOffsetRange) {
+  return range(offsets.min, offsets.max + 1)
+    .reverse()
+    .map((offset) => ({
+      value: String(offset),
+      label: offset > 0 ? `+${offset}` : String(offset),
+    }))
+}
 
 export function PartRow({
   declaration,
+  limits,
   allParts,
   isFirstPart,
   onPartDeclarationChange,
@@ -36,6 +38,7 @@ export function PartRow({
   previewAudioPlaying,
 }: {
   declaration: PartDeclaration
+  limits: PartSettingLimits
   allParts: PartInfo[]
   isFirstPart: boolean
   onPartDeclarationChange: EditPartsModalProps['onPartDeclarationChange']
@@ -165,8 +168,8 @@ export function PartRow({
       <td style={tdStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Slider.Root
-            min={1}
-            max={100}
+            min={limits.volume.min}
+            max={limits.volume.max}
             step={1}
             value={[settings.volume]}
             onValueChange={([v]) => {
@@ -236,7 +239,7 @@ export function PartRow({
           placeholder="octave"
           testId={`octave-select-${declaration.abbreviation}`}
         >
-          {OCTAVE_OPTIONS.map((option) => (
+          {octaveOptions(limits.octaveOffset).map((option) => (
             <RadixSelectItem key={option.value} value={option.value}>
               {option.label}
             </RadixSelectItem>

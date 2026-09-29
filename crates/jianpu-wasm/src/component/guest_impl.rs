@@ -313,6 +313,10 @@ impl Guest for Component {
         list_sound_choices(raw_instruments)
     }
 
+    fn get_part_setting_limits() -> PartSettingLimits {
+        get_part_setting_limits()
+    }
+
     fn extract_source_from_svg(svg_bytes: Vec<u8>) -> Option<String> {
         extract_source_from_svg(svg_bytes)
     }

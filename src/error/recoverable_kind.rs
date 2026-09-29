@@ -1,4 +1,5 @@
 use super::DocumentSection;
+use crate::parser::parts_parser::{PartSettingRange, PART_SETTING_LIMITS};
 
 /// Identifies the specific kind of recoverable error for programmatic matching.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -108,8 +109,10 @@ pub enum RecoverableErrorKind {
         soundfont: String,
         suggestions: Vec<String>,
     },
-    /// Per-part octave offset exceeds ±4 — clamped to the valid range.
-    PartsOctaveOffsetTooLarge { offset: i8 },
+    /// Per-part volume outside `PART_SETTING_LIMITS.volume` — clamped to the valid range.
+    PartsVolumeOutOfRange { volume: u16 },
+    /// Per-part octave offset outside `PART_SETTING_LIMITS.octave_offset` — clamped to the valid range.
+    PartsOctaveOffsetOutOfRange { offset: i16 },
     /// `r`/bare `_`/`=` used with no prior pitched note/chord to repeat — token ignored.
     RepeatNoPriorNote,
     /// A `{N:...}` tuplet has no standard implied ratio and no explicit `{N:M:...}` override.
@@ -178,13 +181,33 @@ impl RecoverableErrorKind {
             Self::PartsUnknownSoundfont { soundfont, suggestions } => {
                 Self::parts_unknown_soundfont_message(soundfont, suggestions)
             }
-            Self::PartsOctaveOffsetTooLarge { offset } => format!(
-                "octave offset {offset} is out of range; valid range is -4 to +4; clamped"
-            ),
+            Self::PartsVolumeOutOfRange { volume } => Self::parts_volume_out_of_range_message(*volume),
+            Self::PartsOctaveOffsetOutOfRange { offset } => {
+                Self::parts_octave_offset_out_of_range_message(*offset)
+            }
             Self::RepeatNoPriorNote => "no prior note/chord to repeat; token ignored".to_string(),
             Self::TupletAmbiguousRatio { num } => format!("tuplet ratio for {num} is ambiguous; use {{{num}:M:...}} to specify explicitly"),
             Self::TupletNoteCountMismatch { expected, got } => format!("tuplet declared {expected} notes but got {got}; note count must match"),
         }
+    }
+
+    fn parts_volume_out_of_range_message(volume: u16) -> String {
+        let PartSettingRange { min, max } = PART_SETTING_LIMITS.volume;
+        let clamped = PART_SETTING_LIMITS.volume.clamp(i32::from(volume)).value;
+        format!(
+            "volume {volume}% is out of range; valid range is {min}% to {max}%; clamped to {clamped}%"
+        )
+    }
+
+    fn parts_octave_offset_out_of_range_message(offset: i16) -> String {
+        let PartSettingRange { min, max } = PART_SETTING_LIMITS.octave_offset;
+        let clamped = PART_SETTING_LIMITS
+            .octave_offset
+            .clamp(i32::from(offset))
+            .value;
+        format!(
+            "octave offset {offset:+} is out of range; valid range is {min:+} to {max:+}; clamped to {clamped:+}"
+        )
     }
 
     fn parts_unknown_soundfont_message(soundfont: &str, suggestions: &[String]) -> String {

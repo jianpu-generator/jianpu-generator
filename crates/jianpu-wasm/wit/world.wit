@@ -459,6 +459,33 @@ world jianpu-wasm {
     // Every sound the Edit Parts sound picker offers, labelled by Rust.
     export list-sound-choices: func(raw-instruments: list<instrument-info>) -> sound-choices;
 
+    // `jianpu_generator::parser::parts_parser::PartSettingRange<u8>` for
+    // `PART_SETTING_LIMITS.volume` — inclusive, in percent.
+    record volume-range {
+        min: u8,
+        max: u8,
+    }
+
+    // `PartSettingRange<i8>` for `PART_SETTING_LIMITS.octave-offset` —
+    // inclusive, in octaves.
+    record octave-offset-range {
+        min: s8,
+        max: s8,
+    }
+
+    // `jianpu_generator::parser::parts_parser::PartSettingLimits`: the valid
+    // range of each numeric `part-settings` field. The parser clamps a `# parts`
+    // line's out-of-range value into it (with a diagnostic), so every
+    // `part-declaration` already lies within it.
+    record part-setting-limits {
+        volume: volume-range,
+        octave-offset: octave-offset-range,
+    }
+
+    // `PART_SETTING_LIMITS`, for the Edit Parts volume slider and octave
+    // select. Prefixed `get-` so it doesn't share its record's name.
+    export get-part-setting-limits: func() -> part-setting-limits;
+
     enum symbol-kind {
         abbreviation,
         section-label,
