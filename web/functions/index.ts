@@ -12,9 +12,10 @@
 // with no way to run this, so share links opened there keep the generic
 // preview.
 
+import createClient from 'openapi-fetch'
+import type { paths } from '../src/generated/live-share-worker/schema'
 import shareIdFormat from '../src/generated/live-share-worker/shareIdFormat.json'
-
-const SHARE_QUERY_PARAM = 's'
+import { SHARE_QUERY_PARAM } from '../src/shareQueryParam'
 
 // Generated from `crates/live-share-worker/src/share_id.rs`
 // (`share_id_format`) by `build:worker-types` -- a standalone JSON file, so
@@ -28,10 +29,14 @@ const SHARE_ID_PATTERN = new RegExp(shareIdFormat.pattern)
 // host is already hardcoded at that same build-time location.
 const SYNCED_SHARE_HOST = 'jianpu-live-share-worker-rs.hou32hou.workers.dev'
 
-interface SyncedDocSummary {
-  filename: string
-  ended: boolean
-}
+// Typed from the worker's own OpenAPI spec (`build:worker-types`), so the
+// route, its path param and the `SyncedDoc` response body all come from the
+// Rust handler's signature. Only the types are imported from the generated
+// schema; the client itself is `openapi-fetch`, not the SPA's
+// `workerClient.ts`, to keep this edge bundle free of SPA code.
+const workerClient = createClient<paths>({
+  baseUrl: `https://${SYNCED_SHARE_HOST}`,
+})
 
 export const onRequestGet: PagesFunction = async (context) => {
   const response = await context.next()
@@ -43,18 +48,14 @@ export const onRequestGet: PagesFunction = async (context) => {
   const shareId = payload.slice(0, SHARE_ID_LENGTH)
   if (!SHARE_ID_PATTERN.test(shareId)) return response
 
-  let doc: SyncedDocSummary
-  try {
-    const docResponse = await fetch(
-      `https://${SYNCED_SHARE_HOST}/shares/${shareId}`,
-      { cache: 'no-store' },
-    )
-    if (!docResponse.ok) return response
-    doc = await docResponse.json()
-  } catch {
-    return response
-  }
-  if (doc.ended || !doc.filename) return response
+  const doc = await workerClient
+    .GET('/shares/{share_id}', {
+      params: { path: { share_id: shareId } },
+      cache: 'no-store',
+    })
+    .then((result) => result.data)
+    .catch(() => undefined)
+  if (!doc || doc.ended || !doc.filename) return response
 
   const title = `${doc.filename.replace(/\.jianpu$/, '')} - 簡譜`
 

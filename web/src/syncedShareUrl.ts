@@ -1,14 +1,7 @@
 import shareIdFormat from './generated/live-share-worker/shareIdFormat.json'
+import { SHARE_QUERY_PARAM } from './shareQueryParam'
 
 const SYNCED_HASH_PREFIX = '#synced='
-
-// Mirrors the hash payload in a query param too. A crawler that generates a
-// link preview (WhatsApp, Slack, ...) never runs JS and never sends the URL
-// fragment to the server, so `functions/index.ts` -- which needs the share
-// id to fetch the real title before the crawler ever sees the HTML -- reads
-// this instead. The hash remains the only thing the client itself reads;
-// this param exists purely for server-side consumption.
-const SHARE_QUERY_PARAM = 's'
 
 const FILENAME_EXTENSION = '.jianpu'
 
@@ -71,7 +64,7 @@ export function clearSyncedShareHash(): void {
 }
 
 /** Removes the `?s=` param (added purely for a link-preview crawler's
- * pre-JS request, see `SHARE_QUERY_PARAM` above) from the address bar once
+ * pre-JS request, see `shareQueryParam.ts`) from the address bar once
  * client JS has parsed it, leaving the `#synced=` hash untouched -- unlike
  * `clearSyncedShareHash`, the viewer is still using the hash for its
  * session. Keeps the URL a viewer sees tidy without affecting anything the

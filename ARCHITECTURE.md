@@ -416,8 +416,10 @@ migrations (see "Storage" below), nothing else.
   and `callWorker` turns each call's result into its success body or a
   `NetworkFailure`/`UnreadableResponse`/`WorkerRequestError` (the latter
   carrying the parsed `ApiError`) — every web call site and e2e helper
-  (`web/e2e/cloudFileHelpers.ts`) goes through it, so no path, method, body
-  shape or error literal is restated by hand in TS.
+  (`web/e2e/cloudFileHelpers.ts`) goes through it, and the Pages Function
+  `web/functions/index.ts` builds its own `openapi-fetch` client over the same
+  `paths` type (keeping SPA code out of its edge bundle), so no path, method,
+  body shape or error literal is restated by hand in TS.
 - Storage: D1 (SQLite), not the old KV namespace. Schema in
   `live-share-worker/migrations/0001_init.sql` (shared, as plain `.sql`,
   between real D1 migrations and a local shadow SQLite database

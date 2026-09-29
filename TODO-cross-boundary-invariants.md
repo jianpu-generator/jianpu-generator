@@ -335,7 +335,7 @@ are deleted: the JSON moved to `src/gm_percussion.json`, since only Rust reads i
 
 ---
 
-## [ ] 12. Link-preview Pages function bypasses the OpenAPI client (cosmetic)
+## [x] 12. Link-preview Pages function bypasses the OpenAPI client (cosmetic)
 
 - `web/functions/index.ts:29-32,45-52` does a raw `fetch` of `/shares/${shareId}` with a
   hand-typed `SyncedDocSummary {filename, ended}` and an untyped `.json()`.
@@ -345,6 +345,14 @@ are deleted: the JSON moved to `src/gm_percussion.json`, since only Rust reads i
 
 **Direction:** `import type { components }` from the generated schema (type-only, adds
 nothing to the bundle), or use openapi-fetch.
+
+**Fix:** the function builds its own `openapi-fetch` client, `createClient<paths>`, with
+`paths` imported type-only from the generated schema. The route, the `share_id` path
+param and the `SyncedDoc` response body now all come from the spec, and the hand-typed
+`SyncedDocSummary` is deleted. The function does not reuse `workerClient.ts`, which
+would pull SPA code into the edge bundle. `SHARE_QUERY_PARAM` now lives only in the
+dependency-free `web/src/shareQueryParam.ts`, which both `syncedShareUrl.ts` and the
+function import. The worker host is still hard-coded; item 16 covers it.
 
 ---
 
