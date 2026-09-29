@@ -10,7 +10,7 @@ pub struct RawSection {
     pub content_offset: usize,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SectionKind {
     Metadata,
     Parts,

@@ -261,6 +261,10 @@ impl Guest for Component {
         highlight_tokens(source)
     }
 
+    fn section_headers(source: String) -> Vec<SectionHeader> {
+        section_headers(source)
+    }
+
     fn set_layout_fonts(fonts: FontBytesByFamily) {
         set_layout_fonts(fonts)
     }

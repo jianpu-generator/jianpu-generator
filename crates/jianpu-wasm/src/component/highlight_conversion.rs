@@ -1,9 +1,10 @@
 //! Conversions from `jianpu_generator::highlight`'s types to the WIT
-//! `highlight-token` family, by exhaustive match so a kind added on either
-//! side fails to compile here.
+//! `highlight-token` and `section-header` families, by exhaustive match so a
+//! kind added on either side fails to compile here.
 
 use super::*;
 use jianpu_generator::highlight;
+use jianpu_generator::parser::section_splitter;
 
 fn highlight_kind_to_wit(kind: highlight::HighlightKind) -> HighlightKind {
     match kind {
@@ -20,6 +21,25 @@ pub(super) fn highlight_token_to_wit(token: highlight::HighlightToken) -> Highli
         span: Span {
             start: token.span.start as u32,
             end: token.span.end as u32,
+        },
+    }
+}
+
+fn section_kind_to_wit(kind: section_splitter::SectionKind) -> SectionKind {
+    match kind {
+        section_splitter::SectionKind::Metadata => SectionKind::Metadata,
+        section_splitter::SectionKind::Parts => SectionKind::Parts,
+        section_splitter::SectionKind::Score => SectionKind::Score,
+        section_splitter::SectionKind::Sequence => SectionKind::Sequence,
+    }
+}
+
+pub(super) fn section_header_to_wit(header: highlight::SectionHeader) -> SectionHeader {
+    SectionHeader {
+        kind: section_kind_to_wit(header.kind),
+        span: Span {
+            start: header.span.start as u32,
+            end: header.span.end as u32,
         },
     }
 }

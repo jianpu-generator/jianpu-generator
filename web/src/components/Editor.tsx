@@ -1,5 +1,5 @@
 import MonacoEditor, { type Monaco, type OnMount } from '@monaco-editor/react'
-import type { editor, IDisposable, ISelection, languages } from 'monaco-editor'
+import type { editor, IDisposable, ISelection } from 'monaco-editor'
 import {
   forwardRef,
   type ReactNode,
@@ -14,6 +14,7 @@ import {
   registerJianpuLanguage,
 } from '../monacoJianpuLanguage'
 import { registerJianpuRenameProvider } from '../monacoRenameProvider'
+import { registerSectionCodeLensProvider } from '../monacoSectionCodeLensProvider'
 import { registerJianpuSemanticTokensProvider } from '../monacoSemanticTokensProvider'
 import type {
   Diagnostic,
@@ -221,35 +222,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     })
 
     codeLensProviderRef.current?.dispose()
-    codeLensProviderRef.current = monacoApi.languages.registerCodeLensProvider(
-      JIANPU_LANGUAGE_ID,
-      {
-        provideCodeLenses(model: editor.ITextModel) {
-          const lenses: languages.CodeLens[] = []
-          for (let line = 1; line <= model.getLineCount(); line++) {
-            if (/^#\s*parts$/.test(model.getLineContent(line).trim())) {
-              lenses.push({
-                range: new monacoApi.Range(line, 1, line, 1),
-                command: {
-                  id: editPartsCommandId ?? '',
-                  title: 'Edit Parts',
-                },
-              })
-            }
-            if (/^#\s*metadata$/.test(model.getLineContent(line).trim())) {
-              lenses.push({
-                range: new monacoApi.Range(line, 1, line, 1),
-                command: {
-                  id: editMetadataCommandId ?? '',
-                  title: 'Edit Metadata',
-                },
-              })
-            }
-          }
-          return { lenses, dispose: () => {} }
-        },
-      },
-    )
+    codeLensProviderRef.current = registerSectionCodeLensProvider(monacoApi, {
+      parts: { id: editPartsCommandId ?? '', title: 'Edit Parts' },
+      metadata: { id: editMetadataCommandId ?? '', title: 'Edit Metadata' },
+    })
 
     const notifyCursor = () => {
       const model = ed.getModel()

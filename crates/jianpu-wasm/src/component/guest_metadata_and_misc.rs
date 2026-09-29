@@ -35,6 +35,13 @@ pub(super) fn highlight_tokens(source: String) -> Vec<HighlightToken> {
         .collect()
 }
 
+pub(super) fn section_headers(source: String) -> Vec<SectionHeader> {
+    jianpu_generator::highlight::section_headers(&source)
+        .into_iter()
+        .map(section_header_to_wit)
+        .collect()
+}
+
 // Same underlying `jianpu_generator` calls as the old
 // `wasm_boundary::set_layout_fonts`/`shift_part_octave`/`format_score`
 // `#[wasm_bindgen] fn`s — their logic was already a direct call into

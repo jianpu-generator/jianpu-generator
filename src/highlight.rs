@@ -72,6 +72,28 @@ pub fn highlight_tokens(source: &str) -> Vec<HighlightToken> {
         .collect()
 }
 
+/// A known `# <section>` header line: which section it opens, and its span
+/// (the same span its `HighlightKind::SectionHeader` token has).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SectionHeader {
+    pub kind: SectionKind,
+    pub span: Span,
+}
+
+/// Every known section header in `source`, ordered by position — exactly the
+/// headers `split_sections` recognizes, so a header-like line the parser
+/// ignores (e.g. an indented `  # parts`) is never reported.
+pub fn section_headers(source: &str) -> Vec<SectionHeader> {
+    let (sections, _) = split_sections(source);
+    sections
+        .into_iter()
+        .map(|section| SectionHeader {
+            kind: section.kind,
+            span: section.header_span,
+        })
+        .collect()
+}
+
 #[cfg(test)]
 #[path = "highlight_tests.rs"]
 mod highlight_tests;

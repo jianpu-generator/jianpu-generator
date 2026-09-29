@@ -1,4 +1,4 @@
-import type { HighlightKind, HighlightToken } from './jianpuWasm'
+import type { HighlightKind, HighlightToken, Span } from './jianpuWasm'
 
 /** Where a UTF-8 byte offset falls, as Monaco counts it: 0-indexed line and
  * UTF-16 column. */
@@ -8,16 +8,16 @@ interface LinePosition {
 }
 
 /**
- * Resolves the start and end of every token (which `highlight-tokens`
- * returns sorted, each within one line) to line positions in one pass over
- * `source`. `source` must be LF-only, as the Rust side measures it.
+ * Resolves the start and end of every wasm UTF-8 byte span to line
+ * positions, keyed by byte offset, in one pass over `source`. `source` must
+ * be LF-only, as the Rust side measures it.
  */
-function tokenPositions(
+export function spanPositions(
   source: string,
-  tokens: HighlightToken[],
+  spans: Span[],
 ): Map<number, LinePosition> {
   const wanted = [
-    ...new Set(tokens.flatMap(({ span }) => [span.start, span.end])),
+    ...new Set(spans.flatMap(({ start, end }) => [start, end])),
   ].sort((a, b) => a - b)
   const positions = new Map<number, LinePosition>()
   const encoder = new TextEncoder()
@@ -52,7 +52,10 @@ export function encodeSemanticTokens(
   tokens: HighlightToken[],
   tokenTypes: readonly HighlightKind[],
 ): Uint32Array {
-  const positions = tokenPositions(source, tokens)
+  const positions = spanPositions(
+    source,
+    tokens.map(({ span }) => span),
+  )
   let previous: LinePosition = { line: 0, character: 0 }
   const data = tokens.flatMap(({ kind, span }) => {
     const start = positions.get(span.start)

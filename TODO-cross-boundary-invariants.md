@@ -386,7 +386,7 @@ provider.
 
 ---
 
-## [ ] 14. Edit Parts / Edit Metadata CodeLens uses its own section-header regex (minor)
+## [x] 14. Edit Parts / Edit Metadata CodeLens uses its own section-header regex (minor)
 
 - TS: `web/src/components/Editor.tsx:230,239` trims the line, then tests
   `/^#\s*parts$/` and `/^#\s*metadata$/`.
@@ -399,6 +399,17 @@ provider.
 
 **Direction:** drive the lenses from the `section-header` spans that `highlight-tokens`
 already returns. This may need the section kind added to the token.
+
+**Fix:** a new WIT export, `section-headers(source) -> list<section-header>`, returns
+`{kind: section-kind, span}` (Rust `highlight::section_headers`). It is built from the
+same `split_sections` result as the `section-header` highlight tokens, so it only
+reports headers the parser recognizes. This is a separate export, not an optional field
+on `highlight-token`, so keyword tokens can't carry a section kind that is always
+`none`. `web/src/monacoSectionCodeLensProvider.ts` places one lens per header whose
+kind has a command. The commands are a `Partial<Record<SectionKind, Command>>`,
+typechecked against the generated enum. Both regexes are deleted. Covered by
+`section-header-code-lens.feature` (commented header and indented header) and
+`src/highlight_tests.rs`.
 
 ---
 

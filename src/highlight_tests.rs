@@ -104,3 +104,51 @@ fn offsets_are_utf8_byte_offsets() {
             .map(|start| Span::new(start, start + 10))
     );
 }
+
+#[derive(Debug, PartialEq, Eq)]
+struct HeaderText<'source> {
+    kind: SectionKind,
+    text: &'source str,
+}
+
+fn headers(source: &str) -> Vec<HeaderText<'_>> {
+    section_headers(source)
+        .into_iter()
+        .map(|header| HeaderText {
+            kind: header.kind,
+            text: source
+                .get(header.span.start..header.span.end)
+                .unwrap_or_default(),
+        })
+        .collect()
+}
+
+fn header(kind: SectionKind, text: &str) -> HeaderText<'_> {
+    HeaderText { kind, text }
+}
+
+#[test]
+fn section_headers_names_each_known_section() {
+    let source = "# metadata\n# parts\n# drafts\n# score\n# sequence\n";
+    assert_eq!(
+        headers(source),
+        [
+            header(SectionKind::Metadata, "# metadata"),
+            header(SectionKind::Parts, "# parts"),
+            header(SectionKind::Score, "# score"),
+            header(SectionKind::Sequence, "# sequence"),
+        ]
+    );
+}
+
+#[test]
+fn section_header_followed_by_a_comment_is_recognized() {
+    let source = "# parts // note\nMelody [M] = notes\n";
+    assert_eq!(headers(source), [header(SectionKind::Parts, "# parts")]);
+}
+
+#[test]
+fn indented_header_like_line_is_not_a_section_header() {
+    let source = "# score\n[M] 1\n  # parts\n";
+    assert_eq!(headers(source), [header(SectionKind::Score, "# score")]);
+}

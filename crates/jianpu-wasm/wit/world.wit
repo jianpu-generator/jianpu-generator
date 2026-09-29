@@ -852,6 +852,25 @@ world jianpu-wasm {
     // parser's own lexers. Drives the editor's semantic highlighting.
     export highlight-tokens: func(source: string) -> list<highlight-token>;
 
+    // Which section a `# <section>` header opens.
+    enum section-kind {
+        metadata,
+        parts,
+        score,
+        sequence,
+    }
+
+    // One known section header line's UTF-8 byte span (its `section-header`
+    // highlight token's span), excluding any trailing comment.
+    record section-header {
+        kind: section-kind,
+        span: span,
+    }
+
+    // Every section header the parser recognizes in `source`, ordered by
+    // position. Drives the editor's Edit Parts / Edit Metadata CodeLens.
+    export section-headers: func(source: string) -> list<section-header>;
+
     // Raw OTF/TTF bytes of each `font-family` role's font (see
     // `fonts/fonts.json`, keyed by the same role names). Keyed by role, not
     // by what text a role renders: which role measures/renders which text
