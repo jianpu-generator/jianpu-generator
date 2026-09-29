@@ -46,10 +46,6 @@ jobs:
         working-directory: web
         env:
           VITE_BASE_PATH: /jianpu-generator/
-          # The OAuth App's client ID. Not a secret (GitHub's device flow
-          # sends it in plaintext). Replace with the real OAuth App's client
-          # ID for clarity/future-proofing once one is registered.
-          VITE_GITHUB_OAUTH_CLIENT_ID: placeholder-client-id
           # The Synced Share worker's client id and host come from its
           # `wrangler.toml` (see `web/vite.config.ts`), not from here.
         run: pnpm build
@@ -136,7 +132,6 @@ jobs:
         working-directory: web
         env:
           VITE_BASE_PATH: /
-          VITE_GITHUB_OAUTH_CLIENT_ID: placeholder-client-id
         run: pnpm build
 
       - name: Deploy to Cloudflare Pages

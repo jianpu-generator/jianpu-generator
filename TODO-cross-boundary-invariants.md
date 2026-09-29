@@ -463,9 +463,10 @@ the generated `web/src/generated/live-share-worker/deployConfig.json` via
 step). `web/vite.config.ts` defaults `VITE_SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID` /
 `VITE_SYNCED_SHARE_HOST` to it (an explicitly set value, e.g. `.env.local`'s local
 worker host or e2e's, still wins), and `web/functions/index.ts` imports the JSON. The
-copies in `web/.env` and both `pages.yml` build steps are deleted. Not fully removed:
-the gitignored, per-developer `web/.env.local` may still carry its own copies, as an
-intentional local override.
+copies in `web/.env` (now deleted, along with the dead storage-backend
+`VITE_GITHUB_OAUTH_*` vars) and both `pages.yml` build steps are gone, and `vite` dev
+defaults the host to the local `wrangler dev` one in `vite.config.ts`, so no `.env*`
+file is needed. A personal gitignored `web/.env.local` can still override any value.
 
 ---
 

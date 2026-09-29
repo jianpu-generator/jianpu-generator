@@ -9,9 +9,8 @@
 # `name` deliberately does NOT reuse the old worker's name (`jianpu-live`)
 # — decided (§8) to keep them as distinct Workers so deploying this one
 # never silently overwrites the still-running old one. Decommissioning the
-# old worker stays a separate, explicit step. `web/.env`, `web/.env.local`,
-# and `.github/workflows/pages.yml`'s `VITE_SYNCED_SHARE_HOST` point at
-# this worker's real `*.workers.dev` hostname built from this name.
+# old worker stays a separate, explicit step. The web app's build reads this
+# worker's real `*.workers.dev` hostname from `[vars].SYNCED_SHARE_PUBLIC_HOST`.
 name = "jianpu-live-share-worker-rs"
 
 # `worker-build`'s default output layout: a `build/` dir at this file's
