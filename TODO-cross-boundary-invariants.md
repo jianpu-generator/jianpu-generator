@@ -442,7 +442,7 @@ overflow is fixed separately, in the commit after this one.
 
 ---
 
-## [ ] 16. Deployment config duplicated across the worker and web (loud / cosmetic)
+## [x] 16. Deployment config duplicated across the worker and web (loud / cosmetic)
 
 - GitHub OAuth client id: `crates/live-share-worker/wrangler.toml:72`,
   `.github/workflows/pages.yml:60,151`, `web/.env:19`.
@@ -453,6 +453,19 @@ overflow is fixed separately, in the commit after this one.
 generic title (cosmetic).
 
 **Direction:** read each value from a single source at build time.
+
+**Fix:** `crates/live-share-worker/wrangler.toml`'s `[vars]` is now the only place the
+sign-in client id (`SYNCED_SHARE_GITHUB_CLIENT_ID`) and the worker's public host
+(`SYNCED_SHARE_PUBLIC_HOST`, new; the worker itself never reads it) are written.
+`tests/export_openapi.rs` parses the toml (`toml` dev-dependency) and publishes both to
+the generated `web/src/generated/live-share-worker/deployConfig.json` via
+`build:worker-types` (already a `prebuild`/`predev` step, so `pages.yml` needs no extra
+step). `web/vite.config.ts` defaults `VITE_SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID` /
+`VITE_SYNCED_SHARE_HOST` to it (an explicitly set value, e.g. `.env.local`'s local
+worker host or e2e's, still wins), and `web/functions/index.ts` imports the JSON. The
+copies in `web/.env` and both `pages.yml` build steps are deleted. Not fully removed:
+the gitignored, per-developer `web/.env.local` may still carry its own copies, as an
+intentional local override.
 
 ---
 

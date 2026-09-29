@@ -15,12 +15,38 @@
 //! And `e2eResetConfig.json` (`live_share_worker::e2e_reset::e2e_reset_config`):
 //! the `--var` that `web/playwright.config.ts` passes to enable the
 //! test-only `POST /e2e/reset` route.
+//!
+//! And `deployConfig.json`, read straight out of `wrangler.toml`'s `[vars]`:
+//! the GitHub OAuth client id and public worker host that the web build and
+//! the link-preview Pages Function need, so they are declared only there.
 
 use std::fs;
 use std::path::PathBuf;
 
+use serde::{Deserialize, Serialize};
+
 use live_share_worker::e2e_reset::e2e_reset_config;
 use live_share_worker::share_id::share_id_format;
+
+#[derive(Deserialize)]
+struct WranglerConfig {
+    vars: WranglerVars,
+}
+
+#[derive(Deserialize)]
+struct WranglerVars {
+    #[serde(rename = "SYNCED_SHARE_GITHUB_CLIENT_ID")]
+    github_client_id: String,
+    #[serde(rename = "SYNCED_SHARE_PUBLIC_HOST")]
+    public_host: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DeployConfig {
+    github_client_id: String,
+    worker_host: String,
+}
 
 #[test]
 fn export_openapi() -> Result<(), Box<dyn std::error::Error>> {
@@ -36,6 +62,16 @@ fn export_openapi() -> Result<(), Box<dyn std::error::Error>> {
     fs::write(
         out_dir.join("e2eResetConfig.json"),
         serde_json::to_string_pretty(&e2e_reset_config())?,
+    )?;
+    let wrangler: WranglerConfig = toml::from_str(&fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("wrangler.toml"),
+    )?)?;
+    fs::write(
+        out_dir.join("deployConfig.json"),
+        serde_json::to_string_pretty(&DeployConfig {
+            github_client_id: wrangler.vars.github_client_id,
+            worker_host: wrangler.vars.public_host,
+        })?,
     )?;
     Ok(())
 }

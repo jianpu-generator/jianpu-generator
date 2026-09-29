@@ -50,19 +50,8 @@ jobs:
           # sends it in plaintext). Replace with the real OAuth App's client
           # ID for clarity/future-proofing once one is registered.
           VITE_GITHUB_OAUTH_CLIENT_ID: placeholder-client-id
-          # Dedicated Synced Share sign-in OAuth App's client id -- not a
-          # placeholder like the one above, since the browser sends this
-          # directly to GitHub's authorization endpoint (see
-          # `useSyncedShareOwner.ts`). Separate app from the storage one
-          # above so GitHub's consent screen never surfaces the storage
-          # app's broad `repo` grant on this identity-only sign-in. Not a
-          # secret.
-          VITE_SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID: Ov23liFN0gIJmZ2VREGm
-          # Cloudflare Worker host for Synced Share. Not a
-          # secret (exposed client-side regardless), but only ever set in
-          # the gitignored `web/.env.local` for local dev, so it's absent
-          # here unless declared explicitly.
-          VITE_SYNCED_SHARE_HOST: jianpu-live-share-worker-rs.hou32hou.workers.dev
+          # The Synced Share worker's client id and host come from its
+          # `wrangler.toml` (see `web/vite.config.ts`), not from here.
         run: pnpm build
 
       - name: Add SPA-fallback 404.html
@@ -148,8 +137,6 @@ jobs:
         env:
           VITE_BASE_PATH: /
           VITE_GITHUB_OAUTH_CLIENT_ID: placeholder-client-id
-          VITE_SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID: Ov23liFN0gIJmZ2VREGm
-          VITE_SYNCED_SHARE_HOST: jianpu-live-share-worker-rs.hou32hou.workers.dev
         run: pnpm build
 
       - name: Deploy to Cloudflare Pages

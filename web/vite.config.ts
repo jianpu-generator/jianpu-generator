@@ -2,9 +2,10 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
-import type { Plugin, ViteDevServer } from 'vite'
+import { loadEnv, type Plugin, type ViteDevServer } from 'vite'
 import { defineConfig } from 'vitest/config'
 import fontsManifest from '../fonts/fonts.json'
+import deployConfig from './src/generated/live-share-worker/deployConfig.json'
 
 const CARGO_COMPONENT_ARGS = [
   'component',
@@ -245,9 +246,44 @@ function serveFontsPlugin(): Plugin {
   }
 }
 
+/**
+ * Defaults the Synced Share deployment env vars to the worker's own
+ * `wrangler.toml` values (exported as `deployConfig.json` by
+ * `build:worker-types`), so they are declared nowhere else. An explicitly set
+ * value -- the local worker's host in `.env.local`, or e2e's -- still wins.
+ */
+function workerDeployConfigPlugin(): Plugin {
+  const defaults = {
+    VITE_SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID: deployConfig.githubClientId,
+    VITE_SYNCED_SHARE_HOST: deployConfig.workerHost,
+  }
+  return {
+    name: 'worker-deploy-config',
+    config(_, { mode }) {
+      const explicit = loadEnv(mode, __dirname, 'VITE_')
+      return {
+        define: Object.fromEntries(
+          Object.entries(defaults)
+            .filter(([name]) => explicit[name] === undefined)
+            .map(([name, value]) => [
+              `import.meta.env.${name}`,
+              JSON.stringify(value),
+            ]),
+        ),
+      }
+    },
+  }
+}
+
 export default defineConfig({
   base: process.env.VITE_BASE_PATH ?? '/',
-  plugins: [react(), wasmDevPlugin(), serveFontsPlugin(), copyFontsPlugin()],
+  plugins: [
+    react(),
+    workerDeployConfigPlugin(),
+    wasmDevPlugin(),
+    serveFontsPlugin(),
+    copyFontsPlugin(),
+  ],
   worker: {
     format: 'es',
   },

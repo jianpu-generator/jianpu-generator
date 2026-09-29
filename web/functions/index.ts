@@ -13,6 +13,7 @@
 // preview.
 
 import createClient from 'openapi-fetch'
+import deployConfig from '../src/generated/live-share-worker/deployConfig.json'
 import type { paths } from '../src/generated/live-share-worker/schema'
 import shareIdFormat from '../src/generated/live-share-worker/shareIdFormat.json'
 import { SHARE_QUERY_PARAM } from '../src/shareQueryParam'
@@ -23,19 +24,13 @@ import { SHARE_QUERY_PARAM } from '../src/shareQueryParam'
 const SHARE_ID_LENGTH = shareIdFormat.length
 const SHARE_ID_PATTERN = new RegExp(shareIdFormat.pattern)
 
-// Matches `VITE_SYNCED_SHARE_HOST` in `.github/workflows/pages.yml`. Not
-// read from an env binding: Pages Functions env vars would need their own
-// dashboard/`wrangler.toml` setup that doesn't exist yet, and this worker
-// host is already hardcoded at that same build-time location.
-const SYNCED_SHARE_HOST = 'jianpu-live-share-worker-rs.hou32hou.workers.dev'
-
 // Typed from the worker's own OpenAPI spec (`build:worker-types`), so the
 // route, its path param and the `SyncedDoc` response body all come from the
 // Rust handler's signature. Only the types are imported from the generated
 // schema; the client itself is `openapi-fetch`, not the SPA's
 // `workerClient.ts`, to keep this edge bundle free of SPA code.
 const workerClient = createClient<paths>({
-  baseUrl: `https://${SYNCED_SHARE_HOST}`,
+  baseUrl: `https://${deployConfig.workerHost}`,
 })
 
 export const onRequestGet: PagesFunction = async (context) => {
