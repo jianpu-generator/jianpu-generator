@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { tagSelector } from '../dataAttributes'
 import type { NoteTiming, SvgDocument } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import { renderSvgDocument } from './PreviewSvgRenderer'
@@ -12,6 +11,7 @@ import {
   applyPersistedLyricHighlights,
   applyPersistedNoteHighlights,
 } from './previewRangeHighlights'
+import { findRevealTarget } from './previewRevealTarget'
 import type { LyricCell, NoteCell } from './previewSelection'
 import { usePlaybackCursor } from './usePlaybackCursor'
 import { usePreviewClickSelection } from './usePreviewClickSelection'
@@ -110,11 +110,9 @@ interface PreviewProps {
     revealMeasureIndex: number
     /** The exact disjoint measure ranges highlighted in the SVG preview for
      * this selection (a `# sequence` chain), when it differs from the
-     * single `[start, end]` span above. Not read directly by `Preview`
-     * itself — the highlight rects it drives come back through
-     * `highlightedDocuments`, already rendered — but kept here so this
-     * duplicated local type matches `selectedMeasureRange`'s shape
-     * everywhere else it's declared. */
+     * single `[start, end]` span above. `Preview` only checks whether it's
+     * set (see `findRevealTarget`); the highlight rects it drives come back
+     * through `highlightedDocuments`, already rendered. */
     highlightRanges?: { start: number; end: number }[]
   } | null
   /** Fired whenever a click-and-click gesture starts or stops waiting on its
@@ -259,17 +257,12 @@ export function Preview({
     }
     if (suppressedRangeRef.current === selectedMeasureRange) return
     suppressedRangeRef.current = null
-    const targetMeasureIndex = selectedMeasureRange.revealMeasureIndex
 
     const frameId = requestAnimationFrame(() => {
       const container = previewPagesRef.current
       if (!container) return
 
-      const target =
-        container.querySelector('[data-testid="measure-highlight"]') ??
-        container.querySelector(
-          tagSelector('measure', { index: targetMeasureIndex }),
-        )
+      const target = findRevealTarget(container, selectedMeasureRange)
       target?.scrollIntoView({
         block: 'center',
         inline: 'nearest',

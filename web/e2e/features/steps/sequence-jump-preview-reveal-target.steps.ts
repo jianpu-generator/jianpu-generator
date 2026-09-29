@@ -87,6 +87,13 @@ When(
     await page.mouse.down()
     await buttons.nth(1).hover()
     await page.mouse.up()
+    // Wait for the selection to settle: one highlight rect per selected
+    // entry, painted by the (asynchronous) highlight render. Its arrival
+    // re-runs the preview's reveal, so asserting before it lands could pass
+    // on a scroll position that's about to be overwritten.
+    await expect(page.locator('[data-testid="measure-highlight"]')).toHaveCount(
+      2,
+    )
   },
 )
 
