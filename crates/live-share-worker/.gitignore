@@ -3,3 +3,5 @@
 # committed `.dev.vars`'s fake e2e-test-client-secret). Never commit real
 # secrets here -- see dekit.yaml at the repo root for how this is sourced.
 .env.local
+node_modules
+.cloudflare

@@ -11,7 +11,7 @@ type PublicFile = WorkerSchemas['PublicFile']
 type ApiError = WorkerSchemas['ApiError']
 type WorkerPath = keyof paths
 
-// Seeds/mutates real rows in the local `wrangler dev` worker's D1 database
+// Seeds/mutates real rows in the local `cf dev` worker's D1 database
 // (see `playwright.config.ts`'s `webServer` array) by calling its `/files/*`
 // routes directly from Node -- the e2e equivalent of "this file already
 // existed in the cloud before the page under test ever loaded". Unlike the
@@ -24,7 +24,7 @@ type WorkerPath = keyof paths
 // bodies are always the generated ones, never hand-typed.
 
 /** Same origin `playwright.config.ts` points the app's own `VITE_SYNCED_SHARE_HOST`
- * at -- see that file's `webServer` entry for `wrangler dev --port 8797`
+ * at -- see that file's `webServer` entry for `cf dev --port 8797`
  * (deliberately not `just dev`'s 8787, see that entry's comment). */
 export const CLOUD_WORKER_ORIGIN = 'http://localhost:8797'
 
@@ -100,7 +100,7 @@ export const DEFAULT_CLOUD_FILE_CONTENT = [
  *
  * Idempotent across reruns of the same scenario: `scripts/resolve-e2e-
  * flakes.ts` reruns a still-failing scenario against the very same
- * already-running `wrangler dev` + local D1 instance (see
+ * already-running `cf dev` + local D1 instance (see
  * `playwright.config.ts`'s `reuseExistingServer`), so a plain `POST /files`
  * would fail with `name_taken` on any rerun once the first attempt's row is
  * already sitting there under this exact name -- see `reseedExistingFile`. */

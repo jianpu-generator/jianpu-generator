@@ -251,7 +251,7 @@ const LOCAL_WORKER_HOST = 'localhost:8787'
 
 /**
  * Defaults the Synced Share env vars: the client id from the worker's own
- * `wrangler.toml` (exported as `deployConfig.json` by `build:worker-types`),
+ * `deploy.json`/`cloudflare.config.ts` (exported as `deployConfig.json` by `build:worker-types`),
  * and the host to the deployed worker's -- or, under `vite` dev, to the
  * local `wrangler dev` one. An explicitly set value (e2e's, or a personal
  * `.env.local`) still wins.

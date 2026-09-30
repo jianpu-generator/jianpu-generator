@@ -20,8 +20,8 @@ pub(crate) const GITHUB_PROVIDER: &str = "github";
 const DEFAULT_GITHUB_USER_ENDPOINT: &str = "https://api.github.com/user";
 
 /// Optional `[vars]` override for `GET /user`'s endpoint, read by
-/// `user_endpoint_from_env` below. Unset in the real `wrangler.toml` (so
-/// production always calls real GitHub); e2e's local `wrangler dev` run
+/// `user_endpoint_from_env` below. Unset in the real `deploy.json`/`cloudflare.config.ts` (so
+/// production always calls real GitHub); e2e's local `cf dev` run
 /// points this at a mock GitHub server via `--var` so no Playwright run
 /// ever makes a real GitHub API call (see
 /// `TODO-synced-share-rust-d1-migration.md` task 11 and
@@ -65,7 +65,7 @@ pub(crate) struct GithubIdentityProvider {
 
 impl GithubIdentityProvider {
     /// Builds a provider using `GITHUB_USER_URL_VAR` if the Worker's
-    /// `wrangler.toml`/`--var` set it, otherwise the real GitHub API.
+    /// `deploy.json`/`cloudflare.config.ts`/`--var` set it, otherwise the real GitHub API.
     pub(crate) fn from_env(ctx: &RouteContext<()>) -> Self {
         Self {
             user_endpoint: user_endpoint_from_env(ctx),

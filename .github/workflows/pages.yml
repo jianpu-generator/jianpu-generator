@@ -47,7 +47,7 @@ jobs:
         env:
           VITE_BASE_PATH: /jianpu-generator/
           # The Synced Share worker's client id and host come from its
-          # `wrangler.toml` (see `web/vite.config.ts`), not from here.
+          # `cloudflare.config.ts` (see `web/vite.config.ts`), not from here.
         run: pnpm build
 
       - name: Add SPA-fallback 404.html

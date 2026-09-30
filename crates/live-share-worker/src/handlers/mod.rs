@@ -44,9 +44,9 @@ use crate::identity::{resolve_verified_user_id, session_ttl_millis_from_env};
 use crate::oauth;
 use routes::{HandlerResult, Routes};
 
-/// D1 binding name this worker expects in `wrangler.toml`. Wiring the
+/// D1 binding name this worker expects in `deploy.json`/`cloudflare.config.ts`. Wiring the
 /// actual binding is task 5 (`TODO-synced-share-rust-d1-migration.md` §4's
-/// "Update `wrangler.toml`" bullet) -- out of scope here.
+/// "Update `deploy.json`/`cloudflare.config.ts`" bullet) -- out of scope here.
 const D1_BINDING: &str = "DB";
 
 /// Every route, for both serving and the spec. `e2e_reset_enabled` (see

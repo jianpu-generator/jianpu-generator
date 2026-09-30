@@ -49,7 +49,7 @@ pub(crate) trait IdentityProvider {
 
 /// Optional `[vars]` override for how long a cached `oauth_sessions`
 /// verification stays fresh, in milliseconds -- unset in production
-/// (`SESSION_TTL_MILLIS`), set to `0` by e2e's local `wrangler dev` run so
+/// (`SESSION_TTL_MILLIS`), set to `0` by e2e's local `cf dev` run so
 /// every request re-verifies against the mock GitHub server. Without it, a
 /// token revoked on GitHub's side keeps passing on its cached verification
 /// for up to an hour, so e2e could never observe a revocation.

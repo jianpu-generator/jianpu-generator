@@ -18,7 +18,7 @@
 //! `#[cfg(test)]` modules. Everything else here is D1- or
 //! wasm-runtime-facing and stays crate-private -- it isn't exercised by
 //! host-side `cargo test` (per `TODO-synced-share-rust-d1-migration.md` §0:
-//! real D1 integration testing is deferred to `wrangler dev`, not built
+//! real D1 integration testing is deferred to `cf dev`, not built
 //! here; the GitHub verification call itself is mocked in `verification`'s
 //! unit tests instead of hit for real, per that section's testing
 //! decision).

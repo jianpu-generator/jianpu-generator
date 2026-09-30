@@ -5,7 +5,7 @@
 //! authorization-code + PKCE token exchange, which needs the OAuth App's
 //! client secret and so cannot run in the browser. The client secret is
 //! read from a Worker secret binding (`SYNCED_SHARE_GITHUB_CLIENT_SECRET`,
-//! see `CLIENT_SECRET_BINDING` below) -- set via `wrangler secret put`,
+//! see `CLIENT_SECRET_BINDING` below) -- set via `wrangler secret put` (cf has none yet),
 //! never committed to this repo.
 //!
 //! Scope note: this module only performs the token exchange itself (plus,
@@ -50,7 +50,7 @@ const DEFAULT_GITHUB_TOKEN_URL: &str = "https://github.com/login/oauth/access_to
 
 /// Optional `[vars]` override for the token-exchange endpoint, mirroring
 /// `identity::github`'s `GITHUB_USER_URL_VAR` -- unset in production, set by
-/// e2e's local `wrangler dev` run to a mock GitHub server so no Playwright
+/// e2e's local `cf dev` run to a mock GitHub server so no Playwright
 /// run ever makes a real GitHub API call (task 11).
 pub(crate) const GITHUB_TOKEN_URL_VAR: &str = "SYNCED_SHARE_GITHUB_TOKEN_URL";
 
@@ -81,8 +81,8 @@ fn token_revocation_url_from_env(ctx: &RouteContext<()>, client_id: &str) -> Str
 /// GitHub OAuth client ids are public, the browser already sends the same
 /// one to build the authorization URL -- but is read from a binding
 /// alongside the secret since both are needed together for the token
-/// exchange. `CLIENT_SECRET` MUST be set via `wrangler secret put`, never
-/// committed to `wrangler.toml`.
+/// exchange. `CLIENT_SECRET` MUST be set via `wrangler secret put` (cf has none yet), never
+/// committed to `deploy.json`/`cloudflare.config.ts`.
 pub(crate) const CLIENT_ID_BINDING: &str = "SYNCED_SHARE_GITHUB_CLIENT_ID";
 const CLIENT_SECRET_BINDING: &str = "SYNCED_SHARE_GITHUB_CLIENT_SECRET";
 

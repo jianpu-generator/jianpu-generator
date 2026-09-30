@@ -2,8 +2,8 @@
 // (a bare host, no scheme -- see that env var's doc comments in
 // `useSyncedShareOwner.ts`/`accountAuthCallback.ts`).
 //
-// Local dev points this at `localhost:8787` (`wrangler dev`, see
-// `dekit.yaml`), which serves plain HTTP -- `wrangler dev` only serves HTTPS
+// Local dev points this at `localhost:8787` (`cf dev`, see
+// `dekit.yaml`), which serves plain HTTP -- `cf dev` only serves HTTPS
 // when started with `--local-protocol https`, and that requires trusting its
 // self-signed cert in every browser profile/device before `fetch()` will
 // succeed (a one-time click-through per browser that's easy to forget and

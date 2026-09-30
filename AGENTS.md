@@ -44,11 +44,11 @@ To run local dev, use `mprocs -c dekit.yaml`.
   require a rustc version ahead of this repo's. The pre-commit job skips
   with a message rather than failing if `sqruff` isn't on `PATH`.
 - `worker-build` (Cloudflare's build tool that compiles a `workers-rs`
-  crate — `crates/live-share-worker` — to the wasm bundle `wrangler`
-  expects, per `crates/live-share-worker/wrangler.toml`'s `[build] command`):
+  crate — `crates/live-share-worker` — to the wasm bundle `cf`
+  expects, per `crates/live-share-worker/wrangler.config.ts`'s `build.command`):
   install with `cargo install worker-build`. Only needed to actually build
-  the deployable bundle (e.g. via `wrangler dev`/`deploy`, or running
-  `worker-build` directly to sanity-check the wrangler config) — the
+  the deployable bundle (e.g. via `cf dev`/`deploy`, or running
+  `worker-build` directly to sanity-check the cf config) — the
   pre-commit `live-share-worker-wasm-check` job doesn't need it, since it
   only runs `cargo check --target wasm32-unknown-unknown`, and skips with a
   message rather than failing if the `wasm32-unknown-unknown` target isn't
@@ -74,7 +74,7 @@ It applies on every channel:
 - serde JSON and worker `postMessage` messages
 - the live-share worker's HTTP API
 - the D1 schema, including test scripts that query it
-- deploy/build config (`wrangler.toml`, workflows, `.env`)
+- deploy/build config (`cloudflare.config.ts`, workflows, `.env`)
 - Pages Functions
 - e2e selectors and mocks
 

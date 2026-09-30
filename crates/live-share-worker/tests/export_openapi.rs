@@ -13,12 +13,13 @@
 //! Function bundles.
 //!
 //! And `e2eWorkerConfig.json` (`live_share_worker::e2e_worker_config`): the
-//! `--var` names `web/playwright.config.ts` overrides to point the worker at
+//! var names `web/playwright.config.ts` overrides to point the worker at
 //! the mock GitHub server and enable the test-only `POST /e2e/reset` route.
 //!
-//! And `deployConfig.json`, read straight out of `wrangler.toml`'s `[vars]`:
-//! the GitHub OAuth client id and public worker host that the web build and
-//! the link-preview Pages Function need, so they are declared only there.
+//! And `deployConfig.json`, copied from the crate's `deploy.json`: the
+//! GitHub OAuth client id and public worker host that the web build and the
+//! link-preview Pages Function need, and the D1 database id, so they are
+//! declared only there (`cloudflare.config.ts` reads it too).
 
 use std::fs;
 use std::path::PathBuf;
@@ -28,24 +29,14 @@ use serde::{Deserialize, Serialize};
 use live_share_worker::e2e_worker_config::e2e_worker_config;
 use live_share_worker::share_id::share_id_format;
 
-#[derive(Deserialize)]
-struct WranglerConfig {
-    vars: WranglerVars,
-}
-
-#[derive(Deserialize)]
-struct WranglerVars {
-    #[serde(rename = "SYNCED_SHARE_GITHUB_CLIENT_ID")]
-    github_client_id: String,
-    #[serde(rename = "SYNCED_SHARE_PUBLIC_HOST")]
-    public_host: String,
-}
-
-#[derive(Serialize)]
+/// `deploy.json`, republished as-is: the deployment values `cloudflare.config.ts`
+/// also reads.
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DeployConfig {
     github_client_id: String,
     worker_host: String,
+    d1_database_id: String,
 }
 
 #[test]
@@ -63,15 +54,12 @@ fn export_openapi() -> Result<(), Box<dyn std::error::Error>> {
         out_dir.join("e2eWorkerConfig.json"),
         serde_json::to_string_pretty(&e2e_worker_config())?,
     )?;
-    let wrangler: WranglerConfig = toml::from_str(&fs::read_to_string(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("wrangler.toml"),
+    let deploy: DeployConfig = serde_json::from_str(&fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("deploy.json"),
     )?)?;
     fs::write(
         out_dir.join("deployConfig.json"),
-        serde_json::to_string_pretty(&DeployConfig {
-            github_client_id: wrangler.vars.github_client_id,
-            worker_host: wrangler.vars.public_host,
-        })?,
+        serde_json::to_string_pretty(&deploy)?,
     )?;
     Ok(())
 }

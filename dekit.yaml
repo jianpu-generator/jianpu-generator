@@ -4,13 +4,13 @@
 #
 # Starts both halves of local dev needed to test "Sign in with GitHub"
 # against the real GitHub OAuth App:
-# - worker: `wrangler dev` for crates/live-share-worker, real GitHub OAuth
+# - worker: `cf dev` for crates/live-share-worker, real GitHub OAuth
 #   creds sourced from that crate's gitignored .env.local (fill in
 #   SYNCED_SHARE_GITHUB_CLIENT_SECRET there first).
 # - web: the Vite dev server, pointed at the local worker via
 #   web/.env.local's VITE_SYNCED_SHARE_HOST=localhost:8787.
 #
-# Deliberately plain HTTP here (no `--local-protocol https`): wrangler dev's
+# Deliberately plain HTTP here (no `--local-protocol https`): cf dev's
 # HTTPS mode serves a self-signed cert that a browser silently rejects
 # (fetch() surfaces it as an opaque "Failed to fetch") until you visit the
 # origin directly and click through the cert warning -- a step that has to
@@ -21,17 +21,15 @@
 procs:
   worker:
     cwd: crates/live-share-worker
-    # `-y` on both `npx wrangler` calls: without it, npx prompts
-    # ("Need to install the following packages: wrangler@X. Ok to
-    # proceed? (y)") the first time it's run on a machine without
-    # wrangler cached, and mprocs doesn't forward keystrokes into this
-    # pane -- the prompt just sits there forever, hanging `just dev`.
+    # `cf` and `wrangler` are dev dependencies of this crate
+    # (`package.json`); `pnpm install` there once before `just dev`. cf has
+    # no `--var`, so the real client secret goes in via
+    # `WORKER_VAR_OVERRIDES` (see `cloudflare.config.ts`).
     shell: >
       set -a && . ./.env.local && set +a &&
-      npx -y wrangler d1 migrations apply DB --local &&
-      npx -y wrangler dev --port 8787
-      --var SYNCED_SHARE_GITHUB_CLIENT_ID:Ov23liFN0gIJmZ2VREGm
-      --var SYNCED_SHARE_GITHUB_CLIENT_SECRET:$SYNCED_SHARE_GITHUB_CLIENT_SECRET
+      export WORKER_VAR_OVERRIDES="{\"SYNCED_SHARE_GITHUB_CLIENT_SECRET\":\"$SYNCED_SHARE_GITHUB_CLIENT_SECRET\"}" &&
+      pnpm exec cf d1 migrations apply $(jq -r .d1DatabaseId deploy.json) --local --dir ../../live-share-worker/migrations &&
+      pnpm exec cf dev --port 8787
   web:
     cwd: web
     shell: pnpm dev

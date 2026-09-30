@@ -1,7 +1,7 @@
 //! Unit tests for `files::classify_content_write` -- the one piece of the
 //! cloud storage backend's content-save conflict logic worth testing in
 //! isolation from real D1 (per this crate's hard convention: no test here
-//! touches D1, only `wrangler dev` + Playwright e2e do -- see `files.rs`'s
+//! touches D1, only `cf dev` + Playwright e2e do -- see `files.rs`'s
 //! module doc comment).
 #![allow(clippy::disallowed_macros)]
 

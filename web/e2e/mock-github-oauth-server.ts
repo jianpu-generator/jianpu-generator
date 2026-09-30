@@ -3,12 +3,12 @@
 // exchange, `crates/live-share-worker/src/oauth.rs`) and `GET /user`
 // (identity verification, `crates/live-share-worker/src/identity/github.rs`).
 //
-// Both calls happen inside the worker process (`wrangler dev`), not the
+// Both calls happen inside the worker process (`cf dev`), not the
 // browser -- Playwright's `page.route()` can only intercept requests the
 // browser itself makes (used elsewhere in this suite for the popup's
 // navigation to GitHub's authorization endpoint), so this is a real local
 // HTTP server the worker is pointed at instead, via `SYNCED_SHARE_GITHUB_TOKEN_URL`/
-// `SYNCED_SHARE_GITHUB_USER_URL` (see `crates/live-share-worker/wrangler.toml`'s
+// `SYNCED_SHARE_GITHUB_USER_URL` (see `crates/live-share-worker/cloudflare.config.ts`'s
 // e2e-only `.dev.vars.e2e` override loaded by `playwright.config.ts`'s
 // webServer command). Ensures no Synced Share e2e run ever makes a real
 // GitHub API call (task 11).

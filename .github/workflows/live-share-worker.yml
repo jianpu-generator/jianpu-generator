@@ -7,12 +7,10 @@ name: Deploy Synced Share worker
 #
 # Prerequisite not handled by this pipeline (TODO §7 / task 12): a deploy
 # here will succeed, but GitHub sign-in stays broken until, once, by hand:
-#   1. `SYNCED_SHARE_GITHUB_CLIENT_ID` in `crates/live-share-worker/wrangler.toml`
-#      is filled in (still the `REPLACE_AT_ROLLOUT` placeholder), and
-#   2. `SYNCED_SHARE_GITHUB_CLIENT_SECRET` is set via
-#      `wrangler secret put SYNCED_SHARE_GITHUB_CLIENT_SECRET` from
-#      `crates/live-share-worker/`.
-# Both require a real Synced Share GitHub OAuth App, which this pipeline
+#   `SYNCED_SHARE_GITHUB_CLIENT_SECRET` is set via
+#   `pnpm exec wrangler secret put SYNCED_SHARE_GITHUB_CLIENT_SECRET` from
+#   `crates/live-share-worker/` (cf has no `secret put` yet).
+# It requires a real Synced Share GitHub OAuth App, which this pipeline
 # does not create.
 
 on:
@@ -39,7 +37,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       # Per AGENTS.md's "Local tooling" section: `worker-build` compiles
-      # this `workers-rs` crate to the wasm bundle `wrangler` expects.
+      # this `workers-rs` crate to the wasm bundle `cf` expects.
       - name: Install worker-build
         run: cargo install worker-build --locked
 
@@ -47,21 +45,28 @@ jobs:
         working-directory: crates/live-share-worker
         run: worker-build --release
 
-      # `wrangler d1 migrations apply` only applies migration files not yet
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          package_json_file: crates/live-share-worker/package.json
+
+      - name: Install cf
+        working-directory: crates/live-share-worker
+        run: pnpm install --frozen-lockfile
+
+      # `cf d1 migrations apply` only applies migration files not yet
       # recorded as applied, so this is safe to run on every deploy even
       # though task 12 already applied the current migrations by hand.
       - name: Apply D1 migrations
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: crates/live-share-worker
-          command: d1 migrations apply jianpu-live-share --remote
+        working-directory: crates/live-share-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec cf d1 migrations apply "$(jq -r .d1DatabaseId deploy.json)" --dir ../../live-share-worker/migrations
 
       - name: Deploy to Cloudflare Workers
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: crates/live-share-worker
-          command: deploy
+        working-directory: crates/live-share-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec cf deploy

@@ -8,7 +8,7 @@
 //! Gated on `GITHUB_USER_IDS_VAR`: the route is only registered into the
 //! router when that var is set, so without it the worker answers
 //! `/e2e/reset` exactly as it does any unknown path. The real
-//! `wrangler.toml` never sets it; only e2e's local `wrangler dev` passes it
+//! `deploy.json`/`cloudflare.config.ts` never sets it; only e2e's local `cf dev` passes it
 //! (via `--var`, see `web/playwright.config.ts`). Its value is also the
 //! allowlist: a JSON array of the GitHub user ids whose rows the route may
 //! delete, so the route can never touch any other account's rows.
