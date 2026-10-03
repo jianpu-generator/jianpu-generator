@@ -85,6 +85,9 @@
 .pitch-drawer-piano {
   flex: none;
   margin-left: auto;
+  /* The caption hangs below the keys without taking layout space, so the keys
+   * (not keys + caption) are what align with the guitar diagram. */
+  position: relative;
 }
 
 .pitch-drawer-piano-diagram {
@@ -92,6 +95,10 @@
 }
 
 .pitch-drawer-piano-function {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
   min-height: 1.2em;
   color: var(--muted);
   font-size: 0.85rem;
