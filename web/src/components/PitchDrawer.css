@@ -62,7 +62,11 @@
 }
 
 .pitch-drawer-body--chord .pitch-drawer-text {
-  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  column-gap: 16px;
 }
 
 .pitch-drawer-body--chord {
