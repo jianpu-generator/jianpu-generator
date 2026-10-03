@@ -61,6 +61,22 @@
   padding: 4px 16px 16px;
 }
 
+.pitch-drawer-body--chord {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+/* The tone caption hangs below the keys, so leave it room. */
+.pitch-drawer-diagrams {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding-bottom: 12px;
+}
+
 .pitch-drawer-name {
   font-size: 1.75rem;
   font-weight: 600;
@@ -83,8 +99,8 @@
 }
 
 .pitch-drawer-piano {
-  flex: none;
-  margin-left: auto;
+  flex: 0 1 auto;
+  min-width: 0;
   /* The caption hangs below the keys without taking layout space, so the keys
    * (not keys + caption) are what align with the guitar diagram. */
   position: relative;
@@ -107,4 +123,6 @@
 
 .pitch-drawer-piano-diagram svg {
   display: block;
+  max-width: 100%;
+  height: auto;
 }
