@@ -240,7 +240,7 @@ fn keyboard_spans_chord_tones_with_white_key_padding() {
     // each side (A3 B3 .. A4 B4) = 9 white keys.
     let source = chords_score("C4", "1 - - -");
     let svg = describe_chord_token(&source, "1").piano_diagram_svg;
-    assert!(svg.contains(r#"viewBox="0 0 198 64""#), "{svg}");
+    assert!(svg.contains(r#"viewBox="0 0 198 112""#), "{svg}");
 }
 
 #[test]
