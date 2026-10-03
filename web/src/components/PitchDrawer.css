@@ -61,6 +61,10 @@
   padding: 4px 16px 16px;
 }
 
+.pitch-drawer-body--chord .pitch-drawer-text {
+  text-align: center;
+}
+
 .pitch-drawer-body--chord {
   flex-direction: column;
   align-items: stretch;
