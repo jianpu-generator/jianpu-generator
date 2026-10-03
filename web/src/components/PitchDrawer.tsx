@@ -93,6 +93,7 @@ function PitchDrawerContent({
           </div>
         )}
       </div>
+      <PianoDiagram svg={chord.pianoDiagramSvg} />
       {chord.guitarDiagramSvg === undefined ? null : (
         <div
           className="pitch-drawer-guitar-diagram"
@@ -102,6 +103,42 @@ function PitchDrawerContent({
           dangerouslySetInnerHTML={{ __html: chord.guitarDiagramSvg }}
         />
       )}
+    </div>
+  )
+}
+
+/** The keyboard SVG plus a caption naming the function (root, minor 3rd, ...)
+ * of the highlighted key under the mouse or last pressed. Mouse hover also
+ * gets the SVG's native `<title>` tooltip; the caption is what touch sees. */
+function PianoDiagram({ svg }: { svg: string }) {
+  const [toneFunction, setToneFunction] = useState<string | null>(null)
+  const toneFunctionAt = (target: EventTarget) =>
+    target instanceof Element
+      ? (target
+          .closest('[data-tone-function]')
+          ?.getAttribute('data-tone-function') ?? null)
+      : null
+  return (
+    <div className="pitch-drawer-piano">
+      <div
+        className="pitch-drawer-piano-diagram"
+        data-testid="pitch-drawer-piano-diagram"
+        onPointerOver={(event) => setToneFunction(toneFunctionAt(event.target))}
+        onPointerDown={(event) => setToneFunction(toneFunctionAt(event.target))}
+        onPointerLeave={(event) => {
+          // Touch has no hover: keep the pressed tone's name shown.
+          if (event.pointerType === 'mouse') setToneFunction(null)
+        }}
+        // Our own Rust-generated SVG (`piano_diagram_svg.rs`), not user input.
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: see above
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+      <div
+        className="pitch-drawer-piano-function"
+        data-testid="pitch-drawer-piano-function"
+      >
+        {toneFunction}
+      </div>
     </div>
   )
 }

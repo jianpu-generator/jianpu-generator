@@ -81,3 +81,25 @@
   width: 132px;
   height: auto;
 }
+
+.pitch-drawer-piano {
+  flex: none;
+  margin-left: auto;
+}
+
+.pitch-drawer-piano-diagram {
+  color: var(--text);
+}
+
+.pitch-drawer-piano-function {
+  min-height: 1.2em;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.pitch-drawer-piano-diagram svg {
+  display: block;
+  height: 64px;
+  width: auto;
+}
