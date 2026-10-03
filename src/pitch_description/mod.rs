@@ -4,6 +4,7 @@
 mod chord_template;
 mod guitar_diagram_svg;
 mod guitar_voicing;
+mod piano_diagram_svg;
 mod spelling;
 
 use itertools::Itertools;
@@ -16,7 +17,10 @@ use crate::source_edit::ByteRange;
 use chord_template::chord_template;
 use guitar_diagram_svg::render_guitar_diagram_svg;
 use guitar_voicing::{chords_db_bass_name, find_guitar_voicing};
-use spelling::SpelledPitch;
+use piano_diagram_svg::{
+    interval_function_name, interval_label, render_piano_diagram_svg, PianoTone,
+};
+use spelling::{Interval, SpelledPitch};
 
 /// What one selected note or chord means in letter names, resolved against
 /// the key in effect at its measure.
@@ -45,6 +49,11 @@ pub struct ChordDescription {
     /// has no voicing for this chord kind (e.g. `7sus2`). A slash chord with
     /// no slash-specific voicing falls back to its plain chord's.
     pub guitar_diagram_svg: Option<String>,
+    /// Keyboard SVG spanning just the chord tones plus padding; each tone is
+    /// labelled with its interval from the chord root (`1 3 5`, `1 b3 5`).
+    /// Always root position, unless the slash bass is one of the triad's
+    /// tones, in which case that tone is lowest.
+    pub piano_diagram_svg: String,
 }
 
 /// Describes the selection when it covers exactly one sounding note or
@@ -185,7 +194,10 @@ fn describe_chord(chord: &GroupedChordNote, tonic: SpelledPitch) -> ChordDescrip
                 .and_then(|suffix| find_guitar_voicing(root.pitch_class(), suffix))
         })
         .map(|voicing| render_guitar_diagram_svg(voicing, &chord_name));
+    let piano_diagram_svg =
+        render_piano_diagram_svg(&piano_tones(root, &template.intervals, bass), &chord_name);
     ChordDescription {
+        piano_diagram_svg,
         tone_names: template
             .intervals
             .iter()
@@ -196,6 +208,40 @@ fn describe_chord(chord: &GroupedChordNote, tonic: SpelledPitch) -> ChordDescrip
         chord_name,
     }
 }
+
+/// The chord tones as keys, stacked upward from the root. A slash bass that
+/// is one of the triad's tones (not the seventh) inverts the chord so that
+/// tone is lowest; any other bass leaves it in root position.
+fn piano_tones(
+    root: SpelledPitch,
+    intervals: &[Interval],
+    bass: Option<SpelledPitch>,
+) -> Vec<PianoTone> {
+    const ROOT_MIDI_OCTAVE_START: i16 = 60;
+    let root_midi = ROOT_MIDI_OCTAVE_START + i16::from(root.pitch_class());
+    let inverted_from = bass.and_then(|bass| {
+        intervals
+            .iter()
+            .take(TRIAD_TONE_COUNT)
+            .position(|&interval| root.up(interval).pitch_class() == bass.pitch_class())
+    });
+    intervals
+        .iter()
+        .enumerate()
+        .map(|(index, &interval)| {
+            let raised_an_octave = inverted_from.is_some_and(|bass_index| index < bass_index);
+            PianoTone {
+                midi: root_midi
+                    + i16::from(interval.semitones)
+                    + if raised_an_octave { 12 } else { 0 },
+                label: interval_label(interval),
+                function_name: interval_function_name(interval),
+            }
+        })
+        .collect()
+}
+
+const TRIAD_TONE_COUNT: usize = 3;
 
 /// chords-db only has slash voicings for plain major/minor triads, under
 /// suffixes like `"/G"` and `"m/C"`.
