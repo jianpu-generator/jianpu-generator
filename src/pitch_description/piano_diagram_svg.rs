@@ -3,9 +3,10 @@ use itertools::Itertools;
 use super::spelling::Interval;
 
 const WHITE_KEY_WIDTH: i16 = 22;
-const WHITE_KEY_HEIGHT: i16 = 64;
+// Matches the guitar diagram's overall height so the two sit level.
+const WHITE_KEY_HEIGHT: i16 = 112;
 const BLACK_KEY_WIDTH: i16 = 14;
-const BLACK_KEY_HEIGHT: i16 = 40;
+const BLACK_KEY_HEIGHT: i16 = 70;
 const LABEL_FONT_SIZE: i16 = 9;
 /// White keys shown beyond the outermost chord tone on each side, so the
 /// viewer can tell which key a chord tone is from its neighbours.
