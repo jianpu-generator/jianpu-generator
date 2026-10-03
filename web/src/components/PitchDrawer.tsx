@@ -81,7 +81,6 @@ function PitchDrawerContent({
           {chord.chordName}
         </div>
         <div className="pitch-drawer-detail">
-          Notes:{' '}
           <span data-testid="pitch-drawer-letter-names">
             {chord.toneNames.join(' ')}
           </span>
