@@ -2,9 +2,9 @@ use itertools::Itertools;
 
 use super::spelling::Interval;
 
-const WHITE_KEY_WIDTH: i16 = 16;
+const WHITE_KEY_WIDTH: i16 = 22;
 const WHITE_KEY_HEIGHT: i16 = 64;
-const BLACK_KEY_WIDTH: i16 = 10;
+const BLACK_KEY_WIDTH: i16 = 14;
 const BLACK_KEY_HEIGHT: i16 = 40;
 const LABEL_FONT_SIZE: i16 = 9;
 /// White keys shown beyond the outermost chord tone on each side, so the
