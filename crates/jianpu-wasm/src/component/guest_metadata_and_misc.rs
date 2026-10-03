@@ -94,6 +94,7 @@ pub(super) fn describe_selection(
             tone_names: chord.tone_names,
             bass_note: chord.bass_note,
             guitar_diagram_svg: chord.guitar_diagram_svg,
+            piano_diagram_svg: chord.piano_diagram_svg,
         }),
     })
 }

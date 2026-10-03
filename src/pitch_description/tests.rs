@@ -188,6 +188,74 @@ fn chord_kind_missing_from_chords_db_has_no_diagram() {
 }
 
 #[test]
+fn major_chord_keyboard_labels_are_one_three_five() {
+    let source = chords_score("D4", "1 - - -");
+    let svg = describe_chord_token(&source, "1").piano_diagram_svg;
+    assert!(svg.contains(r#"data-piano-tones="1:0 3:4 5:7""#), "{svg}");
+}
+
+#[test]
+fn same_quality_gets_same_labels_in_any_key() {
+    let in_d = describe_chord_token(&chords_score("D4", "4 - - -"), "4").piano_diagram_svg;
+    let in_c = describe_chord_token(&chords_score("C4", "1 - - -"), "1").piano_diagram_svg;
+    assert!(in_d.contains(r#"data-piano-tones="1:0 3:4 5:7""#), "{in_d}");
+    assert!(in_c.contains(r#"data-piano-tones="1:0 3:4 5:7""#), "{in_c}");
+}
+
+#[test]
+fn minor_seventh_keyboard_labels_use_flats() {
+    let source = chords_score("C4", "1m7 - - -");
+    let svg = describe_chord_token(&source, "1m7").piano_diagram_svg;
+    assert!(
+        svg.contains(r#"data-piano-tones="1:0 b3:3 5:7 b7:10""#),
+        "{svg}"
+    );
+}
+
+#[test]
+fn augmented_keyboard_labels_use_sharp_fifth() {
+    let source = chords_score("C4", "1+ - - -");
+    let svg = describe_chord_token(&source, "1+").piano_diagram_svg;
+    assert!(svg.contains(r#"data-piano-tones="1:0 3:4 #5:8""#), "{svg}");
+}
+
+#[test]
+fn slash_bass_inside_the_triad_inverts_the_keyboard() {
+    // C/G: G lowest, then C and E an octave up.
+    let source = chords_score("C4", "1/5 - - -");
+    let svg = describe_chord_token(&source, "1/5").piano_diagram_svg;
+    assert!(svg.contains(r#"data-piano-tones="1:5 3:9 5:0""#), "{svg}");
+}
+
+#[test]
+fn no_slash_bass_keeps_root_position() {
+    let source = chords_score("C4", "1 - - -");
+    let svg = describe_chord_token(&source, "1").piano_diagram_svg;
+    assert!(svg.contains(r#"data-piano-tones="1:0 3:4 5:7""#), "{svg}");
+}
+
+#[test]
+fn keyboard_spans_chord_tones_with_white_key_padding() {
+    // C E G is midi 60..67: C D E F G A B C ... padded by two white keys
+    // each side (A3 B3 .. A4 B4) = 9 white keys.
+    let source = chords_score("C4", "1 - - -");
+    let svg = describe_chord_token(&source, "1").piano_diagram_svg;
+    assert!(svg.contains(r#"viewBox="0 0 198 112""#), "{svg}");
+}
+
+#[test]
+fn keyboard_tones_carry_their_function_names() {
+    let source = chords_score("C4", "1m7 - - -");
+    let svg = describe_chord_token(&source, "1m7").piano_diagram_svg;
+    for function_name in ["Root", "Minor 3rd", "Perfect 5th", "Minor 7th"] {
+        assert!(
+            svg.contains(&format!(r#"data-tone-function="{function_name}""#)),
+            "{function_name}: {svg}"
+        );
+    }
+}
+
+#[test]
 fn rest_is_not_described() {
     let source = notes_score("C4", "0 2 3 4");
     let range = token_range(&source, "[M] ", "0", 0);

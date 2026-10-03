@@ -338,6 +338,34 @@ Then(
   },
 )
 
+Then(
+  'the pitch drawer shows a keyboard with tones {string}',
+  async ({ page }, tones: string) => {
+    await expect(
+      page.getByTestId('pitch-drawer-piano-diagram').locator('svg'),
+    ).toHaveAttribute('data-piano-tones', tones, { timeout: 10_000 })
+  },
+)
+
+When(
+  'I press the keyboard key with function {string}',
+  async ({ page }, toneFunction: string) => {
+    await page
+      .locator(`[data-tone-function="${toneFunction}"]`)
+      .dispatchEvent('pointerdown')
+  },
+)
+
+Then(
+  'the pitch drawer names the pressed keyboard key {string}',
+  async ({ page }, toneFunction: string) => {
+    await expectText(
+      page.getByTestId('pitch-drawer-piano-function'),
+      toneFunction,
+    )
+  },
+)
+
 Then('the pitch drawer shows no guitar diagram', async ({ page }) => {
   // Wait for the drawer's content to be in place first, so this doesn't
   // pass before the description arrives.

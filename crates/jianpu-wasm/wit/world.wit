@@ -973,6 +973,7 @@ world jianpu-wasm {
         tone-names: list<string>,
         bass-note: option<string>,
         guitar-diagram-svg: option<string>,
+        piano-diagram-svg: string,
     }
 
     variant pitch-description {
