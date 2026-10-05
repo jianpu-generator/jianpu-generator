@@ -138,8 +138,12 @@ export default defineConfig({
       // `< /dev/null`: with nothing left to apply, `cf d1 migrations apply`
       // prints `[]` and then never exits while stdin is an open pipe, which
       // would hang the `&&` chain until the timeout.
+      // CI applies the migrations in its own step instead (this command can
+      // fail to exit after applying there, which would hang the `&&` chain).
       command:
-        `pnpm exec cf d1 migrations apply ${deployConfig.d1DatabaseId} --local --dir ../../live-share-worker/migrations --persist-to .wrangler/e2e-state < /dev/null && ` +
+        (process.env.CI
+          ? ''
+          : `pnpm exec cf d1 migrations apply ${deployConfig.d1DatabaseId} --local --dir ../../live-share-worker/migrations --persist-to .wrangler/e2e-state < /dev/null && `) +
         'pnpm exec cf dev --port 8797 --persist-to .wrangler/e2e-state',
       stdout: 'pipe',
       stderr: 'pipe',

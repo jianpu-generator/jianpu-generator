@@ -161,15 +161,14 @@ jobs:
         working-directory: web
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: debug-cf-dev
+      # `cf d1 migrations apply` can fail to exit after applying on CI, which
+      # would hang Playwright's web server command, so CI applies the
+      # migrations here under a timeout (see `web/playwright.config.ts`).
+      - name: Apply e2e migrations
         working-directory: crates/live-share-worker
-        continue-on-error: true
         run: |
           D=$(node -p "require('./deploy.json').d1DatabaseId")
-          (bash -c "pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/e2e-state < /dev/null && pnpm exec cf dev --port 8797 --persist-to .wrangler/e2e-state" > /tmp/chain.log 2>&1 &)
-          for i in $(seq 1 24); do curl -s -o /dev/null -w "%{http_code}\n" localhost:8797/health && break; sleep 5; done
-          ps aux | grep -E "cf|wrangler|workerd" | grep -v grep | cut -c1-200
-          tail -40 /tmp/chain.log
+          timeout 120 pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/e2e-state < /dev/null || [ $? -eq 124 ]
 
       - name: e2e-tests
         working-directory: web
