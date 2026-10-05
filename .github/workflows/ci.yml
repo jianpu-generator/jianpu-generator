@@ -165,9 +165,9 @@ jobs:
         working-directory: crates/live-share-worker
         continue-on-error: true
         run: |
-          (pnpm exec cf dev --port 8797 --persist-to .wrangler/dbg-state > /tmp/cfdev.log 2>&1 < /dev/null &) 
-          for i in $(seq 1 40); do curl -s -o /dev/null -w "%{http_code}\n" localhost:8797/health && break; sleep 5; done
-          cat /tmp/cfdev.log | tail -60
+          D=$(node -p "require('../../web/src/generated/live-share-worker/deployConfig.json').d1DatabaseId")
+          timeout 90 pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/dbg2 < /dev/null; echo "migrate exit=$?"
+          timeout 90 pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/dbg2 < /dev/null; echo "migrate2 exit=$?"
 
       - name: e2e-tests
         working-directory: web
