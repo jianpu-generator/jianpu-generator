@@ -165,7 +165,7 @@ jobs:
         working-directory: crates/live-share-worker
         continue-on-error: true
         run: |
-          D=$(node -p "require('../../web/src/generated/live-share-worker/deployConfig.json').d1DatabaseId")
+          D=$(node -p "require('./deploy.json').d1DatabaseId")
           timeout 90 pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/dbg2 < /dev/null; echo "migrate exit=$?"
           timeout 90 pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/dbg2 < /dev/null; echo "migrate2 exit=$?"
 
