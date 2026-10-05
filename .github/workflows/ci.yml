@@ -161,16 +161,25 @@ jobs:
         working-directory: web
         run: pnpm exec playwright install --with-deps chromium
 
-      # `cf d1 migrations apply` can fail to exit after applying on CI, which
-      # would hang Playwright's web server command, so CI applies the
-      # migrations here under a timeout (see `web/playwright.config.ts`).
+      # `cf d1 migrations apply` is flaky on CI (sometimes it hangs mid-apply or
+      # never exits), which would hang or break Playwright's web server
+      # command, so CI applies the migrations here, retrying under a timeout
+      # until the schema is really there (see `web/playwright.config.ts`).
       - name: Apply e2e migrations
         working-directory: crates/live-share-worker
         run: |
           D=$(node -p "require('./deploy.json').d1DatabaseId")
-          timeout 120 pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/e2e-state < /dev/null || [ $? -eq 124 ]
-          find .wrangler -type f | head -20
-          timeout 60 pnpm exec cf d1 execute $D --local --persist-to .wrangler/e2e-state --command "select name from sqlite_master" < /dev/null || true
+          for attempt in 1 2 3 4 5; do
+            timeout 60 pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/e2e-state < /dev/null || true
+            for db in .wrangler/e2e-state/v3/d1/miniflare-D1DatabaseObject/*.sqlite; do
+              case "$db" in */metadata.sqlite) continue;; esac
+              if sqlite3 "$db" "select name from sqlite_master where name = 'shares'" | grep -q shares; then
+                echo "migrations applied (attempt $attempt)"; exit 0
+              fi
+            done
+            echo "schema missing after attempt $attempt"
+          done
+          exit 1
 
       - name: e2e-tests
         working-directory: web
