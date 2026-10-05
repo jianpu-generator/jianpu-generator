@@ -189,5 +189,7 @@ jobs:
         if: always()
         working-directory: crates/live-share-worker
         run: |
+          find / -name '*.sqlite' -path '*D1Database*' -newer deploy.json 2>/dev/null | head -20
+          find .wrangler -maxdepth 2 | head -30
           ls -la .wrangler/e2e-state/v3/d1/miniflare-D1DatabaseObject/
           for db in .wrangler/e2e-state/v3/d1/miniflare-D1DatabaseObject/*.sqlite; do echo "== $db"; sqlite3 "$db" ".tables"; done
