@@ -161,6 +161,14 @@ jobs:
         working-directory: web
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: debug-cf-dev
+        working-directory: crates/live-share-worker
+        continue-on-error: true
+        run: |
+          (pnpm exec cf dev --port 8797 --persist-to .wrangler/dbg-state > /tmp/cfdev.log 2>&1 < /dev/null &) 
+          for i in $(seq 1 40); do curl -s -o /dev/null -w "%{http_code}\n" localhost:8797/health && break; sleep 5; done
+          cat /tmp/cfdev.log | tail -60
+
       - name: e2e-tests
         working-directory: web
         run: pnpm build:wasm-component && pnpm build:worker-types && pnpm test:e2e:resolve
