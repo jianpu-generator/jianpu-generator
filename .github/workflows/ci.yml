@@ -184,3 +184,10 @@ jobs:
       - name: e2e-tests
         working-directory: web
         run: pnpm build:wasm-component && pnpm build:worker-types && pnpm test:e2e:resolve
+
+      - name: debug-d1-files
+        if: always()
+        working-directory: crates/live-share-worker
+        run: |
+          ls -la .wrangler/e2e-state/v3/d1/miniflare-D1DatabaseObject/
+          for db in .wrangler/e2e-state/v3/d1/miniflare-D1DatabaseObject/*.sqlite; do echo "== $db"; sqlite3 "$db" ".tables"; done
