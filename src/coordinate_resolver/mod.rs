@@ -13,6 +13,8 @@ pub use resolve::{resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, Reso
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
+mod tests_bar_number_click_target;
+#[cfg(test)]
 mod tests_basic_resolve;
 #[cfg(test)]
 mod tests_highlights;
