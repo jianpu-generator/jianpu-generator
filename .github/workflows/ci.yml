@@ -150,6 +150,13 @@ jobs:
         working-directory: crates/live-share-worker
         run: pnpm install --frozen-lockfile
 
+      # Pre-build so the e2e web server's `cf dev` (whose build step is
+      # `cargo install worker-build && worker-build --release`) only does an
+      # incremental build within Playwright's startup timeout.
+      - name: Build live-share-worker
+        working-directory: crates/live-share-worker
+        run: cargo install worker-build --version 0.8.6 --locked && worker-build --release
+
       - name: Install Playwright Chromium
         working-directory: web
         run: pnpm exec playwright install --with-deps chromium

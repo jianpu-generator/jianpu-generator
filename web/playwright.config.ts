@@ -147,7 +147,7 @@ export default defineConfig({
       cwd: '../crates/live-share-worker',
       port: 8797,
       reuseExistingServer: true,
-      timeout: 60_000,
+      timeout: process.env.CI ? 300_000 : 60_000,
     },
   ],
   projects: [
