@@ -100,6 +100,10 @@ jobs:
         working-directory: web
         run: pnpm exec biome check .
 
+      - name: build-wasm-component
+        working-directory: web
+        run: pnpm run build:wasm-component
+
       - name: build-worker-types
         working-directory: web
         run: pnpm run build:worker-types
