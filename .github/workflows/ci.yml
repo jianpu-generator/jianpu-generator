@@ -169,6 +169,8 @@ jobs:
         run: |
           D=$(node -p "require('./deploy.json').d1DatabaseId")
           timeout 120 pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/e2e-state < /dev/null || [ $? -eq 124 ]
+          find .wrangler -type f | head -20
+          timeout 60 pnpm exec cf d1 execute $D --local --persist-to .wrangler/e2e-state --command "select name from sqlite_master" < /dev/null || true
 
       - name: e2e-tests
         working-directory: web
