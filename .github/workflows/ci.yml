@@ -166,8 +166,10 @@ jobs:
         continue-on-error: true
         run: |
           D=$(node -p "require('./deploy.json').d1DatabaseId")
-          timeout 90 pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/dbg2 < /dev/null; echo "migrate exit=$?"
-          timeout 90 pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/dbg2 < /dev/null; echo "migrate2 exit=$?"
+          (bash -c "pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/e2e-state < /dev/null && pnpm exec cf dev --port 8797 --persist-to .wrangler/e2e-state" > /tmp/chain.log 2>&1 &)
+          for i in $(seq 1 24); do curl -s -o /dev/null -w "%{http_code}\n" localhost:8797/health && break; sleep 5; done
+          ps aux | grep -E "cf|wrangler|workerd" | grep -v grep | cut -c1-200
+          tail -40 /tmp/chain.log
 
       - name: e2e-tests
         working-directory: web
