@@ -139,12 +139,14 @@ export default defineConfig({
       // prints `[]` and then never exits while stdin is an open pipe, which
       // would hang the `&&` chain until the timeout.
       // CI applies the migrations in its own step instead (this command can
-      // fail to exit after applying there, which would hang the `&&` chain).
+      // fail to exit after applying there, which would hang the `&&` chain),
+      // and there `cf dev` ignores `--persist-to` and uses the default
+      // `.wrangler/state`, so CI uses that dir for both.
       command:
         (process.env.CI
           ? ''
           : `pnpm exec cf d1 migrations apply ${deployConfig.d1DatabaseId} --local --dir ../../live-share-worker/migrations --persist-to .wrangler/e2e-state < /dev/null && `) +
-        'pnpm exec cf dev --port 8797 --persist-to .wrangler/e2e-state',
+        `pnpm exec cf dev --port 8797${process.env.CI ? '' : ' --persist-to .wrangler/e2e-state'}`,
       stdout: 'pipe',
       stderr: 'pipe',
       env: { WORKER_VAR_OVERRIDES: JSON.stringify(workerVars) },

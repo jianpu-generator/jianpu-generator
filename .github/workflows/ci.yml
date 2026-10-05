@@ -170,8 +170,8 @@ jobs:
         run: |
           D=$(node -p "require('./deploy.json').d1DatabaseId")
           for attempt in 1 2 3 4 5; do
-            timeout 60 pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/e2e-state < /dev/null || true
-            for db in .wrangler/e2e-state/v3/d1/miniflare-D1DatabaseObject/*.sqlite; do
+            timeout 60 pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations < /dev/null || true
+            for db in .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite; do
               case "$db" in */metadata.sqlite) continue;; esac
               if sqlite3 "$db" "select name from sqlite_master where name = 'shares'" | grep -q shares; then
                 echo "migrations applied (attempt $attempt)"; exit 0
@@ -184,12 +184,3 @@ jobs:
       - name: e2e-tests
         working-directory: web
         run: pnpm build:wasm-component && pnpm build:worker-types && pnpm test:e2e:resolve
-
-      - name: debug-d1-files
-        if: always()
-        working-directory: crates/live-share-worker
-        run: |
-          find / -name '*.sqlite' -path '*D1Database*' -newer deploy.json 2>/dev/null | head -20
-          find .wrangler -maxdepth 2 | head -30
-          ls -la .wrangler/e2e-state/v3/d1/miniflare-D1DatabaseObject/
-          for db in .wrangler/e2e-state/v3/d1/miniflare-D1DatabaseObject/*.sqlite; do echo "== $db"; sqlite3 "$db" ".tables"; done
