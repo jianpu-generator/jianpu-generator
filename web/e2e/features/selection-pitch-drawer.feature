@@ -49,6 +49,17 @@ Feature: Show the selected note/chord's letter names in a bottom drawer
     When I click-and-click select the chord "1m7" on the C line
     Then the pitch drawer shows a guitar diagram with frets "x 3 1 3 4 x"
 
+  Scenario: Selecting a chord shows a keyboard labelled with each tone's interval from the root
+    Given a score in key C4 with "[C] 1m7 - - -" on a chords part is loaded
+    When I click-and-click select the chord "1m7" on the C line
+    Then the pitch drawer shows a keyboard with tones "1:0 b3:3 5:7 b7:10"
+
+  Scenario: Pressing a highlighted keyboard key names its function
+    Given a score in key C4 with "[C] 1m7 - - -" on a chords part is loaded
+    When I click-and-click select the chord "1m7" on the C line
+    And I press the keyboard key with function "Minor 3rd"
+    Then the pitch drawer names the pressed keyboard key "Minor 3rd"
+
   Scenario: Selecting a single note shows no guitar diagram
     Given a score in key C4 with "[M] 1 2 3 4" is loaded
     When I click-and-click select the note "1" on the M line
