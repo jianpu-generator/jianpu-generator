@@ -106,7 +106,7 @@ async function setUpConflictingEdit(
   // Force-save immediately rather than waiting out the debounce; the next
   // content-save request this triggers is the one the one-shot 409 above
   // targets.
-  await page.keyboard.press('Meta+s')
+  await page.keyboard.press('ControlOrMeta+s')
 
   // Opening the modal after the failed save (rather than before) avoids its
   // overlay intercepting the editor click above.

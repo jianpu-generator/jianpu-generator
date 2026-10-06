@@ -128,7 +128,7 @@ export async function attemptEditAndForceSave(page: Page) {
   await focusEditor(page)
   await page.keyboard.press('Control+End')
   await page.keyboard.type(' edited')
-  await page.keyboard.press('Meta+s')
+  await page.keyboard.press('ControlOrMeta+s')
 }
 
 When(
