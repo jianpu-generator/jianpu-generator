@@ -26,7 +26,7 @@ pre-commit:
     # of this group (and run sequentially below) because it invokes
     # `pnpm run build:wasm-component`, which runs `cargo component build` —
     # that races cargo-checks for the shared Cargo package-cache lock. The
-    # full e2e suite only runs on master (last job below); CI runs it on PRs.
+    # full e2e suite is not run here; CI (`.github/workflows/ci.yml`) runs it.
     - group:
         parallel: true
         jobs:
@@ -101,13 +101,6 @@ pre-commit:
     - name: web-typecheck
       glob: "{crates/jianpu-wasm/**,crates/live-share-worker/**,web/**}"
       run: cd web && pnpm run build:wasm-component && pnpm run build:worker-types && python3 ../scripts/check-wasm-size.py && pnpm exec tsc -b
-
-    # The slowest job, so master only; CI runs the full suite on PRs.
-    - name: e2e-tests
-      only:
-        - ref: master
-      glob: "{web/src/**,web/e2e/**,crates/**,src/**}"
-      run: (cd crates/live-share-worker && pnpm install --frozen-lockfile) && cd web && pnpm build:wasm-component && pnpm test:e2e:resolve
 
 pre-merge-commit:
   jobs:
