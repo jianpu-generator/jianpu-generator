@@ -1,3 +1,7 @@
+## Branching and PRs
+
+**Never commit directly to `master`.** Always work on a feature branch and open a pull request. The full e2e suite is too large to run in the pre-commit hook, so it runs in CI (`.github/workflows/ci.yml`) on the PR instead — the PR is the gate, not the local commit.
+
 ## Syntax documentation
 
 The `.jianpu` input syntax is documented in `syntax.md`.

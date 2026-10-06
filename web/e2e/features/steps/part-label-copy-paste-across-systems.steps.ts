@@ -131,11 +131,11 @@ When('I press the copy keyboard shortcut', async ({ page }) => {
   // Chromium binds its native copy accelerator to Cmd+C on macOS hosts
   // (Monaco's own "CtrlCmd+C" keybinding follows the same OS convention),
   // not Ctrl+C — `Meta` is Playwright's cross-platform name for that key.
-  await page.keyboard.press('Meta+c')
+  await page.keyboard.press('ControlOrMeta+c')
 })
 
 When('I press the paste keyboard shortcut', async ({ page }) => {
-  await page.keyboard.press('Meta+v')
+  await page.keyboard.press('ControlOrMeta+v')
 })
 
 Then(

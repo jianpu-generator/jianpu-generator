@@ -13,7 +13,7 @@ Then('the play-measure button is disabled', async ({ page }) => {
 })
 
 When('I press Meta+Enter', async ({ page }) => {
-  await page.keyboard.press('Meta+Enter')
+  await page.keyboard.press('ControlOrMeta+Enter')
   await page.waitForTimeout(500)
 })
 

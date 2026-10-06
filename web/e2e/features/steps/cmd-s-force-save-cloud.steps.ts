@@ -68,7 +68,7 @@ Then(
 When('I press Cmd\\/Ctrl+S', async ({ page }) => {
   // No `page.clock.fastForward` call anywhere in this test: the save
   // request firing here proves the shortcut itself forced the flush.
-  await page.keyboard.press('Meta+s')
+  await page.keyboard.press('ControlOrMeta+s')
 })
 
 Then(

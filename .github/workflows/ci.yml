@@ -1,0 +1,254 @@
+name: CI
+
+# Mirrors every job in `lefthook.yml`'s pre-commit pipeline, so a PR gets the
+# same gate a local commit on master does. Auto-fixing jobs (prek, cargo fmt,
+# biome) run here in check-only mode.
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  file-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: j178/prek-action@v1
+        with:
+          extra-args: --all-files
+
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.89.0
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo-fmt
+        run: cargo fmt --all --check
+
+      - name: cargo-checks
+        run: cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
+
+      - name: dead-pub-check
+        run: cargo run -p dead-pub-check --quiet
+
+      - name: live-share-worker-wasm-check
+        run: cargo check --target wasm32-unknown-unknown -p live-share-worker
+
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: check-max-file-lines
+        run: git ls-files '*.rs' '*.ts' '*.tsx' '*.js' '*.jsx' '*.py' '*.css' '*.html' | grep -v -e '^crates/jianpu-wasm/pkg/' -e '^target/' -e '^vendor/' | xargs python3 scripts/check-max-file-lines.py
+
+      - name: syntax-md-examples
+        run: python3 scripts/check-syntax-md-examples.py
+
+  sqruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.89.0
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: sqruff@0.29.3
+      - name: sqruff
+        run: |
+          files=$(git ls-files 'live-share-worker/migrations/**/*.sql' 'crates/live-share-worker/queries/**/*.sql')
+          if [ -n "$files" ]; then sqruff lint $files; fi
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - uses: dtolnay/rust-toolchain@1.89.0
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-component
+
+      - name: Install dependencies
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: biome-check
+        working-directory: web
+        run: pnpm exec biome check .
+
+      - name: build-wasm-component
+        working-directory: web
+        run: pnpm run build:wasm-component
+
+      - name: build-worker-types
+        working-directory: web
+        run: pnpm run build:worker-types
+
+      - name: web-unit-tests
+        working-directory: web
+        run: pnpm run test:unit
+
+      - name: ast-grep-check
+        working-directory: web
+        run: pnpm run lint:ast-grep
+
+      - name: web-typecheck
+        working-directory: web
+        run: pnpm run build:wasm-component && pnpm run build:worker-types && python3 ../scripts/check-wasm-size.py && pnpm exec tsc -b
+
+  # Builds the live-share-worker once and saves the cargo cache, so each e2e
+  # shard below restores a warm build instead of compiling it from scratch.
+  build-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.89.0
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: e2e-worker
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: Install live-share-worker dependencies
+        working-directory: crates/live-share-worker
+        run: pnpm install --frozen-lockfile
+      - name: Build live-share-worker
+        working-directory: crates/live-share-worker
+        run: cargo install worker-build --version 0.8.6 --locked && worker-build --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: live-share-worker-build
+          path: crates/live-share-worker/build
+          if-no-files-found: error
+
+  e2e:
+    needs: [rust, scripts, web, build-worker]
+    name: e2e (shard ${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - uses: dtolnay/rust-toolchain@1.89.0
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-component
+
+      - name: Install dependencies
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: Install live-share-worker dependencies
+        working-directory: crates/live-share-worker
+        run: pnpm install --frozen-lockfile
+
+      # Prebuilt by the `build-worker` job; `PREBUILT_WORKER` (set on the e2e
+      # step below) makes `cf dev`'s build command a no-op.
+      - uses: actions/download-artifact@v4
+        with:
+          name: live-share-worker-build
+          path: crates/live-share-worker/build
+
+      # Browser binaries are cached; system deps (apt) can't be, so a cache hit
+      # only runs `install-deps`.
+      - uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        working-directory: web
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        working-directory: web
+        run: pnpm exec playwright install-deps chromium
+
+      # `cf d1 migrations apply` is flaky on CI (sometimes it hangs mid-apply or
+      # never exits, even after applying everything), which would hang or break
+      # Playwright's web server command, so CI applies the migrations here:
+      # run it in the background, stop it as soon as every migration is
+      # recorded as applied (rather than always waiting out the timeout), and
+      # retry if that doesn't happen within 60s (see `web/playwright.config.ts`).
+      - name: Apply e2e migrations
+        working-directory: crates/live-share-worker
+        run: |
+          D=$(node -p "require('./deploy.json').d1DatabaseId")
+          expected=$(ls ../../live-share-worker/migrations/*.sql | wc -l)
+          applied() {
+            for db in .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite; do
+              [ -e "$db" ] || continue
+              case "$db" in */metadata.sqlite) continue;; esac
+              n=$(sqlite3 "$db" "select count(*) from d1_migrations" 2>/dev/null || echo 0)
+              [ "$n" -ge "$expected" ] && return 0
+            done
+            return 1
+          }
+          for attempt in 1 2 3 4 5; do
+            setsid pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/state < /dev/null &
+            pid=$!
+            for _ in $(seq 60); do
+              applied && break
+              kill -0 $pid 2>/dev/null || break
+              sleep 1
+            done
+            kill -- -$pid 2>/dev/null || true
+            wait $pid 2>/dev/null || true
+            if applied; then echo "migrations applied (attempt $attempt)"; exit 0; fi
+            echo "schema missing after attempt $attempt"
+          done
+          exit 1
+
+      - name: e2e-tests
+        working-directory: web
+        env:
+          PREBUILT_WORKER: '1'
+        run: pnpm build:wasm-component && pnpm build:worker-types && pnpm test:e2e:resolve -- --shard=${{ matrix.shard }}/4
