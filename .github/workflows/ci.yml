@@ -120,10 +120,42 @@ jobs:
         working-directory: web
         run: pnpm run build:wasm-component && pnpm run build:worker-types && python3 ../scripts/check-wasm-size.py && pnpm exec tsc -b
 
+  # Builds the live-share-worker once and saves the cargo cache, so each e2e
+  # shard below restores a warm build instead of compiling it from scratch.
+  build-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.89.0
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: e2e-worker
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: Install live-share-worker dependencies
+        working-directory: crates/live-share-worker
+        run: pnpm install --frozen-lockfile
+      - name: Build live-share-worker
+        working-directory: crates/live-share-worker
+        run: cargo install worker-build --version 0.8.6 --locked && worker-build --release
+
   e2e:
-    needs: [rust, scripts, web]
+    needs: [rust, scripts, web, build-worker]
+    name: e2e (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -138,6 +170,9 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: e2e-worker
+          save-if: false
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-component
@@ -183,4 +218,4 @@ jobs:
 
       - name: e2e-tests
         working-directory: web
-        run: pnpm build:wasm-component && pnpm build:worker-types && pnpm test:e2e:resolve
+        run: pnpm build:wasm-component && pnpm build:worker-types && pnpm test:e2e:resolve -- --shard=${{ matrix.shard }}/4
