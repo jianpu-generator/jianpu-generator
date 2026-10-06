@@ -194,26 +194,55 @@ jobs:
           name: live-share-worker-build
           path: crates/live-share-worker/build
 
+      # Browser binaries are cached; system deps (apt) can't be, so a cache hit
+      # only runs `install-deps`.
+      - uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+
       - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: web
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        working-directory: web
+        run: pnpm exec playwright install-deps chromium
+
       # `cf d1 migrations apply` is flaky on CI (sometimes it hangs mid-apply or
-      # never exits), which would hang or break Playwright's web server
-      # command, so CI applies the migrations here, retrying under a timeout
-      # until the schema is really there (see `web/playwright.config.ts`).
+      # never exits, even after applying everything), which would hang or break
+      # Playwright's web server command, so CI applies the migrations here:
+      # run it in the background, stop it as soon as every migration is
+      # recorded as applied (rather than always waiting out the timeout), and
+      # retry if that doesn't happen within 60s (see `web/playwright.config.ts`).
       - name: Apply e2e migrations
         working-directory: crates/live-share-worker
         run: |
           D=$(node -p "require('./deploy.json').d1DatabaseId")
-          for attempt in 1 2 3 4 5; do
-            timeout 60 pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/state < /dev/null || true
+          expected=$(ls ../../live-share-worker/migrations/*.sql | wc -l)
+          applied() {
             for db in .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite; do
+              [ -e "$db" ] || continue
               case "$db" in */metadata.sqlite) continue;; esac
-              if sqlite3 "$db" "select name from sqlite_master where name = 'shares'" | grep -q shares; then
-                echo "migrations applied (attempt $attempt)"; exit 0
-              fi
+              n=$(sqlite3 "$db" "select count(*) from d1_migrations" 2>/dev/null || echo 0)
+              [ "$n" -ge "$expected" ] && return 0
             done
+            return 1
+          }
+          for attempt in 1 2 3 4 5; do
+            setsid pnpm exec cf d1 migrations apply $D --local --dir ../../live-share-worker/migrations --persist-to .wrangler/state < /dev/null &
+            pid=$!
+            for _ in $(seq 60); do
+              applied && break
+              kill -0 $pid 2>/dev/null || break
+              sleep 1
+            done
+            kill -- -$pid 2>/dev/null || true
+            wait $pid 2>/dev/null || true
+            if applied; then echo "migrations applied (attempt $attempt)"; exit 0; fi
             echo "schema missing after attempt $attempt"
           done
           exit 1
