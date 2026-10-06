@@ -159,6 +159,7 @@ export function useJianpuWorkerRenderRequests({
       isEmpty: boolean,
       revealLine: number = startLine,
       measureRanges?: { start: number; end: number }[],
+      immediate = false,
     ) => {
       lastSelectionRef.current = {
         start: startLine,
@@ -170,7 +171,7 @@ export function useJianpuWorkerRenderRequests({
       if (cursorOffsetTimerRef.current !== null) {
         window.clearTimeout(cursorOffsetTimerRef.current)
       }
-      cursorOffsetTimerRef.current = window.setTimeout(() => {
+      const apply = () => {
         cursorOffsetTimerRef.current = null
         measureRangeIsCaretOnlyRef.current = isEmpty
         setSelectedMeasureRange(
@@ -182,7 +183,12 @@ export function useJianpuWorkerRenderRequests({
             measureRanges,
           ),
         )
-      }, debounceMs)
+      }
+      if (immediate) {
+        apply()
+        return
+      }
+      cursorOffsetTimerRef.current = window.setTimeout(apply, debounceMs)
     },
     [debounceMs],
   )
