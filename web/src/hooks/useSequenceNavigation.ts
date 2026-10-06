@@ -121,6 +121,7 @@ export function useSequenceNavigation(
     isEmpty: boolean,
     revealLine?: number,
     measureRanges?: { start: number; end: number }[],
+    immediate?: boolean,
   ) => void,
   /**
    * Owned by the caller (`useAppController`) rather than this hook, and
@@ -247,6 +248,7 @@ export function useSequenceNavigation(
         false,
         revealRange.startLine,
         measureRanges,
+        true,
       )
     },
     [

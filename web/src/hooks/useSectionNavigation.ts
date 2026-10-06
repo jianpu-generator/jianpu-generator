@@ -16,6 +16,7 @@ export function useSectionNavigation(
     isEmpty: boolean,
     revealLine?: number,
     measureRanges?: { start: number; end: number }[],
+    immediate?: boolean,
   ) => void,
   /** Drops whatever stale note/lyric/measure highlight a prior no-mounted-
    * editor (Synced/shared view) tap or bar-line click left painted — see
@@ -91,6 +92,7 @@ export function useSectionNavigation(
           false,
           undefined,
           measureRange ? [measureRange] : undefined,
+          true,
         )
         return
       }
@@ -102,7 +104,7 @@ export function useSectionNavigation(
       // the Monaco selection echo above blue-highlights the section's
       // notes/lyrics instead, and the section buttons carry their own
       // highlighting too.
-      notifySelection(firstLine, lastLine, false)
+      notifySelection(firstLine, lastLine, false, undefined, undefined, true)
     },
     [editorRef, measureSpans, notifySelection, clearNoMountedEditorHighlights],
   )
