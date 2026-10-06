@@ -1,7 +1,5 @@
 pre-commit:
   piped: true
-  only:
-    - ref: master
   jobs:
     # Auto-fixing jobs run first, sequentially, and re-stage whatever they
     # change (stage_fixed). They must fully settle before the parallel
