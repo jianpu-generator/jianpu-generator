@@ -146,6 +146,11 @@ jobs:
       - name: Build live-share-worker
         working-directory: crates/live-share-worker
         run: cargo install worker-build --version 0.8.6 --locked && worker-build --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: live-share-worker-build
+          path: crates/live-share-worker/build
+          if-no-files-found: error
 
   e2e:
     needs: [rust, scripts, web, build-worker]
@@ -170,9 +175,6 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: e2e-worker
-          save-if: false
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-component
@@ -185,12 +187,12 @@ jobs:
         working-directory: crates/live-share-worker
         run: pnpm install --frozen-lockfile
 
-      # Pre-build so the e2e web server's `cf dev` (whose build step is
-      # `cargo install worker-build && worker-build --release`) only does an
-      # incremental build within Playwright's startup timeout.
-      - name: Build live-share-worker
-        working-directory: crates/live-share-worker
-        run: cargo install worker-build --version 0.8.6 --locked && worker-build --release
+      # Prebuilt by the `build-worker` job; `PREBUILT_WORKER` (set on the e2e
+      # step below) makes `cf dev`'s build command a no-op.
+      - uses: actions/download-artifact@v4
+        with:
+          name: live-share-worker-build
+          path: crates/live-share-worker/build
 
       - name: Install Playwright Chromium
         working-directory: web
@@ -218,4 +220,6 @@ jobs:
 
       - name: e2e-tests
         working-directory: web
+        env:
+          PREBUILT_WORKER: '1'
         run: pnpm build:wasm-component && pnpm build:worker-types && pnpm test:e2e:resolve -- --shard=${{ matrix.shard }}/4
