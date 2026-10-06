@@ -29,7 +29,6 @@ export function useAppSelectionAndNavigation(
     isEmpty: boolean,
     revealLine?: number,
     measureRanges?: { start: number; end: number }[],
-    immediate?: boolean,
   ) => void,
   sequenceEntries: SequenceEntry[],
   measureSpans: MeasureSpan[],
