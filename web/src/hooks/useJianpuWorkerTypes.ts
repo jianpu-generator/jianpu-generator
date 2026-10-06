@@ -150,10 +150,6 @@ export interface JianpuWorkerState {
     /** The exact disjoint measure ranges to highlight in the SVG preview —
      * see `highlightRanges` above. */
     measureRanges?: { start: number; end: number }[],
-    /** Skip the debounce and update the preview highlight right away. For
-     * discrete clicks (section/sequence buttons) that have no rapid-fire
-     * stream of events to coalesce. */
-    immediate?: boolean,
   ) => void
   playSelectedMeasures: () => void
   playFromCurrentMeasure: () => void
