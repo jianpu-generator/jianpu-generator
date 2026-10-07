@@ -28,8 +28,18 @@ fn suffix_dash_after_rest_is_allowed() {
 fn standalone_dash_after_rest_is_allowed() {
     // `0 - - -` is the space-separated equivalent of `0---`.
     let score = parse_and_group(concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 0 - - -\n_\n",
+        "# metadata\n",
+        "title=\"t\"\n",
+        "author=\"a\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[Melody] 0 - - -\n",
+        "[Melodyv1] _\n",
     ));
     assert_eq!(
         score.measures[0].diagnostics.len(),

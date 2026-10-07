@@ -29,20 +29,20 @@ Feature: Click-and-click from a bar number selects whole systems
   Scenario: Clicking a bar number twice selects every part in that bar number's system
     When I click-and-click select measure 0's bar number then measure 0's bar number
     Then 4 range-selected notes belong to part index 0, as seen in bar number click-and-click selects whole systems
-    And 4 range-selected notes belong to part index 1, as seen in bar number click-and-click selects whole systems
+    And 4 range-selected notes belong to part index 2, as seen in bar number click-and-click selects whole systems
     And 8 notes are range-selected in total, as seen in bar number click-and-click selects whole systems
     And the play-measure button reads Selection, as seen in bar number click-and-click selects whole systems
 
   Scenario: Clicking a bar number then a note in the next system's first measure still selects that whole system, not just the clicked measure
     When I click-and-click select measure 0's bar number then the first note in measure 2's Melody notes
     Then 8 range-selected notes belong to part index 0, as seen in bar number click-and-click selects whole systems
-    And 8 range-selected notes belong to part index 1, as seen in bar number click-and-click selects whole systems
+    And 8 range-selected notes belong to part index 2, as seen in bar number click-and-click selects whole systems
     And 16 notes are range-selected in total, as seen in bar number click-and-click selects whole systems
     And the play-measure button reads Selection, as seen in bar number click-and-click selects whole systems
 
   Scenario: Clicking a bar number then a lyric syllable in a later system selects every part across both systems
     When I click-and-click select measure 0's bar number then a lyric syllable in measure 2
     Then 8 range-selected notes belong to part index 0, as seen in bar number click-and-click selects whole systems
-    And 8 range-selected notes belong to part index 1, as seen in bar number click-and-click selects whole systems
+    And 8 range-selected notes belong to part index 2, as seen in bar number click-and-click selects whole systems
     And 16 notes are range-selected in total, as seen in bar number click-and-click selects whole systems
     And the play-measure button reads Selection, as seen in bar number click-and-click selects whole systems

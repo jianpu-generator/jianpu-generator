@@ -145,6 +145,27 @@ fn parse_rhs_tokens(
                 tokens.get(2..).unwrap_or_default(),
             )
         }
+        PartsToken::Lyrics => {
+            let Some(Spanned {
+                value: PartsToken::LyricsTarget(target),
+                span: target_span,
+            }) = tokens.get(1)
+            else {
+                return Err(RecoverableError::parts_invalid_columns(span, ""));
+            };
+            if tokens.len() > 2 {
+                return Err(RecoverableError::parts_invalid_columns(span, ""));
+            }
+            return Ok(ParsedPartRhs {
+                kind: RawKind::Lyrics {
+                    target: target.clone(),
+                    target_span: *target_span,
+                },
+                soundfont: None,
+                volume: None,
+                octave_offset: None,
+            });
+        }
         _ => return Err(RecoverableError::parts_invalid_columns(span, "")),
     };
 

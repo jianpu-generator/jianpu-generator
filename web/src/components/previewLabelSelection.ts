@@ -63,13 +63,12 @@ export function lyricCellsForPartLabels(
       .map((span) => ({
         sourcePartIndex: span.sourcePartIndex,
         noteId: span.noteId,
-        verse: span.verse,
       })),
   )
 }
 
 /** One rendered lyric-label click target, keyed the same way as
- * `Tag::LyricLabel`'s `data-part-index`/`data-verse`/
+ * `Tag::LyricLabel`'s `data-part-index`/
  * `data-measure-index-start`/`data-measure-index-end` SVG attributes — see
  * `getLyricLabelAtPoint`. The lyric-side mirror of `PartLabelHit`. */
 export type LyricLabelHit = LyricLabelElementId
@@ -99,14 +98,12 @@ export function lyricCellsForLyricLabels(
       .filter(
         (span) =>
           span.sourcePartIndex === hit.sourcePartIndex &&
-          span.verse === hit.verse &&
           span.measureIndex >= hit.measureIndexStart &&
           span.measureIndex <= hit.measureIndexEnd,
       )
       .map((span) => ({
         sourcePartIndex: span.sourcePartIndex,
         noteId: span.noteId,
-        verse: span.verse,
       })),
   )
 }

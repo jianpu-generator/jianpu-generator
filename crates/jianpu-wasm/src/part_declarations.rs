@@ -30,7 +30,7 @@ pub(crate) fn list_parts_response(
                 .map(|part| PartOut {
                     abbreviation: part.abbreviation,
                     display_name: part.display_name,
-                    has_lyrics: part.has_lyrics,
+                    sounds: part.sounds,
                 })
                 .collect(),
             declarations,

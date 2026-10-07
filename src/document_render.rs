@@ -23,13 +23,11 @@ struct DocumentsResult {
 fn render_documents(
     score: &Score,
     parts: &[PartInfo],
-    lyrics_only_tracks: &[String],
 ) -> Result<DocumentsResult, IrrecoverableError> {
     let config = crate::render_config::RenderConfig::from_metadata(&score.metadata);
     let header = crate::build_header(score, parts);
     let compile_result = crate::compiler::compile(score);
-    let compile_result =
-        crate::consolidator::consolidate_with_lyrics_only(compile_result, lyrics_only_tracks);
+    let compile_result = crate::consolidator::consolidate(compile_result);
     let crate::grid_layout::LayoutOutput {
         pages: grid_pages,
         diagnostics,
@@ -78,14 +76,12 @@ fn render_documents(
 fn render_documents_with_range(
     score: &Score,
     parts: &[PartInfo],
-    lyrics_only_tracks: &[String],
     measure_ranges: &[crate::grid_layout::MeasureRange],
 ) -> Result<DocumentsResult, IrrecoverableError> {
     let config = crate::render_config::RenderConfig::from_metadata(&score.metadata);
     let header = crate::build_header(score, parts);
     let compile_result = crate::compiler::compile(score);
-    let compile_result =
-        crate::consolidator::consolidate_with_lyrics_only(compile_result, lyrics_only_tracks);
+    let compile_result = crate::consolidator::consolidate(compile_result);
     let crate::grid_layout::LayoutOutput {
         pages: grid_pages,
         diagnostics,
@@ -140,9 +136,8 @@ fn render_documents_with_range(
 
 /// Parse, group, apply a resolved part visibility, and return typed SVG document trees.
 ///
-/// Parts outside `visibility.rendered_tracks` are not rendered, parts in
-/// `visibility.lyrics_only_tracks` are rendered with only their lyrics, and
-/// `visibility.disabled_lyrics` lists parts rendered without their lyrics.
+/// Parts outside `visibility.rendered_tracks` are not rendered; a lyric part
+/// shown while its target is hidden still draws against the target's columns.
 pub fn render_documents_from_source_with_visibility(
     source: &str,
     filename: &str,
@@ -156,9 +151,8 @@ pub fn render_documents_from_source_with_visibility(
     );
     let mut score = crate::compile(source, filename, instruments)?;
     crate::apply_track_filter(&mut score, enabled_tracks);
-    crate::apply_lyrics_filter(&mut score, Some(&visibility.disabled_lyrics));
     let mut diagnostics = crate::collect_measure_diagnostics(&score);
-    let result = render_documents(&score, &parts, &visibility.lyrics_only_tracks)?;
+    let result = render_documents(&score, &parts)?;
     diagnostics.extend(result.diagnostics);
     Ok(RenderDocumentOutput {
         documents: result.documents,
@@ -182,14 +176,8 @@ pub fn render_documents_with_highlight_range_and_visibility(
     );
     let mut score = crate::compile(source, filename, instruments)?;
     crate::apply_track_filter(&mut score, enabled_tracks);
-    crate::apply_lyrics_filter(&mut score, Some(&visibility.disabled_lyrics));
     let mut diagnostics = crate::collect_measure_diagnostics(&score);
-    let result = render_documents_with_range(
-        &score,
-        &parts,
-        &visibility.lyrics_only_tracks,
-        measure_ranges,
-    )?;
+    let result = render_documents_with_range(&score, &parts, measure_ranges)?;
     diagnostics.extend(result.diagnostics);
     Ok(RenderDocumentOutput {
         documents: result.documents,

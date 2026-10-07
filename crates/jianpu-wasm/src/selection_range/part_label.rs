@@ -93,8 +93,11 @@ pub(crate) fn resolve(
     }
 }
 
-/// `PartLabel ↔ PartLabel`'s rule — derive `part_range`/`measure_range`
-/// straight from the two labels' own fields, no span lookup needed.
+/// `PartLabel ↔ PartLabel`'s rule — a pure rectangle over rendered rows:
+/// every note and lyric cell whose part lies between the two labels' parts
+/// and whose measure lies in the merged measure range. Lyric parts are
+/// ordinary parts, so a notes part's lyric rows are included only when they
+/// fall inside the swept part range.
 fn part_label_range(
     note_spans: &[NoteSpanOut],
     lyric_spans: &[LyricSpanOut],
@@ -119,29 +122,19 @@ fn part_label_range(
             note_id: span.note_id,
         })
         .collect();
-    // Mirrors `part-label-click-selects-notes.feature`'s "no lyric row
-    // unless the sweep crosses more than one label" rule (see
-    // `previewSelectionResolver.ts`'s existing `hits.length > 1` gate): a
-    // part-label click that resolves back to its own label selects just
-    // that part's notes, not its lyrics too.
-    let lyric_cells = if anchor.part == current.part {
-        Vec::new()
-    } else {
-        lyric_spans
-            .iter()
-            .filter(|span| {
-                span.source_part_index >= part_start
-                    && span.source_part_index <= part_end
-                    && span.measure_index >= measure_start
-                    && span.measure_index <= measure_end
-            })
-            .map(|span| LyricCellOut {
-                source_part_index: span.source_part_index,
-                note_id: span.note_id,
-                verse: span.verse,
-            })
-            .collect()
-    };
+    let lyric_cells = lyric_spans
+        .iter()
+        .filter(|span| {
+            span.source_part_index >= part_start
+                && span.source_part_index <= part_end
+                && span.measure_index >= measure_start
+                && span.measure_index <= measure_end
+        })
+        .map(|span| LyricCellOut {
+            source_part_index: span.source_part_index,
+            note_id: span.note_id,
+        })
+        .collect();
 
     ResolveSelectionRangeResponse::Ok {
         note_cells,
@@ -149,18 +142,13 @@ fn part_label_range(
     }
 }
 
-/// Backs the `Note ↔ PartLabel` arm. Neither side carries verse info, so
-/// this reuses `part_label_range`'s rule verbatim, treating the `Note`
-/// endpoint as a degenerate single-measure "label" for its own part:
-/// `measure_start == measure_end == its own measure_index`, looked up from
-/// `note_spans` the same way the cross-part `Note ↔ Note` arm does.
-/// `note_cells` always; `lyric_cells` only when the two parts differ, and
-/// then unrestricted by verse — the same "same part → no lyric row,
-/// cross-part → every verse" shape `part_label_range` already uses, for
-/// the same reason (neither endpoint specifies one). `Err` if the `Note`
-/// endpoint's own span can't be found (shouldn't happen for a valid
-/// click-derived ID; guarded rather than panicking, mirroring this crate's
-/// other cross-scope arms).
+/// Backs the `Note ↔ PartLabel` arm. Treats the `Note` endpoint as a
+/// degenerate single-measure "label" for its own part
+/// (`measure_start == measure_end == its own measure_index`, looked up from
+/// `note_spans` the same way the cross-part `Note ↔ Note` arm does) and
+/// reuses `part_label_range`. `Err` if the `Note` endpoint's own span can't
+/// be found (shouldn't happen for a valid click-derived ID; guarded rather
+/// than panicking, mirroring this crate's other cross-scope arms).
 fn note_part_label_range(
     note_spans: &[NoteSpanOut],
     lyric_spans: &[LyricSpanOut],

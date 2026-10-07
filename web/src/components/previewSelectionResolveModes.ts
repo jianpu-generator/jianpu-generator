@@ -82,7 +82,6 @@ export function resolveMeasureSelection(
     lyricCells = response.val.lyricCells.map((cell) => ({
       sourcePartIndex: cell.sourcePartIndex,
       noteId: cell.noteId,
-      verse: cell.verse,
     }))
   } else {
     const min = Math.min(anchorState.anchor.start, finalRange.start)
@@ -220,7 +219,6 @@ export function resolveNoteSelection(
       ? response.val.lyricCells.map((cell) => ({
           sourcePartIndex: cell.sourcePartIndex,
           noteId: cell.noteId,
-          verse: cell.verse,
         }))
       : []
   if (container) {
@@ -279,7 +277,6 @@ export function resolveLyricSelection(
     const lyricCells = response.val.lyricCells.map((cell) => ({
       sourcePartIndex: cell.sourcePartIndex,
       noteId: cell.noteId,
-      verse: cell.verse,
     }))
     if (container) {
       applyPersistedNoteHighlights(container, noteCells)

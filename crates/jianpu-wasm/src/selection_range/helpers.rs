@@ -12,32 +12,16 @@ pub(crate) struct NoteEndpoint {
     pub note_id: usize,
 }
 
-/// The `Lyric`-endpoint analog of [`NoteEndpoint`], additionally carrying
-/// `verse`.
-#[derive(Clone, Copy)]
-pub(crate) struct LyricEndpoint {
-    pub part: usize,
-    pub note_id: usize,
-    pub verse: usize,
-}
+/// The `Lyric`-endpoint analog of [`NoteEndpoint`]; `part` is the lyric
+/// part's own index.
+pub(crate) type LyricEndpoint = NoteEndpoint;
 
-/// A part-scoped measure span with no verse — the shared shape of a
-/// `PartLabel` endpoint, and of a `Note` endpoint once collapsed to its own
-/// degenerate single-measure span (see [`note_measure_index`]).
+/// A part-scoped measure span — the shared shape of a `PartLabel` or
+/// `LyricLabel` endpoint, and of a `Note`/`Lyric` endpoint once collapsed to
+/// its own degenerate single-measure span (see [`note_measure_index`]).
 #[derive(Clone, Copy)]
 pub(crate) struct MeasureSpan {
     pub part: usize,
-    pub start: usize,
-    pub end: usize,
-}
-
-/// The verse-carrying analog of [`MeasureSpan`] — the shared shape of a
-/// `LyricLabel` endpoint, and of a `Lyric` endpoint once collapsed to its
-/// own degenerate single-measure span (see [`lyric_measure_index`]).
-#[derive(Clone, Copy)]
-pub(crate) struct VerseMeasureSpan {
-    pub part: usize,
-    pub verse: usize,
     pub start: usize,
     pub end: usize,
 }
@@ -78,25 +62,21 @@ pub(crate) fn note_position_in_measure(
         .position(|span| span.note_id == note_id)
 }
 
-/// The `Lyric`-endpoint analog of `note_measure_index`, additionally keyed
-/// by `verse`.
+/// The `Lyric`-endpoint analog of `note_measure_index`.
 pub(crate) fn lyric_measure_index(
     lyric_spans: &[LyricSpanOut],
     part: usize,
     note_id: usize,
-    verse: usize,
 ) -> Option<usize> {
     lyric_spans
         .iter()
-        .find(|span| {
-            span.source_part_index == part && span.note_id == note_id && span.verse == verse
-        })
+        .find(|span| span.source_part_index == part && span.note_id == note_id)
         .map(|span| span.measure_index)
 }
 
-/// The `Lyric`-endpoint analog of [`note_position_in_measure`], additionally
-/// keyed by `verse` — a syllable's position among its own
-/// `(source_part_index, verse, measure_index)` group, in score order. Used
+/// The `Lyric`-endpoint analog of [`note_position_in_measure`] — a
+/// syllable's position among its own `(source_part_index, measure_index)`
+/// group, in score order. Used
 /// alongside `note_position_in_measure` by the cross-part `Note ↔ Lyric` arm
 /// so a same-measure cross-part pair stops at each endpoint's own
 /// within-measure position instead of sweeping the whole measure on both
@@ -105,14 +85,11 @@ pub(crate) fn lyric_measure_index(
 pub(crate) fn lyric_position_in_measure(
     lyric_spans: &[LyricSpanOut],
     part: usize,
-    verse: usize,
     measure: usize,
     note_id: usize,
 ) -> Option<usize> {
     lyric_spans
         .iter()
-        .filter(|span| {
-            span.source_part_index == part && span.verse == verse && span.measure_index == measure
-        })
+        .filter(|span| span.source_part_index == part && span.measure_index == measure)
         .position(|span| span.note_id == note_id)
 }

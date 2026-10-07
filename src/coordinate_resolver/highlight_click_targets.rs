@@ -229,7 +229,6 @@ pub(super) fn resolve_lyric_label_click_target(
             width: geometry.width,
             height: geometry.height,
             source_part_index: target.source_part_index,
-            verse: target.verse,
             measure_index_start: target.measure_index_start,
             measure_index_end: target.measure_index_end,
         },
@@ -261,7 +260,6 @@ pub(super) fn resolve_lyric_click_target(
             height: row.height_pt,
             source_part_index: target.source_part_index,
             note_id: target.note_id,
-            verse: target.verse,
         },
     })
 }

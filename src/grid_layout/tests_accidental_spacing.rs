@@ -57,6 +57,7 @@ fn make_block_with_accidental_note(
 ) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
+            kind: crate::compiler::types::RowKind::Sounding,
             absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
             label: row_id.to_string(),
@@ -204,6 +205,7 @@ fn glyph_left_anchor_x_shifts_right_by_the_column_s_accidental_lead() {
 fn make_block_with_chord(text: &str) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
+            kind: crate::compiler::types::RowKind::Sounding,
             absorbed_rows: Vec::new(),
             id: RowId("C".to_string()),
             label: "C".to_string(),

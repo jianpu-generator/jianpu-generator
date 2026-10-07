@@ -30,7 +30,6 @@ pub(crate) enum ClickableElementId {
     Lyric {
         source_part_index: usize,
         note_id: usize,
-        verse: usize,
     },
     #[serde(rename_all = "camelCase")]
     Measure {
@@ -46,7 +45,6 @@ pub(crate) enum ClickableElementId {
     #[serde(rename_all = "camelCase")]
     LyricLabel {
         source_part_index: usize,
-        verse: usize,
         measure_index_start: usize,
         measure_index_end: usize,
     },
@@ -62,7 +60,7 @@ pub struct NoteCellOut {
     pub note_id: usize,
 }
 
-/// One resolved `(source_part_index, note_id, verse)` cell — output mirror
+/// One resolved `(source_part_index, note_id)` cell — output mirror
 /// of [`crate::lyric_selection_types::LyricCellIn`], matching TS's
 /// `LyricCell` (`previewSelection.ts`).
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
@@ -70,7 +68,6 @@ pub struct NoteCellOut {
 pub struct LyricCellOut {
     pub source_part_index: usize,
     pub note_id: usize,
-    pub verse: usize,
 }
 
 /// Result of `resolve_selection_range`. `Err` covers both a malformed

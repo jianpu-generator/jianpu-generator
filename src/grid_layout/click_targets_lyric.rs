@@ -4,7 +4,7 @@
 
 use crate::compiler::types::{ElementContent, MeasureBlock, MeasureRow};
 use crate::grid_layout::layout::{
-    block_column_width, is_chord_only_row, is_lyric_row, lyric_row_verse, LABEL_COLS,
+    block_column_width, is_chord_only_row, is_lyric_row, is_lyric_row_of, LABEL_COLS,
     MUSIC_START_COL,
 };
 use crate::grid_layout::playback_cursor::{block_has_bar_line, group_elements_by_note_id};
@@ -47,10 +47,11 @@ fn lyric_row_absolute_indices(
         result.push(None);
         cursor += sub_count;
         let mut verse_end = idx + 1;
-        while first.rows.get(verse_end).is_some_and(|verse_row| {
-            is_lyric_row(verse_row)
-                && verse_row.source_part_index == part_template.source_part_index
-        }) {
+        while first
+            .rows
+            .get(verse_end)
+            .is_some_and(|verse_row| is_lyric_row_of(verse_row, part_template))
+        {
             result.push(Some(cursor));
             cursor += 1;
             verse_end += 1;
@@ -60,11 +61,10 @@ fn lyric_row_absolute_indices(
     result
 }
 
-/// One entry per `first.rows` index, `Some(note_part_idx)` for a lyric verse
-/// row naming the note row it's paired with (the nearest preceding row
-/// sharing its `source_part_index`), `None` for a note row (or a lyric row
-/// with no such owner, which shouldn't occur in practice). Mirrors the same
-/// verse-absorption walk `note_row_spans`/`lyric_row_absolute_indices` use,
+/// One entry per `first.rows` index, `Some(note_part_idx)` for a lyric row
+/// naming the note row it's paired with (the row it sings along to),
+/// `None` for a note row (or a lyric row whose target row is absent). Mirrors
+/// the same lyric-row absorption walk `note_row_spans`/`lyric_row_absolute_indices` use,
 /// so a lyric syllable's click target can be widened to match its note's own
 /// written column span.
 fn lyric_owner_note_row_indices(system: &[MeasureBlock]) -> Vec<Option<usize>> {
@@ -80,10 +80,11 @@ fn lyric_owner_note_row_indices(system: &[MeasureBlock]) -> Vec<Option<usize>> {
         }
         let note_idx = idx;
         let mut verse_idx = idx + 1;
-        while first.rows.get(verse_idx).is_some_and(|verse_row| {
-            is_lyric_row(verse_row)
-                && verse_row.source_part_index == part_template.source_part_index
-        }) {
+        while first
+            .rows
+            .get(verse_idx)
+            .is_some_and(|verse_row| is_lyric_row_of(verse_row, part_template))
+        {
             if let Some(slot) = result.get_mut(verse_idx) {
                 *slot = Some(note_idx);
             }
@@ -131,12 +132,7 @@ fn push_lyric_click_targets_for_row(
         .map(|e| e.column)
         .min();
     for el in &pos.part_row.elements {
-        let ElementContent::Lyric {
-            text,
-            note_id,
-            verse,
-        } = &el.content
-        else {
+        let ElementContent::Lyric { text, note_id } = &el.content else {
             continue;
         };
         // Can't gate on `ColumnElement::note_id` the way the note/rest case
@@ -182,7 +178,6 @@ fn push_lyric_click_targets_for_row(
                 column_end,
                 source_part_index: pos.part_row.source_part_index,
                 note_id: *note_id,
-                verse: *verse,
             },
         ));
     }
@@ -311,15 +306,11 @@ pub(crate) fn compute_all_lyric_label_click_targets(
                 if part_template.label.is_empty() {
                     continue;
                 }
-                let Some(verse) = lyric_row_verse(part_template) else {
-                    continue;
-                };
                 results.push((
                     page_idx,
                     LyricLabelClickTarget {
                         row: *row_idx,
                         source_part_index: part_template.source_part_index,
-                        verse,
                         measure_index_start,
                         measure_index_end,
                     },

@@ -8,14 +8,15 @@ const SOURCE_WITH_UNDERFLOW_IN_MEASURE_1 = [
   '',
   '# parts',
   'Melody = notes',
+  'Melody lyrics [Melodyv1] = lyrics[Melody]',
   '',
   '# score',
   '(time=4/4 key=C4 bpm=120)',
   '[Melody] 1 2 3 4',
-  'a b',
+  '[Melodyv1] a b',
   '',
   '[Melody] 5 6 7 1',
-  'do re mi fa',
+  '[Melodyv1] do re mi fa',
 ].join('\n')
 
 const FILE_STORE_KEY = 'jianpu:files:v1'

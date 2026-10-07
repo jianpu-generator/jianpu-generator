@@ -92,11 +92,9 @@ const TAG_FIELD_ATTRIBUTES = {
   lyric: {
     sourcePartIndex: 'data-part-index',
     noteId: 'data-note-id',
-    verse: 'data-verse',
   },
   'lyric-label': {
     sourcePartIndex: 'data-part-index',
-    verse: 'data-verse',
     measureIndexStart: 'data-measure-index-start',
     measureIndexEnd: 'data-measure-index-end',
   },
@@ -249,30 +247,23 @@ export function tagFromElement(el: Element): Tag | undefined {
     case 'lyric': {
       const sourcePartIndex = readIntField(el, tagType, 'sourcePartIndex')
       const noteId = readIntField(el, tagType, 'noteId')
-      const verse = readIntField(el, tagType, 'verse')
-      if (
-        sourcePartIndex === undefined ||
-        noteId === undefined ||
-        verse === undefined
-      )
+      if (sourcePartIndex === undefined || noteId === undefined)
         return undefined
-      return { tag: 'lyric', val: { sourcePartIndex, noteId, verse } }
+      return { tag: 'lyric', val: { sourcePartIndex, noteId } }
     }
     case 'lyric-label': {
       const sourcePartIndex = readIntField(el, tagType, 'sourcePartIndex')
-      const verse = readIntField(el, tagType, 'verse')
       const measureIndexStart = readIntField(el, tagType, 'measureIndexStart')
       const measureIndexEnd = readIntField(el, tagType, 'measureIndexEnd')
       if (
         sourcePartIndex === undefined ||
-        verse === undefined ||
         measureIndexStart === undefined ||
         measureIndexEnd === undefined
       )
         return undefined
       return {
         tag: 'lyric-label',
-        val: { sourcePartIndex, verse, measureIndexStart, measureIndexEnd },
+        val: { sourcePartIndex, measureIndexStart, measureIndexEnd },
       }
     }
     case 'bar-line': {

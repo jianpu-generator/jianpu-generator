@@ -39,12 +39,11 @@ const sampleTags: Tag[] = [
     tag: 'part-label',
     val: { sourcePartIndex: 0, measureIndexStart: 2, measureIndexEnd: 5 },
   },
-  { tag: 'lyric', val: { sourcePartIndex: 1, noteId: 7, verse: 2 } },
+  { tag: 'lyric', val: { sourcePartIndex: 1, noteId: 7 } },
   {
     tag: 'lyric-label',
     val: {
       sourcePartIndex: 1,
-      verse: 0,
       measureIndexStart: 0,
       measureIndexEnd: 3,
     },

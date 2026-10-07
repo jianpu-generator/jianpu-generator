@@ -53,7 +53,7 @@ async function loadFixture(page: import('@playwright/test').Page) {
 async function primeMeasureSpans(page: import('@playwright/test').Page) {
   await focusEditor(page)
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('10')
+  await page.keyboard.type('11')
   await page.keyboard.press('Enter')
   await expect(page.locator('button.play-measure-btn')).toHaveText(/Measure/, {
     timeout: 5_000,
@@ -97,13 +97,14 @@ Given(
       '',
       '# parts',
       'Melody [M] = notes',
+      'Melody lyrics [Mv1] = lyrics[M]',
       '',
       '# score',
       '[M] 1 2', // measure 0
-      'do re', // verse 0
+      '[Mv1] do re', // verse 0
       '',
       '[M] 3 4', // measure 1
-      'mi fa', // verse 0
+      '[Mv1] mi fa', // verse 0
     ].join('\n')
 
     await page.addInitScript((source) => {
@@ -144,10 +145,11 @@ Given(
       '',
       '# parts',
       'Melody [M] = notes',
+      'Melody lyrics [Mv1] = lyrics[M]',
       '',
       '# score',
       '[M] 1 2', // measure 0
-      'do re', // verse 0
+      '[Mv1] do re', // verse 0
     ].join('\n')
 
     await page.addInitScript((source) => {
@@ -349,7 +351,7 @@ Then(
       .first()
     const lyricLabelRect = page
       .locator(
-        `${tagSelector('lyric-label', { sourcePartIndex: 0, verse: 0 })} ${rectVariantSelector('lyric-label-click-target')}`,
+        `${tagSelector('lyric-label', { sourcePartIndex: 1 })} ${rectVariantSelector('lyric-label-click-target')}`,
       )
       .first()
     const partBox = await stableBoundingBox(partLabelRect)

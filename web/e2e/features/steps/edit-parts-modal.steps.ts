@@ -7,12 +7,13 @@ const SOURCE = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody lyrics [Mv1] = lyrics[M]',
   'Chords [C] = chords',
   '',
   '# score',
   '(bpm=120 key=C4 time=4/4)',
   '[M] 1 1 5 5',
-  'twin- kle twin- kle',
+  '[Mv1] twin- kle twin- kle',
   '[C] 1 - - -',
 ].join('\n')
 
@@ -22,12 +23,13 @@ const FOLLOW_SOURCE = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody lyrics [Mv1] = lyrics[M]',
   'Chords [C] = follow[M]',
   '',
   '# score',
   '(bpm=120 key=C4 time=4/4)',
   '[M] 1 1 5 5',
-  'twin- kle twin- kle',
+  '[Mv1] twin- kle twin- kle',
 ].join('\n')
 
 const MULTI_FOLLOW_SOURCE = [
@@ -36,13 +38,14 @@ const MULTI_FOLLOW_SOURCE = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody lyrics [Mv1] = lyrics[M]',
   'Harmony [H] = notes',
   'Chords [C] = follow[M]',
   '',
   '# score',
   '(bpm=120 key=C4 time=4/4)',
   '[M] 1 1 5 5',
-  'twin- kle twin- kle',
+  '[Mv1] twin- kle twin- kle',
 ].join('\n')
 
 async function loadSource(

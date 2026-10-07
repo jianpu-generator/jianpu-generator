@@ -23,15 +23,16 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody lyrics [Mv1] = lyrics[M]',
   'Harmony [H] = notes',
   '',
   '# score',
   '[M] 1 2', // measure 0
-  'do re', // verse 0
+  '[Mv1] do re', // verse 0
   '[H] 5 6',
   '',
   '[M] 3 4', // measure 1
-  'mi fa', // verse 0
+  '[Mv1] mi fa', // verse 0
   "[H] 7 1'",
 ].join('\n')
 
@@ -55,7 +56,7 @@ async function loadFixture(page: import('@playwright/test').Page) {
 async function primeMeasureSpans(page: import('@playwright/test').Page) {
   await focusEditor(page)
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('10')
+  await page.keyboard.type('11')
   await page.keyboard.press('Enter')
   await expect(page.locator('button.play-measure-btn')).toHaveText(/Measure/, {
     timeout: 5_000,
@@ -75,7 +76,7 @@ Given(
       timeout: 15_000,
     })
     await page.waitForSelector(
-      tagSelector('part-label', { sourcePartIndex: 1 }),
+      tagSelector('part-label', { sourcePartIndex: 2 }),
       {
         timeout: 10_000,
       },
@@ -91,7 +92,7 @@ When(
       .locator(tagSelector('part-label', { sourcePartIndex: 0 }))
       .first()
     const harmonyLabel = page
-      .locator(tagSelector('part-label', { sourcePartIndex: 1 }))
+      .locator(tagSelector('part-label', { sourcePartIndex: 2 }))
       .first()
     await expect(melodyLabel).toBeVisible({ timeout: 5_000 })
     await expect(harmonyLabel).toBeVisible({ timeout: 5_000 })

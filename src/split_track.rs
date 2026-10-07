@@ -45,12 +45,37 @@ pub fn split_track_filename(base_name: &str, label: &str, extension: &str) -> St
     )
 }
 
-/// Collect unique part names from score measures (order of first appearance).
+/// `track` followed by the lyric parts that sing along to it, so a split
+/// export of one track keeps its lyrics.
+pub fn track_with_its_lyric_parts(score: &Score, track: &str) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    let lyric_names = score
+        .measures
+        .iter()
+        .flat_map(|measure| measure.parts.iter())
+        .filter(|part| {
+            part.slice()
+                .lyrics
+                .as_ref()
+                .is_some_and(|lyrics| lyrics.target_name == track)
+        })
+        .filter_map(|part| part.name().cloned())
+        .filter(|name| seen.insert(name.clone()));
+    std::iter::once(track.to_string())
+        .chain(lyric_names)
+        .collect()
+}
+
+/// Collect unique sounding part names from score measures (order of first
+/// appearance); lyric parts are excluded since they export with their target.
 pub fn collect_track_names(score: &Score) -> Vec<String> {
     let mut seen = std::collections::HashSet::new();
     let mut names = Vec::new();
     for measure in &score.measures {
         for part in &measure.parts {
+            if part.slice().lyrics.is_some() {
+                continue;
+            }
             if let Some(name) = part.name() {
                 if seen.insert(name.clone()) {
                     names.push(name.clone());
@@ -82,6 +107,7 @@ pub fn split_track_names(
     if names.is_empty() {
         names = list_parts_from_source(source, filename, &[])?
             .into_iter()
+            .filter(|part| part.sounds)
             .map(|part| part.abbreviation)
             .collect();
     }
@@ -99,7 +125,7 @@ pub struct SplitPdfEntry {
 /// Parse once, render one PDF per track (CLI `--split-tracks` semantics).
 ///
 /// `tracks_filter`: empty → all tracks; non-empty → only listed abbreviations.
-/// Lyrics are always included (no lyrics filter).
+/// A track exports together with the lyric parts that sing along to it.
 #[cfg(feature = "pdf")]
 pub fn write_split_pdfs_from_source(
     source: &str,
@@ -115,10 +141,10 @@ pub fn write_split_pdfs_from_source(
     let mut entries = Vec::with_capacity(track_names.len());
     for track in track_names {
         let mut score_clone = score.clone();
-        filter_tracks(&mut score_clone, std::slice::from_ref(&track));
-        let enabled_tracks = [track.clone()];
+        let enabled_tracks = track_with_its_lyric_parts(&score, &track);
+        filter_tracks(&mut score_clone, &enabled_tracks);
         let parts = filter_part_list(all_parts.clone(), Some(&enabled_tracks));
-        let svgs = render_svgs_with_parts(&score_clone, &parts, &[], None)?.svgs;
+        let svgs = render_svgs_with_parts(&score_clone, &parts, None)?.svgs;
         let pdf = crate::pdf::write_pdf(&svgs, fonts, None)?;
         let label = split_track_label(&display_names, &track);
         entries.push(SplitPdfEntry {

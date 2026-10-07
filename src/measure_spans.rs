@@ -107,6 +107,7 @@ mod tests {
             "\n",
             "# parts\n",
             "Alto 1 & Tenor [A1,T] = notes\n",
+            "Alto 1 & Tenor lyrics [A1,Tv1] = lyrics[A1,T]\n",
             "Alto 2 [A2] = follow[A1,T]\n",
             "Soprano 1 [S1] = follow[A1,T]\n",
             "Soprano 2 [S2] = follow[S1]\n",
@@ -116,11 +117,11 @@ mod tests {
             "# score\n",
             "bpm=80 key=C4 time=4/4 label=\"Verse 1\"\n",
             "[A1,T] 5_ 5_ 5_ 5= 5= 5_ 3_ 2_ (3_\n",
-            "la la la la la la la la la\n",
+            "[A1,Tv1] la la la la la la la la la\n",
             "[C] 1\n",
             "\n",
             "[A1,T] 3_) (1_1-) 0_ 1= 1=\n",
-            "la la la\n",
+            "[A1,Tv1] la la la\n",
             "[C] 6m/3\n",
         );
         let spans = list_measure_spans_from_source(source, "test.jianpu")
@@ -128,10 +129,10 @@ mod tests {
             .spans;
         assert_eq!(spans.len(), 2);
         assert_eq!(
-            spans[0].end_line, 17,
-            "measure 0 should end at line 17 ([C] 1)"
+            spans[0].end_line, 18,
+            "measure 0 should end at line 18 ([C] 1)"
         );
-        assert_eq!(spans[1].start_line, 19, "measure 1 should start at line 19");
+        assert_eq!(spans[1].start_line, 20, "measure 1 should start at line 20");
         assert!(
             spans[0].end_line < spans[1].start_line,
             "measure 0 end_line ({}) must be before measure 1 start_line ({})",

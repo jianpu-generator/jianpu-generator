@@ -33,12 +33,15 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody verse 1 [Mv1] = lyrics[M]',
+  'Melody verse 2 [Mv2] = lyrics[M]',
+  'Melody verse 3 [Mv3] = lyrics[M]',
   '',
   '# score',
   '[M] 1 2 3 4', // measure 0 — note ids 0-3
-  'do re mi fa', // verse 0
-  'la ti fa sol', // verse 1
-  'ho ho ho ho', // verse 2 — distractor, outside the swept verse range
+  '[Mv1] do re mi fa', // verse 0
+  '[Mv2] la ti fa sol', // verse 1
+  '[Mv3] ho ho ho ho', // verse 2 — distractor, outside the swept verse range
 ].join('\n')
 
 function lyricInVerse(
@@ -47,7 +50,7 @@ function lyricInVerse(
   noteId: number,
 ) {
   return page.locator(
-    tagSelector('lyric', { sourcePartIndex: 0, verse, noteId }),
+    tagSelector('lyric', { sourcePartIndex: verse + 1, noteId }),
   )
 }
 
@@ -73,9 +76,9 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await expect(
-      page.locator(tagSelector('lyric', { sourcePartIndex: 0 })),
-    ).toHaveCount(12, { timeout: 10_000 })
+    await expect(page.locator(tagSelector('lyric'))).toHaveCount(12, {
+      timeout: 10_000,
+    })
     await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(200)
   },
@@ -131,7 +134,7 @@ Then(
       for (let noteId = noteIdStart; noteId <= noteIdEnd; noteId++) {
         await expect(
           page.locator(
-            `${tagSelector('lyric', { verse, noteId })}[data-lyric-range-selected]`,
+            `${tagSelector('lyric', { sourcePartIndex: verse + 1, noteId })}[data-lyric-range-selected]`,
           ),
         ).toHaveCount(1)
       }
@@ -144,7 +147,7 @@ Then(
   async ({ page }, verse: number) => {
     await expect(
       page.locator(
-        `${tagSelector('lyric', { verse })}[data-lyric-range-selected]`,
+        `${tagSelector('lyric', { sourcePartIndex: verse + 1 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(0)
   },

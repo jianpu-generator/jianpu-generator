@@ -205,9 +205,8 @@ pub enum GridContent {
     HorizontalLine,
     /// Part name at column=0, column_span=4 in the note-head sub-row.
     RowLabel(String),
-    /// `source_part_index`/`note_id` identify the note this syllable is sung
-    /// on, and `verse` (0-indexed) disambiguates which verse line it belongs
-    /// to when a part has more than one (see
+    /// `source_part_index` is the lyric part's own index and `note_id` the
+    /// note of its target this syllable is sung on (see
     /// `compiler::types::ElementContent::Lyric`), letting the SVG preview
     /// give this syllable its own click target independent of its note's —
     /// see `renderer::new_types::Tag::Lyric`.
@@ -215,7 +214,6 @@ pub enum GridContent {
         text: String,
         source_part_index: usize,
         note_id: usize,
-        verse: usize,
     },
     /// One verse's full text line for a standalone `lyrics` part, rendered as
     /// a single left-aligned block spanning the whole measure (via
@@ -363,7 +361,6 @@ pub struct LyricClickTarget {
     pub column_end: f32,
     pub source_part_index: usize,
     pub note_id: usize,
-    pub verse: usize,
 }
 
 /// Invisible hit target laid over one verse's `RowLabel` text (e.g.
@@ -377,7 +374,6 @@ pub struct LyricClickTarget {
 pub struct LyricLabelClickTarget {
     pub row: usize,
     pub source_part_index: usize,
-    pub verse: usize,
     pub measure_index_start: usize,
     pub measure_index_end: usize,
 }

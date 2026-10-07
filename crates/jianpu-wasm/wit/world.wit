@@ -123,12 +123,10 @@ world jianpu-wasm {
     record lyric-tag {
         source-part-index: u32,
         note-id: u32,
-        verse: u32,
     }
 
     record lyric-label-tag {
         source-part-index: u32,
-        verse: u32,
         measure-index-start: u32,
         measure-index-end: u32,
     }
@@ -306,15 +304,17 @@ world jianpu-wasm {
     record part {
         abbreviation: string,
         display-name: string,
-        has-lyrics: bool,
+        // False for a lyric part, which only sings along to its target.
+        sounds: bool,
     }
 
-    // `jianpu_generator::source_edit::PartMode`; `follow` carries its target.
+    // `jianpu_generator::source_edit::PartMode`; `follow` and `lyrics` carry their target.
     variant part-mode {
         chords,
         notes,
         percussion,
         follow(string),
+        lyrics(string),
     }
 
     // `jianpu_generator::source_edit::PartSettings`: a `# parts` line's
@@ -396,13 +396,11 @@ world jianpu-wasm {
     }
 
     // The part-toggle UI's raw show/hide/solo state, as part abbreviations.
-    // A part with lyrics has two independent rows (notes and lyrics), each
-    // with its own hidden and soloed flag. Input to `resolve-part-visibility`.
+    // Every part, lyric parts included, is toggled the same way. Input to
+    // `resolve-part-visibility`.
     record part-toggle-state {
-        hidden-notes: list<string>,
-        soloed-notes: list<string>,
-        hidden-lyrics: list<string>,
-        soloed-lyrics: list<string>,
+        hidden-parts: list<string>,
+        soloed-parts: list<string>,
     }
 
     // What `resolve-part-visibility` decided (`jianpu_generator::ResolvedPartVisibility`),
@@ -412,8 +410,6 @@ world jianpu-wasm {
         rendered-tracks: option<list<string>>,
         sounding-tracks: option<list<string>>,
         sounding-display-names: option<list<string>>,
-        lyrics-only-tracks: list<string>,
-        disabled-lyrics: list<string>,
     }
 
     // Resolves hide/solo state into what is drawn and what sounds, given the
@@ -614,7 +610,6 @@ world jianpu-wasm {
         // See `note-span.part-abbreviation`.
         part-abbreviation: option<string>,
         note-id: u32,
-        verse: u32,
         measure-index: u32,
         start: u32,
         end: u32,
@@ -690,7 +685,6 @@ world jianpu-wasm {
     record lyric-cell-in {
         source-part-index: u32,
         note-id: u32,
-        verse: u32,
     }
 
     record lyric-selection-run {
@@ -1183,7 +1177,6 @@ world jianpu-wasm {
     record lyric-element-id {
         source-part-index: u32,
         note-id: u32,
-        verse: u32,
     }
 
     record measure-element-id {
@@ -1199,7 +1192,6 @@ world jianpu-wasm {
 
     record lyric-label-element-id {
         source-part-index: u32,
-        verse: u32,
         measure-index-start: u32,
         measure-index-end: u32,
     }
@@ -1220,7 +1212,6 @@ world jianpu-wasm {
     record lyric-cell-out {
         source-part-index: u32,
         note-id: u32,
-        verse: u32,
     }
 
     record resolve-selection-range-success {

@@ -84,8 +84,8 @@ fn cross_part_note_range_anchor_before_current() {
     // current's measure 1) — excludes part 0's measure-2 note.
     assert_cross_part_note_range(
         &note(0, 0),
-        &note(1, 3),
-        &[note_cell(0, 0), note_cell(0, 1), note_cell(1, 3)],
+        &note(3, 3),
+        &[note_cell(0, 0), note_cell(0, 1), note_cell(3, 3)],
     );
 }
 
@@ -93,9 +93,9 @@ fn cross_part_note_range_anchor_before_current() {
 fn cross_part_note_range_current_before_anchor() {
     // Same pair as above, anchor/current swapped — same result.
     assert_cross_part_note_range(
-        &note(1, 3),
+        &note(3, 3),
         &note(0, 0),
-        &[note_cell(0, 0), note_cell(0, 1), note_cell(1, 3)],
+        &[note_cell(0, 0), note_cell(0, 1), note_cell(3, 3)],
     );
 }
 
@@ -106,8 +106,8 @@ fn cross_part_note_range_measure_with_no_notes_in_one_part_contributes_nothing()
     // doesn't pick anything up there; no error.
     assert_cross_part_note_range(
         &note(0, 2),
-        &note(1, 3),
-        &[note_cell(0, 1), note_cell(0, 2), note_cell(1, 3)],
+        &note(3, 3),
+        &[note_cell(0, 1), note_cell(0, 2), note_cell(3, 3)],
     );
 }
 

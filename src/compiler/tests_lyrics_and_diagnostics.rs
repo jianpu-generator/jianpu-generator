@@ -10,7 +10,7 @@ fn score_from(source: &str) -> crate::ast::grouped::Score {
 /// Lyrics-part document with one track.
 fn lyrics_doc(score_content: &str) -> String {
     format!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nS = notes\n\n# score\n{score_content}"
+        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nS = notes\nSv = lyrics[S]\n\n# score\n{score_content}"
     )
 }
 
@@ -22,14 +22,14 @@ fn cross_measure_tilde_tie_does_not_consume_lyric_slot_for_continuation_note() {
     let score = score_from(&lyrics_doc(concat!(
         "time=4/4 key=C4 bpm=120\n",
         "[S] 1 2 3 4~\n",
-        "ha ta ba na\n",
+        "[Sv] ha ta ba na\n",
         "\n",
         "[S] 4 5 6 7\n",
-        "sa da ko\n",
+        "[Sv] sa da ko\n",
     )));
     let result = compile(&score);
     let blocks = result.blocks;
-    let bar2 = &blocks[1].rows[0];
+    let bar2 = &blocks[1].rows[1];
     // "sa" should be at column 4 (note 5, after the tied note 4 at column 0)
     let lyrics: Vec<_> = bar2
         .elements
@@ -52,7 +52,7 @@ fn cross_measure_tilde_tie_does_not_consume_lyric_slot_for_continuation_note() {
 #[test]
 fn lyrics_underflow_errors_propagate_to_measure_block() {
     // 4 notes but only 2 syllables → block should have errors
-    let source = lyrics_doc("time=4/4 key=C4 bpm=120\n[S] 1 2 3 4\na b\n");
+    let source = lyrics_doc("time=4/4 key=C4 bpm=120\n[S] 1 2 3 4\n[Sv] a b\n");
     let score = score_from(&source);
     let result = compile(&score);
     assert_eq!(result.blocks.len(), 1);
@@ -64,7 +64,7 @@ fn lyrics_underflow_errors_propagate_to_measure_block() {
 
 #[test]
 fn matching_lyrics_produce_no_block_errors() {
-    let source = lyrics_doc("time=4/4 key=C4 bpm=120\n[S] 1 2 3 4\na b c d\n");
+    let source = lyrics_doc("time=4/4 key=C4 bpm=120\n[S] 1 2 3 4\n[Sv] a b c d\n");
     let score = score_from(&source);
     let result = compile(&score);
     assert!(result.blocks[0].diagnostics.is_empty());
@@ -77,10 +77,10 @@ fn lyrics_underflow_in_first_measure_only() {
     let source = lyrics_doc(concat!(
         "time=4/4 key=C4 bpm=120\n",
         "[S] 1 2 3 4\n",
-        "a b\n",
+        "[Sv] a b\n",
         "\n",
         "[S] 5 6 7 1\n",
-        "c d e f\n",
+        "[Sv] c d e f\n",
     ));
     let score = score_from(&source);
     let result = compile(&score);

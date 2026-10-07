@@ -66,7 +66,7 @@ pub struct DiagnosticOut {
 pub struct PartOut {
     pub abbreviation: String,
     pub display_name: String,
-    pub has_lyrics: bool,
+    pub sounds: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -222,8 +222,6 @@ pub struct LyricSpanOut {
     pub part_abbreviation: Option<String>,
     /// Matches the SVG's `data-note-id` attribute on a `Tag::Lyric` group.
     pub note_id: usize,
-    /// Matches the SVG's `data-verse` attribute on a `Tag::Lyric` group.
-    pub verse: usize,
     /// Index into the score's measures, in source order.
     pub measure_index: usize,
     /// Inclusive start byte of this syllable's own token in the original source.

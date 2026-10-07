@@ -132,10 +132,9 @@ const lyricRangeSpec: RangeHighlightSpec<LyricCell> = {
     return {
       sourcePartIndex: tag.val.sourcePartIndex,
       noteId: tag.val.noteId,
-      verse: tag.val.verse,
     }
   },
-  cellKey: (c) => `${c.sourcePartIndex}:${c.noteId}:${c.verse}`,
+  cellKey: (c) => `${c.sourcePartIndex}:${c.noteId}`,
   datasetFlag: 'lyricRangeSelected',
 }
 

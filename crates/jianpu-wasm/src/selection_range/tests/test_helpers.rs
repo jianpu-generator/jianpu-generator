@@ -1,4 +1,7 @@
-use crate::selection_range::types::{ClickableElementId, LyricCellOut, NoteCellOut};
+use crate::selection_range::resolve_selection_range_response;
+use crate::selection_range::types::{
+    ClickableElementId, LyricCellOut, NoteCellOut, ResolveSelectionRangeResponse,
+};
 use crate::types::{LyricSpanOut, NoteSpanOut};
 
 pub(super) fn note_span(
@@ -19,14 +22,12 @@ pub(super) fn note_span(
 pub(super) fn lyric_span(
     source_part_index: usize,
     note_id: usize,
-    verse: usize,
     measure_index: usize,
 ) -> LyricSpanOut {
     LyricSpanOut {
         source_part_index,
         part_abbreviation: None,
         note_id,
-        verse,
         measure_index,
         start: note_id * 10,
         end: note_id * 10 + 1,
@@ -47,11 +48,10 @@ pub(super) fn note(source_part_index: usize, note_id: usize) -> ClickableElement
     }
 }
 
-pub(super) fn lyric(source_part_index: usize, note_id: usize, verse: usize) -> ClickableElementId {
+pub(super) fn lyric(source_part_index: usize, note_id: usize) -> ClickableElementId {
     ClickableElementId::Lyric {
         source_part_index,
         note_id,
-        verse,
     }
 }
 
@@ -69,13 +69,11 @@ pub(super) fn part_label(
 
 pub(super) fn lyric_label(
     source_part_index: usize,
-    verse: usize,
     measure_index_start: usize,
     measure_index_end: usize,
 ) -> ClickableElementId {
     ClickableElementId::LyricLabel {
         source_part_index,
-        verse,
         measure_index_start,
         measure_index_end,
     }
@@ -88,58 +86,63 @@ pub(super) fn note_cell(source_part_index: usize, note_id: usize) -> NoteCellOut
     }
 }
 
-pub(super) fn lyric_cell(source_part_index: usize, note_id: usize, verse: usize) -> LyricCellOut {
+pub(super) fn lyric_cell(source_part_index: usize, note_id: usize) -> LyricCellOut {
     LyricCellOut {
         source_part_index,
         note_id,
-        verse,
     }
 }
 
-/// Fixture shared by every case below: three note-carrying measures (0, 1,
-/// 2), a second part only present in measure 1, and lyrics on part 0 only.
+/// Fixture shared by every case: parts in declaration order are
+/// 0 = notes A (note_ids 0-2 in measures 0-2), 1 = lyric part of A (a
+/// syllable per note), 2 = a second lyric part of A (note_ids 0-1),
+/// 3 = notes B (note_id 3, measure 1 only), 4 = lyric part of B.
 pub(super) fn fixture() -> (Vec<NoteSpanOut>, Vec<LyricSpanOut>) {
     let note_spans = vec![
         note_span(0, 0, 0),
         note_span(0, 1, 1),
         note_span(0, 2, 2),
-        note_span(1, 3, 1),
+        note_span(3, 3, 1),
     ];
     let lyric_spans = vec![
-        lyric_span(0, 0, 0, 0),
-        lyric_span(0, 1, 0, 1),
-        lyric_span(0, 2, 0, 2),
+        lyric_span(1, 0, 0),
+        lyric_span(1, 1, 1),
+        lyric_span(1, 2, 2),
+        lyric_span(2, 0, 0),
+        lyric_span(2, 1, 1),
+        lyric_span(4, 3, 1),
     ];
     (note_spans, lyric_spans)
 }
 
-/// Fixture for the cross-verse `Lyric ↔ Lyric` arm: extends `fixture()`
-/// (part 0's note_ids 0-2, verse-0 lyrics on all three) with a verse-1 lyric
-/// on note_id 1 only and a verse-2 lyric on note_id 0 — enough to prove the
-/// arm ranges over both `note_id` and `verse` independently, not unioning
-/// every verse it happens to find.
-pub(super) fn cross_verse_lyric_fixture() -> (Vec<NoteSpanOut>, Vec<LyricSpanOut>) {
-    let (note_spans, mut lyric_spans) = fixture();
-    lyric_spans.push(lyric_span(0, 1, 1, 1));
-    lyric_spans.push(lyric_span(0, 0, 2, 0));
-    (note_spans, lyric_spans)
+/// Asserts that resolving `(anchor, current)` — in both orders — over
+/// [`fixture`] yields exactly the expected cells.
+pub(super) fn assert_range(
+    anchor: &ClickableElementId,
+    current: &ClickableElementId,
+    expected_note_cells: &[NoteCellOut],
+    expected_lyric_cells: &[LyricCellOut],
+) {
+    let (note_spans, lyric_spans) = fixture();
+    for (first, second) in [(anchor, current), (current, anchor)] {
+        match resolve_selection_range_response(&note_spans, &lyric_spans, first, second) {
+            ResolveSelectionRangeResponse::Ok {
+                note_cells,
+                lyric_cells,
+            } => {
+                assert_eq!(note_cells, expected_note_cells);
+                assert_eq!(lyric_cells, expected_lyric_cells);
+            }
+            ResolveSelectionRangeResponse::Err => panic!("expected Ok, got Err"),
+        }
+    }
 }
 
-/// Fixture for the cross-part `Lyric ↔ Lyric` arm: extends `fixture()` with
-/// a verse-0 lyric on part 1 (measure 1, same note_id/measure as part 1's
-/// only note), so a cross-part pair has a second part's lyric to range
-/// into.
-pub(super) fn cross_part_lyric_fixture() -> (Vec<NoteSpanOut>, Vec<LyricSpanOut>) {
-    let (note_spans, mut lyric_spans) = fixture();
-    lyric_spans.push(lyric_span(1, 3, 0, 1));
-    (note_spans, lyric_spans)
-}
-
-/// Fixture for `LyricLabel ↔ LyricLabel` cases: extends `fixture()` with a
-/// verse-0 lyric on part 1 (measure 1), so a multi-part sweep at verse 0 has
-/// more than one part's lyrics to union together.
-pub(super) fn lyric_label_fixture() -> (Vec<NoteSpanOut>, Vec<LyricSpanOut>) {
-    let (note_spans, mut lyric_spans) = fixture();
-    lyric_spans.push(lyric_span(1, 3, 0, 1));
-    (note_spans, lyric_spans)
+/// Asserts that resolving `(anchor, current)` over [`fixture`] is `Err`.
+pub(super) fn assert_unresolved(anchor: &ClickableElementId, current: &ClickableElementId) {
+    let (note_spans, lyric_spans) = fixture();
+    assert!(matches!(
+        resolve_selection_range_response(&note_spans, &lyric_spans, anchor, current),
+        ResolveSelectionRangeResponse::Err
+    ));
 }

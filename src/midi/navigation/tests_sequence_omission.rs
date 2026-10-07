@@ -84,7 +84,7 @@ fn measure_with_parts(index: usize, part_names: &[&str]) -> MultiPartMeasure {
                     volume: 100,
                     octave_offset: 0,
                     notes: Notes { events: vec![] },
-                    lyrics: vec![],
+                    lyrics: None,
                     has_error: false,
                     resolution_multiplier: 1,
                     beat_group_size: 4,

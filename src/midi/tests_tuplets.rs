@@ -93,7 +93,7 @@ fn triplet_measure_produces_same_total_ticks_as_equivalent_non_tuplet_measure() 
                 triplet_eighth_note_event(),
             ],
         },
-        lyrics: Vec::new(),
+        lyrics: None,
         has_error: false,
     });
 
@@ -109,7 +109,7 @@ fn triplet_measure_produces_same_total_ticks_as_equivalent_non_tuplet_measure() 
         notes: Notes {
             events: vec![plain_quarter_note_event()],
         },
-        lyrics: Vec::new(),
+        lyrics: None,
         has_error: false,
     });
 

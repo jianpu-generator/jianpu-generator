@@ -6,12 +6,13 @@ const SOURCE: &str = concat!(
     "\n",
     "# parts\n",
     "Melody [M] = notes\n",
+    "Melody lyrics [Mv1] = lyrics[M]\n",
     "Chords [C] = chords\n",
     "\n",
     "# score\n",
     "(bpm=120 key=C4 time=4/4)\n",
     "[M] 1 2 3 4\n",
-    "twin- kle twin- kle\n",
+    "[Mv1] twin- kle twin- kle\n",
     "[C] 1 - - -\n",
 );
 
@@ -24,7 +25,7 @@ fn render(visibility: &ResolvedPartVisibility) -> String {
 
 fn melody_lyrics_only() -> ResolvedPartVisibility {
     ResolvedPartVisibility {
-        lyrics_only_tracks: vec!["M".to_string()],
+        rendered_tracks: Some(vec!["Mv1".to_string(), "C".to_string()]),
         ..Default::default()
     }
 }
@@ -94,10 +95,11 @@ fn lyrics_only_part_keeps_the_lyrics_at_their_horizontal_positions() {
 }
 
 #[test]
-fn lyrics_only_part_stays_in_the_part_list_legend() {
+fn shown_lyric_part_is_listed_in_the_part_list_legend() {
     let svg = render(&melody_lyrics_only());
 
-    assert!(svg.contains("M — Melody"));
+    assert!(svg.contains("Mv1 — Melody lyrics"));
+    assert!(!svg.contains("M — Melody"));
 }
 
 #[test]
@@ -105,13 +107,14 @@ fn lyrics_only_measure_without_lyrics_is_a_blank_lyric_row_not_a_rest() {
     let source = concat!(
         "# parts\n",
         "Melody [M] = notes\n",
+        "Melody lyrics [Mv1] = lyrics[M]\n",
         "\n",
         "# score\n",
         "(bpm=120 key=C4 time=4/4)\n",
         "[M] 1 2 3 4\n",
         "\n",
         "[M] 5 6 7 1\n",
-        "la la la la\n",
+        "[Mv1] la la la la\n",
     );
 
     let svg =
@@ -120,9 +123,10 @@ fn lyrics_only_measure_without_lyrics_is_a_blank_lyric_row_not_a_rest() {
             .svgs
             .concat();
 
+    // The blank first measure draws no syllable text (and no rest).
     assert_eq!(
         texts_of_variant(&svg, "lyric"),
-        vec!["", "la", "la", "la", "la"]
+        vec!["la", "la", "la", "la"]
     );
     assert!(texts_of_variant(&svg, "note-head").is_empty());
     assert!(texts_of_variant(&svg, "rest").is_empty());

@@ -7,12 +7,13 @@ const SOURCE = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody lyrics [Mv1] = lyrics[M]',
   'Chords [C] = chords',
   '',
   '# score',
   '(bpm=120 key=C4 time=4/4)',
   '[M] 1 2 3 4',
-  'twin- kle twin- kle',
+  '[Mv1] twin- kle twin- kle',
   '[C] 1 - - -',
 ].join('\n')
 
@@ -22,13 +23,14 @@ const THREE_PART_SOURCE = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody lyrics [Mv1] = lyrics[M]',
   'Harmony [H] = notes',
   'Chords [C] = chords',
   '',
   '# score',
   '(bpm=120 key=C4 time=4/4)',
   '[M] 1 2 3 4',
-  'twin- kle twin- kle',
+  '[Mv1] twin- kle twin- kle',
   '[H] 5 6 7 1',
   '[C] 1 - - -',
 ].join('\n')
@@ -42,6 +44,7 @@ const CHORD_CONTENT = '———'
 // Part-list legend entries ("abbreviation — display name"), rendered in the
 // preview header only for parts whose abbreviation differs from their name.
 const MELODY_LEGEND = 'M — Melody'
+const MELODY_LYRICS_LEGEND = 'Mv1 — Melody lyrics'
 const HARMONY_LEGEND = 'H — Harmony'
 const CHORDS_LEGEND = 'C — Chords'
 
@@ -90,10 +93,6 @@ async function toggleSolo(page: Page, abbreviation: string) {
     .click()
 }
 
-function lyricsPill(page: Page, abbreviation: string) {
-  return partPill(page, `${abbreviation}詞`)
-}
-
 function firstLyricLocator(page: Page) {
   return page.locator('.preview-pages text', { hasText: MELODY_LYRICS }).first()
 }
@@ -108,6 +107,7 @@ async function expectTwoButtons(pill: Locator) {
 
 const PART_ABBREVIATIONS: Record<string, string> = {
   Melody: 'M',
+  'Melody lyrics': 'Mv1',
   Harmony: 'H',
   Chords: 'C',
 }
@@ -131,6 +131,7 @@ function lookup(
 
 const LEGEND_BY_LABEL: Record<string, string> = {
   Melody: MELODY_LEGEND,
+  'Melody lyrics': MELODY_LYRICS_LEGEND,
   Harmony: HARMONY_LEGEND,
   Chords: CHORDS_LEGEND,
 }
@@ -159,21 +160,6 @@ When(
 
 When('I solo the {string} part', async ({ page }, partName: string) => {
   await toggleSolo(page, lookup(PART_ABBREVIATIONS, partName, 'part name'))
-})
-
-When(
-  'I hide the {string} lyrics row via its eye toggle',
-  async ({ page }, partName: string) => {
-    await lyricsPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name'))
-      .locator('.part-toggle-segment--eye')
-      .click()
-  },
-)
-
-When('I solo the {string} lyrics row', async ({ page }, partName: string) => {
-  await lyricsPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name'))
-    .locator('.part-toggle-segment--headphones')
-    .click()
 })
 
 When('I reload the part toggles page', async ({ page }) => {
@@ -214,37 +200,10 @@ Then(
 )
 
 Then(
-  'the part toggles list contains a {string} lyrics pill',
-  async ({ page }, partName: string) => {
-    await expect(
-      lyricsPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name')),
-    ).toHaveCount(1)
-  },
-)
-
-Then(
-  'the part toggles list does not contain a {string} lyrics pill',
-  async ({ page }, partName: string) => {
-    await expect(
-      lyricsPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name')),
-    ).toHaveCount(0)
-  },
-)
-
-Then(
   'the {string} part pill has exactly a show\\/hide button and a solo button',
   async ({ page }, partName: string) => {
     await expectTwoButtons(
       partPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name')),
-    )
-  },
-)
-
-Then(
-  'the {string} lyrics pill has exactly a show\\/hide button and a solo button',
-  async ({ page }, partName: string) => {
-    await expectTwoButtons(
-      lyricsPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name')),
     )
   },
 )

@@ -32,8 +32,10 @@ pub mod grouper;
 pub mod grouping;
 pub mod highlight;
 pub mod layout;
+mod lyric_slots;
 pub mod lyric_spans;
 pub mod measure_spans;
+pub mod migrate_lyrics;
 pub mod note_spans;
 pub mod parser;
 mod part_info;
@@ -205,13 +207,11 @@ struct SvgDocsResult {
 fn render_svg_docs_with_parts(
     score: &Score,
     parts: &[PartInfo],
-    lyrics_only_tracks: &[String],
 ) -> Result<SvgDocsResult, IrrecoverableError> {
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
     let header = build_header(score, parts);
     let compile_result = compiler::compile(score);
-    let compile_result =
-        consolidator::consolidate_with_lyrics_only(compile_result, lyrics_only_tracks);
+    let compile_result = consolidator::consolidate(compile_result);
     let grid_layout::LayoutOutput {
         pages: grid_pages,
         diagnostics,
@@ -267,10 +267,9 @@ pub(crate) struct SvgsResult {
 pub(crate) fn render_svgs_with_parts(
     score: &Score,
     parts: &[PartInfo],
-    lyrics_only_tracks: &[String],
     source: Option<&str>,
 ) -> Result<SvgsResult, IrrecoverableError> {
-    let result = render_svg_docs_with_parts(score, parts, lyrics_only_tracks)?;
+    let result = render_svg_docs_with_parts(score, parts)?;
     Ok(SvgsResult {
         svgs: serializer::serialize(&result.documents, source),
         diagnostics: result.diagnostics,
@@ -279,7 +278,7 @@ pub(crate) fn render_svgs_with_parts(
 
 /// Layout and render a [`Score`] into one SVG string per page.
 pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
-    Ok(render_svgs_with_parts(score, &[], &[], None)?.svgs)
+    Ok(render_svgs_with_parts(score, &[], None)?.svgs)
 }
 
 /// Parse, group, and render a `.jianpu` source string into SVG page strings.
@@ -301,46 +300,23 @@ pub fn render_svgs_from_source_filtered(
     enabled_tracks: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<RenderOutput, IrrecoverableError> {
-    render_svgs_from_source_filtered_with_lyrics(
-        source,
-        filename,
-        enabled_tracks,
-        None,
-        instruments,
-    )
-}
-
-/// Parse, group, optionally filter tracks and lyrics, and render SVG page strings.
-///
-/// When `enabled_tracks` is `None`, all parts are rendered.
-/// When `Some(tracks)` is empty, no parts are rendered.
-/// When `disabled_lyrics` lists part abbreviations, lyrics are hidden for those parts.
-pub fn render_svgs_from_source_filtered_with_lyrics(
-    source: &str,
-    filename: &str,
-    enabled_tracks: Option<&[String]>,
-    disabled_lyrics: Option<&[String]>,
-    instruments: &[InstrumentInfo],
-) -> Result<RenderOutput, IrrecoverableError> {
     render_svgs_from_source_with_visibility(
         source,
         filename,
         &ResolvedPartVisibility {
             rendered_tracks: enabled_tracks.map(<[String]>::to_vec),
-            disabled_lyrics: disabled_lyrics.map(<[String]>::to_vec).unwrap_or_default(),
             ..Default::default()
         },
         instruments,
     )
 }
 
-/// Parse, group, optionally filter tracks and lyrics, and write PDF bytes.
+/// Parse, group, optionally filter tracks, and write PDF bytes.
 #[cfg(feature = "pdf")]
-pub fn write_pdf_from_source_filtered_with_lyrics(
+pub fn write_pdf_from_source_filtered(
     source: &str,
     filename: &str,
     enabled_tracks: Option<&[String]>,
-    disabled_lyrics: Option<&[String]>,
     fonts: &fonts::FontBytesByFamily,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<u8>, IrrecoverableError> {
@@ -349,7 +325,6 @@ pub fn write_pdf_from_source_filtered_with_lyrics(
         filename,
         &ResolvedPartVisibility {
             rendered_tracks: enabled_tracks.map(<[String]>::to_vec),
-            disabled_lyrics: disabled_lyrics.map(<[String]>::to_vec).unwrap_or_default(),
             ..Default::default()
         },
         fonts,

@@ -50,6 +50,11 @@ pub(crate) use types::{
 /// `Err` like every other not-yet-ported combination, so the caller falls
 /// back to the existing pixel-marquee path.
 ///
+/// Lyric parts are ordinary parts (own `source_part_index`, own rendered
+/// rows), so every arm is a pure rectangle over rendered rows by part index
+/// and measure — there are no lyric-specific special cases (no "sings along
+/// to" lookups).
+///
 /// Every label-mixed pair (`Note ↔ PartLabel`, `Lyric ↔ LyricLabel`,
 /// `Note ↔ LyricLabel`, `Lyric ↔ PartLabel`, `PartLabel ↔ LyricLabel`) is
 /// implemented too, closing out every combination this plan's Phase 1/Phase

@@ -143,11 +143,9 @@ pub enum TagOut {
     Lyric {
         source_part_index: usize,
         note_id: usize,
-        verse: usize,
     },
     LyricLabel {
         source_part_index: usize,
-        verse: usize,
         measure_index_start: usize,
         measure_index_end: usize,
     },

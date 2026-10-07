@@ -1,6 +1,7 @@
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock};
 use crate::grid_layout::layout::{
-    block_column_width, is_chord_only_row, is_lyric_row, LABEL_COLS, MUSIC_START_COL,
+    block_column_width, is_chord_only_row, is_lyric_row, is_lyric_row_of, LABEL_COLS,
+    MUSIC_START_COL,
 };
 use crate::grid_layout::system_walk::for_each_system;
 use crate::grid_layout::types::{GridElement, Header, PlaybackCursorTarget};
@@ -61,12 +62,10 @@ pub(crate) struct NoteRowSpan {
     pub click_row_end: usize,
 }
 
-/// A `notes`/`chords` part with lyrics has its verses compiled as separate sibling rows in
-/// `first.rows` (one `is_lyric_row` entry per verse, immediately following
-/// the notes row, sharing its `source_part_index`) rather than being mixed
-/// into the notes row itself — see `ElementContent::Lyric`'s doc comment.
-/// So a note row's own `has_lyrics` is always false; instead this absorbs
-/// those following verse rows into the note row's `playback_row_end` (so its
+/// A lyric part is its own row in `first.rows` (an `is_lyric_row` entry per
+/// lyric part, immediately following the row it sings along to — see
+/// `RowKind::Lyrics`). This absorbs those following lyric rows into the note
+/// row's `playback_row_end` (so its
 /// playback cursor rect extends down to cover the lyric text) while capturing
 /// `click_row_end` *before* that absorption, and gives each absorbed verse
 /// row the same span as its note row — verse rows never carry a `note_id`,
@@ -85,10 +84,8 @@ pub(crate) fn note_row_spans(
     let mut idx = 0;
     while let Some(part_template) = first.rows.get(idx) {
         if is_lyric_row(part_template) {
-            // A verse row not immediately preceded by its notes row: either a
-            // standalone `lyrics` part (which has no notes row at all) or an
-            // otherwise-unexpected ordering. Either way, give it its own
-            // single-row span.
+            // A lyric row not immediately preceded by its target's row (the
+            // target is hidden). Give it its own single-row span.
             let start = cursor;
             cursor += 1;
             spans.push(NoteRowSpan {
@@ -110,10 +107,11 @@ pub(crate) fn note_row_spans(
         cursor += sub_count;
         let click_row_end = cursor - 1;
         let mut verse_end = idx + 1;
-        while first.rows.get(verse_end).is_some_and(|verse_row| {
-            is_lyric_row(verse_row)
-                && verse_row.source_part_index == part_template.source_part_index
-        }) {
+        while first
+            .rows
+            .get(verse_end)
+            .is_some_and(|verse_row| is_lyric_row_of(verse_row, part_template))
+        {
             cursor += 1;
             verse_end += 1;
         }

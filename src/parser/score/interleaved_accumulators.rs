@@ -29,7 +29,7 @@ pub(super) fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulat
         .map(|decl| TrackAccumulator::Timed {
             measure_slots: Vec::new(),
             pending_events: Vec::new(),
-            syllables: if matches!(decl.kind, PartKind::Notes) {
+            syllables: if matches!(decl.kind, PartKind::Lyrics { .. }) {
                 Some(Vec::new())
             } else {
                 None

@@ -11,11 +11,10 @@ Feature: Click-and-click across part labels selects lyrics too
   # `part-label-click-selects-notes.feature`'s
   # "plain click does not also select the lyric row" scenario.
   #
-  # `usePreviewClickSelection.ts`'s `'part-label'` mode used to resolve only
-  # `noteCellsForPartLabels` and never a lyric-side counterpart, so a
-  # part-label range-select silently skipped every lyric row underneath the
-  # swept parts. `lyricCellsForPartLabels` (in `previewLabelSelection.ts`) is
-  # the fix.
+  # Lyric parts are ordinary parts, so the range is a pure rectangle over
+  # rendered rows by part index: a notes part's lyric rows are selected only
+  # when they sit between the two clicked labels (here Melody's lyric row,
+  # not one below Harmony).
 
   Scenario: Click-and-click vertically across part labels selects both parts' notes and the lyrics under them
     Given the part-label lyric-range-select fixture is loaded

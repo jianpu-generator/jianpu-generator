@@ -104,7 +104,7 @@ fn chord_major_expands_to_three_notes() {
                 notes: Notes {
                     events: vec![NoteEvent::Chord(chord)],
                 },
-                lyrics: Vec::new(),
+                lyrics: None,
                 has_error: false,
             })],
             source_span: Span::new(0, 0), // dummy — midi output ignores span
@@ -221,7 +221,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
                 notes: Notes {
                     events: vec![make_note(true), make_note(false)],
                 },
-                lyrics: Vec::new(),
+                lyrics: None,
                 has_error: false,
             })],
             source_span: Span::new(0, 0),

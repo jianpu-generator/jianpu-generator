@@ -1,7 +1,7 @@
 use super::*;
 
 /// Regression coverage for the lyric-verse-label feature: each verse row
-/// gets its own visible `RowLabel` text (the fixed "*" lyrics glyph, same
+/// gets its own visible `RowLabel` text (its lyric part abbreviation, same
 /// as every other verse row's, rather than the part's abbreviation) plus
 /// its own invisible click target, mirroring how a part gets its own
 /// `RowLabel` text plus `PartLabelClickTarget`.
@@ -55,12 +55,14 @@ const TWO_VERSE_INPUT: &str = concat!(
     "\n",
     "# parts\n",
     "Melody [M] = notes\n",
+    "Melody verse 1 [Mv1] = lyrics[M]\n",
+    "Melody verse 2 [Mv2] = lyrics[M]\n",
     "\n",
     "# score\n",
     "time=4/4 key=C4 bpm=120\n",
     "[M] 1 2 3 4\n",
-    "do re mi fa\n",
-    "la ti da di\n",
+    "[Mv1] do re mi fa\n",
+    "[Mv2] la ti da di\n",
 );
 
 #[test]
@@ -80,37 +82,34 @@ fn each_verse_row_renders_its_own_label_text() {
         "expected an \"M\" label on the notes row only, got {label_texts:?}"
     );
     assert_eq!(
-        label_texts.iter().filter(|&&t| t == "*").count(),
+        label_texts
+            .iter()
+            .filter(|&&t| t == "Mv1" || t == "Mv2")
+            .count(),
         2,
-        "expected a \"*\" label on both verse rows, got {label_texts:?}"
+        "expected \"Mv1\" and \"Mv2\" labels on the verse rows, got {label_texts:?}"
     );
 }
 
 #[test]
 fn each_verse_row_gets_its_own_click_target() {
     let abs = resolve_test_score(TWO_VERSE_INPUT);
-    let targets: Vec<(usize, usize, usize, usize)> = abs[0]
+    let targets: Vec<(usize, usize, usize)> = abs[0]
         .elements
         .iter()
         .filter_map(|e| match &e.content {
             compositor::types::AbsoluteContent::LyricLabelClickTarget {
                 source_part_index,
-                verse,
                 measure_index_start,
                 measure_index_end,
                 ..
-            } => Some((
-                *source_part_index,
-                *verse,
-                *measure_index_start,
-                *measure_index_end,
-            )),
+            } => Some((*source_part_index, *measure_index_start, *measure_index_end)),
             _ => None,
         })
         .collect();
     assert_eq!(
         targets,
-        vec![(0, 0, 0, 0), (0, 1, 0, 0)],
-        "expected one click target per verse row, scoped to the system's own measure range"
+        vec![(1, 0, 0), (2, 0, 0)],
+        "expected one click target per lyric part's row, scoped to the system's own measure range"
     );
 }

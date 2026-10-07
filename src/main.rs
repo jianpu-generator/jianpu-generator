@@ -23,6 +23,11 @@ enum Commands {
     Check {
         input: PathBuf,
     },
+    /// Rewrite positional lyric lines into `lyrics[...]` parts. Rewrites the
+    /// given files in place; with no files, filters stdin to stdout.
+    MigrateLyrics {
+        paths: Vec<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -95,6 +100,7 @@ fn main() -> ExitCode {
     let result = match args.command {
         Commands::Generate { format } => run_generate(format).map(|()| true),
         Commands::Check { input } => run_check(&input),
+        Commands::MigrateLyrics { paths } => run_migrate_lyrics(&paths).map(|()| true),
     };
 
     match result {
@@ -105,6 +111,26 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+fn run_migrate_lyrics(paths: &[PathBuf]) -> Result<(), jg::error::IrrecoverableError> {
+    if paths.is_empty() {
+        let mut source = String::new();
+        std::io::Read::read_to_string(&mut std::io::stdin(), &mut source).map_err(|error| {
+            jg::error::IrrecoverableError::new(jg::error::IrrecoverableErrorKind::IoReadFailed {
+                span: jg::error::Span::new(0, 0),
+                path: PathBuf::from("<stdin>"),
+                source: error.to_string(),
+            })
+        })?;
+        print!("{}", jg::migrate_lyrics::migrate_lyrics_syntax(&source));
+        return Ok(());
+    }
+    paths.iter().try_for_each(|path| {
+        let source = jianpu_generator::cli::read_source(path)?;
+        let migrated = jg::migrate_lyrics::migrate_lyrics_syntax(&source);
+        jianpu_generator::cli::write_file(path, migrated.as_bytes())
+    })
 }
 
 /// Returns `Ok(true)` when the file parses with no errors, `Ok(false)` when it

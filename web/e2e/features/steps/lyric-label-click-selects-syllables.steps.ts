@@ -28,20 +28,22 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody verse 1 [Mv1] = lyrics[M]',
+  'Melody verse 2 [Mv2] = lyrics[M]',
   '',
   '# score',
   '[M] 1 2', // measure 0
-  'do re', // verse 0
-  'fa sol', // verse 1
+  '[Mv1] do re', // verse 0
+  '[Mv2] fa sol', // verse 1
   '',
   '[M] 3 4', // measure 1
-  'la ti', // verse 0
-  'da di', // verse 1
+  '[Mv1] la ti', // verse 0
+  '[Mv2] da di', // verse 1
 ].join('\n')
 
 function verseLabel(page: import('@playwright/test').Page, verse: number) {
   return page
-    .locator(tagSelector('lyric-label', { sourcePartIndex: 0, verse }))
+    .locator(tagSelector('lyric-label', { sourcePartIndex: verse + 1 }))
     .first()
 }
 
@@ -73,17 +75,17 @@ Given(
       timeout: 15_000,
     })
     await page.waitForSelector(
-      tagSelector('lyric-label', { sourcePartIndex: 0, verse: 0 }),
+      tagSelector('lyric-label', { sourcePartIndex: 1 }),
       { timeout: 10_000 },
     )
     await page.waitForSelector(
-      tagSelector('lyric-label', { sourcePartIndex: 0, verse: 1 }),
+      tagSelector('lyric-label', { sourcePartIndex: 2 }),
       { timeout: 10_000 },
     )
 
     await focusEditor()
     await page.keyboard.press('Control+g')
-    await page.keyboard.type('10')
+    await page.keyboard.type('11')
     await page.keyboard.press('Enter')
     await expect(page.locator('button.play-measure-btn')).toHaveText(
       /Measure/,
@@ -148,12 +150,12 @@ Then(
     await expect(highlightedLyrics).toHaveCount(4)
     await expect(
       page.locator(
-        `${tagSelector('lyric', { verse: 0 })}[data-lyric-range-selected]`,
+        `${tagSelector('lyric', { sourcePartIndex: 1 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(4)
     await expect(
       page.locator(
-        `${tagSelector('lyric', { verse: 1 })}[data-lyric-range-selected]`,
+        `${tagSelector('lyric', { sourcePartIndex: 2 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(0)
   },

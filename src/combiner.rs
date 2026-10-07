@@ -1,7 +1,9 @@
 use crate::ast::grouped::{
-    GroupedMeasure, GroupedScore, GroupedTrack, Lyrics, MeasureDirectives, MultiPartMeasure, Notes,
-    PartRow, PartSlice, DEFAULT_HIDE_RESTING_PARTS, DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
+    GroupedMeasure, GroupedScore, GroupedTrack, LyricsSlice, MeasureDirectives, MultiPartMeasure,
+    Notes, PartRow, PartSlice, DEFAULT_HIDE_RESTING_PARTS,
+    DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS,
 };
+use crate::ast::parsed::PartKind;
 use crate::error::{Diagnostic, RecoverableError, Span};
 
 fn collect_part_measure_diagnostics(m: Option<&GroupedMeasure>) -> Vec<Diagnostic> {
@@ -187,12 +189,22 @@ fn build_part_rows(
                     ));
                     continue;
                 };
-                let lyrics = measure
-                    .paired_lyrics
-                    .iter()
-                    .cloned()
-                    .map(|syllables| Lyrics { syllables })
-                    .collect();
+                let lyrics = match part.kind {
+                    PartKind::Lyrics { target_part_index } => {
+                        grouped_tracks.get(target_part_index).map(|target| {
+                            let GroupedTrack::Timed(target) = target;
+                            LyricsSlice {
+                                target_name: target.name.clone().unwrap_or_default(),
+                                target_events: target
+                                    .measures
+                                    .get(measure_idx)
+                                    .map_or_else(Vec::new, |measure| measure.notes.events.clone()),
+                                syllables: measure.paired_lyrics.clone(),
+                            }
+                        })
+                    }
+                    _ => None,
+                };
                 let slice = PartSlice {
                     name: part.name.clone(),
                     kind: part.kind,

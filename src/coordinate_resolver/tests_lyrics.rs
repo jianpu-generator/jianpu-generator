@@ -53,7 +53,6 @@ fn lyric_syllable_halign_center_is_independent_of_column_weight() {
                 text: "la".to_string(),
                 source_part_index: 0,
                 note_id: 0,
-                verse: 0,
             },
         };
         GridPage {
@@ -146,7 +145,6 @@ fn lyric_syllable_shares_the_note_head_padding_formula() {
             text: "la".to_string(),
             source_part_index: 0,
             note_id: 0,
-            verse: 0,
         },
     };
     let page = single_row_page(el);
@@ -207,7 +205,6 @@ fn cjk_lyric_syllable_compensates_its_leading_glyphs_left_bearing() {
             text: "漢字".to_string(),
             source_part_index: 0,
             note_id: 0,
-            verse: 0,
         },
     };
     let page = single_row_page(el);

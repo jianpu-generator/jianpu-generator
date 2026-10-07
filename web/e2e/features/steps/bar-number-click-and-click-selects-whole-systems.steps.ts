@@ -26,23 +26,24 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody lyrics [Mv1] = lyrics[M]',
   'Harmony [H] = notes',
   '',
   '# score',
   '[M] 1 2', // measure 0 — system 0
-  'la la',
+  '[Mv1] la la',
   '[H] 5 6',
   '',
   '[M] 3 4', // measure 1 — system 0
-  'la la',
+  '[Mv1] la la',
   "[H] 7 1'",
   '',
   '[M] 5 6', // measure 2 — system 1
-  'la la',
+  '[Mv1] la la',
   "[H] 1' 7",
   '',
   "[M] 7 1'", // measure 3 — system 1
-  'la la',
+  '[Mv1] la la',
   '[H] 6 5',
 ].join('\n')
 
@@ -109,12 +110,9 @@ function lyric(
   page: import('@playwright/test').Page,
   partIndex: number,
   noteId: number,
-  verse: number,
 ) {
   return page
-    .locator(
-      tagSelector('lyric', { sourcePartIndex: partIndex, noteId, verse }),
-    )
+    .locator(tagSelector('lyric', { sourcePartIndex: partIndex, noteId }))
     .first()
 }
 
@@ -159,11 +157,7 @@ When(
   async ({ page }) => {
     // Same note id 4 as the note-anchored scenario above, but landing on its
     // lyric syllable's own click target instead of the note's.
-    await clickThenStableClick(
-      page,
-      barNumberRect(page, 0),
-      lyric(page, 0, 4, 0),
-    )
+    await clickThenStableClick(page, barNumberRect(page, 0), lyric(page, 1, 4))
   },
 )
 

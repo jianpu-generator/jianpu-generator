@@ -1,6 +1,6 @@
 use crate::types::{LyricSpanOut, NoteSpanOut};
 
-use super::helpers::{lyric_measure_index, note_measure_index, MeasureSpan, VerseMeasureSpan};
+use super::helpers::{lyric_measure_index, note_measure_index, MeasureSpan};
 use super::types::{ClickableElementId, LyricCellOut, NoteCellOut, ResolveSelectionRangeResponse};
 
 /// The three "mixed" label-mixed pairs — `Note ↔ LyricLabel`, `Lyric ↔
@@ -49,7 +49,6 @@ fn resolve_note_lyric_label(
         },
         ClickableElementId::LyricLabel {
             source_part_index: label_part,
-            verse: label_verse,
             measure_index_start: label_start,
             measure_index_end: label_end,
         },
@@ -57,7 +56,6 @@ fn resolve_note_lyric_label(
     | (
         ClickableElementId::LyricLabel {
             source_part_index: label_part,
-            verse: label_verse,
             measure_index_start: label_start,
             measure_index_end: label_end,
         },
@@ -79,9 +77,8 @@ fn resolve_note_lyric_label(
             start: note_measure,
             end: note_measure,
         },
-        VerseMeasureSpan {
+        MeasureSpan {
             part: *label_part,
-            verse: *label_verse,
             start: *label_start,
             end: *label_end,
         },
@@ -108,7 +105,6 @@ fn resolve_lyric_part_label(
         ClickableElementId::Lyric {
             source_part_index: lyric_part,
             note_id: lyric_note_id,
-            verse: lyric_verse,
         },
         ClickableElementId::PartLabel {
             source_part_index: label_part,
@@ -125,15 +121,13 @@ fn resolve_lyric_part_label(
         ClickableElementId::Lyric {
             source_part_index: lyric_part,
             note_id: lyric_note_id,
-            verse: lyric_verse,
         },
     )) = (anchor, current)
     else {
         return None;
     };
 
-    let lyric_measure =
-        lyric_measure_index(lyric_spans, *lyric_part, *lyric_note_id, *lyric_verse)?;
+    let lyric_measure = lyric_measure_index(lyric_spans, *lyric_part, *lyric_note_id)?;
     Some(note_like_lyric_like_range(
         note_spans,
         lyric_spans,
@@ -142,9 +136,8 @@ fn resolve_lyric_part_label(
             start: *label_start,
             end: *label_end,
         },
-        VerseMeasureSpan {
+        MeasureSpan {
             part: *lyric_part,
-            verse: *lyric_verse,
             start: lyric_measure,
             end: lyric_measure,
         },
@@ -169,7 +162,6 @@ fn resolve_part_label_lyric_label(
         },
         ClickableElementId::LyricLabel {
             source_part_index: lyric_label_part,
-            verse: lyric_label_verse,
             measure_index_start: lyric_label_start,
             measure_index_end: lyric_label_end,
         },
@@ -177,7 +169,6 @@ fn resolve_part_label_lyric_label(
     | (
         ClickableElementId::LyricLabel {
             source_part_index: lyric_label_part,
-            verse: lyric_label_verse,
             measure_index_start: lyric_label_start,
             measure_index_end: lyric_label_end,
         },
@@ -199,9 +190,8 @@ fn resolve_part_label_lyric_label(
             start: *part_label_start,
             end: *part_label_end,
         },
-        VerseMeasureSpan {
+        MeasureSpan {
             part: *lyric_label_part,
-            verse: *lyric_label_verse,
             start: *lyric_label_start,
             end: *lyric_label_end,
         },
@@ -222,7 +212,7 @@ fn note_like_lyric_like_range(
     note_spans: &[NoteSpanOut],
     lyric_spans: &[LyricSpanOut],
     note_like: MeasureSpan,
-    lyric_like: VerseMeasureSpan,
+    lyric_like: MeasureSpan,
 ) -> ResolveSelectionRangeResponse {
     let part_start = note_like.part.min(lyric_like.part);
     let part_end = note_like.part.max(lyric_like.part);
@@ -247,14 +237,12 @@ fn note_like_lyric_like_range(
         .filter(|span| {
             span.source_part_index >= part_start
                 && span.source_part_index <= part_end
-                && span.verse == lyric_like.verse
                 && span.measure_index >= measure_start
                 && span.measure_index <= measure_end
         })
         .map(|span| LyricCellOut {
             source_part_index: span.source_part_index,
             note_id: span.note_id,
-            verse: span.verse,
         })
         .collect();
 

@@ -1,5 +1,4 @@
 use super::*;
-use crate::ast::parsed::PartKind;
 
 #[test]
 fn list_parts_from_source_returns_declarations() {
@@ -11,21 +10,22 @@ fn list_parts_from_source_returns_declarations() {
         "# parts\n",
         "main = chords\n",
         "Alto 1 & Tenor [A1&T] = notes\n",
+        "Alto 1 & Tenor lyrics [A1&Tv1] = lyrics[A1&T]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[main] 1m\n",
         "[A1&T] 1 2 3 4\n",
-        "a b c d\n",
+        "[A1&Tv1] a b c d\n",
     );
     let parts = list_parts_from_source(input, "test.jianpu", &[]).unwrap();
-    assert_eq!(parts.len(), 2);
+    assert_eq!(parts.len(), 3);
     assert_eq!(parts[0].abbreviation, "main");
     assert_eq!(parts[0].display_name, "main");
     assert_eq!(parts[1].abbreviation, "A1&T");
     assert_eq!(parts[1].display_name, "Alto 1 & Tenor");
-    assert!(!parts[0].has_lyrics);
-    assert!(parts[1].has_lyrics);
+    assert_eq!(parts[2].abbreviation, "A1&Tv1");
+    assert_eq!(parts[2].display_name, "Alto 1 & Tenor lyrics");
 }
 
 #[test]
@@ -37,23 +37,24 @@ fn hidden_lyrics_do_not_reserve_lyric_row_space() {
         "\n",
         "# parts\n",
         "Soprano = notes\n",
+        "Soprano lyrics [Sopranov1] = lyrics[Soprano]\n",
         "Alto = notes\n",
+        "Alto lyrics [Altov1] = lyrics[Alto]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Soprano] 1 2 3 4\n",
-        "sop sop sop sop\n",
+        "[Sopranov1] sop sop sop sop\n",
         "[Alto] 5 6 7 1\n",
-        "alt alt alt alt\n",
+        "[Altov1] alt alt alt alt\n",
     );
     let all = render_svgs_from_source(input, "test.jianpu", &[])
         .unwrap()
         .svgs;
-    let alto_lyrics_hidden = render_svgs_from_source_filtered_with_lyrics(
+    let alto_lyrics_hidden = render_svgs_from_source_filtered(
         input,
         "test.jianpu",
-        None,
-        Some(&["Alto".into()]),
+        Some(&["Soprano".into(), "Sopranov1".into(), "Alto".into()]),
         &[],
     )
     .unwrap()
@@ -74,23 +75,24 @@ fn render_svgs_from_source_filtered_can_hide_lyrics_per_part() {
         "\n",
         "# parts\n",
         "Soprano = notes\n",
+        "Soprano lyrics [Sopranov1] = lyrics[Soprano]\n",
         "Alto = notes\n",
+        "Alto lyrics [Altov1] = lyrics[Alto]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Soprano] 1 2 3 4\n",
-        "sop sop sop sop\n",
+        "[Sopranov1] sop sop sop sop\n",
         "[Alto] 5 6 7 1\n",
-        "alt alt alt alt\n",
+        "[Altov1] alt alt alt alt\n",
     );
     let all = render_svgs_from_source(input, "test.jianpu", &[])
         .unwrap()
         .svgs;
-    let alto_lyrics_hidden = render_svgs_from_source_filtered_with_lyrics(
+    let alto_lyrics_hidden = render_svgs_from_source_filtered(
         input,
         "test.jianpu",
-        None,
-        Some(&["Alto".into()]),
+        Some(&["Soprano".into(), "Sopranov1".into(), "Alto".into()]),
         &[],
     )
     .unwrap()
@@ -198,11 +200,12 @@ fn split_track_names_falls_back_to_part_declarations() {
         "\n",
         "# parts\n",
         "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Melody] 1 2 3 4\n",
-        "a b c d\n",
+        "[Melodyv1] a b c d\n",
     );
     let score = compile(input, "test.jianpu", &[]).unwrap();
     let names = split_track_names(input, "test.jianpu", &score, &[]).unwrap();
@@ -222,7 +225,7 @@ fn split_pdf_filename_sanitizes_track_name() {
 }
 
 #[test]
-fn apply_lyrics_filter_clears_lyrics_for_filtered_part_only() {
+fn apply_track_filter_keeps_only_enabled_lyric_parts() {
     let input = concat!(
         "# metadata\n",
         "title = \"t\"\n",
@@ -230,31 +233,56 @@ fn apply_lyrics_filter_clears_lyrics_for_filtered_part_only() {
         "\n",
         "# parts\n",
         "Soprano = notes\n",
+        "Soprano lyrics [Sopranov1] = lyrics[Soprano]\n",
         "Alto = notes\n",
+        "Alto lyrics [Altov1] = lyrics[Alto]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Soprano] 1 2 3 4\n",
-        "do re mi fa\n",
+        "[Sopranov1] do re mi fa\n",
         "[Alto] 5 6 7 1\n",
-        "alt alt alt alt\n",
+        "[Altov1] alt alt alt alt\n",
     );
     let mut score = compile(input, "test.jianpu", &[]).unwrap();
-    apply_lyrics_filter(&mut score, Some(&["Soprano".into()]));
-    let part_slice = score.measures[0].parts[0].slice();
+    apply_track_filter(
+        &mut score,
+        Some(&["Soprano".into(), "Alto".into(), "Altov1".into()]),
+    );
+    let names: Vec<&str> = score.measures[0]
+        .parts
+        .iter()
+        .filter_map(|part| part.name().map(String::as_str))
+        .collect();
     assert_eq!(
-        part_slice.kind,
-        PartKind::Notes,
-        "apply_lyrics_filter should not change a part's kind"
+        names,
+        ["Soprano", "Alto", "Altov1"],
+        "a lyric part that is not enabled should be dropped, like any other part"
     );
-    assert!(
-        part_slice.lyrics.is_empty(),
-        "apply_lyrics_filter should clear lyrics for the filtered-out part"
+    assert!(score.measures[0].parts[2].slice().lyrics.is_some());
+}
+
+#[test]
+fn apply_track_filter_keeps_a_lyric_part_whose_target_is_hidden() {
+    let input = concat!(
+        "# parts\n",
+        "Melody [M] = notes\n",
+        "Verse 1 [v1] = lyrics[M]\n",
+        "\n",
+        "# score\n",
+        "[M] 1 2 3 4\n",
+        "[v1] do re mi fa\n",
     );
-    let alto_slice = score.measures[0].parts[1].slice();
-    assert!(
-        !alto_slice.lyrics.is_empty(),
-        "apply_lyrics_filter should leave untouched parts' lyrics intact"
+    let mut score = compile(input, "test.jianpu", &[]).unwrap();
+    apply_track_filter(&mut score, Some(&["v1".into()]));
+    assert_eq!(score.measures[0].parts.len(), 1);
+    let lyrics = score.measures[0].parts[0].slice().lyrics.as_ref().unwrap();
+    assert_eq!(lyrics.target_name, "M");
+    assert_eq!(lyrics.syllables.len(), 4);
+    assert_eq!(
+        lyrics.target_events.len(),
+        4,
+        "the lyric part still carries its target's timing"
     );
 }
 

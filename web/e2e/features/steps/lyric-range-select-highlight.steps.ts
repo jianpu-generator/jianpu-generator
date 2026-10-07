@@ -30,10 +30,11 @@ const rangeTestSource = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody lyrics [Mv1] = lyrics[M]',
   '',
   '# score',
   '[M] 1 2 3 4', // measure 0 — line 9
-  'do re mi fa', // line 10
+  '[Mv1] do re mi fa', // line 10
 ].join('\n')
 
 function lyricTexts(page: import('@playwright/test').Page) {

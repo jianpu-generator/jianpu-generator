@@ -43,7 +43,6 @@ export function lyricClickableElementId(
     val: {
       sourcePartIndex: cell.sourcePartIndex,
       noteId: cell.noteId,
-      verse: cell.verse,
     },
   }
 }

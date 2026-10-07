@@ -1,7 +1,7 @@
 use super::beat_padding::validate_and_pad_beats;
 use super::errors::invariant;
-use super::{notes_syllables_mut, BarGroupContext, SlotAction, TrackAccumulator};
-use crate::ast::parsed::{ParsedMeasureSlot, ScoreEvent};
+use super::{lyrics_accumulator_mut, BarGroupContext, SlotAction, TrackAccumulator};
+use crate::ast::parsed::{ParsedMeasureSlot, PartKind, ScoreEvent};
 use crate::desugar::SourceLine;
 use crate::error::{
     Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned,
@@ -59,71 +59,73 @@ pub(super) fn process_padded_columns(
 
 fn process_lyrics_column_line(
     track_index: usize,
-    line: &str,
+    line: ColumnLine<'_>,
     line_span: Span,
     ctx: &mut BarGroupContext<'_>,
 ) -> Result<(), IrrecoverableError> {
+    let ColumnLine {
+        text: line,
+        is_implicit_fill,
+        ..
+    } = line;
     let lyrics_parse_error = if line.is_empty() {
         Some(RecoverableError::lyrics_line_empty(line_span))
     } else {
         None
     };
-    // Treat empty lines as `_`: no syllables for this measure.
-    let syllables = if line.is_empty() || line == "_" {
+    let chords_target = ctx
+        .declarations
+        .get(track_index)
+        .and_then(|decl| match decl.kind {
+            PartKind::Lyrics { target_part_index } => ctx.declarations.get(target_part_index),
+            _ => None,
+        })
+        .filter(|target| target.kind == PartKind::Chords);
+    // Treat empty lines as `_`: no syllables for this measure. Chords take no
+    // lyrics, so a lyric part targeting one never carries syllables.
+    let syllables = if line.is_empty() || line == "_" || chords_target.is_some() {
         Vec::new()
     } else {
         tokenize_lyrics(line, line_span.start)
     };
-
-    let verse = ctx
-        .bar_lyric_verse_counters
-        .get_mut(track_index)
-        .map(|counter| {
-            let verse = *counter;
-            *counter += 1;
-            verse
-        })
-        .unwrap_or(0);
-
-    {
-        let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
-            invariant(
+    if let (Some(target), false) = (chords_target, is_implicit_fill) {
+        ctx.extra_document_errors
+            .push(RecoverableError::lyrics_no_notes_track(
                 line_span,
-                "internal error: track accumulator index out of range",
-            )
-        })?;
-        let Some(syllables_acc) = notes_syllables_mut(acc)? else {
-            let abbrev = ctx
-                .declarations
-                .get(track_index)
-                .map(|d| d.abbreviation.as_str())
-                .unwrap_or("unknown");
-            ctx.extra_document_errors
-                .push(RecoverableError::lyrics_no_notes_track(line_span, abbrev));
-            return Ok(());
-        };
-        let (syllables_vec, line_starts, line_ends) = syllables_acc;
-        let Some(current_measure) = syllables_vec.last_mut() else {
-            return Err(invariant(
-                line_span,
-                "internal error: no measure bucket to push lyric verse into",
+                &target.abbreviation,
             ));
-        };
-        current_measure.push(syllables);
-        // `line_starts`/`line_ends` already have a placeholder entry for this
-        // bar group (pushed once per group in `process_bar_group`, alongside
-        // this same track's `syllables_vec` bucket) — overwrite it in place
-        // rather than pushing again, so the two stay 1:1 with `measures`
-        // even for a group where this line is the track's first lyric line
-        // ever written.
-        if verse == 0 {
-            if let Some(start) = line_starts.last_mut() {
-                *start = line_span.start;
-            }
-            if let Some(end) = line_ends.last_mut() {
-                *end = line_span.end;
-            }
-        } else if let Some(end) = line_ends.last_mut() {
+    }
+
+    let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
+        invariant(
+            line_span,
+            "internal error: track accumulator index out of range",
+        )
+    })?;
+    let Some(lyrics) = lyrics_accumulator_mut(acc)? else {
+        return Err(invariant(
+            line_span,
+            "internal error: lyric line routed to a track that is not a lyric part",
+        ));
+    };
+    let Some(current_measure) = lyrics.syllables.last_mut() else {
+        return Err(invariant(
+            line_span,
+            "internal error: no measure bucket to push lyric line into",
+        ));
+    };
+    *current_measure = syllables;
+    // `line_starts`/`line_ends` already have a placeholder entry for this bar
+    // group (pushed once per group in `process_bar_group`, alongside this same
+    // track's syllables bucket) — overwrite it in place rather than pushing
+    // again, so the two stay 1:1 with the target's measures. A line left to
+    // implicit fill keeps the placeholder: its synthesized offset is not a
+    // real position in the source.
+    if !is_implicit_fill {
+        if let Some(start) = lyrics.line_starts.last_mut() {
+            *start = line_span.start;
+        }
+        if let Some(end) = lyrics.line_ends.last_mut() {
             *end = line_span.end;
         }
     }
@@ -138,13 +140,7 @@ fn process_lyrics_column_line(
         per_measure_lyrics_errors,
         ..
     } = acc;
-    if verse == 0 {
-        per_measure_lyrics_errors.push(lyrics_parse_error);
-    } else if lyrics_parse_error.is_some() {
-        if let Some(slot @ None) = per_measure_lyrics_errors.last_mut() {
-            *slot = lyrics_parse_error;
-        }
-    }
+    per_measure_lyrics_errors.push(lyrics_parse_error);
     Ok(())
 }
 
@@ -198,7 +194,7 @@ fn process_notes_column_line(
     let is_percussion = ctx
         .declarations
         .get(track_index)
-        .is_some_and(|decl| decl.kind == crate::ast::parsed::PartKind::Percussion);
+        .is_some_and(|decl| decl.kind == PartKind::Percussion);
     let notes_parse = if is_percussion {
         token_parser::parse_percussion_line(line, ctx.base_offset + line_offset, group_state)?
     } else {
@@ -332,7 +328,7 @@ fn process_column_line(
             process_notes_column_line(*track_index, line, beats_expected, line_span, ctx)?;
         }
         SlotAction::Lyrics { track_index } => {
-            process_lyrics_column_line(*track_index, line.text, line_span, ctx)?;
+            process_lyrics_column_line(*track_index, line, line_span, ctx)?;
         }
         SlotAction::Chord { track_index } => {
             if line.text == "_" {

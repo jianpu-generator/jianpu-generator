@@ -74,7 +74,10 @@ where
     let (base, base_name) = split_track_base(input, output);
     for track in &effective_tracks {
         let mut score_clone = score.clone();
-        jg::filter_tracks(&mut score_clone, std::slice::from_ref(track));
+        jg::filter_tracks(
+            &mut score_clone,
+            &jg::track_with_its_lyric_parts(score, track),
+        );
         let label = jg::split_track_label(display_names, track);
         write_track(&score_clone, track, &label, &base, &base_name)?;
     }
@@ -138,11 +141,10 @@ pub fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
     } else {
         Some(opts.tracks.as_slice())
     };
-    let pdf_bytes = jg::write_pdf_from_source_filtered_with_lyrics(
+    let pdf_bytes = jg::write_pdf_from_source_filtered(
         &content,
         &filename,
         enabled_tracks,
-        None,
         &crate::fonts::FontBytesByFamily::embedded(),
         &[],
     )?;

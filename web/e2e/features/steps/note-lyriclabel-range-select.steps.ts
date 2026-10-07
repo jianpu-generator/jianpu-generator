@@ -26,24 +26,26 @@ const source = [
   '# parts',
   'Melody [M] = notes',
   'Harmony [H] = notes',
+  'Harmony verse 1 [Hv1] = lyrics[H]',
+  'Harmony verse 2 [Hv2] = lyrics[H]',
   '',
   '# score',
   '[M] 1', // measure 0 — system 0
   '[H] 5',
-  'do', // Harmony verse 0
-  'fa', // Harmony verse 1 — proves the verse restriction, see below
+  '[Hv1] do', // Harmony verse 0
+  '[Hv2] fa', // Harmony verse 1 — proves the verse restriction, see below
   '',
   'break',
   '[M] 2', // measure 1 — system 1
   '[H] 6',
-  're', // Harmony verse 0
-  'sol', // Harmony verse 1
+  '[Hv1] re', // Harmony verse 0
+  '[Hv2] sol', // Harmony verse 1
   '',
   'break',
   '[M] 3', // measure 2 — system 2, distractor
   '[H] 7',
-  'mi', // Harmony verse 0
-  'la', // Harmony verse 1
+  '[Hv1] mi', // Harmony verse 0
+  '[Hv2] la', // Harmony verse 1
 ].join('\n')
 
 // A note group carries a sibling `Tag::Note` group for its
@@ -59,26 +61,18 @@ function noteInPart(page: import('@playwright/test').Page, partIndex: number) {
     })
 }
 
-function lyricInVerse(
-  page: import('@playwright/test').Page,
-  partIndex: number,
-  verse: number,
-) {
-  return page.locator(
-    tagSelector('lyric', { sourcePartIndex: partIndex, verse }),
-  )
+function lyricInPart(page: import('@playwright/test').Page, partIndex: number) {
+  return page.locator(tagSelector('lyric', { sourcePartIndex: partIndex }))
 }
 
-function verseLabelInSystem(
+function lyricLabelInSystem(
   page: import('@playwright/test').Page,
   partIndex: number,
-  verse: number,
   measureIndexStart: number,
 ) {
   return page.locator(
     tagSelector('lyric-label', {
       sourcePartIndex: partIndex,
-      verse,
       measureIndexStart,
     }),
   )
@@ -108,12 +102,11 @@ Given(
     })
     await expect(noteInPart(page, 0)).toHaveCount(3, { timeout: 10_000 })
     await expect(noteInPart(page, 1)).toHaveCount(3, { timeout: 10_000 })
-    await expect(lyricInVerse(page, 1, 0)).toHaveCount(3, { timeout: 10_000 })
-    await expect(lyricInVerse(page, 1, 1)).toHaveCount(3, { timeout: 10_000 })
+    await expect(lyricInPart(page, 2)).toHaveCount(3, { timeout: 10_000 })
+    await expect(lyricInPart(page, 3)).toHaveCount(3, { timeout: 10_000 })
     await page.waitForSelector(
       tagSelector('lyric-label', {
-        sourcePartIndex: 1,
-        verse: 0,
+        sourcePartIndex: 2,
         measureIndexStart: 1,
       }),
       { timeout: 10_000 },
@@ -127,7 +120,7 @@ When(
   "I click-and-click select Melody's note in measure 0 then Harmony's verse label in system 1",
   async ({ page }) => {
     const fromNote = noteInPart(page, 0).nth(0)
-    const toLabel = verseLabelInSystem(page, 1, 0, 1)
+    const toLabel = lyricLabelInSystem(page, 2, 1)
     await expect(fromNote).toBeVisible({ timeout: 5_000 })
     await expect(toLabel).toBeVisible({ timeout: 5_000 })
 
@@ -147,15 +140,15 @@ Then(
 Then(
   '{int} syllables are range-selected in total, as seen in note lyriclabel range select',
   async ({ page }, count: number) => {
-    // Only Harmony's verse 0 (the label's own verse) should be selected —
-    // verse 1 sits in range but on the wrong verse.
+    // Only Harmony's first lyric part (the label's own) lies in the swept
+    // rows; its second lyric part sits below the label.
     const selected = page.locator(
       `${tagSelector('lyric')}[data-lyric-range-selected]`,
     )
     await expect(selected).toHaveCount(count)
     await expect(
       page.locator(
-        `${tagSelector('lyric', { sourcePartIndex: 1, verse: 1 })}[data-lyric-range-selected]`,
+        `${tagSelector('lyric', { sourcePartIndex: 3 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(0)
   },

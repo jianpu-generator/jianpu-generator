@@ -33,11 +33,13 @@ const multiVerseSource = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody verse 1 [Mv1] = lyrics[M]',
+  'Melody verse 2 [Mv2] = lyrics[M]',
   '',
   '# score',
   '[M] 1 2 3 4', // measure 0 — line 9
-  'do re mi fa', // verse 0 — line 10
-  'uno dos tres cuatro', // verse 1 — line 11
+  '[Mv1] do re mi fa', // verse 0 — line 10
+  '[Mv2] uno dos tres cuatro', // verse 1 — line 11
 ].join('\n')
 
 function lyricRect(
@@ -45,7 +47,9 @@ function lyricRect(
   noteId: number,
   verse: number,
 ) {
-  return page.locator(tagSelector('lyric', { noteId, verse })).locator('rect')
+  return page
+    .locator(tagSelector('lyric', { noteId, sourcePartIndex: verse + 1 }))
+    .locator('rect')
 }
 
 async function monacoSelectionText(page: import('@playwright/test').Page) {
@@ -174,7 +178,7 @@ Then(
     ).toHaveCount(1)
     await expect(
       page.locator(
-        `${tagSelector('lyric', { noteId, verse })}[data-lyric-range-selected]`,
+        `${tagSelector('lyric', { noteId, sourcePartIndex: verse + 1 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(1)
   },
@@ -241,13 +245,13 @@ Then(
   ) => {
     await expect(
       page.locator(
-        `${tagSelector('lyric', { noteId: noteIdA, verse: verseA })}[data-lyric-range-selected]`,
+        `${tagSelector('lyric', { noteId: noteIdA, sourcePartIndex: verseA + 1 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(1)
     // Verse 0's corresponding syllable must not also be marked selected.
     await expect(
       page.locator(
-        `${tagSelector('lyric', { noteId: noteIdB, verse: verseB })}[data-lyric-range-selected]`,
+        `${tagSelector('lyric', { noteId: noteIdB, sourcePartIndex: verseB + 1 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(0)
   },

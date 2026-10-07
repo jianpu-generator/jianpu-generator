@@ -17,6 +17,18 @@ pub enum NoteEvent {
     Percussion(GroupedPercussionHit),
 }
 
+impl NoteEvent {
+    /// Duration in quarter-beats (including `-` extensions).
+    pub fn duration(&self) -> u32 {
+        match self {
+            Self::Note(note) => note.duration,
+            Self::Rest(rest) => rest.duration,
+            Self::Chord(chord) => chord.duration,
+            Self::Percussion(hit) => hit.duration,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct GroupedChordNote {
     pub degree: JianPuPitch,

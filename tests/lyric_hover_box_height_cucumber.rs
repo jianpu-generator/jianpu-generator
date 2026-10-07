@@ -105,7 +105,7 @@ fn when_rendered(world: &mut LyricHoverBoxWorld) {
         metadata.push_str(&format!("{key} = {value}\n"));
     }
     let source = format!(
-        "{metadata}\n# parts\nMelody [M] = notes\n\n# score\ntime=4/4 key=C4 bpm=120\n[M] 1\n{}\n",
+        "{metadata}\n# parts\nMelody [M] = notes\nLyrics [L] = lyrics[M]\n\n# score\ntime=4/4 key=C4 bpm=120\n[M] 1\n[L] {}\n",
         world.syllable_text
     );
 

@@ -90,16 +90,10 @@ export function useAppController() {
     partToggles,
     disabledParts,
     setDisabledParts,
-    disabledLyrics,
-    setDisabledLyrics,
     soloedParts,
     setSoloedParts,
-    soloedLyrics,
-    setSoloedLyrics,
     handlePartToggle,
-    handleLyricsToggle,
     handleSoloToggle,
-    handleLyricsSoloToggle,
   } = usePartToggles(fileId)
 
   const {
@@ -176,13 +170,7 @@ export function useAppController() {
     selectedSequenceRangeRef,
     measureRangeSelectedPartNamesRef,
   )
-  usePartTogglePruning(
-    parts,
-    setDisabledParts,
-    setDisabledLyrics,
-    setSoloedParts,
-    setSoloedLyrics,
-  )
+  usePartTogglePruning(parts, setDisabledParts, setSoloedParts)
 
   const handleSourceChange = useCallback(
     (value: string) => {
@@ -299,13 +287,9 @@ export function useAppController() {
     soundfontReady,
     pdfFontsReady,
     disabledParts,
-    disabledLyrics,
     soloedParts,
-    soloedLyrics,
     handlePartToggle,
-    handleLyricsToggle,
     handleSoloToggle,
-    handleLyricsSoloToggle,
     parts,
     partDeclarations,
     documents,

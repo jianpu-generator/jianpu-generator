@@ -10,8 +10,8 @@ import { focusEditor } from '../../fileSwitcherHelpers'
  */
 export const PART_INDEX: Record<string, number> = {
   Melody: 0,
-  Harmony: 1,
-  Bass: 2,
+  Harmony: 3,
+  Bass: 4,
 }
 
 export type MeasureSpec = {
@@ -82,6 +82,8 @@ function buildSource(): { source: string; firstMeasureLine: number } {
   lines.push('')
   lines.push('# parts')
   lines.push('Melody [M] = notes')
+  lines.push('Melody verse 1 [Mv1] = lyrics[M]')
+  lines.push('Melody verse 2 [Mv2] = lyrics[M]')
   lines.push('Harmony [H] = notes')
   lines.push('Bass [B] = notes')
   lines.push('')
@@ -97,9 +99,9 @@ function buildSource(): { source: string; firstMeasureLine: number } {
     for (const part of ['Melody', 'Harmony', 'Bass']) {
       if (part === 'Melody' && measure.melodyVerses) {
         groupLines.push(`[M] ${NOTE_TOKENS.Melody}`)
-        for (const verse of measure.melodyVerses) {
-          groupLines.push(verse.join(' '))
-        }
+        measure.melodyVerses.forEach((verse, verseIndex) => {
+          groupLines.push(`[Mv${verseIndex + 1}] ${verse.join(' ')}`)
+        })
       } else if (measure.notesFor.includes(part)) {
         const abbrev = part === 'Melody' ? 'M' : part === 'Harmony' ? 'H' : 'B'
         // The merge scenario deliberately wants Melody and Harmony to have

@@ -66,6 +66,7 @@ fn make_block_with_notes(row_id: &str, note_count: u32, bar_col: u32) -> Measure
     });
     MeasureBlock {
         rows: vec![MeasureRow {
+            kind: crate::compiler::types::RowKind::Sounding,
             absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
             label: row_id.to_string(),

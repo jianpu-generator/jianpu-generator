@@ -4,29 +4,31 @@ max_measures_per_system = 1
 
 # parts
 Melody [M] = notes
+Melody verse 1 [Mv1] = lyrics[M]
+Melody verse 2 [Mv2] = lyrics[M]
 
 # score
 label="CJK syllables"
 [M] 1 2 3 4
-春天来了
+[Mv1] 春天来了
 
 label="Latin syllables"
 [M] 1 2 3 4
-do re mi fa
+[Mv1] do re mi fa
 
 label="Syllable break (-)"
 [M] 1 1 5 5
-twin- kle twin- kle
+[Mv1] twin- kle twin- kle
 
 label="Held syllable (-)"
 [M] 4~4 3 2
-he - world
+[Mv1] he - world
 
 label="No-lyrics marker (_)"
 [M] 0
-_
+[Mv1] _
 
 label="Multiple verses"
 [M] 1 2 3 4
-do re mi fa
-one two three four
+[Mv1] do re mi fa
+[Mv2] one two three four

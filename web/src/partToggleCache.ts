@@ -2,9 +2,7 @@ export const PART_TOGGLES_KEY = 'jianpu:part-toggles:v1'
 
 export interface PartToggleState {
   disabledParts: string[]
-  disabledLyrics: string[]
   soloedParts: string[]
-  soloedLyrics: string[]
 }
 
 type PartToggleCache = Record<string, PartToggleState>
@@ -27,9 +25,7 @@ export function readPartTogglesForFile(fileId: string): PartToggleState | null {
   if (entry == null) return null
   return {
     disabledParts: entry.disabledParts ?? [],
-    disabledLyrics: entry.disabledLyrics ?? [],
     soloedParts: entry.soloedParts ?? [],
-    soloedLyrics: entry.soloedLyrics ?? [],
   }
 }
 

@@ -32,11 +32,13 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody verse 1 [Mv1] = lyrics[M]',
+  'Melody verse 2 [Mv2] = lyrics[M]',
   '',
   '# score',
   '[M] 1 2 3 4', // measure 0 — note ids 0-3
-  'a b c d', // verse 0
-  'e f g h', // verse 1
+  '[Mv1] a b c d', // verse 0
+  '[Mv2] e f g h', // verse 1
 ].join('\n')
 
 function noteClickTarget(
@@ -62,7 +64,7 @@ function lyricAt(
   noteId: number,
 ) {
   return page.locator(
-    tagSelector('lyric', { sourcePartIndex: 0, verse, noteId }),
+    tagSelector('lyric', { sourcePartIndex: verse + 1, noteId }),
   )
 }
 
@@ -91,9 +93,9 @@ Given(
     await expect(
       page.locator(rectVariantSelector('note-click-target')),
     ).toHaveCount(4, { timeout: 10_000 })
-    await expect(
-      page.locator(tagSelector('lyric', { sourcePartIndex: 0 })),
-    ).toHaveCount(8, { timeout: 10_000 })
+    await expect(page.locator(tagSelector('lyric'))).toHaveCount(8, {
+      timeout: 10_000,
+    })
     await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(200)
   },

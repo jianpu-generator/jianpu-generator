@@ -4,11 +4,12 @@ max_measures_per_system = 1
 
 # parts
 Melody [M] = notes
+Melody lyrics [Mv1] = lyrics[M]
 
 # score
 label="Slur group"
 [M] (1 2) (3 4)
-_
+[Mv1] _
 
 label="Tie: basic"
 [M] 4~4 3 2
@@ -21,14 +22,14 @@ label="Tie: chained"
 
 label="Tie + repeat"
 [M] 5__~5 0 0
-_
+[Mv1] _
 
 label="Tie inside slur"
 [M] (4~4 3) 2
 
 label="Nested slur"
 [M] ((1_ 2_) 3) 4
-_
+[Mv1] _
 
 label="Cross-measure slur"
 [M] 1 2 3 (4
@@ -36,4 +37,4 @@ label="Cross-measure slur"
 
 
 [M] 5) 6 7 0
-_
+[Mv1] _

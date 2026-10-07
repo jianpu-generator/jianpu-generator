@@ -55,10 +55,23 @@ impl PartialEq for MeasureBlock {
     }
 }
 
+/// What a row draws, which decides how it lays out.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RowKind {
+    /// Notes, chords, percussion or rests.
+    Sounding,
+    /// One verse of lyrics, drawn directly under the row `target` (its
+    /// `RowId`), which it sings along to. The target's row may be absent from
+    /// the block (filtered out) — the lyric row's elements still sit at the
+    /// target's columns.
+    Lyrics { target: RowId },
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeasureRow {
     pub id: RowId,
     pub label: String,
+    pub kind: RowKind,
     pub elements: Vec<ColumnElement>,
     /// The original part index this row was compiled from, before consolidation.
     /// Used to look up slur arcs keyed by original part index.
@@ -149,10 +162,9 @@ pub enum ElementContent {
         dotted: bool,
         double_dotted: bool,
     },
-    /// A syllable for one verse (0-indexed) of a `notes`/`chords` part with lyrics.
+    /// A syllable of a lyric part.
     Lyric {
         text: String,
-        verse: usize,
         /// Identity of the note this syllable is sung on — the same id its
         /// note's own `ColumnElement::note_id` carries (not stored on this
         /// element's own `ColumnElement::note_id`, which stays `None`: see
@@ -163,15 +175,14 @@ pub enum ElementContent {
         /// distinct from its note's (see `renderer::new_types::Tag::Lyric`).
         note_id: usize,
     },
-    /// One verse's (0-indexed) full text line, adurational and not tied to
-    /// any note, rendered as a single left-aligned block spanning the whole
-    /// measure rather than one syllable per column. Currently unreachable:
-    /// nothing constructs this variant since the standalone `lyrics` part
-    /// kind was removed; kept for the downstream rendering machinery that
-    /// still consumes it, in case a future adurational-text feature needs it.
+    /// A lyric part's full text line, adurational and not tied to any note,
+    /// rendered as a single left-aligned block spanning the whole measure
+    /// rather than one syllable per column. Currently unreachable: nothing
+    /// constructs this variant since the standalone `lyrics` part kind was
+    /// removed; kept for the downstream rendering machinery that still
+    /// consumes it, in case a future adurational-text feature needs it.
     LyricLine {
         text: String,
-        verse: usize,
     },
 }
 

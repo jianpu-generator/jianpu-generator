@@ -51,8 +51,8 @@ enum TrackAccumulator {
         measure_slots: Vec<ParsedMeasureSlot>,
         /// Directive events received since the last finalized slot; prepended to the next Real slot.
         pending_events: Vec<Spanned<ScoreEvent>>,
-        /// Measure -> verse -> syllables, for `Notes` parts with lyrics.
-        syllables: Option<Vec<Vec<Vec<crate::ast::parsed::Syllable>>>>,
+        /// Measure -> syllables, for lyric parts.
+        syllables: Option<Vec<Vec<crate::ast::parsed::Syllable>>>,
         /// Start byte offset of the lyrics line for each measure, in order.
         lyrics_line_starts: Vec<usize>,
         /// End byte offset of the lyrics line for each measure, in order.
@@ -74,9 +74,7 @@ struct BarGroupContext<'a> {
     base_offset: usize,
     declarations: &'a [PartDecl],
     /// This measure group's score-line slots. Reset at the top of each
-    /// `process_bar_group` call, since a `Notes` part's positional-lyrics
-    /// verse count (and thus its slot list) can vary from one measure group
-    /// to the next.
+    /// `process_bar_group` call.
     slots: Vec<ScoreLineSlot>,
     slot_actions: Vec<SlotAction>,
     time_num: &'a mut u8,
@@ -85,10 +83,6 @@ struct BarGroupContext<'a> {
     lyric_tie_states: &'a mut [LyricTieState],
     group_states: &'a mut [GroupStack],
     bar_lyric_slots: &'a mut [Option<u32>],
-    /// Per-track count of lyric-verse lines seen so far in the current measure
-    /// group; reset to 0 at the top of each `process_bar_group` call. Used to
-    /// tell which verse (0-indexed) a given lyrics column line belongs to.
-    bar_lyric_verse_counters: &'a mut [usize],
     directive_events_per_measure: &'a mut DirectiveEventsPerMeasure,
     per_measure_directive_errors: &'a mut Vec<Option<RecoverableError>>,
     extra_document_errors: &'a mut Vec<RecoverableError>,
@@ -157,7 +151,6 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
     let mut lyric_tie_states = vec![LyricTieState::default(); declarations.len()];
     let mut group_states = vec![GroupStack::default(); declarations.len()];
     let mut bar_lyric_slots = vec![None; declarations.len()];
-    let mut bar_lyric_verse_counters = vec![0usize; declarations.len()];
     let mut directive_events_per_measure: DirectiveEventsPerMeasure = Vec::new();
     let mut per_measure_directive_errors: Vec<Option<RecoverableError>> = Vec::new();
     let mut extra_document_errors: Vec<RecoverableError> = Vec::new();
@@ -173,7 +166,6 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         lyric_tie_states: &mut lyric_tie_states,
         group_states: &mut group_states,
         bar_lyric_slots: &mut bar_lyric_slots,
-        bar_lyric_verse_counters: &mut bar_lyric_verse_counters,
         directive_events_per_measure: &mut directive_events_per_measure,
         per_measure_directive_errors: &mut per_measure_directive_errors,
         extra_document_errors: &mut extra_document_errors,
@@ -243,27 +235,21 @@ fn process_bar_group(
     for slot in ctx.bar_lyric_slots.iter_mut() {
         *slot = None;
     }
-    for counter in ctx.bar_lyric_verse_counters.iter_mut() {
-        *counter = 0;
-    }
-    // Every syllable-carrying track gets one measure_syllables bucket per bar
-    // group, whether or not it actually has a lyric line written in this
-    // group — a `notes` part with positionally-attached lyrics may have a
-    // `Lyrics` role in some groups and not others. `lyrics_line_starts`/`_ends`
-    // must stay aligned to that same per-group cadence (one entry per bar group)
-    // so `attach_paired_lyrics`'s zip against `measures` doesn't silently
-    // truncate to however many groups actually had a written lyric line.
-    // Placeholder start/end are overwritten in place (not pushed again) by
-    // `process_lyrics_column_line` if this group does turn out to have one.
+    // Every lyric track gets one measure_syllables bucket per bar group, and
+    // `lyrics_line_starts`/`_ends` stay aligned to that same per-group cadence
+    // so the grouper's zip against the target's measures doesn't silently
+    // truncate. Placeholder start/end are overwritten in place (not pushed
+    // again) by `process_lyrics_column_line` when this group writes the
+    // lyric line itself rather than leaving it to implicit fill.
     let group_start_offset = group_lines
         .first()
         .map(|line| ctx.base_offset + line.offset)
         .unwrap_or(ctx.base_offset);
     for acc in ctx.accumulators.iter_mut() {
-        if let Some((syllables_vec, line_starts, line_ends)) = notes_syllables_mut(acc)? {
-            syllables_vec.push(Vec::new());
-            line_starts.push(group_start_offset);
-            line_ends.push(group_start_offset);
+        if let Some(lyrics) = lyrics_accumulator_mut(acc)? {
+            lyrics.syllables.push(Vec::new());
+            lyrics.line_starts.push(group_start_offset);
+            lyrics.line_ends.push(group_start_offset);
         }
     }
 
@@ -295,13 +281,13 @@ fn timed_events_mut(
     }
 }
 
-type SyllablesAndLineSpans<'a> = (
-    &'a mut Vec<Vec<Vec<crate::ast::parsed::Syllable>>>,
-    &'a mut Vec<usize>,
-    &'a mut Vec<usize>,
-);
+struct SyllablesAndLineSpans<'a> {
+    syllables: &'a mut Vec<Vec<crate::ast::parsed::Syllable>>,
+    line_starts: &'a mut Vec<usize>,
+    line_ends: &'a mut Vec<usize>,
+}
 
-fn notes_syllables_mut(
+fn lyrics_accumulator_mut(
     acc: &mut TrackAccumulator,
 ) -> Result<Option<SyllablesAndLineSpans<'_>>, IrrecoverableError> {
     match acc {
@@ -310,9 +296,11 @@ fn notes_syllables_mut(
             lyrics_line_starts,
             lyrics_line_ends,
             ..
-        } => Ok(syllables
-            .as_mut()
-            .map(|s| (s, lyrics_line_starts, lyrics_line_ends))),
+        } => Ok(syllables.as_mut().map(|syllables| SyllablesAndLineSpans {
+            syllables,
+            line_starts: lyrics_line_starts,
+            line_ends: lyrics_line_ends,
+        })),
     }
 }
 
