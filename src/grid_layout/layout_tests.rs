@@ -19,5 +19,7 @@ mod tests_lyrics_only_part;
 #[path = "tests_lyric_click_targets.rs"]
 mod tests_lyric_click_targets;
 
+#[path = "tests_empty_lyric_rows.rs"]
+mod tests_empty_lyric_rows;
 #[path = "tests_lone_resting_row_label.rs"]
 mod tests_lone_resting_row_label;

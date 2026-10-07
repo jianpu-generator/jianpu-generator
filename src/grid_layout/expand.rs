@@ -174,6 +174,19 @@ pub(crate) fn expand_note_part(
     sub_rows
 }
 
+fn has_lyric_syllable(system: &[MeasureBlock], part_idx: usize) -> bool {
+    system
+        .iter()
+        .filter_map(|block| block.rows.get(part_idx))
+        .flat_map(|row| row.elements.iter())
+        .any(|el| {
+            matches!(
+                el.content,
+                crate::compiler::types::ElementContent::Lyric { .. }
+            )
+        })
+}
+
 /// Convert a system's measures into flat GridRows.
 /// Does not include decoration, separator, header, or footer rows.
 pub(crate) fn expand_system_to_rows(
@@ -195,6 +208,12 @@ pub(crate) fn expand_system_to_rows(
     let mut all_rows: Vec<GridRow> = Vec::new();
     for (part_idx, part_template) in first.rows.iter().enumerate() {
         if is_lyric_row(part_template) {
+            // A lyric row with no syllables anywhere in this system is blank
+            // (e.g. L1/L2 merged into one "L1 L2" row while only L3 is sung).
+            // The first row keeps drawing the bar lines, so it stays.
+            if part_idx != 0 && !has_lyric_syllable(system, part_idx) {
+                continue;
+            }
             all_rows.push(expand_lyric_part(
                 system,
                 &LyricPartParams {
