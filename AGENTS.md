@@ -2,6 +2,15 @@
 
 **Never commit directly to `master`.** Always work on a feature branch and open a pull request. The full e2e suite is too large to run in the pre-commit hook, so it runs in CI (`.github/workflows/ci.yml`) on the PR instead — the PR is the gate, not the local commit.
 
+### Before/after screenshots in PRs
+
+When a PR changes rendered output (layout, spacing, rows, glyphs, colors — anything visible in the SVG/PDF or the web UI), its description **MUST include a `## Before / after` section** with a two-column `| Before | After |` table of images, so the reviewer can eyeball the change instead of reproducing it. Skip it for changes with no visual effect (parser errors, MIDI, refactors, CI, docs).
+
+- Render both from the **same minimal `.jianpu` score** (ideally the one from the new test case), with the fix toggled off for "before" and on for "after". Show the score source in a code block above the table.
+- Generate SVGs with `cargo run --features cli -- generate svg <file>`. Crop each to the relevant region by shrinking `width`/`height`/`viewBox` so the change is legible rather than a mostly-white A4 page.
+- GitHub strips inline `<svg>` from descriptions and relative image paths don't resolve, so push the images to an orphan branch named `pr-<number>-assets` and link them via `https://raw.githubusercontent.com/<owner>/<repo>/pr-<number>-assets/<file>.svg`. Don't commit them into the PR's own branch. The assets branch can be deleted after merge.
+- Add one sentence under the table saying what differs, and say if you haven't viewed the images yourself.
+
 ## Syntax documentation
 
 The `.jianpu` input syntax is documented in `syntax.md`.
