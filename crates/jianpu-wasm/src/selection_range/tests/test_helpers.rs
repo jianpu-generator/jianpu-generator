@@ -21,14 +21,12 @@ pub(super) fn note_span(
 
 pub(super) fn lyric_span(
     source_part_index: usize,
-    target_source_part_index: usize,
     note_id: usize,
     measure_index: usize,
 ) -> LyricSpanOut {
     LyricSpanOut {
         source_part_index,
         part_abbreviation: None,
-        target_source_part_index: Some(target_source_part_index),
         note_id,
         measure_index,
         start: note_id * 10,
@@ -107,12 +105,12 @@ pub(super) fn fixture() -> (Vec<NoteSpanOut>, Vec<LyricSpanOut>) {
         note_span(3, 3, 1),
     ];
     let lyric_spans = vec![
-        lyric_span(1, 0, 0, 0),
-        lyric_span(1, 0, 1, 1),
-        lyric_span(1, 0, 2, 2),
-        lyric_span(2, 0, 0, 0),
-        lyric_span(2, 0, 1, 1),
-        lyric_span(4, 3, 3, 1),
+        lyric_span(1, 0, 0),
+        lyric_span(1, 1, 1),
+        lyric_span(1, 2, 2),
+        lyric_span(2, 0, 0),
+        lyric_span(2, 1, 1),
+        lyric_span(4, 3, 1),
     ];
     (note_spans, lyric_spans)
 }

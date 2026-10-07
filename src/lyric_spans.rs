@@ -15,9 +15,6 @@ pub struct LyricSourceSpan {
     /// Abbreviation of the part at `source_part_index` — see
     /// `note_spans::NoteSourceSpan::part_abbreviation`.
     pub part_abbreviation: Option<String>,
-    /// Index (same indexing as `source_part_index`) of the part these lyrics
-    /// sing along to; `None` when that target part is filtered out.
-    pub target_source_part_index: Option<usize>,
     /// Same id the syllable's underlying note (of the lyric part's target)
     /// carries in `ColumnElement::note_id` (see
     /// `compiler::types::ElementContent::Lyric`).
@@ -85,16 +82,11 @@ pub fn list_lyric_spans_from_source(
             let Some(lyrics) = &part_row.slice().lyrics else {
                 continue;
             };
-            let target_source_part_index = measure
-                .parts
-                .iter()
-                .position(|part| part.name().is_some_and(|name| *name == lyrics.target_name));
             let measure_slots = measure_lyric_slots(&lyrics.target_events, state.entering_tied);
             spans.extend(measure_slots.slots.iter().zip(&lyrics.syllables).map(
                 |(slot, syllable)| LyricSourceSpan {
                     source_part_index: part_idx,
                     part_abbreviation: part_row.name().cloned(),
-                    target_source_part_index,
                     note_id: state.next_note_id + slot.event_index,
                     measure_index,
                     start: syllable.span.start,

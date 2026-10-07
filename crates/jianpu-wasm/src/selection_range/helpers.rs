@@ -74,31 +74,6 @@ pub(crate) fn lyric_measure_index(
         .map(|span| span.measure_index)
 }
 
-/// The part a `Lyric` endpoint's lyric part sings along to (`None` when
-/// unknown or filtered out).
-pub(crate) fn lyric_target_part(
-    lyric_spans: &[LyricSpanOut],
-    part: usize,
-    note_id: usize,
-) -> Option<usize> {
-    lyric_spans
-        .iter()
-        .find(|span| span.source_part_index == part && span.note_id == note_id)
-        .and_then(|span| span.target_source_part_index)
-}
-
-/// Whether `span`'s lyric part lies in `part_start..=part_end`, or sings
-/// along to a part that does — a part's lyric parts travel with it when the
-/// part is swept up by a part-label range.
-pub(crate) fn lyric_part_in_range_or_target_in_range(
-    span: &LyricSpanOut,
-    part_start: usize,
-    part_end: usize,
-) -> bool {
-    let in_range = |part: usize| part >= part_start && part <= part_end;
-    in_range(span.source_part_index) || span.target_source_part_index.is_some_and(in_range)
-}
-
 /// The `Lyric`-endpoint analog of [`note_position_in_measure`] — a
 /// syllable's position among its own `(source_part_index, measure_index)`
 /// group, in score order. Used

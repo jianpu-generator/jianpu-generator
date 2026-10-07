@@ -116,7 +116,6 @@ fn span(
     LyricSourceSpan {
         source_part_index,
         part_abbreviation: Some(test_part_abbreviation(source_part_index)),
-        target_source_part_index: None,
         note_id,
         measure_index,
         start,

@@ -222,9 +222,6 @@ pub struct LyricSpanOut {
     pub part_abbreviation: Option<String>,
     /// Matches the SVG's `data-note-id` attribute on a `Tag::Lyric` group.
     pub note_id: usize,
-    /// Part these lyrics sing along to; `None` when it is filtered out.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub target_source_part_index: Option<usize>,
     /// Index into the score's measures, in source order.
     pub measure_index: usize,
     /// Inclusive start byte of this syllable's own token in the original source.

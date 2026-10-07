@@ -56,9 +56,7 @@ export function lyricCellsForPartLabels(
     lyricSpans
       .filter(
         (span) =>
-          // A part's lyric parts travel with it.
-          (span.sourcePartIndex === hit.sourcePartIndex ||
-            span.targetSourcePartIndex === hit.sourcePartIndex) &&
+          span.sourcePartIndex === hit.sourcePartIndex &&
           span.measureIndex >= hit.measureIndexStart &&
           span.measureIndex <= hit.measureIndexEnd,
       )

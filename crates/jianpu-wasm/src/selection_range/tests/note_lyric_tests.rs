@@ -1,7 +1,7 @@
 use super::test_helpers::{assert_range, lyric, lyric_cell, note, note_cell};
 
 #[test]
-fn lyric_of_the_notes_own_part_ranges_by_note_id() {
+fn lyric_of_the_notes_own_part_ranges_over_the_measure_rectangle() {
     assert_range(
         &note(0, 0),
         &lyric(1, 2),
@@ -42,5 +42,15 @@ fn note_of_one_part_and_lyric_of_a_later_part_range_across_parts() {
         &lyric(4, 3),
         &[note_cell(0, 1), note_cell(3, 3)],
         &[lyric_cell(1, 1), lyric_cell(2, 1), lyric_cell(4, 3)],
+    );
+}
+
+#[test]
+fn note_and_its_own_lyric_select_just_those_two_cells() {
+    assert_range(
+        &note(0, 0),
+        &lyric(1, 0),
+        &[note_cell(0, 0)],
+        &[lyric_cell(1, 0)],
     );
 }

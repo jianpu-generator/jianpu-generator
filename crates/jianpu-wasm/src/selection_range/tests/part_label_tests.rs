@@ -21,14 +21,14 @@ fn part_labels_across_systems_widen_the_measure_range() {
 }
 
 #[test]
-fn a_swept_part_brings_its_lyric_parts_along() {
-    // Part 4 (B's lyric part) lies past the swept range 0..=3 but sings
-    // along to part 3, which is inside it.
+fn a_swept_range_covers_only_the_parts_between_the_labels() {
+    // Part 4 (B's lyric part) lies past the swept range 0..=3, so it is
+    // left out even though it sings along to part 3.
     assert_range(
         &part_label(0, 1, 1),
         &part_label(3, 1, 1),
         &[note_cell(0, 1), note_cell(3, 3)],
-        &[lyric_cell(1, 1), lyric_cell(2, 1), lyric_cell(4, 3)],
+        &[lyric_cell(1, 1), lyric_cell(2, 1)],
     );
 }
 
@@ -43,7 +43,7 @@ fn note_and_label_of_the_same_part_select_no_lyrics() {
 }
 
 #[test]
-fn note_and_label_of_another_part_include_lyric_parts() {
+fn note_and_label_of_another_part_cover_the_parts_between() {
     assert_range(
         &note(0, 0),
         &part_label(3, 1, 1),
@@ -53,7 +53,6 @@ fn note_and_label_of_another_part_include_lyric_parts() {
             lyric_cell(1, 1),
             lyric_cell(2, 0),
             lyric_cell(2, 1),
-            lyric_cell(4, 3),
         ],
     );
 }

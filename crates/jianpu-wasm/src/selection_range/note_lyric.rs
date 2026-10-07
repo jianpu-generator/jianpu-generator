@@ -1,14 +1,14 @@
 use crate::types::{LyricSpanOut, NoteSpanOut};
 
 use super::helpers::{
-    lyric_measure_index, lyric_position_in_measure, lyric_target_part, note_measure_index,
-    note_position_in_measure, LyricEndpoint, NoteEndpoint,
+    lyric_measure_index, lyric_position_in_measure, note_measure_index, note_position_in_measure,
+    LyricEndpoint, NoteEndpoint,
 };
 use super::types::{ClickableElementId, LyricCellOut, NoteCellOut, ResolveSelectionRangeResponse};
 
-/// `Note ↔ Lyric` cross-row, both scopes — see [`same_target`] (the lyric
-/// part sings along to the note's own part) and [`cross_part`] for each
-/// rule's own doc comment.
+/// `Note ↔ Lyric` cross-row — see [`cross_part`]. Lyric parts are ordinary
+/// parts, so this is the same measure rectangle as `Note ↔ Note`, with no
+/// special case for a lyric part and the part it sings along to.
 pub(crate) fn resolve(
     note_spans: &[NoteSpanOut],
     lyric_spans: &[LyricSpanOut],
@@ -42,15 +42,6 @@ pub(crate) fn resolve(
         part: *lyric_part,
         note_id: *lyric_note_id,
     };
-    if lyric_target_part(lyric_spans, lyric.part, lyric.note_id) == Some(*note_part) {
-        return Some(same_target(
-            note_spans,
-            lyric_spans,
-            *note_part,
-            *note_id,
-            lyric,
-        ));
-    }
     Some(cross_part(
         note_spans,
         lyric_spans,
@@ -62,57 +53,7 @@ pub(crate) fn resolve(
     ))
 }
 
-/// `Note ↔ Lyric` where the lyric part sings along to the note's own part.
-/// A measure commonly holds several notes, so ranging by `measure_index`
-/// would be far too coarse; instead this ranges by `note_id`, which is shared
-/// between a part's notes and the lyrics attached to them, so no measure
-/// lookup is needed. `lyric_cells` covers every lyric part of the note's part
-/// from the first one through the `Lyric` endpoint's own — the note row
-/// renders above its lyric rows, so a vertical sweep from the note down to
-/// lyric row `V` also crosses every lyric row above `V`.
-fn same_target(
-    note_spans: &[NoteSpanOut],
-    lyric_spans: &[LyricSpanOut],
-    note_part: usize,
-    note_id: usize,
-    lyric: LyricEndpoint,
-) -> ResolveSelectionRangeResponse {
-    let range_start = note_id.min(lyric.note_id);
-    let range_end = note_id.max(lyric.note_id);
-
-    let note_cells = note_spans
-        .iter()
-        .filter(|span| {
-            span.source_part_index == note_part
-                && span.note_id >= range_start
-                && span.note_id <= range_end
-        })
-        .map(|span| NoteCellOut {
-            source_part_index: span.source_part_index,
-            note_id: span.note_id,
-        })
-        .collect();
-    let lyric_cells = lyric_spans
-        .iter()
-        .filter(|span| {
-            span.target_source_part_index == Some(note_part)
-                && span.source_part_index <= lyric.part
-                && span.note_id >= range_start
-                && span.note_id <= range_end
-        })
-        .map(|span| LyricCellOut {
-            source_part_index: span.source_part_index,
-            note_id: span.note_id,
-        })
-        .collect();
-
-    ResolveSelectionRangeResponse::Ok {
-        note_cells,
-        lyric_cells,
-    }
-}
-
-/// The cross-part `Note ↔ Lyric` cross-row rule — no shared `note_id` axis
+/// The `Note ↔ Lyric` cross-row rule — no shared `note_id` axis
 /// across parts, so this falls back to the cross-part `Note ↔ Note` arm's
 /// measure-range pattern instead (accepting the same coarseness tradeoff
 /// that arm already accepts): each endpoint's own `measure_index`, looked
