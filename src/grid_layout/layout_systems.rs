@@ -159,6 +159,7 @@ fn make_padding_row(template_row: &MeasureRow, block: &MeasureBlock) -> MeasureR
                 content: ElementContent::Lyric {
                     text: String::new(),
                     verse: lyric_row_verse(template_row).unwrap_or(0),
+                    verse_label: template_row.label.clone(),
                     note_id: 0,
                 },
                 note_id: None,

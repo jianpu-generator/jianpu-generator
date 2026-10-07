@@ -18,7 +18,6 @@ pub(super) fn part_to_wit(part: &crate::types::PartOut) -> Part {
     Part {
         abbreviation: part.abbreviation.clone(),
         display_name: part.display_name.clone(),
-        has_lyrics: part.has_lyrics,
     }
 }
 

@@ -112,6 +112,22 @@ fn notes_row(row: &MeasureRow) -> MeasureRow {
     }
 }
 
+/// The lyric part abbreviation of `verse` in `row`, falling back to the row's
+/// own label when no syllable of that verse carries one.
+fn verse_label(row: &MeasureRow, verse: usize) -> String {
+    row.elements
+        .iter()
+        .find_map(|element| match &element.content {
+            ElementContent::Lyric {
+                verse: v,
+                verse_label,
+                ..
+            } if *v == verse && !verse_label.is_empty() => Some(verse_label.clone()),
+            _ => None,
+        })
+        .unwrap_or_else(|| row.label.clone())
+}
+
 /// Splits a mixed row's lyric elements into one `MeasureRow` per verse, in verse
 /// order, each with a distinct `RowId` so a verse-count change between two
 /// measures of the same part is a row-structure change (see `pack_into_systems`
@@ -144,7 +160,7 @@ fn lyrics_rows(row: &MeasureRow) -> Vec<MeasureRow> {
             }
             MeasureRow {
                 id: RowId(format!("{}-lyrics-{verse}", row.id.0)),
-                label: row.label.clone(),
+                label: verse_label(row, verse),
                 elements,
                 source_part_index: row.source_part_index,
                 absorbed_rows: row.absorbed_rows.clone(),

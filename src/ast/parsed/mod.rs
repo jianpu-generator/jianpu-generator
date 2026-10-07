@@ -109,6 +109,8 @@ pub struct ParsedTimedTrack {
     pub soundfont: Soundfont,
     pub volume: u8,
     pub octave_offset: i8,
+    /// Abbreviations of the lyric parts attached to this track, in verse order.
+    pub verse_labels: Vec<String>,
     pub measure_slots: Vec<ParsedMeasureSlot>,
     pub lyrics: Option<ParsedLyrics>,
     /// Per-measure beat-overflow error (None = no overflow for that measure).

@@ -1,4 +1,3 @@
-use crate::ast::parsed::ParsedTrack;
 use crate::error::IrrecoverableError;
 use crate::parser::parts_parser::{
     self, InstrumentInfo, SourcePartMode, SourceRawPartDecl, DEFAULT_PART_OCTAVE_OFFSET,
@@ -14,9 +13,6 @@ pub struct PartInfo {
     pub abbreviation: String,
     /// Full display name from the declaration left-hand side.
     pub display_name: String,
-    /// Whether this part carries any lyric content (positionally attached
-    /// verse lines) anywhere in the score.
-    pub has_lyrics: bool,
 }
 
 /// Source-level part declaration for the Edit Parts modal (before follow inheritance).
@@ -86,39 +82,29 @@ pub fn list_part_declarations_from_source(
 }
 
 /// List part declarations from a `.jianpu` source string.
+///
+/// Lyric parts are listed like any other part, right after the part they sing
+/// along to.
 pub fn list_parts_from_source(
     source: &str,
     filename: &str,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<PartInfo>, IrrecoverableError> {
     let doc = crate::parser::parse(source, filename, instruments)?;
-    let lyrics_by_abbreviation: std::collections::HashMap<&str, bool> = doc
-        .tracks
-        .iter()
-        .map(|track| {
-            let ParsedTrack::Timed(track) = track;
-            let has_lyrics = track.lyrics.as_ref().is_some_and(|lyrics| {
-                lyrics
-                    .measure_syllables
-                    .iter()
-                    .any(|verses| !verses.is_empty())
-            });
-            (track.abbreviation.as_str(), has_lyrics)
-        })
-        .collect();
     Ok(doc
         .declarations
         .into_iter()
-        .map(|d| {
-            let has_lyrics = lyrics_by_abbreviation
-                .get(d.abbreviation.as_str())
-                .copied()
-                .unwrap_or(false);
-            PartInfo {
-                abbreviation: d.abbreviation,
-                display_name: d.display_name,
-                has_lyrics,
-            }
+        .flat_map(|declaration| {
+            let verses = declaration.verses.into_iter().map(|verse| PartInfo {
+                abbreviation: verse.abbreviation,
+                display_name: verse.display_name,
+            });
+            std::iter::once(PartInfo {
+                abbreviation: declaration.abbreviation,
+                display_name: declaration.display_name,
+            })
+            .chain(verses)
+            .collect::<Vec<_>>()
         })
         .collect())
 }

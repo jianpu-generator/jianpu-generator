@@ -48,11 +48,8 @@ fn lyric_part_max_font_size(
         .max(font_sizes.base)
 }
 
-/// A verse row's `RowLabel` is always this fixed glyph, not the part's
-/// abbreviation — the notes row above already conveys part identity.
-const LYRIC_ROW_LABEL: &str = "*";
-
-/// Every verse gets its own label at column 0. `system.first()` always has a
+/// Every verse gets its own label at column 0: the lyric part's own
+/// abbreviation from `# parts` (e.g. `v1`). `system.first()` always has a
 /// `part_idx` entry matching this row's own template (only ever called for
 /// an `is_lyric_row` row). Split out of `expand_lyric_part` to keep it under
 /// the max function-length lint.
@@ -71,7 +68,7 @@ fn push_verse_row_label(row: &mut GridRow, system: &[MeasureBlock], part_idx: us
         column_span: LABEL_COLS,
         halign: HAlign::Center,
         valign: VAlign::Center,
-        content: GridContent::RowLabel(LYRIC_ROW_LABEL.to_string()),
+        content: GridContent::RowLabel(part_template.label.clone()),
     });
 }
 
@@ -127,6 +124,7 @@ pub(crate) fn expand_lyric_part(system: &[MeasureBlock], params: &LyricPartParam
                         text,
                         note_id,
                         verse,
+                        ..
                     } => {
                         row.elements.push(GridElement {
                             column: MUSIC_START_COL + measure_col_offset + el.column,

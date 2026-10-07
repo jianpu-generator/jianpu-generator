@@ -81,6 +81,11 @@ pub(super) fn build_parse_result(
                 soundfont: decl.soundfont,
                 volume: decl.volume,
                 octave_offset: decl.octave_offset,
+                verse_labels: decl
+                    .verses
+                    .iter()
+                    .map(|verse| verse.abbreviation.clone())
+                    .collect(),
                 measure_slots,
                 lyrics: syllables.map(|measure_syllables| ParsedLyrics {
                     measure_syllables,

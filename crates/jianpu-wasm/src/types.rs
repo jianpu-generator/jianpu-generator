@@ -66,7 +66,6 @@ pub struct DiagnosticOut {
 pub struct PartOut {
     pub abbreviation: String,
     pub display_name: String,
-    pub has_lyrics: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]

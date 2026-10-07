@@ -138,11 +138,10 @@ pub fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
     } else {
         Some(opts.tracks.as_slice())
     };
-    let pdf_bytes = jg::write_pdf_from_source_filtered_with_lyrics(
+    let pdf_bytes = jg::write_pdf_from_source_filtered(
         &content,
         &filename,
         enabled_tracks,
-        None,
         &crate::fonts::FontBytesByFamily::embedded(),
         &[],
     )?;

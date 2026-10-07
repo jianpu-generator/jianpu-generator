@@ -13,13 +13,9 @@ import './PartToggles.css'
 interface PartTogglesProps {
   parts: PartInfo[]
   disabledParts: ReadonlySet<string>
-  disabledLyrics: ReadonlySet<string>
   soloedParts: ReadonlySet<string>
-  soloedLyrics: ReadonlySet<string>
   onPartToggle: (abbreviation: string, enabled: boolean) => void
-  onLyricsToggle: (abbreviation: string, enabled: boolean) => void
   onSoloToggle: (abbreviation: string, soloed: boolean) => void
-  onLyricsSoloToggle: (abbreviation: string, soloed: boolean) => void
 }
 
 function TooltipLabel({
@@ -96,13 +92,9 @@ function TogglePill({
 export function PartToggles({
   parts,
   disabledParts,
-  disabledLyrics,
   soloedParts,
-  soloedLyrics,
   onPartToggle,
-  onLyricsToggle,
   onSoloToggle,
-  onLyricsSoloToggle,
 }: PartTogglesProps) {
   const [collapsed, setCollapsed] = useState(false)
 
@@ -138,43 +130,22 @@ export function PartToggles({
         </button>
         {collapsed ? null : (
           <ul className="part-toggles-list toolbar-scroll-list">
-            {parts.flatMap((part) => {
-              const abbreviation = part.abbreviation
-              const notesPill = (
-                <li key={abbreviation}>
-                  <TogglePill
-                    label={abbreviation}
-                    tooltip={part.displayName}
-                    visible={!disabledParts.has(abbreviation)}
-                    soloed={soloedParts.has(abbreviation)}
-                    onVisibleChange={(visible) =>
-                      onPartToggle(abbreviation, visible)
-                    }
-                    onSoloChange={(soloed) =>
-                      onSoloToggle(abbreviation, soloed)
-                    }
-                  />
-                </li>
-              )
-              if (!part.hasLyrics) return [notesPill]
-              return [
-                notesPill,
-                <li key={`${abbreviation}-lyrics`}>
-                  <TogglePill
-                    label={`${abbreviation}詞`}
-                    tooltip={`${part.displayName} lyrics`}
-                    visible={!disabledLyrics.has(abbreviation)}
-                    soloed={soloedLyrics.has(abbreviation)}
-                    onVisibleChange={(visible) =>
-                      onLyricsToggle(abbreviation, visible)
-                    }
-                    onSoloChange={(soloed) =>
-                      onLyricsSoloToggle(abbreviation, soloed)
-                    }
-                  />
-                </li>,
-              ]
-            })}
+            {parts.map((part) => (
+              <li key={part.abbreviation}>
+                <TogglePill
+                  label={part.abbreviation}
+                  tooltip={part.displayName}
+                  visible={!disabledParts.has(part.abbreviation)}
+                  soloed={soloedParts.has(part.abbreviation)}
+                  onVisibleChange={(visible) =>
+                    onPartToggle(part.abbreviation, visible)
+                  }
+                  onSoloChange={(soloed) =>
+                    onSoloToggle(part.abbreviation, soloed)
+                  }
+                />
+              </li>
+            ))}
           </ul>
         )}
       </fieldset>

@@ -663,7 +663,7 @@ time=4/4 key=C4 bpm=120
 - A lyric part's line is written with its own `[Abbrev]` key, anywhere in the measure group; it is not tied to the line above it. A lyric part takes no sound, volume or octave settings.
 - Lyric parts have their own abbreviation and display name, and share the abbreviation namespace with every other part (a duplicate abbreviation is an error).
 - Each lyric part renders as its own row directly under its target's notes row, in declaration order, and is tallied and tie-paired against the notes row independently — a lyric part can have its own `-` held syllables and `_` no-lyrics marker.
-- Each verse row's left-margin label still shows its target part's abbreviation (the same on every verse row); clicking it, or including it in a click-and-click range selection, selects every syllable that verse sings across the system.
+- Each verse row's left-margin label shows that lyric part's own abbreviation (e.g. `v1`, `v2`); clicking it, or including it in a click-and-click range selection, selects every syllable that verse sings across the system.
 - A lyric part not written in a measure group gets no row for that measure. If a later lyric part is written but an earlier one isn't, the earlier one is filled with `_` for that measure (a blank row). A measure with no lyric line at all has zero lyric rows for that part, not blank placeholders.
 - A lyric line written without its target's notes line in that measure group still works: the target part is filled with rests (or follows its target).
 - A second line for the same lyric part in one measure group is a `part [Key] has N lines but only 1 slot(s)` error.

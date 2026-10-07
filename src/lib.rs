@@ -302,46 +302,23 @@ pub fn render_svgs_from_source_filtered(
     enabled_tracks: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<RenderOutput, IrrecoverableError> {
-    render_svgs_from_source_filtered_with_lyrics(
-        source,
-        filename,
-        enabled_tracks,
-        None,
-        instruments,
-    )
-}
-
-/// Parse, group, optionally filter tracks and lyrics, and render SVG page strings.
-///
-/// When `enabled_tracks` is `None`, all parts are rendered.
-/// When `Some(tracks)` is empty, no parts are rendered.
-/// When `disabled_lyrics` lists part abbreviations, lyrics are hidden for those parts.
-pub fn render_svgs_from_source_filtered_with_lyrics(
-    source: &str,
-    filename: &str,
-    enabled_tracks: Option<&[String]>,
-    disabled_lyrics: Option<&[String]>,
-    instruments: &[InstrumentInfo],
-) -> Result<RenderOutput, IrrecoverableError> {
     render_svgs_from_source_with_visibility(
         source,
         filename,
         &ResolvedPartVisibility {
             rendered_tracks: enabled_tracks.map(<[String]>::to_vec),
-            disabled_lyrics: disabled_lyrics.map(<[String]>::to_vec).unwrap_or_default(),
             ..Default::default()
         },
         instruments,
     )
 }
 
-/// Parse, group, optionally filter tracks and lyrics, and write PDF bytes.
+/// Parse, group, optionally filter tracks, and write PDF bytes.
 #[cfg(feature = "pdf")]
-pub fn write_pdf_from_source_filtered_with_lyrics(
+pub fn write_pdf_from_source_filtered(
     source: &str,
     filename: &str,
     enabled_tracks: Option<&[String]>,
-    disabled_lyrics: Option<&[String]>,
     fonts: &fonts::FontBytesByFamily,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<u8>, IrrecoverableError> {
@@ -350,7 +327,6 @@ pub fn write_pdf_from_source_filtered_with_lyrics(
         filename,
         &ResolvedPartVisibility {
             rendered_tracks: enabled_tracks.map(<[String]>::to_vec),
-            disabled_lyrics: disabled_lyrics.map(<[String]>::to_vec).unwrap_or_default(),
             ..Default::default()
         },
         fonts,

@@ -191,7 +191,11 @@ fn build_part_rows(
                     .paired_lyrics
                     .iter()
                     .cloned()
-                    .map(|syllables| Lyrics { syllables })
+                    .enumerate()
+                    .map(|(verse, syllables)| Lyrics {
+                        label: part.verse_labels.get(verse).cloned().unwrap_or_default(),
+                        syllables,
+                    })
                     .collect();
                 let slice = PartSlice {
                     name: part.name.clone(),

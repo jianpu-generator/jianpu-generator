@@ -23,7 +23,7 @@ Bass lyrics [Bv1] = lyrics[B]
 "#;
 
 fn enabled_tracks_without_alto() -> Vec<String> {
-    vec!["S".to_string(), "B".to_string()]
+    vec!["S".to_string(), "B".to_string(), "Bv1".to_string()]
 }
 
 #[test]

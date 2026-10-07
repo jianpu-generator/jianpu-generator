@@ -1,6 +1,6 @@
 use crate::ast::grouped::Score;
 use crate::error::IrrecoverableError;
-use crate::filters::apply_track_filter;
+use crate::filters::apply_visibility_filter;
 
 use super::navigation::{
     expand_navigation_with_note_positions, filter_expanded_tracks, ExpandedMeasureOrigin,
@@ -16,7 +16,7 @@ use crate::compiler::compile;
 
 /// Physically drops parts `visible_tracks` excludes, mirroring
 /// [`crate::filters::apply_track_filter`], the same removal the *rendered*
-/// SVG's `compile()` call sees (see `render_svgs_from_source_filtered_with_lyrics`).
+/// SVG's `compile()` call sees (see `render_svgs_from_source_filtered`).
 /// Timing/note-id bookkeeping must be built from a score shaped this way —
 /// not the fully unfiltered written score — so a leading all-rest run that's
 /// only all-rest once a hidden part's notes are removed collapses into the
@@ -35,7 +35,7 @@ fn visible_score(score: &Score, visible_tracks: Option<&[String]>) -> Score {
         return score.clone();
     }
     let mut score = score.clone();
-    apply_track_filter(&mut score, visible_tracks);
+    apply_visibility_filter(&mut score, visible_tracks);
     score
 }
 

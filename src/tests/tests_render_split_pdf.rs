@@ -126,20 +126,18 @@ fn without_legend_input() -> &'static str {
 }
 
 #[test]
-fn write_pdf_from_source_filtered_with_lyrics_includes_part_legend() {
-    let with_legend_pdf = write_pdf_from_source_filtered_with_lyrics(
+fn write_pdf_from_source_filtered_includes_part_legend() {
+    let with_legend_pdf = write_pdf_from_source_filtered(
         with_legend_input(),
         "test.jianpu",
-        None,
         None,
         &fonts::FontBytesByFamily::embedded(),
         &[],
     )
     .unwrap();
-    let without_legend_pdf = write_pdf_from_source_filtered_with_lyrics(
+    let without_legend_pdf = write_pdf_from_source_filtered(
         without_legend_input(),
         "test.jianpu",
-        None,
         None,
         &fonts::FontBytesByFamily::embedded(),
         &[],

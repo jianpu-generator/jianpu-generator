@@ -306,7 +306,6 @@ world jianpu-wasm {
     record part {
         abbreviation: string,
         display-name: string,
-        has-lyrics: bool,
     }
 
     // `jianpu_generator::source_edit::PartMode`; `follow` and `lyrics` carry their target.
@@ -397,13 +396,11 @@ world jianpu-wasm {
     }
 
     // The part-toggle UI's raw show/hide/solo state, as part abbreviations.
-    // A part with lyrics has two independent rows (notes and lyrics), each
-    // with its own hidden and soloed flag. Input to `resolve-part-visibility`.
+    // Every part, lyric parts included, is toggled the same way. Input to
+    // `resolve-part-visibility`.
     record part-toggle-state {
-        hidden-notes: list<string>,
-        soloed-notes: list<string>,
-        hidden-lyrics: list<string>,
-        soloed-lyrics: list<string>,
+        hidden-parts: list<string>,
+        soloed-parts: list<string>,
     }
 
     // What `resolve-part-visibility` decided (`jianpu_generator::ResolvedPartVisibility`),
@@ -413,8 +410,6 @@ world jianpu-wasm {
         rendered-tracks: option<list<string>>,
         sounding-tracks: option<list<string>>,
         sounding-display-names: option<list<string>>,
-        lyrics-only-tracks: list<string>,
-        disabled-lyrics: list<string>,
     }
 
     // Resolves hide/solo state into what is drawn and what sounds, given the

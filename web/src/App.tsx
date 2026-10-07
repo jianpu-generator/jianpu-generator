@@ -58,12 +58,8 @@ export default function App() {
     soundfontReady,
     pdfFontsReady,
     disabledParts,
-    disabledLyrics,
     soloedParts,
     handlePartToggle,
-    handleLyricsToggle,
-    handleLyricsSoloToggle,
-    soloedLyrics,
     handleSoloToggle,
     parts,
     partDeclarations,
@@ -293,13 +289,9 @@ export default function App() {
       <PartToggles
         parts={parts}
         disabledParts={disabledParts}
-        disabledLyrics={disabledLyrics}
         soloedParts={soloedParts}
-        soloedLyrics={soloedLyrics}
         onPartToggle={handlePartToggle}
-        onLyricsToggle={handleLyricsToggle}
         onSoloToggle={handleSoloToggle}
-        onLyricsSoloToggle={handleLyricsSoloToggle}
       />
       <AppWorkspace
         editorCollapsed={editorCollapsed}

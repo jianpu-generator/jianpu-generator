@@ -78,6 +78,7 @@ pub(in crate::grouper) fn group_timed_track(
         soundfont,
         volume: part_volume,
         octave_offset: part_octave_offset,
+        verse_labels: part.verse_labels,
         measures,
     };
     attach_lyrics(

@@ -31,7 +31,7 @@ fn ok_response_has_svgs() {
 }
 
 #[test]
-fn render_with_disabled_lyrics_hides_lyrics_for_part() {
+fn render_without_a_lyric_part_hides_its_lyrics() {
     let input = concat!(
         "# metadata\n",
         "title = \"t\"\n",
@@ -57,7 +57,7 @@ fn render_with_disabled_lyrics_hides_lyrics_for_part() {
     let alto_lyrics_hidden = match render_response(
         input,
         &ResolvedPartVisibility {
-            disabled_lyrics: vec!["Alto".into()],
+            rendered_tracks: Some(vec!["Soprano".into(), "Sopranov1".into(), "Alto".into()]),
             ..Default::default()
         },
         &[],

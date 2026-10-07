@@ -20,13 +20,13 @@ fn list_parts_from_source_returns_declarations() {
         "[A1&Tv1] a b c d\n",
     );
     let parts = list_parts_from_source(input, "test.jianpu", &[]).unwrap();
-    assert_eq!(parts.len(), 2);
+    assert_eq!(parts.len(), 3);
     assert_eq!(parts[0].abbreviation, "main");
     assert_eq!(parts[0].display_name, "main");
     assert_eq!(parts[1].abbreviation, "A1&T");
     assert_eq!(parts[1].display_name, "Alto 1 & Tenor");
-    assert!(!parts[0].has_lyrics);
-    assert!(parts[1].has_lyrics);
+    assert_eq!(parts[2].abbreviation, "A1&Tv1");
+    assert_eq!(parts[2].display_name, "Alto 1 & Tenor lyrics");
 }
 
 #[test]
@@ -52,11 +52,10 @@ fn hidden_lyrics_do_not_reserve_lyric_row_space() {
     let all = render_svgs_from_source(input, "test.jianpu", &[])
         .unwrap()
         .svgs;
-    let alto_lyrics_hidden = render_svgs_from_source_filtered_with_lyrics(
+    let alto_lyrics_hidden = render_svgs_from_source_filtered(
         input,
         "test.jianpu",
-        None,
-        Some(&["Alto".into()]),
+        Some(&["Soprano".into(), "Sopranov1".into(), "Alto".into()]),
         &[],
     )
     .unwrap()
@@ -91,11 +90,10 @@ fn render_svgs_from_source_filtered_can_hide_lyrics_per_part() {
     let all = render_svgs_from_source(input, "test.jianpu", &[])
         .unwrap()
         .svgs;
-    let alto_lyrics_hidden = render_svgs_from_source_filtered_with_lyrics(
+    let alto_lyrics_hidden = render_svgs_from_source_filtered(
         input,
         "test.jianpu",
-        None,
-        Some(&["Alto".into()]),
+        Some(&["Soprano".into(), "Sopranov1".into(), "Alto".into()]),
         &[],
     )
     .unwrap()
@@ -228,7 +226,7 @@ fn split_pdf_filename_sanitizes_track_name() {
 }
 
 #[test]
-fn apply_lyrics_filter_clears_lyrics_for_filtered_part_only() {
+fn apply_visibility_filter_keeps_only_enabled_lyric_parts() {
     let input = concat!(
         "# metadata\n",
         "title = \"t\"\n",
@@ -248,22 +246,39 @@ fn apply_lyrics_filter_clears_lyrics_for_filtered_part_only() {
         "[Altov1] alt alt alt alt\n",
     );
     let mut score = compile(input, "test.jianpu", &[]).unwrap();
-    apply_lyrics_filter(&mut score, Some(&["Soprano".into()]));
-    let part_slice = score.measures[0].parts[0].slice();
-    assert_eq!(
-        part_slice.kind,
-        PartKind::Notes,
-        "apply_lyrics_filter should not change a part's kind"
+    let lyrics_only = apply_visibility_filter(
+        &mut score,
+        Some(&["Soprano".into(), "Alto".into(), "Altov1".into()]),
     );
+    assert!(lyrics_only.is_empty());
+    let soprano_slice = score.measures[0].parts[0].slice();
+    assert_eq!(soprano_slice.kind, PartKind::Notes);
     assert!(
-        part_slice.lyrics.is_empty(),
-        "apply_lyrics_filter should clear lyrics for the filtered-out part"
+        soprano_slice.lyrics.is_empty(),
+        "a lyric part that is not enabled should be dropped"
     );
     let alto_slice = score.measures[0].parts[1].slice();
     assert!(
         !alto_slice.lyrics.is_empty(),
-        "apply_lyrics_filter should leave untouched parts' lyrics intact"
+        "an enabled lyric part should be kept"
     );
+}
+
+#[test]
+fn apply_visibility_filter_keeps_a_part_for_its_enabled_lyric_part_only() {
+    let input = concat!(
+        "# parts\n",
+        "Melody [M] = notes\n",
+        "Verse 1 [v1] = lyrics[M]\n",
+        "\n",
+        "# score\n",
+        "[M] 1 2 3 4\n",
+        "[v1] do re mi fa\n",
+    );
+    let mut score = compile(input, "test.jianpu", &[]).unwrap();
+    let lyrics_only = apply_visibility_filter(&mut score, Some(&["v1".into()]));
+    assert_eq!(lyrics_only, vec!["M".to_string()]);
+    assert_eq!(score.measures[0].parts.len(), 1);
 }
 
 #[test]

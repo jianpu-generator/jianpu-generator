@@ -173,7 +173,7 @@ pub fn measure_start_times_from_source(
 ///
 /// `visible_tracks` must be the part-visibility toggle's own state (the same
 /// set physically removed before the rendered SVG's own `compile()` call —
-/// see [`crate::filters::apply_track_filter`]), so `note_id`s and block
+/// see [`crate::filters::apply_visibility_filter`]), so `note_id`s and block
 /// structure (e.g. a `MultiMeasureRest` run only created once a sibling
 /// part's notes are hidden) agree with the rendered SVG's `data-note-id`.
 /// `enabled_tracks` separately mutes playback down to a further, possibly

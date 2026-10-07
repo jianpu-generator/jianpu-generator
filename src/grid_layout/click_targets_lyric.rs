@@ -135,6 +135,7 @@ fn push_lyric_click_targets_for_row(
             text,
             note_id,
             verse,
+            ..
         } = &el.content
         else {
             continue;

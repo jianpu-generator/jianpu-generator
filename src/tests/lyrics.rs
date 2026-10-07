@@ -153,6 +153,6 @@ fn lyric_parts_are_not_listed_as_editable_part_declarations() {
     assert_eq!(declarations.len(), 1);
     assert_eq!(declarations[0].abbreviation, "M");
     let parts = list_parts_from_source(input, "test.jianpu", &[]).unwrap();
-    assert_eq!(parts.len(), 1);
-    assert!(parts[0].has_lyrics);
+    assert_eq!(parts.len(), 2);
+    assert_eq!(parts[1].abbreviation, "v1");
 }

@@ -10,17 +10,9 @@ export function usePartToggles(fileId: string) {
     const cached = readPartTogglesForFile(fileId)
     return new Set(cached?.disabledParts ?? [])
   })
-  const [disabledLyrics, setDisabledLyrics] = useState<Set<string>>(() => {
-    const cached = readPartTogglesForFile(fileId)
-    return new Set(cached?.disabledLyrics ?? [])
-  })
   const [soloedParts, setSoloedParts] = useState<Set<string>>(() => {
     const cached = readPartTogglesForFile(fileId)
     return new Set(cached?.soloedParts ?? [])
-  })
-  const [soloedLyrics, setSoloedLyrics] = useState<Set<string>>(() => {
-    const cached = readPartTogglesForFile(fileId)
-    return new Set(cached?.soloedLyrics ?? [])
   })
   const skipToggleSaveRef = useRef(false)
 
@@ -28,9 +20,7 @@ export function usePartToggles(fileId: string) {
     skipToggleSaveRef.current = true
     const cached = readPartTogglesForFile(fileId)
     setDisabledParts(new Set(cached?.disabledParts ?? []))
-    setDisabledLyrics(new Set(cached?.disabledLyrics ?? []))
     setSoloedParts(new Set(cached?.soloedParts ?? []))
-    setSoloedLyrics(new Set(cached?.soloedLyrics ?? []))
   }, [fileId])
 
   useEffect(() => {
@@ -40,30 +30,13 @@ export function usePartToggles(fileId: string) {
     }
     writePartTogglesForFile(fileId, {
       disabledParts: [...disabledParts],
-      disabledLyrics: [...disabledLyrics],
       soloedParts: [...soloedParts],
-      soloedLyrics: [...soloedLyrics],
     })
-  }, [fileId, disabledParts, disabledLyrics, soloedParts, soloedLyrics])
+  }, [fileId, disabledParts, soloedParts])
 
   const handlePartToggle = useCallback(
     (abbreviation: string, enabled: boolean) => {
       setDisabledParts((prev) => {
-        const next = new Set(prev)
-        if (enabled) {
-          next.delete(abbreviation)
-        } else {
-          next.add(abbreviation)
-        }
-        return next
-      })
-    },
-    [],
-  )
-
-  const handleLyricsToggle = useCallback(
-    (abbreviation: string, enabled: boolean) => {
-      setDisabledLyrics((prev) => {
         const next = new Set(prev)
         if (enabled) {
           next.delete(abbreviation)
@@ -91,45 +64,22 @@ export function usePartToggles(fileId: string) {
     [],
   )
 
-  const handleLyricsSoloToggle = useCallback(
-    (abbreviation: string, soloed: boolean) => {
-      setSoloedLyrics((prev) => {
-        const next = new Set(prev)
-        if (soloed) {
-          next.add(abbreviation)
-        } else {
-          next.delete(abbreviation)
-        }
-        return next
-      })
-    },
-    [],
-  )
-
   /** The raw toggle state as handed to Rust, which decides what it means. */
   const partToggles = useMemo<PartToggleState>(
     () => ({
-      hiddenNotes: [...disabledParts],
-      soloedNotes: [...soloedParts],
-      hiddenLyrics: [...disabledLyrics],
-      soloedLyrics: [...soloedLyrics],
+      hiddenParts: [...disabledParts],
+      soloedParts: [...soloedParts],
     }),
-    [disabledParts, soloedParts, disabledLyrics, soloedLyrics],
+    [disabledParts, soloedParts],
   )
 
   return {
     partToggles,
     disabledParts,
     setDisabledParts,
-    disabledLyrics,
-    setDisabledLyrics,
     soloedParts,
     setSoloedParts,
-    soloedLyrics,
-    setSoloedLyrics,
     handlePartToggle,
-    handleLyricsToggle,
     handleSoloToggle,
-    handleLyricsSoloToggle,
   }
 }

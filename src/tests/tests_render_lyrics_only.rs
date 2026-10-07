@@ -25,7 +25,7 @@ fn render(visibility: &ResolvedPartVisibility) -> String {
 
 fn melody_lyrics_only() -> ResolvedPartVisibility {
     ResolvedPartVisibility {
-        lyrics_only_tracks: vec!["M".to_string()],
+        rendered_tracks: Some(vec!["Mv1".to_string(), "C".to_string()]),
         ..Default::default()
     }
 }
@@ -95,10 +95,11 @@ fn lyrics_only_part_keeps_the_lyrics_at_their_horizontal_positions() {
 }
 
 #[test]
-fn lyrics_only_part_stays_in_the_part_list_legend() {
+fn shown_lyric_part_is_listed_in_the_part_list_legend() {
     let svg = render(&melody_lyrics_only());
 
-    assert!(svg.contains("M — Melody"));
+    assert!(svg.contains("Mv1 — Melody lyrics"));
+    assert!(!svg.contains("M — Melody"));
 }
 
 #[test]

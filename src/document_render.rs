@@ -140,9 +140,9 @@ fn render_documents_with_range(
 
 /// Parse, group, apply a resolved part visibility, and return typed SVG document trees.
 ///
-/// Parts outside `visibility.rendered_tracks` are not rendered, parts in
-/// `visibility.lyrics_only_tracks` are rendered with only their lyrics, and
-/// `visibility.disabled_lyrics` lists parts rendered without their lyrics.
+/// Parts outside `visibility.rendered_tracks` are not rendered; a part whose
+/// notes are hidden but one of whose lyric parts is shown renders only that
+/// lyric.
 pub fn render_documents_from_source_with_visibility(
     source: &str,
     filename: &str,
@@ -155,10 +155,9 @@ pub fn render_documents_from_source_with_visibility(
         enabled_tracks,
     );
     let mut score = crate::compile(source, filename, instruments)?;
-    crate::apply_track_filter(&mut score, enabled_tracks);
-    crate::apply_lyrics_filter(&mut score, Some(&visibility.disabled_lyrics));
+    let lyrics_only_tracks = crate::apply_visibility_filter(&mut score, enabled_tracks);
     let mut diagnostics = crate::collect_measure_diagnostics(&score);
-    let result = render_documents(&score, &parts, &visibility.lyrics_only_tracks)?;
+    let result = render_documents(&score, &parts, &lyrics_only_tracks)?;
     diagnostics.extend(result.diagnostics);
     Ok(RenderDocumentOutput {
         documents: result.documents,
@@ -181,15 +180,9 @@ pub fn render_documents_with_highlight_range_and_visibility(
         enabled_tracks,
     );
     let mut score = crate::compile(source, filename, instruments)?;
-    crate::apply_track_filter(&mut score, enabled_tracks);
-    crate::apply_lyrics_filter(&mut score, Some(&visibility.disabled_lyrics));
+    let lyrics_only_tracks = crate::apply_visibility_filter(&mut score, enabled_tracks);
     let mut diagnostics = crate::collect_measure_diagnostics(&score);
-    let result = render_documents_with_range(
-        &score,
-        &parts,
-        &visibility.lyrics_only_tracks,
-        measure_ranges,
-    )?;
+    let result = render_documents_with_range(&score, &parts, &lyrics_only_tracks, measure_ranges)?;
     diagnostics.extend(result.diagnostics);
     Ok(RenderDocumentOutput {
         documents: result.documents,

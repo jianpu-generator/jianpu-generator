@@ -107,6 +107,8 @@ pub struct Notes {
 /// One verse's syllables for a single measure.
 #[derive(Clone)]
 pub struct Lyrics {
+    /// The lyric part's own abbreviation from `# parts` (e.g. `v1`).
+    pub label: String,
     pub syllables: Vec<Syllable>,
 }
 
@@ -302,6 +304,8 @@ pub(crate) struct GroupedPart {
     pub(crate) soundfont: crate::ast::parsed::Soundfont,
     pub(crate) volume: u8,
     pub(crate) octave_offset: i8,
+    /// Abbreviations of this part's lyric parts, in verse order.
+    pub(crate) verse_labels: Vec<String>,
     pub(crate) measures: Vec<GroupedMeasure>,
 }
 

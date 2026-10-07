@@ -153,6 +153,8 @@ pub enum ElementContent {
     Lyric {
         text: String,
         verse: usize,
+        /// The verse's lyric part abbreviation, shown as its row label.
+        verse_label: String,
         /// Identity of the note this syllable is sung on — the same id its
         /// note's own `ColumnElement::note_id` carries (not stored on this
         /// element's own `ColumnElement::note_id`, which stays `None`: see

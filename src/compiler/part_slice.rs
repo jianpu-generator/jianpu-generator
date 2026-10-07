@@ -88,7 +88,11 @@ pub(super) fn compile_part_slice(
 }
 
 fn process_events(state: &mut PartState<'_>, slice: &PartSlice) {
-    let mut lyrics_iters: Vec<_> = slice.lyrics.iter().map(|l| l.syllables.iter()).collect();
+    let mut lyrics_iters: Vec<_> = slice
+        .lyrics
+        .iter()
+        .map(|l| (l.label.as_str(), l.syllables.iter()))
+        .collect();
     for event in &slice.notes.events {
         let note_id = *state.next_note_id;
         *state.next_note_id += 1;
@@ -100,10 +104,11 @@ fn process_events(state: &mut PartState<'_>, slice: &PartSlice) {
                         lyrics_iters
                             .iter_mut()
                             .enumerate()
-                            .filter_map(|(verse, it)| {
+                            .filter_map(|(verse, (label, it))| {
                                 it.next().map(|s| ElementContent::Lyric {
                                     text: s.text.clone(),
                                     verse,
+                                    verse_label: (*label).to_string(),
                                     note_id,
                                 })
                             })

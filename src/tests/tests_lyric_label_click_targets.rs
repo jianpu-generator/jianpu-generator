@@ -1,7 +1,7 @@
 use super::*;
 
 /// Regression coverage for the lyric-verse-label feature: each verse row
-/// gets its own visible `RowLabel` text (the fixed "*" lyrics glyph, same
+/// gets its own visible `RowLabel` text (its lyric part abbreviation, same
 /// as every other verse row's, rather than the part's abbreviation) plus
 /// its own invisible click target, mirroring how a part gets its own
 /// `RowLabel` text plus `PartLabelClickTarget`.
@@ -82,9 +82,12 @@ fn each_verse_row_renders_its_own_label_text() {
         "expected an \"M\" label on the notes row only, got {label_texts:?}"
     );
     assert_eq!(
-        label_texts.iter().filter(|&&t| t == "*").count(),
+        label_texts
+            .iter()
+            .filter(|&&t| t == "Mv1" || t == "Mv2")
+            .count(),
         2,
-        "expected a \"*\" label on both verse rows, got {label_texts:?}"
+        "expected \"Mv1\" and \"Mv2\" labels on the verse rows, got {label_texts:?}"
     );
 }
 
