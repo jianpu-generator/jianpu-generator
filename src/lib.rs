@@ -34,6 +34,7 @@ pub mod highlight;
 pub mod layout;
 pub mod lyric_spans;
 pub mod measure_spans;
+pub mod migrate_lyrics;
 pub mod note_spans;
 pub mod parser;
 mod part_info;

@@ -11,9 +11,10 @@
 //!    with real content, since that would shift the later verse into the
 //!    earlier one's slot. `follow[X]` parts are never touched (their
 //!    implicit fill is the follow target's content, not rest).
-//! 2. **Part-order sorting.** A key's surviving lines are moved together as
-//!    one block to the position matching that part's order in `# parts`,
-//!    regardless of how the lines were interleaved in the source. A key
+//! 2. **Part-order sorting.** A key's surviving line is moved to the position
+//!    matching its part's order in `# parts` (a lyric part's line right after
+//!    its target's notes line, in verse order), regardless of how the lines
+//!    were interleaved in the source. A key
 //!    that can't be resolved to a declared part keeps its original relative
 //!    position, ordered after every recognised part.
 //! 3. **Whitespace normalization.** Every directive line and surviving data
@@ -30,7 +31,7 @@
 //! "not found -> unchanged" convention: a missing `# parts`/`# score` section,
 //! or any internal parse failure, returns `source` unchanged.
 
-use crate::ast::parsed::{PartDecl, PartKind, ScoreLineRole};
+use crate::ast::parsed::{PartDecl, ScoreLineRole};
 use crate::desugar;
 use crate::parser;
 
@@ -108,31 +109,75 @@ pub fn format_score(source: &str) -> String {
     result
 }
 
-/// Whether an occurrence at `occurrence_index` (0-based) of `key`'s lines in
-/// this measure group is a `Notes`/`Chord`-role or `Lyrics`-role slot, for a
-/// key that resolves to `decl`. Mirrors `desugar::roles_for_group`'s
-/// static-kind branch, computed directly from the raw per-key line count
-/// rather than through full slot resolution: for `Chords`/`Notes`,
-/// occurrence 0 is Notes/Chord-role and every later occurrence (a positional
-/// lyrics verse) is Lyrics-role; `Percussion` only has occurrence 0, which is
-/// Notes-role.
-fn role_at_occurrence(decl: &PartDecl, occurrence_index: usize) -> Option<ScoreLineRole> {
-    match decl.kind {
-        PartKind::Chords | PartKind::Notes if occurrence_index > 0 => Some(ScoreLineRole::Lyrics),
-        PartKind::Chords | PartKind::Notes | PartKind::Percussion => (occurrence_index == 0)
-            .then(|| decl.score_line_roles().first().copied())
-            .flatten(),
-    }
+/// The slot a `[Key]` addresses: its declaration, and which of that part's
+/// lines it is (0 = its notes/chords line, `n` = verse `n`).
+#[derive(Clone, Copy)]
+struct KeySlot {
+    declaration_index: usize,
+    slot_index: usize,
 }
 
-/// The part declaration a raw `[Key]` line's role list should be read from: a
-/// direct, non-`follow[X]` part declaration. `None` for an unknown key or a
-/// `follow[X]` part (excluded entirely: its implicit fill is the follow
-/// target's content, not rest, so an explicit rest line there is real
-/// content).
-fn decl_for_key<'a>(key: &str, declarations: &'a [PartDecl]) -> Option<&'a PartDecl> {
-    let decl = declarations.iter().find(|d| d.abbreviation == key)?;
-    decl.follow_target.is_none().then_some(decl)
+fn key_slot(key: &str, declarations: &[PartDecl]) -> Option<KeySlot> {
+    declarations
+        .iter()
+        .enumerate()
+        .find_map(|(declaration_index, decl)| {
+            if decl.abbreviation == key {
+                return Some(KeySlot {
+                    declaration_index,
+                    slot_index: 0,
+                });
+            }
+            decl.verses
+                .iter()
+                .position(|verse| verse.abbreviation == key)
+                .map(|verse_position| KeySlot {
+                    declaration_index,
+                    slot_index: verse_position + 1,
+                })
+        })
+}
+
+/// Which data lines are redundant with implicit fill. Per part, walks its
+/// lines from the highest slot down and stops at the first one that isn't:
+/// an earlier no-lyrics verse can't be dropped out from under a later verse
+/// with real content, and a rest notes line stays while any verse is kept.
+/// `follow[X]` notes lines are never removable (their implicit fill is the
+/// target's content, not rest).
+fn removable_lines(parsed: &[Option<(&str, &str)>], declarations: &[PartDecl]) -> Vec<bool> {
+    let slots: Vec<Option<KeySlot>> = parsed
+        .iter()
+        .map(|entry| entry.and_then(|(key, _)| key_slot(key, declarations)))
+        .collect();
+    let mut removable = vec![false; parsed.len()];
+    for (declaration_index, decl) in declarations.iter().enumerate() {
+        let mut part_lines: Vec<(usize, usize)> = slots
+            .iter()
+            .enumerate()
+            .filter_map(|(index, slot)| {
+                slot.filter(|slot| slot.declaration_index == declaration_index)
+                    .map(|slot| (index, slot.slot_index))
+            })
+            .collect();
+        part_lines.sort_by_key(|&(_, slot_index)| std::cmp::Reverse(slot_index));
+        for (index, slot_index) in part_lines {
+            let role = match (slot_index, decl.follow_target.is_some()) {
+                (0, true) => break,
+                (0, false) => decl.score_line_roles().first().copied(),
+                _ => Some(ScoreLineRole::Lyrics),
+            };
+            let content = parsed.get(index).copied().flatten().map(|(_, c)| c);
+            match (role, content) {
+                (Some(role), Some(content)) if is_removable(role, content) => {
+                    if let Some(flag) = removable.get_mut(index) {
+                        *flag = true;
+                    }
+                }
+                _ => break,
+            }
+        }
+    }
+    removable
 }
 
 /// Every whitespace-split token is a rest: `0` optionally followed by a run
@@ -165,14 +210,6 @@ fn is_removable(role: ScoreLineRole, content: &str) -> bool {
     }
 }
 
-/// One key's parsed lines within a measure group, in file order.
-struct KeyLines<'a> {
-    key: String,
-    /// Index into the group's data-line list, per occurrence (file order).
-    indices: Vec<usize>,
-    decl: Option<&'a PartDecl>,
-}
-
 /// Builds the filtered/reordered/whitespace-normalized raw measure group for
 /// `group`: directive line(s) normalized, unparseable data lines passed
 /// through untouched, eligible trailing redundant `[Key]` lines dropped, and
@@ -189,40 +226,7 @@ fn format_group(group: &[RawSourceLine], declarations: &[PartDecl]) -> Vec<RawSo
         .map(|(line, _offset)| desugar::parse_key_prefix(line))
         .collect();
 
-    let mut key_lines: Vec<KeyLines> = Vec::new();
-    for (index, entry) in parsed.iter().enumerate() {
-        let Some((key, _content)) = entry else {
-            continue;
-        };
-        if let Some(existing) = key_lines.iter_mut().find(|k| k.key == *key) {
-            existing.indices.push(index);
-        } else {
-            key_lines.push(KeyLines {
-                key: key.to_string(),
-                indices: vec![index],
-                decl: decl_for_key(key, declarations),
-            });
-        }
-    }
-
-    let mut removable: Vec<bool> = vec![false; data_lines.len()];
-    for entry in &key_lines {
-        let Some(decl) = entry.decl else { continue };
-        for (occurrence_index, &data_index) in entry.indices.iter().enumerate().rev() {
-            let Some(role) = role_at_occurrence(decl, occurrence_index) else {
-                break;
-            };
-            let Some((_, content)) = parsed.get(data_index).copied().flatten() else {
-                break;
-            };
-            if !is_removable(role, content) {
-                break;
-            }
-            if let Some(slot) = removable.get_mut(data_index) {
-                *slot = true;
-            }
-        }
-    }
+    let mut removable = removable_lines(&parsed, declarations);
 
     let remaining_count = removable.iter().filter(|r| !**r).count();
     if remaining_count == 0 {
@@ -281,22 +285,20 @@ fn sort_data_lines_by_declaration<'a>(
     removable: &[bool],
     declarations: &[PartDecl],
 ) -> Vec<RawSourceLine> {
-    let attribution = positional_attribution_keys(parsed);
-
     // Blocks in first-seen order; a linear scan per line is fine since a
     // measure group only ever has a handful of distinct keys.
     let mut blocks: Vec<(DataLineBlockKey<'a>, Vec<RawSourceLine>)> = Vec::new();
-    for (index, ((line, drop), attributed_key)) in normalized_data_lines
+    for (index, ((line, drop), entry)) in normalized_data_lines
         .into_iter()
         .zip(removable.iter())
-        .zip(attribution.iter())
+        .zip(parsed.iter())
         .enumerate()
     {
         if *drop {
             continue;
         }
-        let block_key = match attributed_key {
-            Some(key) => DataLineBlockKey::Key(key),
+        let block_key = match entry {
+            Some((key, _)) => DataLineBlockKey::Key(key),
             None => DataLineBlockKey::Unparsed(index),
         };
         match blocks
@@ -312,40 +314,13 @@ fn sort_data_lines_by_declaration<'a>(
     // unrecognised-key block, which all rank `usize::MAX`) keep their
     // first-seen relative order.
     blocks.sort_by_key(|(block_key, _)| match block_key {
-        DataLineBlockKey::Key(key) => declaration_index(key, declarations).unwrap_or(usize::MAX),
-        DataLineBlockKey::Unparsed(_) => usize::MAX,
+        DataLineBlockKey::Key(key) => key_slot(key, declarations).map_or((usize::MAX, 0), |slot| {
+            (slot.declaration_index, slot.slot_index)
+        }),
+        DataLineBlockKey::Unparsed(_) => (usize::MAX, 0),
     });
 
     blocks.into_iter().flat_map(|(_, lines)| lines).collect()
-}
-
-/// A key's position in `# parts` declaration order, for sorting purposes.
-/// Unlike `decl_for_key`, this includes `follow[X]` parts (they still have a
-/// declared position to sort by) and returns `None` only for a genuinely
-/// unrecognised key.
-fn declaration_index(key: &str, declarations: &[PartDecl]) -> Option<usize> {
-    declarations.iter().position(|d| d.abbreviation == key)
-}
-
-/// Per data line, the key its content is attributed to for sort-block
-/// membership: an explicit `[Key]`-prefixed line's own key, or — for a bare
-/// (positional) line — whichever `[Key]` line most recently preceded it in
-/// this measure group, mirroring `desugar::attribution::attribute_data_lines`'s
-/// nearest-preceding-key rule. `None` for a bare line with no preceding
-/// `[Key]` line yet (a standalone lyrics caption): it isn't resolved to its
-/// target part here, so it stays its own unattached block.
-fn positional_attribution_keys<'a>(parsed: &[Option<(&'a str, &'a str)>]) -> Vec<Option<&'a str>> {
-    let mut current_key: Option<&'a str> = None;
-    parsed
-        .iter()
-        .map(|entry| match entry {
-            Some((key, _)) => {
-                current_key = Some(key);
-                Some(*key)
-            }
-            None => current_key,
-        })
-        .collect()
 }
 
 /// Collapses whitespace to single spaces, leaving unparseable lines and

@@ -31,23 +31,25 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody lyrics [Mv1] = lyrics[M]',
   'Harmony [H] = notes',
+  'Harmony lyrics [Hv1] = lyrics[H]',
   '',
   '# score',
   '[M] 1', // measure 0
-  'do', // Melody verse 0
+  '[Mv1] do', // Melody verse 0
   '[H] 5',
-  'la', // Harmony verse 0
+  '[Hv1] la', // Harmony verse 0
   '',
   '[M] 2', // measure 1
-  're',
+  '[Mv1] re',
   '[H] 6',
-  'ti',
+  '[Hv1] ti',
   '',
   '[M] 3', // measure 2 — distractor, outside the swept measure range
-  'mi',
+  '[Mv1] mi',
   '[H] 7',
-  'sol',
+  '[Hv1] sol',
 ].join('\n')
 
 function lyricInPart(

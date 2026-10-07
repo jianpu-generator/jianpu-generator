@@ -11,12 +11,13 @@ fn list_parts_from_source_returns_declarations() {
         "# parts\n",
         "main = chords\n",
         "Alto 1 & Tenor [A1&T] = notes\n",
+        "Alto 1 & Tenor lyrics [A1&Tv1] = lyrics[A1&T]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[main] 1m\n",
         "[A1&T] 1 2 3 4\n",
-        "a b c d\n",
+        "[A1&Tv1] a b c d\n",
     );
     let parts = list_parts_from_source(input, "test.jianpu", &[]).unwrap();
     assert_eq!(parts.len(), 2);
@@ -37,14 +38,16 @@ fn hidden_lyrics_do_not_reserve_lyric_row_space() {
         "\n",
         "# parts\n",
         "Soprano = notes\n",
+        "Soprano lyrics [Sopranov1] = lyrics[Soprano]\n",
         "Alto = notes\n",
+        "Alto lyrics [Altov1] = lyrics[Alto]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Soprano] 1 2 3 4\n",
-        "sop sop sop sop\n",
+        "[Sopranov1] sop sop sop sop\n",
         "[Alto] 5 6 7 1\n",
-        "alt alt alt alt\n",
+        "[Altov1] alt alt alt alt\n",
     );
     let all = render_svgs_from_source(input, "test.jianpu", &[])
         .unwrap()
@@ -74,14 +77,16 @@ fn render_svgs_from_source_filtered_can_hide_lyrics_per_part() {
         "\n",
         "# parts\n",
         "Soprano = notes\n",
+        "Soprano lyrics [Sopranov1] = lyrics[Soprano]\n",
         "Alto = notes\n",
+        "Alto lyrics [Altov1] = lyrics[Alto]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Soprano] 1 2 3 4\n",
-        "sop sop sop sop\n",
+        "[Sopranov1] sop sop sop sop\n",
         "[Alto] 5 6 7 1\n",
-        "alt alt alt alt\n",
+        "[Altov1] alt alt alt alt\n",
     );
     let all = render_svgs_from_source(input, "test.jianpu", &[])
         .unwrap()
@@ -198,11 +203,12 @@ fn split_track_names_falls_back_to_part_declarations() {
         "\n",
         "# parts\n",
         "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Melody] 1 2 3 4\n",
-        "a b c d\n",
+        "[Melodyv1] a b c d\n",
     );
     let score = compile(input, "test.jianpu", &[]).unwrap();
     let names = split_track_names(input, "test.jianpu", &score, &[]).unwrap();
@@ -230,14 +236,16 @@ fn apply_lyrics_filter_clears_lyrics_for_filtered_part_only() {
         "\n",
         "# parts\n",
         "Soprano = notes\n",
+        "Soprano lyrics [Sopranov1] = lyrics[Soprano]\n",
         "Alto = notes\n",
+        "Alto lyrics [Altov1] = lyrics[Alto]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Soprano] 1 2 3 4\n",
-        "do re mi fa\n",
+        "[Sopranov1] do re mi fa\n",
         "[Alto] 5 6 7 1\n",
-        "alt alt alt alt\n",
+        "[Altov1] alt alt alt alt\n",
     );
     let mut score = compile(input, "test.jianpu", &[]).unwrap();
     apply_lyrics_filter(&mut score, Some(&["Soprano".into()]));

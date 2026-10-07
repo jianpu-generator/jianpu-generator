@@ -5,9 +5,18 @@ use crate::parser;
 fn lyrics_overflow_recovers_with_error_on_measure() {
     // 2 notes but 4 syllables → should not Err, should attach error to measure
     let input = concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 0 0\na b c d e f\n",
+        "# metadata\n",
+        "title=\"t\"\n",
+        "author=\"a\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[Melody] 1 2 0 0\n",
+        "[Melodyv1] a b c d e f\n",
     );
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).expect("overflow must not abort grouping");
@@ -26,9 +35,18 @@ fn lyrics_overflow_recovers_with_error_on_measure() {
 fn lyrics_underflow_recovers_with_error_on_measure() {
     // 4 notes but only 2 syllables → should not Err, should attach error to measure
     let input = concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b\n",
+        "# metadata\n",
+        "title=\"t\"\n",
+        "author=\"a\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[Melody] 1 2 3 4\n",
+        "[Melodyv1] a b\n",
     );
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).expect("underflow must not abort grouping");
@@ -48,9 +66,18 @@ fn lyrics_underflow_error_span_covers_lyrics_line_not_notes() {
     // 4 notes but only 2 syllables → underflow error span must point at the
     // lyrics line ("a b"), not the notes line ("1 2 3 4").
     let input = concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b\n",
+        "# metadata\n",
+        "title=\"t\"\n",
+        "author=\"a\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[Melody] 1 2 3 4\n",
+        "[Melodyv1] a b\n",
     );
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).expect("underflow must not abort grouping");
@@ -76,9 +103,18 @@ fn lyrics_underflow_error_span_covers_lyrics_line_not_notes() {
 #[test]
 fn measures_without_lyrics_underflow_have_no_errors() {
     let input = concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n",
+        "# metadata\n",
+        "title=\"t\"\n",
+        "author=\"a\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[Melody] 1 2 3 4\n",
+        "[Melodyv1] a b c d\n",
     );
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
@@ -91,9 +127,18 @@ fn explicit_no_lyrics_marker_produces_no_paired_syllables() {
     // with real notes paired against `_` must not get any placeholder
     // syllables — otherwise it would render as a spurious empty lyric row.
     let input = concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n_\n",
+        "# metadata\n",
+        "title=\"t\"\n",
+        "author=\"a\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[Melody] 1 2 3 4\n",
+        "[Melodyv1] _\n",
     );
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
@@ -156,14 +201,15 @@ author="a"
 
 # parts
 Melody = notes
+Melody lyrics [Melodyv1] = lyrics[Melody]
 
 # score
 time=4/4 key=C4 bpm=120
 [Melody] 1 2 3 4~
-la la la la
+[Melodyv1] la la la la
 
 [Melody] 4 5 6 7
-ha ko da
+[Melodyv1] ha ko da
 "#;
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
@@ -189,16 +235,17 @@ author="a"
 
 # parts
 Melody = notes
+Melody lyrics [Melodyv1] = lyrics[Melody]
 
 # score
 time=4/4 key=C4 bpm=120
 [Melody] 1 2~
-a b
+[Melodyv1] a b
 
 [Melody] 2 3
 
 [Melody] 4 5
-c d
+[Melodyv1] c d
 "#;
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
@@ -218,11 +265,21 @@ fn cross_measure_slur_note_consumes_syllable() {
     // note and must consume a lyric syllable. Measure 2 has notes 5, 6, 7, 0 (rest),
     // so "hi ha ho" (3 syllables) is exactly sufficient — no underflow.
     let input = concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n",
-        "[Melody] 1 2 3 (5\nfa fo fi fu\n\n",
-        "[Melody] 5) 6 7 0\nhi ha ho\n",
+        "# metadata\n",
+        "title=\"t\"\n",
+        "author=\"a\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[Melody] 1 2 3 (5\n",
+        "[Melodyv1] fa fo fi fu\n",
+        "\n",
+        "[Melody] 5) 6 7 0\n",
+        "[Melodyv1] hi ha ho\n",
     );
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();

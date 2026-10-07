@@ -23,6 +23,7 @@ pub enum PartMode {
     Notes,
     Percussion,
     Follow { target: String },
+    Lyrics { target: String },
 }
 
 impl PartMode {
@@ -36,6 +37,9 @@ impl PartMode {
             SourcePartMode::Follow => Self::Follow {
                 target: follow_target.unwrap_or_default(),
             },
+            SourcePartMode::Lyrics => Self::Lyrics {
+                target: follow_target.unwrap_or_default(),
+            },
         }
     }
 
@@ -45,6 +49,7 @@ impl PartMode {
             Self::Notes => "notes".to_owned(),
             Self::Percussion => "percussion".to_owned(),
             Self::Follow { target } => format!("follow[{target}]"),
+            Self::Lyrics { target } => format!("lyrics[{target}]"),
         }
     }
 }

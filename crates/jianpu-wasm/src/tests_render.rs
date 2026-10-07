@@ -13,11 +13,12 @@ fn ok_response_has_svgs() {
         "\n",
         "# parts\n",
         "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Melody] 1 2 3 4\n",
-        "a b c d\n",
+        "[Melodyv1] a b c d\n",
     );
     let resp = render_response(input, &ResolvedPartVisibility::default(), &[]);
     match resp {
@@ -38,14 +39,16 @@ fn render_with_disabled_lyrics_hides_lyrics_for_part() {
         "\n",
         "# parts\n",
         "Soprano = notes\n",
+        "Soprano lyrics [Sopranov1] = lyrics[Soprano]\n",
         "Alto = notes\n",
+        "Alto lyrics [Altov1] = lyrics[Alto]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Soprano] 1 2 3 4\n",
-        "sop sop sop sop\n",
+        "[Sopranov1] sop sop sop sop\n",
         "[Alto] 5 6 7 1\n",
-        "alt alt alt alt\n",
+        "[Altov1] alt alt alt alt\n",
     );
     let all = match render_response(input, &ResolvedPartVisibility::default(), &[]) {
         RenderResponse::Ok { documents, .. } => documents,
@@ -119,9 +122,18 @@ fn err_response_has_structured_diagnostic() {
 fn recoverable_error_produces_warning_severity_view_zone() {
     // lyrics underflow is a recoverable error
     let input = concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b\n",
+        "# metadata\n",
+        "title=\"t\"\n",
+        "author=\"a\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[Melody] 1 2 3 4\n",
+        "[Melodyv1] a b\n",
     );
     let resp = render_response(input, &ResolvedPartVisibility::default(), &[]);
     match resp {
@@ -189,11 +201,12 @@ fn diagnostic_span_is_utf8_byte_offset() {
         "\n",
         "# parts\n",
         "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Melody] 1 2 z 4\n",
-        "a b c d\n",
+        "[Melodyv1] a b c d\n",
     );
     let token_byte_start = source.find('z').expect("error token in source");
     let resp = render_response(source, &ResolvedPartVisibility::default(), &[]);

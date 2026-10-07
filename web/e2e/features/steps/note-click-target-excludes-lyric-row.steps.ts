@@ -28,10 +28,11 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody lyrics [Mv1] = lyrics[M]',
   '',
   '# score',
   '[M] 1 2 3 4', // measure 0 — line 9
-  'do re mi fa', // verse 0 — line 10
+  '[Mv1] do re mi fa', // verse 0 — line 10
 ].join('\n')
 
 Given(

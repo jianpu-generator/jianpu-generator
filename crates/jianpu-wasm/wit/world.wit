@@ -309,12 +309,13 @@ world jianpu-wasm {
         has-lyrics: bool,
     }
 
-    // `jianpu_generator::source_edit::PartMode`; `follow` carries its target.
+    // `jianpu_generator::source_edit::PartMode`; `follow` and `lyrics` carry their target.
     variant part-mode {
         chords,
         notes,
         percussion,
         follow(string),
+        lyrics(string),
     }
 
     // `jianpu_generator::source_edit::PartSettings`: a `# parts` line's

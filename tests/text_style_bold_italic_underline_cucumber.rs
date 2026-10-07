@@ -142,8 +142,8 @@ fn kind_fixture_body(kind: &str) -> KindFixture {
             is_tspan: false,
         },
         "lyrics" => KindFixture {
-            parts_block: "S = notes",
-            score_block: "[S] 1\nLyricWord\n",
+            parts_block: "S = notes\nL = lyrics[S]",
+            score_block: "[S] 1\n[L] LyricWord\n",
             sequence_block: "",
             extra_metadata: "",
             content: "LyricWord",

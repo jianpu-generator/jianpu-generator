@@ -32,11 +32,13 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody verse 1 [Mv1] = lyrics[M]',
+  'Melody verse 2 [Mv2] = lyrics[M]',
   '',
   '# score',
   '[M] 1 2 3 4', // measure 0 — note ids 0-3
-  'a b c d', // verse 0
-  'e f g h', // verse 1
+  '[Mv1] a b c d', // verse 0
+  '[Mv2] e f g h', // verse 1
 ].join('\n')
 
 function noteClickTarget(

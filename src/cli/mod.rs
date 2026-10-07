@@ -26,7 +26,7 @@ pub fn check(input: &Path) -> Result<CheckOutcome, IrrecoverableError> {
     Ok(CheckOutcome { ok, diagnostics })
 }
 
-pub(crate) fn read_source(input: &Path) -> Result<String, IrrecoverableError> {
+pub fn read_source(input: &Path) -> Result<String, IrrecoverableError> {
     std::fs::read_to_string(input).map_err(|e| {
         IrrecoverableError::new(IrrecoverableErrorKind::IoReadFailed {
             span: Span::new(0, 0),
@@ -45,7 +45,7 @@ pub(crate) fn parse_and_group(
     crate::grouper::group(doc).map_err(|e| e.with_path(input))
 }
 
-pub(crate) fn write_file(path: &Path, bytes: &[u8]) -> Result<(), IrrecoverableError> {
+pub fn write_file(path: &Path, bytes: &[u8]) -> Result<(), IrrecoverableError> {
     std::fs::write(path, bytes).map_err(|e| {
         IrrecoverableError::new(IrrecoverableErrorKind::IoWriteFailed {
             span: Span::new(0, 0),

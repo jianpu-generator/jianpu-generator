@@ -65,7 +65,8 @@ export function PartRow({
     settings.mode.tag === 'follow' ? settings.mode.val : undefined
 
   function handleModeChange(newMode: string) {
-    const tag = newMode as PartMode['tag']
+    // The select only offers these; lyric parts are not listed here at all.
+    const tag = newMode as Exclude<PartMode['tag'], 'lyrics'>
     if (tag === 'follow') {
       const defaultTarget = precedingParts[0]?.abbreviation
       if (defaultTarget !== undefined)

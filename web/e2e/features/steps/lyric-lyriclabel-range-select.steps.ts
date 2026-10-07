@@ -27,21 +27,23 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody verse 1 [Mv1] = lyrics[M]',
+  'Melody verse 2 [Mv2] = lyrics[M]',
   '',
   '# score',
   '[M] 1', // measure 0 — system 0
-  'do', // verse 0
-  'la', // verse 1
+  '[Mv1] do', // verse 0
+  '[Mv2] la', // verse 1
   '',
   'break',
   '[M] 2', // measure 1 — system 1
-  're', // verse 0
-  'ti', // verse 1
+  '[Mv1] re', // verse 0
+  '[Mv2] ti', // verse 1
   '',
   'break',
   '[M] 3', // measure 2 — system 2, distractor
-  'mi', // verse 0
-  'sol', // verse 1
+  '[Mv1] mi', // verse 0
+  '[Mv2] sol', // verse 1
 ].join('\n')
 
 function lyricInVerse(page: import('@playwright/test').Page, verse: number) {

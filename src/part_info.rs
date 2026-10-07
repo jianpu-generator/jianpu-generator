@@ -77,8 +77,10 @@ pub fn list_part_declarations_from_source(
         instruments,
     );
 
+    // Lyric parts have no sound, volume or octave to edit.
     Ok(raw_declarations
         .into_iter()
+        .filter(|raw| raw.mode != SourcePartMode::Lyrics)
         .map(|raw| map_raw_to_source_declaration(raw, instruments))
         .collect())
 }

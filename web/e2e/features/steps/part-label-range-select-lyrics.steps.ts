@@ -23,15 +23,16 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody lyrics [Mv1] = lyrics[M]',
   'Harmony [H] = notes',
   '',
   '# score',
   '[M] 1 2', // measure 0
-  'do re', // verse 0
+  '[Mv1] do re', // verse 0
   '[H] 5 6',
   '',
   '[M] 3 4', // measure 1
-  'mi fa', // verse 0
+  '[Mv1] mi fa', // verse 0
   "[H] 7 1'",
 ].join('\n')
 

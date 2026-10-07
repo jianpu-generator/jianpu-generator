@@ -97,13 +97,14 @@ Given(
       '',
       '# parts',
       'Melody [M] = notes',
+      'Melody lyrics [Mv1] = lyrics[M]',
       '',
       '# score',
       '[M] 1 2', // measure 0
-      'do re', // verse 0
+      '[Mv1] do re', // verse 0
       '',
       '[M] 3 4', // measure 1
-      'mi fa', // verse 0
+      '[Mv1] mi fa', // verse 0
     ].join('\n')
 
     await page.addInitScript((source) => {
@@ -144,10 +145,11 @@ Given(
       '',
       '# parts',
       'Melody [M] = notes',
+      'Melody lyrics [Mv1] = lyrics[M]',
       '',
       '# score',
       '[M] 1 2', // measure 0
-      'do re', // verse 0
+      '[Mv1] do re', // verse 0
     ].join('\n')
 
     await page.addInitScript((source) => {

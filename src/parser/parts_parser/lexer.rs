@@ -14,6 +14,8 @@ pub(crate) enum PartsToken {
     Kind(PartKind),
     Follow,
     FollowTarget(String),
+    Lyrics,
+    LyricsTarget(String),
     Soundfont(String),
     /// As written; [`super::PART_SETTING_LIMITS`] is applied when parsing.
     Volume(u16),
@@ -23,6 +25,8 @@ pub(crate) enum PartsToken {
 
 /// The part-kind keyword that makes a part follow another (`follow[M]`).
 const FOLLOW_KEYWORD: &str = "follow";
+/// The part-kind keyword that makes a part carry lyrics for another (`lyrics[b]`).
+const LYRICS_KEYWORD: &str = "lyrics";
 
 /// The span of `token`'s part-kind keyword, if it is one: the whole token
 /// for `notes`/`chords`/`percussion`, just `follow` for `follow[M]`.
@@ -33,12 +37,17 @@ pub(crate) fn kind_keyword_span(token: &Spanned<PartsToken>) -> Option<Span> {
             token.span.start,
             token.span.start + FOLLOW_KEYWORD.len(),
         )),
+        PartsToken::Lyrics => Some(Span::new(
+            token.span.start,
+            token.span.start + LYRICS_KEYWORD.len(),
+        )),
         PartsToken::Name(_)
         | PartsToken::LBracket
         | PartsToken::Abbreviation(_)
         | PartsToken::RBracket
         | PartsToken::Equals
         | PartsToken::FollowTarget(_)
+        | PartsToken::LyricsTarget(_)
         | PartsToken::Soundfont(_)
         | PartsToken::Volume(_)
         | PartsToken::OctaveOffset(_) => None,
@@ -240,8 +249,8 @@ fn coarse_tokenize(input: &str, base_offset: usize) -> Result<Vec<CoarseToken>, 
     Ok(tokens)
 }
 
-fn parse_follow_target_with_span(text: &str, span: Span) -> Option<(String, Span)> {
-    let rest = text.strip_prefix(FOLLOW_KEYWORD)?.strip_prefix('[')?;
+fn parse_bracket_target_with_span(keyword: &str, text: &str, span: Span) -> Option<(String, Span)> {
+    let rest = text.strip_prefix(keyword)?.strip_prefix('[')?;
     let bracket_end = rest.find(']')?;
     if bracket_end + 1 != rest.len() {
         return None;
@@ -249,7 +258,7 @@ fn parse_follow_target_with_span(text: &str, span: Span) -> Option<(String, Span
     let inner = &rest[..bracket_end];
     let trimmed = inner.trim();
     let trim_start = inner.find(trimmed)?;
-    let prefix_len = FOLLOW_KEYWORD.len() + '['.len_utf8();
+    let prefix_len = keyword.len() + '['.len_utf8();
     let target_start = span.start + prefix_len + trim_start;
     let target_end = target_start + trimmed.len();
     Some((trimmed.to_string(), Span::new(target_start, target_end)))
@@ -267,7 +276,19 @@ fn classify_coarse_token(
         )]);
     }
 
-    if let Some((target, target_span)) = parse_follow_target_with_span(&text, span) {
+    if let Some((target, target_span)) = parse_bracket_target_with_span(LYRICS_KEYWORD, &text, span)
+    {
+        if target.is_empty() {
+            return Err(RecoverableError::parts_invalid_columns(span, &text));
+        }
+        return Ok(vec![
+            Spanned::new(PartsToken::Lyrics, span),
+            Spanned::new(PartsToken::LyricsTarget(target), target_span),
+        ]);
+    }
+
+    if let Some((target, target_span)) = parse_bracket_target_with_span(FOLLOW_KEYWORD, &text, span)
+    {
         if target.is_empty() {
             return Err(RecoverableError::parts_invalid_columns(span, &text));
         }

@@ -135,6 +135,15 @@ impl RecoverableError {
         }
     }
 
+    pub fn parts_lyrics_invalid_target(span: Span, target: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsLyricsInvalidTarget {
+                target: target.to_string(),
+            },
+        }
+    }
+
     pub fn part_key_unknown(span: Span, key: &str) -> Self {
         Self {
             span,

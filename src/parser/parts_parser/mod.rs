@@ -3,7 +3,7 @@ mod instrument_matching;
 mod lexer;
 mod setting_limits;
 
-use crate::ast::parsed::{PartDecl, PartKind, Soundfont};
+use crate::ast::parsed::{PartDecl, PartKind, Soundfont, VerseDecl};
 use crate::error::{RecoverableError, Span};
 
 pub use instrument_matching::InstrumentInfo;
@@ -16,6 +16,8 @@ use declaration_parsing::parse_declaration_line;
 
 #[cfg(test)]
 mod lexer_tests;
+#[cfg(test)]
+mod lyrics_part_tests;
 #[cfg(test)]
 mod percussion_tests;
 #[cfg(test)]
@@ -44,6 +46,7 @@ pub enum SourcePartMode {
     Notes,
     Percussion,
     Follow,
+    Lyrics,
 }
 
 /// Source-level part declaration before follow inheritance is applied.
@@ -81,6 +84,7 @@ struct RawDecl {
 enum RawKind {
     Concrete(PartKind),
     Follow { target: String, target_span: Span },
+    Lyrics { target: String, target_span: Span },
 }
 
 fn byte_offset_to_line_number(source: &str, byte_offset: usize) -> u32 {
@@ -99,6 +103,7 @@ fn raw_kind_to_source_mode(kind: &RawKind) -> (SourcePartMode, Option<String>) {
         RawKind::Concrete(PartKind::Notes) => (SourcePartMode::Notes, None),
         RawKind::Concrete(PartKind::Percussion) => (SourcePartMode::Percussion, None),
         RawKind::Follow { target, .. } => (SourcePartMode::Follow, Some(target.clone())),
+        RawKind::Lyrics { target, .. } => (SourcePartMode::Lyrics, Some(target.clone())),
     }
 }
 
@@ -262,6 +267,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                         soundfont: soundfont.unwrap_or(target_decl.soundfont),
                         volume: volume.unwrap_or(target_decl.volume),
                         octave_offset: octave_offset.unwrap_or(target_decl.octave_offset),
+                        verses: Vec::new(),
                     }),
                 }
             }
@@ -274,7 +280,28 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                 soundfont: soundfont.unwrap_or_default(),
                 volume: volume.unwrap_or(DEFAULT_PART_VOLUME),
                 octave_offset: octave_offset.unwrap_or(DEFAULT_PART_OCTAVE_OFFSET),
+                verses: Vec::new(),
             }),
+            RawKind::Lyrics {
+                target,
+                target_span,
+            } => {
+                let target_decl = declarations.iter_mut().find(|declaration: &&mut PartDecl| {
+                    declaration.abbreviation == target
+                        && matches!(declaration.kind, PartKind::Notes | PartKind::Chords)
+                });
+                match target_decl {
+                    None => errors.push(RecoverableError::parts_lyrics_invalid_target(
+                        target_span,
+                        &target,
+                    )),
+                    Some(target_decl) => target_decl.verses.push(VerseDecl {
+                        abbreviation,
+                        abbreviation_span,
+                        display_name,
+                    }),
+                }
+            }
         }
     }
     declarations

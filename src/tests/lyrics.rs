@@ -10,14 +10,16 @@ fn explicit_lyrics_keep_lyric_row() {
         "\n",
         "# parts\n",
         "Soprano = notes\n",
+        "Soprano lyrics [Sopranov1] = lyrics[Soprano]\n",
         "Alto = notes\n",
+        "Alto lyrics [Altov1] = lyrics[Alto]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Soprano] 1 2 3 4\n",
-        "do re mi fa\n",
+        "[Sopranov1] do re mi fa\n",
         "[Alto] 5 6 7 1\n",
-        "la la la la\n",
+        "[Altov1] la la la la\n",
     );
     let score = compile(input, "test.jianpu", &[]).unwrap();
     for part in &score.measures[0].parts {
@@ -39,12 +41,14 @@ author = "a"
 
 # parts
 Melody = notes
+Melody verse 1 [Melodyv1] = lyrics[Melody]
+Melody verse 2 [Melodyv2] = lyrics[Melody]
 
 # score
 time=4/4 key=C4 bpm=120
 [Melody] 1 2 3 4
-do re mi fa
-one two three four
+[Melodyv1] do re mi fa
+[Melodyv2] one two three four
 "#;
     let score = compile(input, "test.jianpu", &[]).unwrap();
     let slice = score.measures[0].parts[0].slice();
@@ -77,11 +81,12 @@ author = "a"
 
 # parts
 Melody = notes
+Melody lyrics [Melodyv1] = lyrics[Melody]
 
 # score
 time=4/4 key=C4 bpm=120
 [Melody] 1 2 3 4
-la la la la
+[Melodyv1] la la la la
 "#;
     let score = compile(input, "test.jianpu", &[]).unwrap();
     let slice = score.measures[0].parts[0].slice();
@@ -109,15 +114,17 @@ author = "a"
 
 # parts
 Melody = notes
+Melody verse 1 [Melodyv1] = lyrics[Melody]
+Melody verse 2 [Melodyv2] = lyrics[Melody]
 
 # score
 time=4/4 key=C4 bpm=120
 [Melody] 1 2 3 4
-do re mi fa
+[Melodyv1] do re mi fa
 
 [Melody] 5 6 7 1
-one two three four
-uno dos tres cuatro
+[Melodyv1] one two three four
+[Melodyv2] uno dos tres cuatro
 "#;
     let score = compile(input, "test.jianpu", &[]).unwrap();
     let compile_result = compiler::compile(&score);
@@ -129,4 +136,23 @@ uno dos tres cuatro
         1,
         "a verse-count change alone should not force a new system; both measures fit in one"
     );
+}
+
+#[test]
+fn lyric_parts_are_not_listed_as_editable_part_declarations() {
+    let input = concat!(
+        "# parts\n",
+        "Melody [M] = notes\n",
+        "Verse 1 [v1] = lyrics[M]\n",
+        "\n",
+        "# score\n",
+        "[M] 1 2 3 4\n",
+        "[v1] do re mi fa\n",
+    );
+    let declarations = list_part_declarations_from_source(input, "test.jianpu", &[]).unwrap();
+    assert_eq!(declarations.len(), 1);
+    assert_eq!(declarations[0].abbreviation, "M");
+    let parts = list_parts_from_source(input, "test.jianpu", &[]).unwrap();
+    assert_eq!(parts.len(), 1);
+    assert!(parts[0].has_lyrics);
 }

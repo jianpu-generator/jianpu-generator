@@ -6,12 +6,13 @@ const SOURCE: &str = concat!(
     "\n",
     "# parts\n",
     "Melody [M] = notes\n",
+    "Melody lyrics [Mv1] = lyrics[M]\n",
     "Chords [C] = chords\n",
     "\n",
     "# score\n",
     "(bpm=120 key=C4 time=4/4)\n",
     "[M] 1 2 3 4\n",
-    "twin- kle twin- kle\n",
+    "[Mv1] twin- kle twin- kle\n",
     "[C] 1 - - -\n",
 );
 
@@ -105,13 +106,14 @@ fn lyrics_only_measure_without_lyrics_is_a_blank_lyric_row_not_a_rest() {
     let source = concat!(
         "# parts\n",
         "Melody [M] = notes\n",
+        "Melody lyrics [Mv1] = lyrics[M]\n",
         "\n",
         "# score\n",
         "(bpm=120 key=C4 time=4/4)\n",
         "[M] 1 2 3 4\n",
         "\n",
         "[M] 5 6 7 1\n",
-        "la la la la\n",
+        "[Mv1] la la la la\n",
     );
 
     let svg =

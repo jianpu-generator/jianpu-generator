@@ -34,14 +34,15 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody lyrics [Mv1] = lyrics[M]',
   '',
   '# score',
   '[M] 1 2', // measure 0 — system 0
-  'do re', // verse 0
+  '[Mv1] do re', // verse 0
   '',
   'break',
   '[M] 3 4', // measure 1 — system 1
-  'la ti', // verse 0
+  '[Mv1] la ti', // verse 0
 ].join('\n')
 
 function verseLabelInSystem(

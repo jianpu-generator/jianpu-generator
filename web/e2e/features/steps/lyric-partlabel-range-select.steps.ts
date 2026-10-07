@@ -27,24 +27,26 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody verse 1 [Mv1] = lyrics[M]',
+  'Melody verse 2 [Mv2] = lyrics[M]',
   'Harmony [H] = notes',
   '',
   '# score',
   '[M] 1', // measure 0 — system 0
-  'do', // Melody verse 0
-  'fa', // Melody verse 1 — proves the verse restriction, see below
+  '[Mv1] do', // Melody verse 0
+  '[Mv2] fa', // Melody verse 1 — proves the verse restriction, see below
   '[H] 5',
   '',
   'break',
   '[M] 2', // measure 1 — system 1
-  're', // Melody verse 0
-  'sol', // Melody verse 1
+  '[Mv1] re', // Melody verse 0
+  '[Mv2] sol', // Melody verse 1
   '[H] 6',
   '',
   'break',
   '[M] 3', // measure 2 — system 2, distractor
-  'mi', // Melody verse 0
-  'la', // Melody verse 1
+  '[Mv1] mi', // Melody verse 0
+  '[Mv2] la', // Melody verse 1
   '[H] 7',
 ].join('\n')
 

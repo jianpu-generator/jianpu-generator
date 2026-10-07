@@ -149,10 +149,11 @@ One track per line. Blank lines are ignored.
 
 | Pattern | Meaning | Score lines per measure |
 |---------|---------|-------------------------|
-| `chords` | Chord-symbol row | 1, plus 1 per positionally-attached lyric verse |
-| `notes` | Notes (instrumental, or with lyrics) | 1, plus 1 per positionally-attached lyric verse |
+| `chords` | Chord-symbol row | 1 |
+| `notes` | Notes | 1 |
 | `percussion` | Unpitched GM drum hits | 1 |
 | `follow[X]` | Inherit column layout from the part with abbreviation `X` | same as target |
+| `lyrics[X]` | A lyric part: one verse of lyrics for the `notes`/`chords`/`follow` part with abbreviation `X` (see [Lyric parts](#lyric-parts)) | 1 per measure that writes it |
 
 An optional soundfont string `"<number>: <name>"` may follow the kind token (or `follow[X]` bracket) to select the MIDI timbre for that part. The number is the General MIDI program number (0–127). The `<name>` portion is a quoted string and may contain `=` and other characters (for example `"1: Grand = Piano"`). For example: `notes "52: Choir Aahs"` or `follow[A] "1: Grand Piano"`. If omitted on a concrete part, the default is program 52 (Choir Aahs). On a `follow[X]` part, the soundfont is inherited from the target when omitted.
 
@@ -168,7 +169,7 @@ Rules:
 - At least one track must be declared.
 - `follow[X]` cannot be used for the first declared part.
 - The target abbreviation `X` in `follow[X]` must refer to an already-declared part (declared before the follower).
-- A `follow[X]` part that is not explicitly mentioned in a measure copies `X`'s content and is visually suppressed (row not rendered). This copies notes only — lyrics are never auto-copied to a follow part; a follow part gets a lyrics row only when a lyric line is positionally attached to it directly (see [Positional (unprefixed) lyrics lines](#positional-unprefixed-lyrics-lines)).
+- A `follow[X]` part that is not explicitly mentioned in a measure copies `X`'s content and is visually suppressed (row not rendered). This copies notes only — lyrics are never auto-copied to a follow part; a follow part gets a lyrics row only when it has its own `lyrics[...]` part (see [Lyric parts](#lyric-parts)).
 - A `follow[X]` part can be partially or fully overridden using `[Key]` prefix lines in the score.
 
 Example (multi-part vocal score with chords):
@@ -207,7 +208,7 @@ bpm=92 key=C4 time=4/4 label="Verse 1"
 ### Group layout
 
 1. **Optional directive line** — first line containing at least one directive keyword (`bpm=`, `key=`, `time=`, `label=`, `merge_duplicate_measures_across_parts=`, or `hide_resting_parts=`)
-2. **Data lines** — most data lines begin with a `[Abbrev]` prefix (see below); a bare line with no prefix is also allowed, as a **positional lyrics line** (see [Positional (unprefixed) lyrics lines](#positional-unprefixed-lyrics-lines))
+2. **Data lines** — most data lines begin with a `[Abbrev]` prefix (see below); a line with no prefix is an error (`score_line_missing_key_prefix`) and is dropped
 
 Lines are trimmed; leading/trailing spaces on a line are ignored. A completely empty line separates measure groups (it is not a data line).
 
@@ -219,11 +220,11 @@ Every data line must begin with `[Abbrev]` to route it to a specific part by abb
 [A2] 5 6 7 0
 ```
 
-- Exactly one `[Key]` line may appear for a given part in a measure group (its single notes/chords slot); a second `[Key]` line for the same part is a `part [Key] has N lines but only 1 slot(s)` error — extra lyric verses must be written as bare, positionally-attached lines instead (see below).
+- Exactly one `[Key]` line may appear for a given part in a measure group (its single notes/chords slot); a second `[Key]` line for the same part is a `part [Key] has N lines but only 1 slot(s)` error. Lyrics go on their own lyric part's `[Key]` line (see [Lyric parts](#lyric-parts)).
 - An unrecognised abbreviation is an error; the line is dropped.
 - Parts not covered by any `[Key]` line use their `follow[X]` target's content when declared as such, or are filled with implicit rests/no-lyrics otherwise.
-- A data line with no `[Abbrev]` prefix is a **positional lyrics line**, not an error: it attaches to whichever part's `[Key]` line most recently preceded it in this measure group (see [Positional (unprefixed) lyrics lines](#positional-unprefixed-lyrics-lines)). If no `[Key]` line precedes it in the measure group, it's a `score_line_missing_key_prefix` error, dropped as before.
-- A measure group with zero valid keyed *and* zero positionally-attributed lines is an error (`measure_no_data_lines`).
+- A data line with no `[Abbrev]` prefix is a `score_line_missing_key_prefix` error; the line is dropped. Lyrics are no longer attached positionally — write them on a lyric part's `[Key]` line.
+- A measure group with zero valid keyed lines is an error (`measure_no_data_lines`).
 
 **Row label when parts render as one unison row:** when two or more parts' compiled content ends up identical for a system (a system being one printed line of music, spanning however many measures were packed onto it), the renderer merges them into a single row, labeled by concatenating the merged parts' own abbreviations with a space (e.g. `S1 S2`).
 
@@ -266,16 +267,17 @@ A: `1 2 3 4`. B: not mentioned → copies A's content via `follow`. C: `5 6 7 0`
 ```jianpu
 # parts
 Soprano [S] = notes
+Soprano lyrics [Sv1] = lyrics[S]
 Alto [A] = follow[S]
 
 # score
 time=4/4 key=C4 bpm=120
 [S] 1 2 3 4
-do re mi fa
+[Sv1] do re mi fa
 [A] 5 6 7 1
 ```
 
-Soprano: notes=`1 2 3 4`, lyrics=`do re mi fa`. Alto: notes=`5 6 7 1` (key override), no lyrics — a follow part's notes-only override does not copy the target's lyrics; give Alto its own positionally-attached line (`[A] 5 6 7 1` followed by a bare lyric line) if it needs one.
+Soprano: notes=`1 2 3 4`, lyrics=`do re mi fa`. Alto: notes=`5 6 7 1` (key override), no lyrics — a follow part's notes-only override does not copy the target's lyrics; declare Alto its own `lyrics[A]` part if it needs lyrics.
 
 ---
 
@@ -639,26 +641,38 @@ In each measure, the number of lyric syllables must match the number of notes th
 
 Mismatch is a non-fatal **warning** (rendering continues, with empty-string syllables inserted for underflow), e.g. `[Soprano] lyrics underflow: ran out of syllables at syllable 3 (fewer syllables than notes)` or `[Soprano] lyrics overflow: 1 extra syllable(s) after all notes are consumed`.
 
-### Positional (unprefixed) lyrics lines
+### Lyric parts
 
-Lyrics attach to a `notes`/`chords` part with a **bare (unprefixed)** data line: it attaches to whichever part's `[Key]` line most recently preceded it in the measure group. This works for any notes-bearing declared kind (`notes`, `chords`; not `percussion`, which has no lyrics pairing):
+Lyrics are declared as their own parts in `# parts`, with `lyrics[X]` naming the `notes`, `chords` or `follow` part (declared earlier) whose notes they sing along to:
 
-```
+```jianpu
 # parts
-Melody = notes
+bass [b] = notes
+Verse 1 [v1] = lyrics[b]
+Verse 2 [v2] = lyrics[b]
+Lyrics [l] = lyrics[b]
 
 # score
-[Melody] 1 2 3 4
-la la la la
+time=4/4 key=C4 bpm=120
+[b] 1 2 3 4
+[v1] la la la la
+[v2] na na na na
+[l] da da da da
 ```
 
-- Consecutive bare lines after the same `[Key]` line become verses 1, 2, … , in order. Each verse renders as its own row directly under the notes row, in verse order, and each verse is tallied and tie-paired against the notes row independently — a verse can have its own `-` held syllables and `_` no-lyrics marker.
-- Each verse row also gets its own label at the left margin, showing the part's abbreviation (e.g. `M`, same on every verse row) — clicking it, or including it in a click-and-click range selection, selects every syllable that verse sings across the system, the same way clicking a part's own label selects every note that part sounds.
-- The number of verse lines is per-measure: one measure can have one verse while the next has two. A part's verse count changing from one measure to the next no longer forces a new system: a system's verse rows for a part are the union of every verse it has across the system's measures (see [Not-mentioned parts](#not-mentioned-parts) below), and a measure missing a verse renders that row blank for that measure only. A measure with no lyric line attached at all has zero verse rows for that part in that measure, not a blank placeholder verse.
-- When two parts' `[Key]` lines both precede a bare line, it attaches to the **nearer** one only (the most recent `[Key]` line, not every preceding one). To attach the same words to two parts, write the line twice, once after each part's `[Key]` line.
-- A repeated, explicitly `[Key]`-prefixed line (rather than a bare one) after a part's notes line is **not** a second verse — a fixed-schema part (`notes`, `chords`, `percussion`) only has one non-positional slot, so a second `[Key]`-prefixed line for the same part in one measure group is a `part [Key] has N lines but only 1 slot(s)` error. Extra verses must be written as bare, unprefixed lines.
-- A bare line with no `[Key]` line above it yet in the measure has no part to attach to and is a `score_line_missing_key_prefix` error — a standalone caption line unrelated to a specific part's notes is not supported.
-- One accepted trade-off: since a bare line following a `[Key]` line is always valid syntax, a composer who forgets a second part's `[Key]` prefix (meaning to write that part's notes) no longer gets an error — the line is silently absorbed as a positionally-attached lyrics line instead. Previously this was a hard `score_line_missing_key_prefix` error.
+- A lyric part's line is written with its own `[Abbrev]` key, anywhere in the measure group; it is not tied to the line above it. A lyric part takes no sound, volume or octave settings.
+- Lyric parts have their own abbreviation and display name, and share the abbreviation namespace with every other part (a duplicate abbreviation is an error).
+- Each lyric part renders as its own row directly under its target's notes row, in declaration order, and is tallied and tie-paired against the notes row independently — a lyric part can have its own `-` held syllables and `_` no-lyrics marker.
+- Each verse row's left-margin label still shows its target part's abbreviation (the same on every verse row); clicking it, or including it in a click-and-click range selection, selects every syllable that verse sings across the system.
+- A lyric part not written in a measure group gets no row for that measure. If a later lyric part is written but an earlier one isn't, the earlier one is filled with `_` for that measure (a blank row). A measure with no lyric line at all has zero lyric rows for that part, not blank placeholders.
+- A lyric line written without its target's notes line in that measure group still works: the target part is filled with rests (or follows its target).
+- A second line for the same lyric part in one measure group is a `part [Key] has N lines but only 1 slot(s)` error.
+- `lyrics[X]` where `X` is unknown, declared later, a `percussion` part or another lyric part is a `parts_lyrics_invalid_target` error; the lyric part is dropped.
+- A `follow[X]` part never copies lyrics from `X`; give it its own `lyrics[...]` part.
+
+#### Migrating from positional lyric lines
+
+Earlier versions attached a bare line to the `[Key]` line above it. That form is no longer supported (a bare line is a `score_line_missing_key_prefix` error). Run `jianpu migrate-lyrics <file>...` (or pipe a source through it on stdin) to rewrite a file: it adds one `lyrics[...]` part per verse position a part used (`Melody lyrics [Mv1]` for one verse, `Melody verse 1 [Mv1]`, `Melody verse 2 [Mv2]`, … for several) and prefixes each bare line with its key. `scripts/migrate-lyrics-d1.py` does the same for the `docs` and `files` tables of the production D1 database.
 
 ---
 
@@ -764,8 +778,7 @@ When a part is **not mentioned** in a measure (no `[Key]` line covers it), it is
 | Part not mentioned; declared as `follow[X]` | Copies X's content; row suppressed |
 | Part not mentioned; no follow target; notes/chord slot | Silently filled with rests (`0`) |
 | Part not mentioned; no follow target; lyrics slot | Silently filled with no-lyrics (`_`) |
-| Data line missing `[Abbrev]` prefix, with a `[Key]` line earlier in the measure | Not an error — positional lyrics line (see [Positional (unprefixed) lyrics lines](#positional-unprefixed-lyrics-lines)) |
-| Data line missing `[Abbrev]` prefix, with no preceding `[Key]` line in the measure | Error; line dropped (`score_line_missing_key_prefix`) |
+| Data line missing `[Abbrev]` prefix | Error; line dropped (`score_line_missing_key_prefix`) |
 | `[Key]` line with unrecognised abbreviation | Error; line dropped |
 | No valid keyed lines in a measure group | Error (`measure_no_data_lines`) |
 
@@ -795,8 +808,7 @@ Measure 2: A plays `1 - - -`, B plays `1 2 3 4`.
 | `_` | lyrics only | No lyrics this bar |
 | *(omitted)* | any | Rest fill or follow-target copy; row suppressed |
 | `(...)` | directive | Global bpm/key/time/label for this bar |
-| `[Abbrev] <content>` | notes, lyrics, chord | Key-based line targeting the named part by abbreviation |
-| `<content>` (no `[Abbrev]`) | lyrics | Positional lyrics line — attaches to the nearest preceding `[Key]` line's part; an error if none precedes it (see [Positional (unprefixed) lyrics lines](#positional-unprefixed-lyrics-lines)) |
+| `[Abbrev] <content>` | notes, lyrics, chord | Key-based line targeting the named part (or lyric part) by abbreviation |
 
 ---
 
@@ -809,19 +821,21 @@ author = "Author"
 
 # parts
 Melody [M] = notes
+Melody lyrics [Mv1] = lyrics[M]
 Harmony [H] = follow[M]
+Harmony lyrics [Hv1] = lyrics[H]
 
 # score
 
 bpm=120 key=C4 time=4/4 label="Verse"
 [M] 1 2 4 5
-do re mi fa
+[Mv1] do re mi fa
 
 [M] 1 2 4 5
-_
+[Mv1] _
 [H] 3 5 6 7
-do re mi fa
+[Hv1] do re mi fa
 ```
 
 Bar 1: Melody plays `1 2 4 5` / `do re mi fa`. Harmony is not mentioned → copies Melody, row suppressed.  
-Bar 2: Melody plays `1 2 4 5` / `_` (no lyrics). Harmony uses a `[H]` key line to override its notes, and its own positionally-attached line for lyrics.
+Bar 2: Melody plays `1 2 4 5` / `_` (no lyrics). Harmony uses a `[H]` key line to override its notes, and its own `[Hv]` line for lyrics.

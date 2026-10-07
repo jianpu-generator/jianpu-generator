@@ -1,7 +1,7 @@
 //! Cucumber harness for the positional-lyrics syntax proposal (bare,
 //! unprefixed lyric lines attaching to the nearest preceding part, or
 //! standing alone as an adurational block when they open a measure — see
-//! `tests/features/positional_lyrics.feature`).
+//! `tests/features/lyric_parts.feature`).
 //!
 //! This syntax is not implemented yet. Every scenario in that feature file
 //! is expected to FAIL until the parser/desugar work lands — do not "fix"
@@ -174,5 +174,5 @@ fn then_no_diagnostics(world: &mut JianpuWorld, measure: usize) {
 
 #[tokio::main]
 async fn main() {
-    JianpuWorld::run("tests/features/positional_lyrics.feature").await;
+    JianpuWorld::run("tests/features/lyric_parts.feature").await;
 }

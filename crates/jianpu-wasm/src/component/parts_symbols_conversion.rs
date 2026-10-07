@@ -28,6 +28,7 @@ fn part_mode_to_wit(mode: source_edit::PartMode) -> PartMode {
         source_edit::PartMode::Notes => PartMode::Notes,
         source_edit::PartMode::Percussion => PartMode::Percussion,
         source_edit::PartMode::Follow { target } => PartMode::Follow(target),
+        source_edit::PartMode::Lyrics { target } => PartMode::Lyrics(target),
     }
 }
 
@@ -37,6 +38,7 @@ fn part_mode_from_wit(mode: PartMode) -> source_edit::PartMode {
         PartMode::Notes => source_edit::PartMode::Notes,
         PartMode::Percussion => source_edit::PartMode::Percussion,
         PartMode::Follow(target) => source_edit::PartMode::Follow { target },
+        PartMode::Lyrics(target) => source_edit::PartMode::Lyrics { target },
     }
 }
 

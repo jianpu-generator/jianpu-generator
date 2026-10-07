@@ -10,11 +10,12 @@ fn render_svgs_from_source_smoke() {
         "\n",
         "# parts\n",
         "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
         "\n",
         "# score\n",
         "time=4/4 key=C4 bpm=120\n",
         "[Melody] 1 2 3 4\n",
-        "a b c d\n",
+        "[Melodyv1] a b c d\n",
     );
     let svgs = render_svgs_from_source(input, "test.jianpu", &[])
         .unwrap()
@@ -55,9 +56,18 @@ fn bpm_change_mid_score_renders_both_bpm_labels() {
 #[test]
 fn lyrics_underflow_render_returns_svgs_and_non_empty_errors() {
     let input = concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b\n",
+        "# metadata\n",
+        "title=\"t\"\n",
+        "author=\"a\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[Melody] 1 2 3 4\n",
+        "[Melodyv1] a b\n",
     );
     let output = render_svgs_from_source(input, "test.jianpu", &[])
         .expect("underflow must not abort the render");

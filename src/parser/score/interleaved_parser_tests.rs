@@ -3,7 +3,7 @@ use crate::ast::parsed::{
 };
 
 use super::test_helpers::{
-    all_events, chord_track, decl, notes_track, parse, parse_recoverable_errors,
+    all_events, chord_track, decl, decl_with_verse, notes_track, parse, parse_recoverable_errors,
     total_lyrics_syllables,
 };
 
@@ -85,8 +85,8 @@ fn single_unnamed_part_no_lyrics() {
 fn plain_notes_part_accepts_positionally_attached_lyrics_line() {
     // A plain `notes` part; the trailing bare line has no `[Key]` prefix at
     // all and attaches to it positionally.
-    let content = "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\ndo re mi fa\n";
-    let declarations = vec![decl("", PartKind::Notes)];
+    let content = "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\n[v] do re mi fa\n";
+    let declarations = vec![decl_with_verse("", "v")];
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(tracks.len(), 1);
     let notes = notes_track(&tracks, "");
@@ -133,12 +133,12 @@ fn too_many_lines_in_group_is_recoverable() {
 #[test]
 fn underscore_on_lyrics_line_means_no_lyrics_for_that_bar() {
     let content = concat!(
-        "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\na b c d\n",
+        "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\n[v] a b c d\n",
         "\n",
         "[] 5 6 7 1\n",
-        "_\n",
+        "[v] _\n",
     );
-    let declarations = vec![decl("", PartKind::Notes)];
+    let declarations = vec![decl_with_verse("", "v")];
     let tracks = parse(content, 0, &declarations).unwrap();
     let lyrics = notes_track(&tracks, "").lyrics.as_ref().unwrap();
     assert_eq!(lyrics.measure_syllables.len(), 2);
@@ -148,8 +148,8 @@ fn underscore_on_lyrics_line_means_no_lyrics_for_that_bar() {
 
 #[test]
 fn allows_too_few_lyrics_syllables_for_notes() {
-    let content = "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\na b c\n";
-    let declarations = vec![decl("", PartKind::Notes)];
+    let content = "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\n[v] a b c\n";
+    let declarations = vec![decl_with_verse("", "v")];
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(
         notes_track(&tracks, "")
@@ -213,8 +213,8 @@ fn unclosed_paren_group_at_eof_is_recoverable() {
 
 #[test]
 fn tied_notes_share_one_lyric_slot_in_bar() {
-    let content = "time=4/4 key=C4 bpm=120\n[] (33) 1 2\na b c\n";
-    let declarations = vec![decl("", PartKind::Notes)];
+    let content = "time=4/4 key=C4 bpm=120\n[] (33) 1 2\n[v] a b c\n";
+    let declarations = vec![decl_with_verse("", "v")];
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(
         notes_track(&tracks, "")
@@ -230,12 +230,12 @@ fn tied_notes_share_one_lyric_slot_in_bar() {
 #[test]
 fn cross_measure_tie_continuation_needs_fewer_lyrics() {
     let content = concat!(
-        "time=4/4 key=C4 bpm=120\n[] 0 0 0 (3\na\n",
+        "time=4/4 key=C4 bpm=120\n[] 0 0 0 (3\n[v] a\n",
         "\n",
         "[] 3) 0 0 0\n",
-        "_\n",
+        "[v] _\n",
     );
-    let declarations = vec![decl("", PartKind::Notes)];
+    let declarations = vec![decl_with_verse("", "v")];
     let tracks = parse(content, 0, &declarations).unwrap();
     let lyrics = notes_track(&tracks, "").lyrics.as_ref().unwrap();
     assert_eq!(lyrics.measure_syllables.len(), 2);
@@ -249,13 +249,13 @@ fn spaced_open_group_cross_measure_lyrics() {
         "time=4/4 key=C4 bpm=120\n",
         "[main] 1 - 6m -\n",
         "[S1] (6- 7-\n",
-        "慈 -\n",
+        "[v] 慈 -\n",
         "\n",
         "[main] 1 - 6m -\n",
         "[S1] 7) 1 2 3\n",
-        "光 - 光\n",
+        "[v] 光 - 光\n",
     );
-    let declarations = vec![decl("main", PartKind::Chords), decl("S1", PartKind::Notes)];
+    let declarations = vec![decl("main", PartKind::Chords), decl_with_verse("S1", "v")];
     let tracks = parse(content, 0, &declarations).unwrap();
     let s1 = notes_track(&tracks, "S1");
     assert_eq!(total_lyrics_syllables(s1), 5);

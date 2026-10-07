@@ -28,15 +28,17 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody verse 1 [Mv1] = lyrics[M]',
+  'Melody verse 2 [Mv2] = lyrics[M]',
   '',
   '# score',
   '[M] 1 2', // measure 0
-  'do re', // verse 0
-  'fa sol', // verse 1
+  '[Mv1] do re', // verse 0
+  '[Mv2] fa sol', // verse 1
   '',
   '[M] 3 4', // measure 1
-  'la ti', // verse 0
-  'da di', // verse 1
+  '[Mv1] la ti', // verse 0
+  '[Mv2] da di', // verse 1
 ].join('\n')
 
 function verseLabel(page: import('@playwright/test').Page, verse: number) {

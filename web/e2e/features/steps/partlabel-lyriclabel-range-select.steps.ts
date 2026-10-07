@@ -28,24 +28,26 @@ const source = [
   '# parts',
   'Melody [M] = notes',
   'Harmony [H] = notes',
+  'Harmony verse 1 [Hv1] = lyrics[H]',
+  'Harmony verse 2 [Hv2] = lyrics[H]',
   '',
   '# score',
   '[M] 1', // measure 0 — system 0
   '[H] 5',
-  'do', // Harmony verse 0
-  'fa', // Harmony verse 1 — proves the verse restriction, see below
+  '[Hv1] do', // Harmony verse 0
+  '[Hv2] fa', // Harmony verse 1 — proves the verse restriction, see below
   '',
   'break',
   '[M] 2', // measure 1 — system 1
   '[H] 6',
-  're', // Harmony verse 0
-  'sol', // Harmony verse 1
+  '[Hv1] re', // Harmony verse 0
+  '[Hv2] sol', // Harmony verse 1
   '',
   'break',
   '[M] 3', // measure 2 — system 2, distractor
   '[H] 7',
-  'mi', // Harmony verse 0
-  'la', // Harmony verse 1
+  '[Hv1] mi', // Harmony verse 0
+  '[Hv2] la', // Harmony verse 1
 ].join('\n')
 
 // A note group carries a sibling `Tag::Note` group for its

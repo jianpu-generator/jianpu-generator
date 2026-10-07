@@ -4,15 +4,16 @@ max_measures_per_system = 1
 
 # parts
 Melody [M] = notes
+Melody lyrics [Mv1] = lyrics[M]
 
 # score
 label="Eighth & sixteenth (_/=)"
 [M] 1_ 1_ 1= 1= 1= 1= 1 -
-_
+[Mv1] _
 
 label="Dotted (.)"
 [M] 1. 2_ 1_. 2= 0
-_
+[Mv1] _
 
 label="Extension (-)"
 [M] 1 - - -
@@ -22,4 +23,4 @@ label="Repeat (r, _, =)"
 [M] 1 r r -
 
 [M] __ 0 0 0
-_
+[Mv1] _

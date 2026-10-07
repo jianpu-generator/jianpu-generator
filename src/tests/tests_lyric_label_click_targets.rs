@@ -55,12 +55,14 @@ const TWO_VERSE_INPUT: &str = concat!(
     "\n",
     "# parts\n",
     "Melody [M] = notes\n",
+    "Melody verse 1 [Mv1] = lyrics[M]\n",
+    "Melody verse 2 [Mv2] = lyrics[M]\n",
     "\n",
     "# score\n",
     "time=4/4 key=C4 bpm=120\n",
     "[M] 1 2 3 4\n",
-    "do re mi fa\n",
-    "la ti da di\n",
+    "[Mv1] do re mi fa\n",
+    "[Mv2] la ti da di\n",
 );
 
 #[test]

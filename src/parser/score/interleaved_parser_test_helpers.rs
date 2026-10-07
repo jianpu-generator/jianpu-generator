@@ -1,5 +1,5 @@
 use crate::ast::parsed::{
-    ParsedMeasureSlot, ParsedTimedTrack, ParsedTrack, PartDecl, PartKind, Soundfont,
+    ParsedMeasureSlot, ParsedTimedTrack, ParsedTrack, PartDecl, PartKind, Soundfont, VerseDecl,
 };
 use crate::error::Spanned;
 use crate::error::{IrrecoverableError, RecoverableError, Span};
@@ -34,6 +34,19 @@ pub(super) fn decl(name: &str, kind: PartKind) -> PartDecl {
         soundfont: Soundfont::default(),
         volume: 100,
         octave_offset: 0,
+        verses: Vec::new(),
+    }
+}
+
+/// A `notes` part with one lyric part, whose score key is `verse`.
+pub(super) fn decl_with_verse(name: &str, verse: &str) -> PartDecl {
+    PartDecl {
+        verses: vec![VerseDecl {
+            abbreviation: verse.into(),
+            abbreviation_span: Span::new(0, 0),
+            display_name: verse.into(),
+        }],
+        ..decl(name, PartKind::Notes)
     }
 }
 

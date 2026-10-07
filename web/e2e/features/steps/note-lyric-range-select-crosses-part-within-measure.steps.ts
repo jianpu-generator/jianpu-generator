@@ -33,13 +33,15 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody lyrics [Mv1] = lyrics[M]',
   'Harmony [H] = notes',
+  'Harmony lyrics [Hv1] = lyrics[H]',
   '',
   '# score',
   '[M] 1 2 3', // measure 0 — Melody notes at position 0, 1, 2
-  'do re mi', // Melody verse 0
+  '[Mv1] do re mi', // Melody verse 0
   '[H] 4 5 6', // measure 0 — Harmony notes at position 0, 1, 2
-  'fa so la', // Harmony verse 0
+  '[Hv1] fa so la', // Harmony verse 0
 ].join('\n')
 
 // A note renders as two sibling `[data-tag="note"]` groups sharing the same

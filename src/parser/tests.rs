@@ -22,9 +22,18 @@ fn notes_track(doc: &ParsedDocument) -> &ParsedTimedTrack {
 #[test]
 fn parses_full_document() {
     let input = concat!(
-        "# metadata\ntitle = \"hello world\"\nauthor = \"foo\"\n\n",
-        "# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n你好wo rld\n"
+        "# metadata\n",
+        "title = \"hello world\"\n",
+        "author = \"foo\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[Melody] 1 2 3 4\n",
+        "[Melodyv1] 你好wo rld\n",
     );
     let doc = parse(input, "test.jianpu", &[]).unwrap();
     assert_eq!(doc.metadata.title, Some("hello world".to_string()));
@@ -218,9 +227,18 @@ fn too_many_lines_recoverable_error_lists_declared_parts() {
 #[test]
 fn single_unnamed_part_remains_compatible() {
     let input = concat!(
-        "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",
-        "# parts\nMelody = notes\n\n",
-        "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b c d\n"
+        "# metadata\n",
+        "title=\"t\"\n",
+        "author=\"a\"\n",
+        "\n",
+        "# parts\n",
+        "Melody = notes\n",
+        "Melody lyrics [Melodyv1] = lyrics[Melody]\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[Melody] 1 2 3 4\n",
+        "[Melodyv1] a b c d\n",
     );
     let doc = parse(input, "test.jianpu", &[]).unwrap();
     assert_eq!(doc.tracks.len(), 1);

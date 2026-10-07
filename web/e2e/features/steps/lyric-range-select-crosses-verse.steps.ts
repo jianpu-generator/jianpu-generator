@@ -33,12 +33,15 @@ const source = [
   '',
   '# parts',
   'Melody [M] = notes',
+  'Melody verse 1 [Mv1] = lyrics[M]',
+  'Melody verse 2 [Mv2] = lyrics[M]',
+  'Melody verse 3 [Mv3] = lyrics[M]',
   '',
   '# score',
   '[M] 1 2 3 4', // measure 0 — note ids 0-3
-  'do re mi fa', // verse 0
-  'la ti fa sol', // verse 1
-  'ho ho ho ho', // verse 2 — distractor, outside the swept verse range
+  '[Mv1] do re mi fa', // verse 0
+  '[Mv2] la ti fa sol', // verse 1
+  '[Mv3] ho ho ho ho', // verse 2 — distractor, outside the swept verse range
 ].join('\n')
 
 function lyricInVerse(

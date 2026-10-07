@@ -51,6 +51,19 @@ pub struct PartDecl {
     pub volume: u8,
     /// MIDI-only octave shift applied to every note in this part (−4..=+4).
     pub octave_offset: i8,
+    /// Lyric parts (`Verse 1 [v1] = lyrics[<this abbreviation>]`) attached to
+    /// this part, in declaration order. Verse `i` of a measure is written on
+    /// the score line keyed by `verses[i].abbreviation`.
+    pub verses: Vec<VerseDecl>,
+}
+
+/// A `lyrics[X]` part declaration, attached to its target [`PartDecl`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct VerseDecl {
+    pub abbreviation: String,
+    /// Byte span of the abbreviation token on its `# parts` declaration line.
+    pub abbreviation_span: Span,
+    pub display_name: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -11,10 +11,6 @@ pub(super) struct KeyedLine {
     /// whitespace), distinct from `key_prefix_span` which covers the whole
     /// bracketed prefix and must keep doing so for `part_key_unknown`'s error span.
     pub(super) key_span: Span,
-    /// True when this line is a bare (unprefixed) data line attributed to
-    /// `key` by the positional-lyrics attribution algorithm, rather than a
-    /// real `[Abbrev]`-prefixed line written by the composer.
-    pub(super) is_positional: bool,
 }
 
 fn key_prefix_span_in_line(line: &str, line_offset: usize, base_offset: usize) -> Span {
@@ -37,19 +33,13 @@ fn key_span_in_line(line: &str, line_offset: usize, base_offset: usize) -> Optio
     Some(Span::new(key_start, key_start + trimmed.len()))
 }
 
-/// Attributes each raw data line to a declared part's abbreviation, in
-/// top-to-bottom scan order: a real `[Key]`-prefixed line is kept as-is and
-/// becomes the current attribution target; a bare line attaches to that
-/// target as a positional lyrics verse (does not itself become the new
-/// target, so consecutive bare lines become verses 1, 2, ... under the same
-/// key); a bare line with no attribution target yet is dropped with a
-/// recoverable error.
+/// Reads each raw data line's `[Key]` prefix. A line without one is dropped
+/// with a recoverable error.
 pub(super) fn attribute_data_lines(
     data_lines: &[RawSourceLine],
     base_offset: usize,
     recoverable_error: &mut Option<RecoverableError>,
 ) -> Vec<KeyedLine> {
-    let mut current_attribution_key: Option<String> = None;
     let mut keyed: Vec<KeyedLine> = Vec::new();
 
     for (line, offset) in data_lines {
@@ -57,24 +47,12 @@ pub(super) fn attribute_data_lines(
             let prefix_length = line.len().saturating_sub(content.len());
             let key_span = key_span_in_line(line, *offset, base_offset)
                 .unwrap_or_else(|| key_prefix_span_in_line(line, *offset, base_offset));
-            current_attribution_key = Some(key.to_string());
             keyed.push(KeyedLine {
                 key: key.to_string(),
                 content: content.to_string(),
                 content_offset: *offset + prefix_length,
                 key_prefix_span: key_prefix_span_in_line(line, *offset, base_offset),
                 key_span,
-                is_positional: false,
-            });
-        } else if let Some(key) = &current_attribution_key {
-            let line_span = Span::new(base_offset + offset, base_offset + offset + 1);
-            keyed.push(KeyedLine {
-                key: key.clone(),
-                content: line.clone(),
-                content_offset: *offset,
-                key_prefix_span: line_span,
-                key_span: line_span,
-                is_positional: true,
             });
         } else {
             recoverable_error.get_or_insert_with(|| {

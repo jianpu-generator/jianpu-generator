@@ -26,11 +26,12 @@ const source = [
   '# parts',
   'Melody [M] = notes',
   'Harmony [H] = notes',
+  'Harmony lyrics [Hv1] = lyrics[H]',
   '',
   '# score',
   '[M] 1 2 3',
   '[H] 4 5 6',
-  'x y z',
+  '[Hv1] x y z',
 ].join('\n')
 
 // A note group carries a sibling `Tag::Note` group for its

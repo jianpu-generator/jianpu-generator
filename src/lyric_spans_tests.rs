@@ -7,10 +7,11 @@ title = "t"
 
 # parts
 Melody [M] = notes
+Melody lyrics [Mv1] = lyrics[M]
 
 # score
 [M] 1 2 3 4
-a b c d
+[Mv1] a b c d
 "#;
     let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
         .unwrap()
@@ -35,10 +36,11 @@ title = "t"
 
 # parts
 Melody [M] = notes
+Melody lyrics [Mv1] = lyrics[M]
 
 # score
 [M] 4~4 3 2
-la di dum
+[Mv1] la di dum
 "#;
     let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
         .unwrap()
@@ -66,11 +68,13 @@ title = "t"
 
 # parts
 Melody [M] = notes
+Melody verse 1 [Mv1] = lyrics[M]
+Melody verse 2 [Mv2] = lyrics[M]
 
 # score
 [M] 1 2
-a b
-one two
+[Mv1] a b
+[Mv2] one two
 "#;
     let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
         .unwrap()

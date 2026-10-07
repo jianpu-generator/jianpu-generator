@@ -1,8 +1,8 @@
-use crate::ast::parsed::{AbbreviationReference, PartDecl, PartKind, ScoreLineRole, ScoreLineSlot};
+use crate::ast::parsed::{AbbreviationReference, PartDecl, ScoreLineRole, ScoreLineSlot};
 use crate::error::{IrrecoverableError, RecoverableError, Span};
 use crate::parser::score::measure_group;
 use attribution::{attribute_data_lines, KeyedLine};
-use key_map::KeyMap;
+use key_map::{KeyMap, PartLines};
 
 mod attribution;
 mod key_map;
@@ -20,13 +20,6 @@ pub(crate) struct SourceLine {
     /// the composer. Threaded through to `ParsedRest::implicit_fill` so an
     /// omitted part's filled-in rest renders with a distinct glyph.
     pub(crate) is_implicit_fill: bool,
-    /// True when this line was synthesized from a bare (unprefixed) data line
-    /// attributed to `key` by the positional-lyrics attribution algorithm,
-    /// rather than carrying a literal `[Abbrev]` prefix written by the
-    /// composer. Threaded through so `abbreviation_references` can exclude
-    /// it (there is no literal abbreviation token in source to reference)
-    /// and so `key_map.rs`'s fixed-schema capacity check can ignore it.
-    pub(crate) is_positional: bool,
 }
 
 type MeasureGroup = Vec<SourceLine>;
@@ -142,7 +135,6 @@ fn expand_measure_group(
 
     let abbreviation_references: Vec<AbbreviationReference> = keyed
         .iter()
-        .filter(|line| !line.is_positional)
         .map(|line| AbbreviationReference {
             abbreviation: line.key.clone(),
             span: line.key_span,
@@ -176,7 +168,6 @@ fn expand_measure_group(
             content: content.clone(),
             offset: *offset,
             is_implicit_fill: false,
-            is_positional: false,
         })
         .collect();
     result.extend(result_data);
@@ -196,28 +187,18 @@ fn expand_keyed(
 
 /// The score-line roles this part contributes to this specific measure group.
 ///
-/// A `Notes`/`Chords` part picks up extra `Lyrics` roles when the composer
-/// wrote positionally-attached bare lines (or repeated `[Key]` lines) after
-/// this part's notes line: zero attached lines means zero verses, one
-/// attached line means one verse, and so on. `Percussion` is excluded from
-/// positional-lyrics eligibility — see module docs.
+/// A `Notes`/`Chords` part picks up one extra `Lyrics` role per verse up to
+/// the highest verse written in this group: no verse line means zero verses,
+/// and a skipped verse in between is filled with no-lyrics (`_`).
 ///
 /// Other kinds keep their static role list.
-fn roles_for_group(decl: &PartDecl, key_lines: Option<&[SourceLine]>) -> Vec<ScoreLineRole> {
-    match (decl.kind, key_lines) {
-        (PartKind::Notes | PartKind::Chords, Some(lines)) if lines.len() > 1 => {
-            let verse_count = lines.len() - 1;
-            let base_role = decl
-                .score_line_roles()
-                .first()
-                .copied()
-                .unwrap_or(ScoreLineRole::Notes);
-            std::iter::once(base_role)
-                .chain(itertools::repeat_n(ScoreLineRole::Lyrics, verse_count))
-                .collect()
-        }
-        _ => decl.score_line_roles().to_vec(),
-    }
+fn roles_for_group(decl: &PartDecl, lines: Option<&PartLines>) -> Vec<ScoreLineRole> {
+    let verse_count = lines.map_or(0, |lines| lines.verses.len());
+    decl.score_line_roles()
+        .iter()
+        .copied()
+        .chain(itertools::repeat_n(ScoreLineRole::Lyrics, verse_count))
+        .collect()
 }
 
 fn resolve_tracks(
@@ -228,14 +209,8 @@ fn resolve_tracks(
     let mut resolved_per_track: Vec<Vec<SourceLine>> = Vec::with_capacity(declarations.len());
     let mut roles_per_track: Vec<Vec<ScoreLineRole>> = Vec::with_capacity(declarations.len());
 
-    for i in 0..declarations.len() {
-        let Some(decl) = declarations.get(i) else {
-            continue;
-        };
-        let key_lines = key_map
-            .iter()
-            .find(|(k, _)| k == &decl.abbreviation)
-            .map(|(_, v)| v.as_slice());
+    for (i, decl) in declarations.iter().enumerate() {
+        let part_lines = key_map.get(i);
         let follow_target_index = decl.follow_target.as_ref().and_then(|target| {
             declarations
                 .get(..i)
@@ -244,26 +219,33 @@ fn resolve_tracks(
                 .position(|d| &d.abbreviation == target)
         });
 
-        let roles = roles_for_group(decl, key_lines);
+        let roles = roles_for_group(decl, part_lines);
 
         let track_lines: Vec<SourceLine> = roles
             .iter()
             .enumerate()
             .map(|(slot_index, &role)| {
-                if let Some(line) = key_lines.and_then(|ls| ls.get(slot_index)) {
-                    return line.clone();
+                let written = match slot_index {
+                    0 => part_lines.and_then(|lines| lines.base.clone()),
+                    verse_slot => part_lines
+                        .and_then(|lines| lines.verses.get(verse_slot - 1).cloned().flatten()),
+                };
+                if let Some(line) = written {
+                    return line;
                 }
-                if let Some(line) = follow_target_index
-                    .and_then(|t| resolved_per_track.get(t))
-                    .and_then(|track| track.get(slot_index))
-                {
-                    return line.clone();
+                // A follow part copies its target's notes only, never its lyrics.
+                if slot_index == 0 {
+                    if let Some(line) = follow_target_index
+                        .and_then(|t| resolved_per_track.get(t))
+                        .and_then(|track| track.first())
+                    {
+                        return line.clone();
+                    }
                 }
                 SourceLine {
                     content: implicit_fill(role, context.time_num),
                     offset: context.pad_offset,
                     is_implicit_fill: true,
-                    is_positional: false,
                 }
             })
             .collect();

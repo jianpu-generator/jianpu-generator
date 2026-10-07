@@ -103,6 +103,8 @@ pub enum RecoverableErrorKind {
     PartsFollowUnknownTarget { target: String },
     /// The first declared part uses `follow[...]`, which is not allowed.
     PartsFirstPartCannotFollow,
+    /// A `lyrics[Target]` clause does not name an earlier-declared notes or chords part — the lyrics part is dropped.
+    PartsLyricsInvalidTarget { target: String },
     /// Soundfont string does not match any known instrument — declaration is kept with the parsed
     /// MIDI program number; audio playback may differ from what the user intended.
     PartsUnknownSoundfont {
@@ -173,6 +175,11 @@ impl RecoverableErrorKind {
             Self::PartsFollowUnknownTarget { target } => {
                 format!(
                     "no part with abbreviation '{target}'; follow targets must match a part declared earlier in #parts"
+                )
+            }
+            Self::PartsLyricsInvalidTarget { target } => {
+                format!(
+                    "lyrics[{target}] must name a notes or chords part declared earlier in #parts"
                 )
             }
             Self::PartsFirstPartCannotFollow => {

@@ -13,12 +13,13 @@ title = "t"
 Soprano [S] = notes
 Alto [A] = notes
 Bass [B] = notes
+Bass lyrics [Bv1] = lyrics[B]
 
 # score
 [S] 1 2 3 4
 [A] 5 6 7 1'
 [B] 1 1 5 5
-do re mi fa
+[Bv1] do re mi fa
 "#;
 
 fn enabled_tracks_without_alto() -> Vec<String> {
