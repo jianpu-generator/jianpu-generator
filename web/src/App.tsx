@@ -62,6 +62,8 @@ export default function App() {
     soloedParts,
     handlePartToggle,
     handleLyricsToggle,
+    handleLyricsSoloToggle,
+    soloedLyrics,
     handleSoloToggle,
     parts,
     partDeclarations,
@@ -293,9 +295,11 @@ export default function App() {
         disabledParts={disabledParts}
         disabledLyrics={disabledLyrics}
         soloedParts={soloedParts}
+        soloedLyrics={soloedLyrics}
         onPartToggle={handlePartToggle}
         onLyricsToggle={handleLyricsToggle}
         onSoloToggle={handleSoloToggle}
+        onLyricsSoloToggle={handleLyricsSoloToggle}
       />
       <AppWorkspace
         editorCollapsed={editorCollapsed}

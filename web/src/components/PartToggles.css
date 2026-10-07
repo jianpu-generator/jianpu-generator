@@ -137,16 +137,6 @@
   background: color-mix(in srgb, #f59e0b 20%, var(--editor-bg));
 }
 
-/* Mic: active = lyrics visible (blue, same as eye) */
-.part-toggle-segment--mic:has(input:checked) {
-  background: var(--accent-selected-bg);
-  color: var(--accent-selected-text);
-}
-
-.part-toggle-segment--mic:has(input:checked):hover:not(:has(input:disabled)) {
-  background: var(--accent-selected-bg-hover);
-}
-
 /* Radix tooltip bubble */
 .part-toggle-tooltip-content {
   background: var(--editor-bg, #fff);

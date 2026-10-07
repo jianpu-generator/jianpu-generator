@@ -158,7 +158,7 @@ fn render_svgs_from_source_filtered_hides_legend_entry_for_filtered_out_parts() 
 }
 
 #[test]
-fn render_documents_from_source_filtered_with_lyrics_hides_legend_entry_for_filtered_out_parts() {
+fn render_documents_from_source_with_visibility_hides_legend_entry_for_filtered_out_parts() {
     let input = concat!(
         "# metadata\n",
         "title = \"t\"\n",
@@ -173,11 +173,13 @@ fn render_documents_from_source_filtered_with_lyrics_hides_legend_entry_for_filt
         "[S] 1 2 3 4\n",
         "[A] 5 6 7 1\n",
     );
-    let soprano_only = render_documents_from_source_filtered_with_lyrics(
+    let soprano_only = render_documents_from_source_with_visibility(
         input,
         "test.jianpu",
-        Some(&["S".into()]),
-        None,
+        &ResolvedPartVisibility {
+            rendered_tracks: Some(vec!["S".into()]),
+            ..Default::default()
+        },
         &[],
     )
     .unwrap()

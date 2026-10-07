@@ -1,7 +1,7 @@
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useRef } from 'react'
 import type { SvgDocument } from '../jianpuWasm'
-import type { Diagnostic, MeasureSpan } from '../types'
+import type { Diagnostic, MeasureSpan, ResolvedPartVisibility } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 import { measureRangeInSpanWithReveal } from './workerHelpers'
 
@@ -11,8 +11,8 @@ interface UseJianpuWorkerRenderRequestsParams {
   source: string
   activeFile: string
   debounceMs: number
-  enabledTracks: string[] | undefined
-  disabledLyricsTracks: string[] | undefined
+  visibility: ResolvedPartVisibility
+  renderedTracks: string[] | undefined
   setDocuments: (value: SvgDocument[]) => void
   setNextWavUrl: (value: string | null) => void
   setNextMp3Url: (value: string | null) => void
@@ -66,8 +66,8 @@ export function useJianpuWorkerRenderRequests({
   source,
   activeFile,
   debounceMs,
-  enabledTracks,
-  disabledLyricsTracks,
+  visibility,
+  renderedTracks,
   setDocuments,
   setNextWavUrl,
   setNextMp3Url,
@@ -145,11 +145,10 @@ export function useJianpuWorkerRenderRequests({
       type: 'render',
       source,
       id,
-      enabledTracks,
-      disabledLyrics: disabledLyricsTracks,
+      visibility,
     }
     worker.postMessage(payload)
-  }, [source, activeFile, enabledTracks, disabledLyricsTracks])
+  }, [source, activeFile, visibility])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: lastSelectionRef/cursorOffsetTimerRef/measureSpansRef are stable refs passed in as params
   const notifySelection = useCallback(
@@ -238,10 +237,9 @@ export function useJianpuWorkerRenderRequests({
       source: sourceRef.current,
       id,
       ranges: highlightRanges,
-      enabledTracks,
-      disabledLyrics: disabledLyricsTracks,
+      visibility,
     } satisfies WorkerRequest)
-  }, [selectedMeasureRange, enabledTracks, disabledLyricsTracks])
+  }, [selectedMeasureRange, visibility])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: workerRef/measureSpansRequestIdRef/latestMeasureSpansIdRef are stable refs passed in as params
   useEffect(() => {
@@ -275,12 +273,12 @@ export function useJianpuWorkerRenderRequests({
         type: 'listNoteSpans',
         source,
         id,
-        enabledTracks,
+        enabledTracks: renderedTracks,
       } satisfies WorkerRequest)
     }, debounceMs)
 
     return () => window.clearTimeout(timer)
-  }, [source, debounceMs, enabledTracks])
+  }, [source, debounceMs, renderedTracks])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: workerRef/lyricSpansRequestIdRef/latestLyricSpansIdRef are stable refs passed in as params
   useEffect(() => {
@@ -295,12 +293,12 @@ export function useJianpuWorkerRenderRequests({
         type: 'listLyricSpans',
         source,
         id,
-        enabledTracks,
+        enabledTracks: renderedTracks,
       } satisfies WorkerRequest)
     }, debounceMs)
 
     return () => window.clearTimeout(timer)
-  }, [source, debounceMs, enabledTracks])
+  }, [source, debounceMs, renderedTracks])
 
   return { notifySelection }
 }

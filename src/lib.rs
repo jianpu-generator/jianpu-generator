@@ -48,6 +48,7 @@ pub mod split_track;
 pub mod symbols;
 mod tuplet;
 pub mod utils;
+mod visibility_render;
 
 #[cfg(feature = "midi")]
 pub mod midi;
@@ -58,8 +59,8 @@ pub mod wav;
 
 pub use audio_source::*;
 pub use document_render::{
-    render_documents_from_source_filtered_with_lyrics, render_documents_with_highlight_range,
-    RenderDocumentOutput,
+    render_documents_from_source_with_visibility,
+    render_documents_with_highlight_range_and_visibility, RenderDocumentOutput,
 };
 pub use filters::*;
 pub use lyric_spans::*;
@@ -69,6 +70,7 @@ pub use part_info::{
     list_part_declarations_from_source, list_parts_from_source, PartInfo, SourcePartDeclaration,
 };
 pub use split_track::*;
+pub use visibility_render::*;
 
 use ast::grouped::Score;
 use error::{Diagnostic, IrrecoverableError};
@@ -203,11 +205,13 @@ struct SvgDocsResult {
 fn render_svg_docs_with_parts(
     score: &Score,
     parts: &[PartInfo],
+    lyrics_only_tracks: &[String],
 ) -> Result<SvgDocsResult, IrrecoverableError> {
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
     let header = build_header(score, parts);
     let compile_result = compiler::compile(score);
-    let compile_result = consolidator::consolidate(compile_result);
+    let compile_result =
+        consolidator::consolidate_with_lyrics_only(compile_result, lyrics_only_tracks);
     let grid_layout::LayoutOutput {
         pages: grid_pages,
         diagnostics,
@@ -263,9 +267,10 @@ pub(crate) struct SvgsResult {
 pub(crate) fn render_svgs_with_parts(
     score: &Score,
     parts: &[PartInfo],
+    lyrics_only_tracks: &[String],
     source: Option<&str>,
 ) -> Result<SvgsResult, IrrecoverableError> {
-    let result = render_svg_docs_with_parts(score, parts)?;
+    let result = render_svg_docs_with_parts(score, parts, lyrics_only_tracks)?;
     Ok(SvgsResult {
         svgs: serializer::serialize(&result.documents, source),
         diagnostics: result.diagnostics,
@@ -274,7 +279,7 @@ pub(crate) fn render_svgs_with_parts(
 
 /// Layout and render a [`Score`] into one SVG string per page.
 pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
-    Ok(render_svgs_with_parts(score, &[], None)?.svgs)
+    Ok(render_svgs_with_parts(score, &[], &[], None)?.svgs)
 }
 
 /// Parse, group, and render a `.jianpu` source string into SVG page strings.
@@ -317,20 +322,16 @@ pub fn render_svgs_from_source_filtered_with_lyrics(
     disabled_lyrics: Option<&[String]>,
     instruments: &[InstrumentInfo],
 ) -> Result<RenderOutput, IrrecoverableError> {
-    let parts = filter_part_list(
-        list_parts_from_source(source, filename, instruments)?,
-        enabled_tracks,
-    );
-    let mut score = compile(source, filename, instruments)?;
-    apply_track_filter(&mut score, enabled_tracks);
-    apply_lyrics_filter(&mut score, disabled_lyrics);
-    let mut diagnostics = collect_measure_diagnostics(&score);
-    let result = render_svgs_with_parts(&score, &parts, Some(source))?;
-    diagnostics.extend(result.diagnostics);
-    Ok(RenderOutput {
-        svgs: result.svgs,
-        diagnostics,
-    })
+    render_svgs_from_source_with_visibility(
+        source,
+        filename,
+        &ResolvedPartVisibility {
+            rendered_tracks: enabled_tracks.map(<[String]>::to_vec),
+            disabled_lyrics: disabled_lyrics.map(<[String]>::to_vec).unwrap_or_default(),
+            ..Default::default()
+        },
+        instruments,
+    )
 }
 
 /// Parse, group, optionally filter tracks and lyrics, and write PDF bytes.
@@ -343,14 +344,17 @@ pub fn write_pdf_from_source_filtered_with_lyrics(
     fonts: &fonts::FontBytesByFamily,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<u8>, IrrecoverableError> {
-    let render_output = render_svgs_from_source_filtered_with_lyrics(
+    write_pdf_from_source_with_visibility(
         source,
         filename,
-        enabled_tracks,
-        disabled_lyrics,
+        &ResolvedPartVisibility {
+            rendered_tracks: enabled_tracks.map(<[String]>::to_vec),
+            disabled_lyrics: disabled_lyrics.map(<[String]>::to_vec).unwrap_or_default(),
+            ..Default::default()
+        },
+        fonts,
         instruments,
-    )?;
-    pdf::write_pdf(&render_output.svgs, fonts, Some(source))
+    )
 }
 
 #[cfg(test)]

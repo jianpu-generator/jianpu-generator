@@ -29,8 +29,7 @@ export function handleGeneratePdf(
   }
   const result = jianpuWasm().generatePdf(
     msg.source,
-    msg.enabledTracks,
-    msg.disabledLyrics,
+    msg.visibility,
     loadedFonts,
   )
   if (result.tag === 'ok') {

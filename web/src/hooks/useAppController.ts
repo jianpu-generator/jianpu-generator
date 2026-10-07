@@ -10,14 +10,12 @@ import { useFileOperations } from './useFileOperations'
 import { useFontsLoader } from './useFontsLoader'
 import { useJianpuWorker } from './useJianpuWorker'
 import { usePartTogglePruning } from './usePartTogglePruning'
-import {
-  noPartsSelected as computeNoPartsSelected,
-  usePartToggles,
-} from './usePartToggles'
+import { usePartToggles } from './usePartToggles'
 import { useScoreSource } from './useScoreSource'
 import { useStorageBackend } from './useStorageBackend'
 import { useUrlFileSync } from './useUrlFileSync'
 import { useWasmLoader } from './useWasmLoader'
+import { noPartsSelected as computeNoPartsSelected } from './workerHelpers'
 
 /** Wires together every hook `App` needs — storage backend, file ops, the
  * jianpu worker, part/section/note selection, and panel state — into the one
@@ -89,19 +87,24 @@ export function useAppController() {
   const pdfFontsReady = fonts.status === 'ready'
 
   const {
+    partToggles,
     disabledParts,
     setDisabledParts,
     disabledLyrics,
     setDisabledLyrics,
     soloedParts,
     setSoloedParts,
+    soloedLyrics,
+    setSoloedLyrics,
     handlePartToggle,
     handleLyricsToggle,
     handleSoloToggle,
+    handleLyricsSoloToggle,
   } = usePartToggles(fileId)
 
   const {
     parts,
+    visibility,
     partDeclarations,
     documents,
     pendingDownload,
@@ -165,9 +168,8 @@ export function useAppController() {
     importFromFile,
   } = useJianpuWorker(
     source,
-    disabledParts,
-    disabledLyrics,
-    soloedParts,
+    partToggles,
+    wasm.status === 'ready',
     store.active,
     soundfont.bytes,
     fonts.fonts,
@@ -179,6 +181,7 @@ export function useAppController() {
     setDisabledParts,
     setDisabledLyrics,
     setSoloedParts,
+    setSoloedLyrics,
   )
 
   const handleSourceChange = useCallback(
@@ -256,11 +259,7 @@ export function useAppController() {
     measureRangeSelectedPartNamesRef,
   )
 
-  const noPartsSelected = computeNoPartsSelected(
-    parts,
-    disabledParts,
-    soloedParts,
-  )
+  const noPartsSelected = computeNoPartsSelected(parts, visibility)
 
   return {
     store,
@@ -302,9 +301,11 @@ export function useAppController() {
     disabledParts,
     disabledLyrics,
     soloedParts,
+    soloedLyrics,
     handlePartToggle,
     handleLyricsToggle,
     handleSoloToggle,
+    handleLyricsSoloToggle,
     parts,
     partDeclarations,
     documents,

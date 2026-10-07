@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 import { Given, Then, When } from './fixtures'
 
 const SOURCE = [
@@ -47,6 +47,8 @@ const CHORDS_LEGEND = 'C — Chords'
 
 async function loadSource(page: Page, source: string = SOURCE) {
   await page.addInitScript((src) => {
+    // Seed once: a reload must keep the same file id so its toggles survive.
+    if (localStorage.getItem('jianpu:files:v1')) return
     localStorage.setItem(
       'jianpu:files:v1',
       JSON.stringify({
@@ -88,10 +90,20 @@ async function toggleSolo(page: Page, abbreviation: string) {
     .click()
 }
 
-async function toggleLyrics(page: Page, abbreviation: string) {
-  await partPill(page, abbreviation)
-    .locator('.part-toggle-segment--mic')
-    .click()
+function lyricsPill(page: Page, abbreviation: string) {
+  return partPill(page, `${abbreviation}詞`)
+}
+
+function firstLyricLocator(page: Page) {
+  return page.locator('.preview-pages text', { hasText: MELODY_LYRICS }).first()
+}
+
+let recordedLyricX: number | null = null
+
+async function expectTwoButtons(pill: Locator) {
+  await expect(pill.locator('input[type="checkbox"]')).toHaveCount(2)
+  await expect(pill.locator('.part-toggle-segment--eye')).toHaveCount(1)
+  await expect(pill.locator('.part-toggle-segment--headphones')).toHaveCount(1)
 }
 
 const PART_ABBREVIATIONS: Record<string, string> = {
@@ -150,9 +162,88 @@ When('I solo the {string} part', async ({ page }, partName: string) => {
 })
 
 When(
-  "I toggle the {string} part's lyrics off",
+  'I hide the {string} lyrics row via its eye toggle',
   async ({ page }, partName: string) => {
-    await toggleLyrics(page, lookup(PART_ABBREVIATIONS, partName, 'part name'))
+    await lyricsPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name'))
+      .locator('.part-toggle-segment--eye')
+      .click()
+  },
+)
+
+When('I solo the {string} lyrics row', async ({ page }, partName: string) => {
+  await lyricsPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name'))
+    .locator('.part-toggle-segment--headphones')
+    .click()
+})
+
+When('I reload the part toggles page', async ({ page }) => {
+  await page.reload()
+  await page.waitForSelector('[data-testid="play-measure-button"]', {
+    timeout: 15_000,
+  })
+})
+
+Given(
+  'I note the horizontal position of the first {string} lyric',
+  async ({ page }, _partName: string) => {
+    const box = await firstLyricLocator(page).boundingBox()
+    if (!box) throw new Error('First lyric has no bounding box')
+    recordedLyricX = box.x
+  },
+)
+
+Then(
+  'the first {string} lyric is at the same horizontal position',
+  async ({ page }, _partName: string) => {
+    expect(recordedLyricX).not.toBeNull()
+    await expect
+      .poll(async () => (await firstLyricLocator(page).boundingBox())?.x)
+      .toBeCloseTo(recordedLyricX as number, 1)
+  },
+)
+
+Then(
+  'the part toggles list contains a {string} part pill',
+  async ({ page }, partName: string) => {
+    await expect(
+      partPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name')),
+    ).toHaveCount(1)
+  },
+)
+
+Then(
+  'the part toggles list contains a {string} lyrics pill',
+  async ({ page }, partName: string) => {
+    await expect(
+      lyricsPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name')),
+    ).toHaveCount(1)
+  },
+)
+
+Then(
+  'the part toggles list does not contain a {string} lyrics pill',
+  async ({ page }, partName: string) => {
+    await expect(
+      lyricsPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name')),
+    ).toHaveCount(0)
+  },
+)
+
+Then(
+  'the {string} part pill has exactly a show\\/hide button and a solo button',
+  async ({ page }, partName: string) => {
+    await expectTwoButtons(
+      partPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name')),
+    )
+  },
+)
+
+Then(
+  'the {string} lyrics pill has exactly a show\\/hide button and a solo button',
+  async ({ page }, partName: string) => {
+    await expectTwoButtons(
+      lyricsPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name')),
+    )
   },
 )
 
@@ -183,29 +274,6 @@ Then('the preview contains the chord content', async ({ page }) => {
 Then('the preview does not contain the chord content', async ({ page }) => {
   await expect(page.locator('.preview-pages')).not.toContainText(CHORD_CONTENT)
 })
-
-Then(
-  'the {string} part pill has no mic toggle',
-  async ({ page }, partName: string) => {
-    // The mic (lyrics) toggle only renders for an enabled part with lyrics.
-    await expect(
-      partPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name')).locator(
-        '.part-toggle-segment--mic',
-      ),
-    ).toHaveCount(0)
-  },
-)
-
-Then(
-  'the {string} part pill has a mic toggle',
-  async ({ page }, partName: string) => {
-    await expect(
-      partPill(page, lookup(PART_ABBREVIATIONS, partName, 'part name')).locator(
-        '.part-toggle-segment--mic',
-      ),
-    ).toHaveCount(1)
-  },
-)
 
 Then(
   'the preview contains the {string} legend entry',

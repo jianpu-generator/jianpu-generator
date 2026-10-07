@@ -10,6 +10,7 @@ export function usePartTogglePruning(
   setDisabledParts: SetStringSet,
   setDisabledLyrics: SetStringSet,
   setSoloedParts: SetStringSet,
+  setSoloedLyrics: SetStringSet,
 ) {
   useEffect(() => {
     if (parts.length === 0) return
@@ -47,4 +48,20 @@ export function usePartTogglePruning(
       return next.size === prev.size ? prev : next
     })
   }, [parts, setSoloedParts])
+
+  useEffect(() => {
+    if (parts.length === 0) return
+
+    const lyricAbbreviations = new Set(
+      parts.filter((part) => part.hasLyrics).map((part) => part.abbreviation),
+    )
+    setSoloedLyrics((prev) => {
+      const next = new Set(
+        [...prev].filter((abbreviation) =>
+          lyricAbbreviations.has(abbreviation),
+        ),
+      )
+      return next.size === prev.size ? prev : next
+    })
+  }, [parts, setSoloedLyrics])
 }

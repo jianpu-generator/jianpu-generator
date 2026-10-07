@@ -157,10 +157,21 @@ pub(super) fn get_measure_index_at_offset(
 // collides with `#[wasm_bindgen] pub fn render`'s own export symbol on
 // `wasm32-unknown-unknown`.
 
+pub(super) fn resolve_part_visibility(
+    parts: Vec<Part>,
+    toggles: PartToggleState,
+) -> ResolvedPartVisibility {
+    let parts: Vec<jianpu_generator::PartInfo> =
+        parts.into_iter().map(part_info_from_wit).collect();
+    resolved_part_visibility_to_wit(jianpu_generator::resolve_part_visibility(
+        &parts,
+        &part_toggle_state_from_wit(toggles),
+    ))
+}
+
 pub(super) fn render_svg(
     source: String,
-    enabled_tracks: Option<Vec<String>>,
-    disabled_lyrics: Option<Vec<String>>,
+    visibility: ResolvedPartVisibility,
     raw_instruments: Vec<InstrumentInfo>,
 ) -> RenderResponse {
     let instruments: Vec<jianpu_generator::parser::parts_parser::InstrumentInfo> = raw_instruments
@@ -169,8 +180,7 @@ pub(super) fn render_svg(
         .collect();
     render_response_to_wit(crate::responses::render_response(
         &source,
-        enabled_tracks.as_deref(),
-        disabled_lyrics.as_deref(),
+        &resolved_part_visibility_from_wit(visibility),
         &instruments,
     ))
 }
@@ -178,8 +188,7 @@ pub(super) fn render_svg(
 pub(super) fn render_svg_with_highlight_range(
     source: String,
     raw_measure_ranges: Vec<MeasureRangeIn>,
-    enabled_tracks: Option<Vec<String>>,
-    disabled_lyrics: Option<Vec<String>>,
+    visibility: ResolvedPartVisibility,
     raw_instruments: Vec<InstrumentInfo>,
 ) -> RenderResponse {
     let instruments: Vec<jianpu_generator::parser::parts_parser::InstrumentInfo> = raw_instruments
@@ -193,8 +202,7 @@ pub(super) fn render_svg_with_highlight_range(
     render_response_to_wit(crate::responses::render_with_highlight_range_response(
         &source,
         &measure_ranges,
-        enabled_tracks.as_deref(),
-        disabled_lyrics.as_deref(),
+        &resolved_part_visibility_from_wit(visibility),
         &instruments,
     ))
 }

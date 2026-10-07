@@ -395,6 +395,31 @@ world jianpu-wasm {
         articulation: string,
     }
 
+    // The part-toggle UI's raw show/hide/solo state, as part abbreviations.
+    // A part with lyrics has two independent rows (notes and lyrics), each
+    // with its own hidden and soloed flag. Input to `resolve-part-visibility`.
+    record part-toggle-state {
+        hidden-notes: list<string>,
+        soloed-notes: list<string>,
+        hidden-lyrics: list<string>,
+        soloed-lyrics: list<string>,
+    }
+
+    // What `resolve-part-visibility` decided (`jianpu_generator::ResolvedPartVisibility`),
+    // passed back verbatim to the render and PDF exports. `rendered-tracks`
+    // and `sounding-tracks` are `none` when every part is drawn / sounds.
+    record resolved-part-visibility {
+        rendered-tracks: option<list<string>>,
+        sounding-tracks: option<list<string>>,
+        sounding-display-names: option<list<string>>,
+        lyrics-only-tracks: list<string>,
+        disabled-lyrics: list<string>,
+    }
+
+    // Resolves hide/solo state into what is drawn and what sounds, given the
+    // score's parts (as returned by `list-parts`).
+    export resolve-part-visibility: func(parts: list<part>, toggles: part-toggle-state) -> resolved-part-visibility;
+
     // Phase 3, group 4 of PLAN-wit-bindgen-migration.md. Placed here, not
     // immediately after `render-response`'s own `variant` declaration
     // further up this file, since both exports also need `instrument-info`
@@ -418,9 +443,9 @@ world jianpu-wasm {
     // `list-note-spans`, `rename-symbol`, ...) was safe by accident, since
     // hyphens vs. underscores kept the two mechanisms' literal export names
     // distinct — this was the first single-word export.
-    export render-svg: func(source: string, enabled-tracks: option<list<string>>, disabled-lyrics: option<list<string>>, raw-instruments: list<instrument-info>) -> render-response;
+    export render-svg: func(source: string, visibility: resolved-part-visibility, raw-instruments: list<instrument-info>) -> render-response;
 
-    export render-svg-with-highlight-range: func(source: string, raw-measure-ranges: list<measure-range-in>, enabled-tracks: option<list<string>>, disabled-lyrics: option<list<string>>, raw-instruments: list<instrument-info>) -> render-response;
+    export render-svg-with-highlight-range: func(source: string, raw-measure-ranges: list<measure-range-in>, visibility: resolved-part-visibility, raw-instruments: list<instrument-info>) -> render-response;
 
     // Phase 3, group 3 of PLAN-wit-bindgen-migration.md.
     export list-parts: func(source: string, raw-instruments: list<instrument-info>) -> list-parts-response;
@@ -1051,7 +1076,7 @@ world jianpu-wasm {
     }
 
     // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
-    export generate-pdf: func(source: string, enabled-tracks: option<list<string>>, disabled-lyrics: option<list<string>>, fonts: font-bytes-by-family) -> generate-pdf-response;
+    export generate-pdf: func(source: string, visibility: resolved-part-visibility, fonts: font-bytes-by-family) -> generate-pdf-response;
 
     record generate-split-pdfs-success {
         zip: list<u8>,

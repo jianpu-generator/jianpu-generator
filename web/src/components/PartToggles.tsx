@@ -5,7 +5,6 @@ import {
   Eye,
   EyeOff,
   Headphones,
-  Mic,
 } from 'lucide-react'
 import { useState } from 'react'
 import type { PartInfo } from '../types'
@@ -16,9 +15,82 @@ interface PartTogglesProps {
   disabledParts: ReadonlySet<string>
   disabledLyrics: ReadonlySet<string>
   soloedParts: ReadonlySet<string>
+  soloedLyrics: ReadonlySet<string>
   onPartToggle: (abbreviation: string, enabled: boolean) => void
   onLyricsToggle: (abbreviation: string, enabled: boolean) => void
   onSoloToggle: (abbreviation: string, soloed: boolean) => void
+  onLyricsSoloToggle: (abbreviation: string, soloed: boolean) => void
+}
+
+function TooltipLabel({
+  tooltip,
+  children,
+}: {
+  tooltip: string
+  children: React.ReactNode
+}) {
+  return (
+    <Tooltip.Root>
+      <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
+      <Tooltip.Portal>
+        <Tooltip.Content className="part-toggle-tooltip-content" sideOffset={4}>
+          {tooltip}
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip.Root>
+  )
+}
+
+interface TogglePillProps {
+  label: string
+  tooltip: string
+  visible: boolean
+  soloed: boolean
+  onVisibleChange: (visible: boolean) => void
+  onSoloChange: (soloed: boolean) => void
+}
+
+/** One show/hide + solo pill: used once for a part's notes row and once for
+ * its lyrics row. */
+function TogglePill({
+  label,
+  tooltip,
+  visible,
+  soloed,
+  onVisibleChange,
+  onSoloChange,
+}: TogglePillProps) {
+  return (
+    <div className="part-toggle-pill">
+      <TooltipLabel tooltip={tooltip}>
+        <span className="part-toggle-abbr">{label}</span>
+      </TooltipLabel>
+      <TooltipLabel tooltip="Show/Hide">
+        <label className="part-toggle-segment part-toggle-segment--eye">
+          <input
+            type="checkbox"
+            checked={visible}
+            onChange={(event) => onVisibleChange(event.target.checked)}
+          />
+          {visible ? (
+            <Eye size={14} aria-hidden="true" />
+          ) : (
+            <EyeOff size={14} aria-hidden="true" />
+          )}
+        </label>
+      </TooltipLabel>
+      <TooltipLabel tooltip="Solo">
+        <label className="part-toggle-segment part-toggle-segment--headphones">
+          <input
+            type="checkbox"
+            checked={soloed}
+            onChange={(event) => onSoloChange(event.target.checked)}
+          />
+          <Headphones size={14} aria-hidden="true" />
+        </label>
+      </TooltipLabel>
+    </div>
+  )
 }
 
 export function PartToggles({
@@ -26,9 +98,11 @@ export function PartToggles({
   disabledParts,
   disabledLyrics,
   soloedParts,
+  soloedLyrics,
   onPartToggle,
   onLyricsToggle,
   onSoloToggle,
+  onLyricsSoloToggle,
 }: PartTogglesProps) {
   const [collapsed, setCollapsed] = useState(false)
 
@@ -64,116 +138,42 @@ export function PartToggles({
         </button>
         {collapsed ? null : (
           <ul className="part-toggles-list toolbar-scroll-list">
-            {parts.map((part) => {
-              const enabled = !disabledParts.has(part.abbreviation)
-              const lyricsEnabled = !disabledLyrics.has(part.abbreviation)
-              const soloed = soloedParts.has(part.abbreviation)
-
-              return (
-                <li key={part.abbreviation}>
-                  <div className="part-toggle-pill">
-                    <Tooltip.Root>
-                      <Tooltip.Trigger asChild>
-                        <span className="part-toggle-abbr">
-                          {part.abbreviation}
-                        </span>
-                      </Tooltip.Trigger>
-                      <Tooltip.Portal>
-                        <Tooltip.Content
-                          className="part-toggle-tooltip-content"
-                          sideOffset={4}
-                        >
-                          {part.displayName}
-                        </Tooltip.Content>
-                      </Tooltip.Portal>
-                    </Tooltip.Root>
-
-                    <Tooltip.Root>
-                      <Tooltip.Trigger asChild>
-                        <label className="part-toggle-segment part-toggle-segment--eye">
-                          <input
-                            type="checkbox"
-                            checked={enabled}
-                            onChange={(event) =>
-                              onPartToggle(
-                                part.abbreviation,
-                                event.target.checked,
-                              )
-                            }
-                          />
-                          {enabled ? (
-                            <Eye size={14} aria-hidden="true" />
-                          ) : (
-                            <EyeOff size={14} aria-hidden="true" />
-                          )}
-                        </label>
-                      </Tooltip.Trigger>
-                      <Tooltip.Portal>
-                        <Tooltip.Content
-                          className="part-toggle-tooltip-content"
-                          sideOffset={4}
-                        >
-                          Show/Hide
-                        </Tooltip.Content>
-                      </Tooltip.Portal>
-                    </Tooltip.Root>
-
-                    <Tooltip.Root>
-                      <Tooltip.Trigger asChild>
-                        <label className="part-toggle-segment part-toggle-segment--headphones">
-                          <input
-                            type="checkbox"
-                            checked={soloed}
-                            onChange={(event) =>
-                              onSoloToggle(
-                                part.abbreviation,
-                                event.target.checked,
-                              )
-                            }
-                          />
-                          <Headphones size={14} aria-hidden="true" />
-                        </label>
-                      </Tooltip.Trigger>
-                      <Tooltip.Portal>
-                        <Tooltip.Content
-                          className="part-toggle-tooltip-content"
-                          sideOffset={4}
-                        >
-                          Solo
-                        </Tooltip.Content>
-                      </Tooltip.Portal>
-                    </Tooltip.Root>
-
-                    {part.hasLyrics && enabled ? (
-                      <Tooltip.Root>
-                        <Tooltip.Trigger asChild>
-                          <label className="part-toggle-segment part-toggle-segment--mic">
-                            <input
-                              type="checkbox"
-                              checked={lyricsEnabled}
-                              onChange={(event) =>
-                                onLyricsToggle(
-                                  part.abbreviation,
-                                  event.target.checked,
-                                )
-                              }
-                            />
-                            <Mic size={14} aria-hidden="true" />
-                          </label>
-                        </Tooltip.Trigger>
-                        <Tooltip.Portal>
-                          <Tooltip.Content
-                            className="part-toggle-tooltip-content"
-                            sideOffset={4}
-                          >
-                            Lyrics
-                          </Tooltip.Content>
-                        </Tooltip.Portal>
-                      </Tooltip.Root>
-                    ) : null}
-                  </div>
+            {parts.flatMap((part) => {
+              const abbreviation = part.abbreviation
+              const notesPill = (
+                <li key={abbreviation}>
+                  <TogglePill
+                    label={abbreviation}
+                    tooltip={part.displayName}
+                    visible={!disabledParts.has(abbreviation)}
+                    soloed={soloedParts.has(abbreviation)}
+                    onVisibleChange={(visible) =>
+                      onPartToggle(abbreviation, visible)
+                    }
+                    onSoloChange={(soloed) =>
+                      onSoloToggle(abbreviation, soloed)
+                    }
+                  />
                 </li>
               )
+              if (!part.hasLyrics) return [notesPill]
+              return [
+                notesPill,
+                <li key={`${abbreviation}-lyrics`}>
+                  <TogglePill
+                    label={`${abbreviation}詞`}
+                    tooltip={`${part.displayName} lyrics`}
+                    visible={!disabledLyrics.has(abbreviation)}
+                    soloed={soloedLyrics.has(abbreviation)}
+                    onVisibleChange={(visible) =>
+                      onLyricsToggle(abbreviation, visible)
+                    }
+                    onSoloChange={(soloed) =>
+                      onLyricsSoloToggle(abbreviation, soloed)
+                    }
+                  />
+                </li>,
+              ]
             })}
           </ul>
         )}

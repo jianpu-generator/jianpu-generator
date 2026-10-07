@@ -64,29 +64,28 @@ impl Guest for Component {
         get_measure_index_at_offset(source, byte_offset)
     }
 
+    fn resolve_part_visibility(
+        parts: Vec<Part>,
+        toggles: PartToggleState,
+    ) -> ResolvedPartVisibility {
+        resolve_part_visibility(parts, toggles)
+    }
+
     fn render_svg(
         source: String,
-        enabled_tracks: Option<Vec<String>>,
-        disabled_lyrics: Option<Vec<String>>,
+        visibility: ResolvedPartVisibility,
         raw_instruments: Vec<InstrumentInfo>,
     ) -> RenderResponse {
-        render_svg(source, enabled_tracks, disabled_lyrics, raw_instruments)
+        render_svg(source, visibility, raw_instruments)
     }
 
     fn render_svg_with_highlight_range(
         source: String,
         raw_measure_ranges: Vec<MeasureRangeIn>,
-        enabled_tracks: Option<Vec<String>>,
-        disabled_lyrics: Option<Vec<String>>,
+        visibility: ResolvedPartVisibility,
         raw_instruments: Vec<InstrumentInfo>,
     ) -> RenderResponse {
-        render_svg_with_highlight_range(
-            source,
-            raw_measure_ranges,
-            enabled_tracks,
-            disabled_lyrics,
-            raw_instruments,
-        )
+        render_svg_with_highlight_range(source, raw_measure_ranges, visibility, raw_instruments)
     }
 
     fn generate_wav(
@@ -123,11 +122,10 @@ impl Guest for Component {
 
     fn generate_pdf(
         source: String,
-        enabled_tracks: Option<Vec<String>>,
-        disabled_lyrics: Option<Vec<String>>,
+        visibility: ResolvedPartVisibility,
         fonts: FontBytesByFamily,
     ) -> GeneratePdfResponse {
-        generate_pdf(source, enabled_tracks, disabled_lyrics, fonts)
+        generate_pdf(source, visibility, fonts)
     }
 
     fn generate_split_pdfs(

@@ -8,6 +8,7 @@ interface UseMeasureAudioPlaybackParams {
   workerRef: RefObject<Worker | null>
   sourceRef: RefObject<string>
   enabledTracksRef: RefObject<string[] | undefined>
+  renderedTracksRef: RefObject<string[] | undefined>
   selectedMeasureRange: { start: number; end: number } | null
   /**
    * Read at click time rather than depended on directly, since the selection
@@ -42,6 +43,7 @@ export function useMeasureAudioPlayback({
   workerRef,
   sourceRef,
   enabledTracksRef,
+  renderedTracksRef,
   selectedMeasureRange,
   selectedSequenceRangeRef,
   measureRangeSelectedPartNamesRef,
@@ -137,7 +139,7 @@ export function useMeasureAudioPlayback({
         // Always the part-visibility toggle's own state (never the
         // selection override above) — see `visibleTracks`'s doc comment in
         // `worker/messages.ts`.
-        visibleTracks: enabledTracksRef.current,
+        visibleTracks: renderedTracksRef.current,
         trimToSelectedNoteCells,
       } satisfies WorkerRequest)
     },

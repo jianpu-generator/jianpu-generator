@@ -4,6 +4,7 @@ export interface PartToggleState {
   disabledParts: string[]
   disabledLyrics: string[]
   soloedParts: string[]
+  soloedLyrics: string[]
 }
 
 type PartToggleCache = Record<string, PartToggleState>
@@ -28,6 +29,7 @@ export function readPartTogglesForFile(fileId: string): PartToggleState | null {
     disabledParts: entry.disabledParts ?? [],
     disabledLyrics: entry.disabledLyrics ?? [],
     soloedParts: entry.soloedParts ?? [],
+    soloedLyrics: entry.soloedLyrics ?? [],
   }
 }
 
