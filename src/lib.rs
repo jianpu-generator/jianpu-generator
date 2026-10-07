@@ -32,6 +32,7 @@ pub mod grouper;
 pub mod grouping;
 pub mod highlight;
 pub mod layout;
+mod lyric_slots;
 pub mod lyric_spans;
 pub mod measure_spans;
 pub mod migrate_lyrics;
@@ -206,13 +207,11 @@ struct SvgDocsResult {
 fn render_svg_docs_with_parts(
     score: &Score,
     parts: &[PartInfo],
-    lyrics_only_tracks: &[String],
 ) -> Result<SvgDocsResult, IrrecoverableError> {
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
     let header = build_header(score, parts);
     let compile_result = compiler::compile(score);
-    let compile_result =
-        consolidator::consolidate_with_lyrics_only(compile_result, lyrics_only_tracks);
+    let compile_result = consolidator::consolidate(compile_result);
     let grid_layout::LayoutOutput {
         pages: grid_pages,
         diagnostics,
@@ -268,10 +267,9 @@ pub(crate) struct SvgsResult {
 pub(crate) fn render_svgs_with_parts(
     score: &Score,
     parts: &[PartInfo],
-    lyrics_only_tracks: &[String],
     source: Option<&str>,
 ) -> Result<SvgsResult, IrrecoverableError> {
-    let result = render_svg_docs_with_parts(score, parts, lyrics_only_tracks)?;
+    let result = render_svg_docs_with_parts(score, parts)?;
     Ok(SvgsResult {
         svgs: serializer::serialize(&result.documents, source),
         diagnostics: result.diagnostics,
@@ -280,7 +278,7 @@ pub(crate) fn render_svgs_with_parts(
 
 /// Layout and render a [`Score`] into one SVG string per page.
 pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
-    Ok(render_svgs_with_parts(score, &[], &[], None)?.svgs)
+    Ok(render_svgs_with_parts(score, &[], None)?.svgs)
 }
 
 /// Parse, group, and render a `.jianpu` source string into SVG page strings.

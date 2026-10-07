@@ -47,15 +47,13 @@ function noteCellsInNoteIdRange(
     }))
 }
 
-/** The lyric-side mirror of `noteCellsInNoteIdRange`, additionally scoped to
- * one `verse` — used to resolve a same-verse LYRIC range (see
- * `applyLyricRangeSelection`), since a lyric-mode range-select should stay
- * within the one verse row it anchored on, mirroring how a note-mode
- * range-select stays within one part. */
-function lyricCellsInVerseNoteIdRange(
+/** The lyric-side mirror of `noteCellsInNoteIdRange` — used to resolve a
+ * same-lyric-part LYRIC range (see `applyLyricRangeSelection`), since a
+ * lyric-mode range-select should stay within the one lyric part it anchored
+ * on, mirroring how a note-mode range-select stays within one part. */
+function lyricCellsInNoteIdRange(
   lyricSpans: LyricSpan[],
   sourcePartIndex: number,
-  verse: number,
   noteIdA: number,
   noteIdB: number,
 ): LyricCell[] {
@@ -65,14 +63,12 @@ function lyricCellsInVerseNoteIdRange(
     .filter(
       (span) =>
         span.sourcePartIndex === sourcePartIndex &&
-        span.verse === verse &&
         span.noteId >= min &&
         span.noteId <= max,
     )
     .map((span) => ({
       sourcePartIndex: span.sourcePartIndex,
       noteId: span.noteId,
-      verse: span.verse,
     }))
 }
 
@@ -138,8 +134,8 @@ export function applyNoteRangeSelection(
 }
 
 /** The lyric-side mirror of `applyNoteRangeSelection`: when `current` lands
- * directly on a syllable in the same part AND VERSE as `anchorCell`,
- * resolves by `noteId` order (`lyricCellsInVerseNoteIdRange`) instead of
+ * directly on a syllable in the same lyric part as `anchorCell`,
+ * resolves by `noteId` order (`lyricCellsInNoteIdRange`) instead of
  * pixel geometry. Deliberately resolves *only* lyric cells on that path, for
  * the same reason `applyNoteRangeSelection` resolves only notes on its own
  * index path — see that function's doc comment and
@@ -160,13 +156,11 @@ export function applyLyricRangeSelection(
   const currentCell = getLyricAtPoint(current.x, current.y)
   if (
     currentCell !== undefined &&
-    currentCell.sourcePartIndex === anchorCell.sourcePartIndex &&
-    currentCell.verse === anchorCell.verse
+    currentCell.sourcePartIndex === anchorCell.sourcePartIndex
   ) {
-    const lyricCells = lyricCellsInVerseNoteIdRange(
+    const lyricCells = lyricCellsInNoteIdRange(
       lyricSpans,
       anchorCell.sourcePartIndex,
-      anchorCell.verse,
       anchorCell.noteId,
       currentCell.noteId,
     )

@@ -75,10 +75,9 @@ function lyricAt(
   page: import('@playwright/test').Page,
   partIndex: number,
   noteId: number,
-  verse: number,
 ) {
   return page.locator(
-    tagSelector('lyric', { sourcePartIndex: partIndex, noteId, verse }),
+    tagSelector('lyric', { sourcePartIndex: partIndex, noteId }),
   )
 }
 
@@ -124,7 +123,7 @@ When(
   "I click-and-click select Melody's note {int} then Harmony's lyric syllable {int}",
   async ({ page }, noteId: number, lyricNoteId: number) => {
     const noteBox = await stableBoundingBox(noteClickTarget(page, 0, noteId))
-    const lyricBox = await stableBoundingBox(lyricAt(page, 1, lyricNoteId, 0))
+    const lyricBox = await stableBoundingBox(lyricAt(page, 3, lyricNoteId))
     if (!noteBox || !lyricBox) {
       throw new Error(
         `Could not get bounding boxes for Melody note ${noteId} and Harmony lyric syllable ${lyricNoteId}.`,
@@ -144,7 +143,7 @@ When(
 Then(
   "Melody's and Harmony's notes at position {int} and {int} are range-selected",
   async ({ page }, a: number, b: number) => {
-    for (const partIndex of [0, 1]) {
+    for (const partIndex of [0, 2]) {
       for (const noteId of [a, b]) {
         await expect(noteAt(page, partIndex, noteId)).toHaveAttribute(
           'data-note-range-selected',
@@ -158,9 +157,9 @@ Then(
 Then(
   "Melody's and Harmony's lyric syllables at position {int} and {int} are range-selected",
   async ({ page }, a: number, b: number) => {
-    for (const partIndex of [0, 1]) {
+    for (const partIndex of [1, 3]) {
       for (const noteId of [a, b]) {
-        await expect(lyricAt(page, partIndex, noteId, 0)).toHaveAttribute(
+        await expect(lyricAt(page, partIndex, noteId)).toHaveAttribute(
           'data-lyric-range-selected',
           '',
         )
@@ -172,7 +171,7 @@ Then(
 Then(
   "Melody's and Harmony's notes at position {int} are not range-selected",
   async ({ page }, noteId: number) => {
-    for (const partIndex of [0, 1]) {
+    for (const partIndex of [0, 2]) {
       await expect(noteAt(page, partIndex, noteId)).not.toHaveAttribute(
         'data-note-range-selected',
         '',
@@ -184,8 +183,8 @@ Then(
 Then(
   "Melody's and Harmony's lyric syllables at position {int} are not range-selected",
   async ({ page }, noteId: number) => {
-    for (const partIndex of [0, 1]) {
-      await expect(lyricAt(page, partIndex, noteId, 0)).not.toHaveAttribute(
+    for (const partIndex of [1, 3]) {
+      await expect(lyricAt(page, partIndex, noteId)).not.toHaveAttribute(
         'data-lyric-range-selected',
         '',
       )

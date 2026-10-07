@@ -298,8 +298,8 @@ pub(crate) fn list_lyric_spans_response(
                 .map(|span| LyricSpanOut {
                     source_part_index: span.source_part_index,
                     part_abbreviation: span.part_abbreviation,
+                    target_source_part_index: span.target_source_part_index,
                     note_id: span.note_id,
-                    verse: span.verse,
                     measure_index: span.measure_index,
                     start: span.start,
                     end: span.end,
@@ -320,8 +320,8 @@ pub(crate) fn group_lyric_selection_response(
         .map(|s| jianpu_generator::lyric_spans::LyricSourceSpan {
             source_part_index: s.source_part_index,
             part_abbreviation: s.part_abbreviation.clone(),
+            target_source_part_index: s.target_source_part_index,
             note_id: s.note_id,
-            verse: s.verse,
             measure_index: s.measure_index,
             start: s.start,
             end: s.end,
@@ -332,7 +332,6 @@ pub(crate) fn group_lyric_selection_response(
         .map(|c| jianpu_generator::lyric_spans::LyricCell {
             source_part_index: c.source_part_index,
             note_id: c.note_id,
-            verse: c.verse,
         })
         .collect();
 

@@ -64,7 +64,7 @@ function lyricAt(
   noteId: number,
 ) {
   return page.locator(
-    tagSelector('lyric', { sourcePartIndex: 0, verse, noteId }),
+    tagSelector('lyric', { sourcePartIndex: verse + 1, noteId }),
   )
 }
 
@@ -93,9 +93,9 @@ Given(
     await expect(
       page.locator(rectVariantSelector('note-click-target')),
     ).toHaveCount(4, { timeout: 10_000 })
-    await expect(
-      page.locator(tagSelector('lyric', { sourcePartIndex: 0 })),
-    ).toHaveCount(8, { timeout: 10_000 })
+    await expect(page.locator(tagSelector('lyric'))).toHaveCount(8, {
+      timeout: 10_000,
+    })
     await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(200)
   },

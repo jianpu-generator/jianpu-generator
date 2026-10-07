@@ -4,6 +4,7 @@ pub(super) fn part_info_from_wit(part: Part) -> jianpu_generator::PartInfo {
     jianpu_generator::PartInfo {
         abbreviation: part.abbreviation,
         display_name: part.display_name,
+        sounds: part.sounds,
     }
 }
 

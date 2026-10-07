@@ -3,8 +3,8 @@ use crate::ast::parsed::{
 };
 
 use super::test_helpers::{
-    all_events, chord_track, decl, decl_with_verse, notes_track, parse, parse_recoverable_errors,
-    total_lyrics_syllables,
+    all_events, chord_track, decl, decls_with_verse, lyric_decl, notes_track, parse,
+    parse_recoverable_errors, total_lyrics_syllables,
 };
 
 #[test]
@@ -71,31 +71,22 @@ fn single_unnamed_part_no_lyrics() {
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(tracks.len(), 1);
     let notes = notes_track(&tracks, "");
-    // `Notes` parts now always carry a (possibly empty) lyrics structure, so
-    // positionally-attached bare lines have somewhere to land; with none
-    // written here, every measure has zero verses.
-    assert!(notes
-        .lyrics
-        .as_ref()
-        .is_some_and(|l| l.measure_syllables.iter().all(Vec::is_empty)));
+    // Only a lyric part carries lyrics.
+    assert!(notes.lyrics.is_none());
     assert_eq!(all_events(notes).len(), 7);
 }
 
 #[test]
-fn plain_notes_part_accepts_positionally_attached_lyrics_line() {
-    // A plain `notes` part; the trailing bare line has no `[Key]` prefix at
-    // all and attaches to it positionally.
+fn lyric_part_line_parses_into_its_own_track() {
     let content = "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\n[v] do re mi fa\n";
-    let declarations = vec![decl_with_verse("", "v")];
+    let declarations = decls_with_verse("", "v");
     let tracks = parse(content, 0, &declarations).unwrap();
-    assert_eq!(tracks.len(), 1);
-    let notes = notes_track(&tracks, "");
-    assert!(notes.lyrics.is_some());
-    assert_eq!(
-        notes.lyrics.as_ref().unwrap().measure_syllables[0][0].len(),
-        4
-    );
-    assert_eq!(total_lyrics_syllables(notes), 4);
+    assert_eq!(tracks.len(), 2);
+    assert!(notes_track(&tracks, "").lyrics.is_none());
+    let verse = notes_track(&tracks, "v");
+    assert!(verse.measure_slots.is_empty());
+    assert_eq!(verse.lyrics.as_ref().unwrap().measure_syllables[0].len(), 4);
+    assert_eq!(total_lyrics_syllables(verse), 4);
 }
 
 #[test]
@@ -138,25 +129,25 @@ fn underscore_on_lyrics_line_means_no_lyrics_for_that_bar() {
         "[] 5 6 7 1\n",
         "[v] _\n",
     );
-    let declarations = vec![decl_with_verse("", "v")];
+    let declarations = decls_with_verse("", "v");
     let tracks = parse(content, 0, &declarations).unwrap();
-    let lyrics = notes_track(&tracks, "").lyrics.as_ref().unwrap();
+    let lyrics = notes_track(&tracks, "v").lyrics.as_ref().unwrap();
     assert_eq!(lyrics.measure_syllables.len(), 2);
-    assert_eq!(lyrics.measure_syllables[0][0].len(), 4);
-    assert!(lyrics.measure_syllables[1][0].is_empty());
+    assert_eq!(lyrics.measure_syllables[0].len(), 4);
+    assert!(lyrics.measure_syllables[1].is_empty());
 }
 
 #[test]
 fn allows_too_few_lyrics_syllables_for_notes() {
     let content = "time=4/4 key=C4 bpm=120\n[] 1 2 3 4\n[v] a b c\n";
-    let declarations = vec![decl_with_verse("", "v")];
+    let declarations = decls_with_verse("", "v");
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(
-        notes_track(&tracks, "")
+        notes_track(&tracks, "v")
             .lyrics
             .as_ref()
             .unwrap()
-            .measure_syllables[0][0]
+            .measure_syllables[0]
             .len(),
         3
     );
@@ -214,14 +205,14 @@ fn unclosed_paren_group_at_eof_is_recoverable() {
 #[test]
 fn tied_notes_share_one_lyric_slot_in_bar() {
     let content = "time=4/4 key=C4 bpm=120\n[] (33) 1 2\n[v] a b c\n";
-    let declarations = vec![decl_with_verse("", "v")];
+    let declarations = decls_with_verse("", "v");
     let tracks = parse(content, 0, &declarations).unwrap();
     assert_eq!(
-        notes_track(&tracks, "")
+        notes_track(&tracks, "v")
             .lyrics
             .as_ref()
             .unwrap()
-            .measure_syllables[0][0]
+            .measure_syllables[0]
             .len(),
         3
     );
@@ -235,12 +226,12 @@ fn cross_measure_tie_continuation_needs_fewer_lyrics() {
         "[] 3) 0 0 0\n",
         "[v] _\n",
     );
-    let declarations = vec![decl_with_verse("", "v")];
+    let declarations = decls_with_verse("", "v");
     let tracks = parse(content, 0, &declarations).unwrap();
-    let lyrics = notes_track(&tracks, "").lyrics.as_ref().unwrap();
+    let lyrics = notes_track(&tracks, "v").lyrics.as_ref().unwrap();
     assert_eq!(lyrics.measure_syllables.len(), 2);
-    assert_eq!(lyrics.measure_syllables[0][0].len(), 1);
-    assert!(lyrics.measure_syllables[1][0].is_empty());
+    assert_eq!(lyrics.measure_syllables[0].len(), 1);
+    assert!(lyrics.measure_syllables[1].is_empty());
 }
 
 #[test]
@@ -255,10 +246,14 @@ fn spaced_open_group_cross_measure_lyrics() {
         "[S1] 7) 1 2 3\n",
         "[v] 光 - 光\n",
     );
-    let declarations = vec![decl("main", PartKind::Chords), decl_with_verse("S1", "v")];
+    let declarations = vec![
+        decl("main", PartKind::Chords),
+        decl("S1", PartKind::Notes),
+        lyric_decl("v", 1),
+    ];
     let tracks = parse(content, 0, &declarations).unwrap();
-    let s1 = notes_track(&tracks, "S1");
-    assert_eq!(total_lyrics_syllables(s1), 5);
+    let verse = notes_track(&tracks, "v");
+    assert_eq!(total_lyrics_syllables(verse), 5);
 }
 
 #[test]

@@ -9,11 +9,11 @@ use crate::ast::parsed::{
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Warning};
 
 use super::empty_note_measures::{align_empty_note_measures, MeasureSlot, PerMeasureErrors};
-use super::lyrics_pairing::attach_paired_lyrics;
+use super::lyrics_pairing::pair_lyrics_measures;
 
 #[path = "part_grouper_group.rs"]
 mod part_grouper_group;
-pub(super) use part_grouper_group::group_timed_track;
+pub(super) use part_grouper_group::{group_lyrics_track, group_timed_track};
 
 struct PartGrouper {
     part_kind: PartKind,

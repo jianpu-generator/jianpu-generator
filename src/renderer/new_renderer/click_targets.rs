@@ -50,13 +50,11 @@ pub(super) fn render_secondary_click_target(
             height,
             source_part_index,
             note_id,
-            verse,
-        } => render_lyric_click_target(elem, *width, *height, *source_part_index, *note_id, *verse),
+        } => render_lyric_click_target(elem, *width, *height, *source_part_index, *note_id),
         AbsoluteContent::LyricLabelClickTarget {
             width,
             height,
             source_part_index,
-            verse,
             measure_index_start,
             measure_index_end,
         } => render_lyric_label_click_target(
@@ -65,7 +63,6 @@ pub(super) fn render_secondary_click_target(
                 width: *width,
                 height: *height,
                 source_part_index: *source_part_index,
-                verse: *verse,
                 measure_index_start: *measure_index_start,
                 measure_index_end: *measure_index_end,
             },
@@ -172,7 +169,6 @@ struct LyricLabelClickTargetArgs {
     width: f32,
     height: f32,
     source_part_index: usize,
-    verse: usize,
     measure_index_start: usize,
     measure_index_end: usize,
 }
@@ -192,7 +188,6 @@ fn render_lyric_label_click_target(
         },
         Tag::LyricLabel {
             source_part_index: args.source_part_index,
-            verse: args.verse,
             measure_index_start: args.measure_index_start,
             measure_index_end: args.measure_index_end,
         },
@@ -211,7 +206,6 @@ fn render_lyric_click_target(
     height: f32,
     source_part_index: usize,
     note_id: usize,
-    verse: usize,
 ) -> Vec<SvgElement> {
     wrap_click_target(
         elem,
@@ -223,7 +217,6 @@ fn render_lyric_click_target(
         Tag::Lyric {
             source_part_index,
             note_id,
-            verse,
         },
     )
 }

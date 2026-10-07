@@ -56,6 +56,7 @@ fn test_render_config() -> RenderConfig {
 /// `source_part_index` with `lyric_verse_row`.
 fn notes_row_with_a_two_beat_note() -> MeasureRow {
     MeasureRow {
+        kind: crate::compiler::types::RowKind::Sounding,
         absorbed_rows: Vec::new(),
         id: RowId("V".to_string()),
         label: String::new(),
@@ -106,6 +107,9 @@ fn notes_row_with_a_two_beat_note() -> MeasureRow {
 /// rather than the notes row's own elements).
 fn lyric_verse_row() -> MeasureRow {
     MeasureRow {
+        kind: crate::compiler::types::RowKind::Lyrics {
+            target: RowId("V".to_string()),
+        },
         absorbed_rows: Vec::new(),
         id: RowId("V-lyrics-0".to_string()),
         label: String::new(),
@@ -114,8 +118,6 @@ fn lyric_verse_row() -> MeasureRow {
                 column: 0,
                 content: ElementContent::Lyric {
                     text: "Hoo".to_string(),
-                    verse: 0,
-                    verse_label: String::new(),
                     note_id: 0,
                 },
                 note_id: None,
@@ -124,8 +126,6 @@ fn lyric_verse_row() -> MeasureRow {
                 column: 2,
                 content: ElementContent::Lyric {
                     text: "ray".to_string(),
-                    verse: 0,
-                    verse_label: String::new(),
                     note_id: 1,
                 },
                 note_id: None,
@@ -136,7 +136,7 @@ fn lyric_verse_row() -> MeasureRow {
                 note_id: None,
             },
         ],
-        source_part_index: 0,
+        source_part_index: 1,
     }
 }
 

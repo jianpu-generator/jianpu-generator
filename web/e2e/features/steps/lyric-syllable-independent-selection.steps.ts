@@ -47,7 +47,9 @@ function lyricRect(
   noteId: number,
   verse: number,
 ) {
-  return page.locator(tagSelector('lyric', { noteId, verse })).locator('rect')
+  return page
+    .locator(tagSelector('lyric', { noteId, sourcePartIndex: verse + 1 }))
+    .locator('rect')
 }
 
 async function monacoSelectionText(page: import('@playwright/test').Page) {
@@ -176,7 +178,7 @@ Then(
     ).toHaveCount(1)
     await expect(
       page.locator(
-        `${tagSelector('lyric', { noteId, verse })}[data-lyric-range-selected]`,
+        `${tagSelector('lyric', { noteId, sourcePartIndex: verse + 1 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(1)
   },
@@ -243,13 +245,13 @@ Then(
   ) => {
     await expect(
       page.locator(
-        `${tagSelector('lyric', { noteId: noteIdA, verse: verseA })}[data-lyric-range-selected]`,
+        `${tagSelector('lyric', { noteId: noteIdA, sourcePartIndex: verseA + 1 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(1)
     // Verse 0's corresponding syllable must not also be marked selected.
     await expect(
       page.locator(
-        `${tagSelector('lyric', { noteId: noteIdB, verse: verseB })}[data-lyric-range-selected]`,
+        `${tagSelector('lyric', { noteId: noteIdB, sourcePartIndex: verseB + 1 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(0)
   },

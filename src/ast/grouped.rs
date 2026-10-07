@@ -104,11 +104,20 @@ pub struct Notes {
     pub events: Vec<NoteEvent>,
 }
 
-/// One verse's syllables for a single measure.
+/// What a lyric part carries for one measure instead of notes of its own.
+///
+/// The part's target is named rather than indexed so the link survives
+/// filtering parts by name, and `target_events` is a copy of the target's
+/// events for this measure so the lyric row lays out against the target's
+/// columns even when the target itself is filtered out.
 #[derive(Clone)]
-pub struct Lyrics {
-    /// The lyric part's own abbreviation from `# parts` (e.g. `v1`).
-    pub label: String,
+pub struct LyricsSlice {
+    /// Abbreviation of the part whose notes these lyrics sing along to.
+    pub target_name: String,
+    /// The target's events this measure, which fix where syllables sit.
+    pub target_events: Vec<NoteEvent>,
+    /// Tie-aware syllables, one per lyric slot of `target_events` (see
+    /// `lyric_slots::measure_lyric_slots`); empty for no lyrics (`_`).
     pub syllables: Vec<Syllable>,
 }
 
@@ -120,8 +129,9 @@ pub struct PartSlice {
     pub volume: u8,
     pub octave_offset: i8,
     pub notes: Notes,
-    /// One entry per verse, in order. Empty when this part has no lyrics this measure.
-    pub lyrics: Vec<Lyrics>,
+    /// Set exactly for a lyric part (`kind` is `PartKind::Lyrics`), whose own
+    /// `notes` are empty.
+    pub lyrics: Option<LyricsSlice>,
     /// True when this slice's source measure had at least one `Diagnostic::Error`.
     /// The compiler uses this to drop incoming cross-measure tie/slur arcs.
     pub has_error: bool,
@@ -170,6 +180,18 @@ pub struct MultiPartMeasure {
 #[derive(Clone)]
 pub enum PartRow {
     Timed(PartSlice),
+}
+
+impl PartSlice {
+    /// The events that fix this slice's timing: its own notes, or for a lyric
+    /// part (which has none) its target's.
+    pub fn timing_events(&self) -> &[NoteEvent] {
+        self.lyrics
+            .as_ref()
+            .map_or(self.notes.events.as_slice(), |lyrics| {
+                lyrics.target_events.as_slice()
+            })
+    }
 }
 
 impl PartRow {
@@ -269,10 +291,10 @@ pub(crate) struct GroupedScore {
 pub(crate) struct GroupedMeasure {
     pub(crate) notes: Notes,
     pub(crate) source_span: Span,
-    /// Tie-aware syllables paired to this measure's lyric slots, one entry per
-    /// verse. Set for notes/chords parts with lyrics attached during grouping.
-    pub(crate) paired_lyrics: Vec<Vec<Syllable>>,
-    /// Recoverable lyrics underflow/overflow for this measure, one per verse that has one.
+    /// Tie-aware syllables paired to the target's lyric slots in this measure.
+    /// Set only for a lyric part, during grouping.
+    pub(crate) paired_lyrics: Vec<Syllable>,
+    /// Recoverable lyrics underflow/overflow for this measure, if any.
     pub(crate) lyrics_error: Vec<Warning>,
     /// Recoverable beat overflow for this measure (notes trimmed), if any.
     pub(crate) beat_overflow_error: Option<Warning>,
@@ -304,8 +326,6 @@ pub(crate) struct GroupedPart {
     pub(crate) soundfont: crate::ast::parsed::Soundfont,
     pub(crate) volume: u8,
     pub(crate) octave_offset: i8,
-    /// Abbreviations of this part's lyric parts, in verse order.
-    pub(crate) verse_labels: Vec<String>,
     pub(crate) measures: Vec<GroupedMeasure>,
 }
 

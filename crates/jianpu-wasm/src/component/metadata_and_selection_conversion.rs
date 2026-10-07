@@ -11,7 +11,6 @@ pub(super) fn clickable_element_id_from_wit(
         ClickableElementId::Lyric(fields) => crate::selection_range::ClickableElementId::Lyric {
             source_part_index: fields.source_part_index as usize,
             note_id: fields.note_id as usize,
-            verse: fields.verse as usize,
         },
         ClickableElementId::Measure(fields) => {
             crate::selection_range::ClickableElementId::Measure {
@@ -29,7 +28,6 @@ pub(super) fn clickable_element_id_from_wit(
         ClickableElementId::LyricLabel(fields) => {
             crate::selection_range::ClickableElementId::LyricLabel {
                 source_part_index: fields.source_part_index as usize,
-                verse: fields.verse as usize,
                 measure_index_start: fields.measure_index_start as usize,
                 measure_index_end: fields.measure_index_end as usize,
             }
@@ -48,7 +46,6 @@ pub(super) fn lyric_cell_out_to_wit(cell: &crate::selection_range::LyricCellOut)
     LyricCellOut {
         source_part_index: cell.source_part_index as u32,
         note_id: cell.note_id as u32,
-        verse: cell.verse as u32,
     }
 }
 

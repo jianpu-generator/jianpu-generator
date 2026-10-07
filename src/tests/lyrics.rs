@@ -22,19 +22,26 @@ fn explicit_lyrics_keep_lyric_row() {
         "[Altov1] la la la la\n",
     );
     let score = compile(input, "test.jianpu", &[]).unwrap();
-    for part in &score.measures[0].parts {
+    let parts = &score.measures[0].parts;
+    assert_eq!(parts.len(), 4, "each lyric part is a part of its own");
+    let lyric_targets: Vec<&str> = parts
+        .iter()
+        .filter_map(|part| part.slice().lyrics.as_ref())
+        .map(|lyrics| lyrics.target_name.as_str())
+        .collect();
+    assert_eq!(lyric_targets, ["Soprano", "Alto"]);
+    for part in parts {
         let slice = part.slice();
-        assert!(
-            matches!(slice.kind, PartKind::Notes),
-            "explicit lyrics must keep the lyric row"
+        assert_eq!(
+            slice.lyrics.is_some(),
+            matches!(slice.kind, PartKind::Lyrics { .. })
         );
-        assert_eq!(slice.lyrics.len(), 1);
     }
 }
 
-/// Consecutive `[Part]` lyric lines after the notes line become verses 1..N, in order.
+/// Each lyric part of one target is its own part, in declaration order.
 #[test]
-fn multiple_lyric_lines_become_separate_verses() {
+fn multiple_lyric_parts_of_one_target_are_separate_parts() {
     let input = r#"# metadata
 title = "t"
 author = "a"
@@ -51,30 +58,29 @@ time=4/4 key=C4 bpm=120
 [Melodyv2] one two three four
 "#;
     let score = compile(input, "test.jianpu", &[]).unwrap();
-    let slice = score.measures[0].parts[0].slice();
-    assert_eq!(
-        slice.lyrics.len(),
-        2,
-        "two lyric lines after the notes line should become two verses"
-    );
-    let verse_texts = |verse: usize| -> Vec<String> {
-        slice.lyrics[verse]
+    let parts = &score.measures[0].parts;
+    assert_eq!(parts.len(), 3, "notes part plus two lyric parts");
+    let verse_texts = |part: usize| -> Vec<String> {
+        parts[part]
+            .slice()
+            .lyrics
+            .as_ref()
+            .unwrap()
             .syllables
             .iter()
             .map(|s| s.text.clone())
             .collect()
     };
-    assert_eq!(verse_texts(0), vec!["do", "re", "mi", "fa"]);
-    assert_eq!(verse_texts(1), vec!["one", "two", "three", "four"]);
+    assert_eq!(parts[1].name().map(String::as_str), Some("Melodyv1"));
+    assert_eq!(parts[2].name().map(String::as_str), Some("Melodyv2"));
+    assert_eq!(verse_texts(1), vec!["do", "re", "mi", "fa"]);
+    assert_eq!(verse_texts(2), vec!["one", "two", "three", "four"]);
 }
 
-/// A plain `notes` part (not `notes+lyrics`) with a positionally-attached
-/// bare lyric line: exercises the full compile -> `PartSlice` path, catching
-/// any regression in `compiler::part_slice::process_events`'s gate that
-/// cucumber (which only inspects `PartSlice` fields directly, not rendering
-/// behavior) can't see.
+/// A lyric part's syllables reach its own `PartSlice`, next to a target slice
+/// that carries no lyrics.
 #[test]
-fn positional_lyrics_on_plain_notes_part_reach_part_slice() {
+fn lyric_part_syllables_reach_its_own_part_slice() {
     let input = r#"# metadata
 title = "t"
 author = "a"
@@ -89,10 +95,17 @@ time=4/4 key=C4 bpm=120
 [Melodyv1] la la la la
 "#;
     let score = compile(input, "test.jianpu", &[]).unwrap();
-    let slice = score.measures[0].parts[0].slice();
-    assert!(matches!(slice.kind, PartKind::Notes));
-    assert_eq!(slice.lyrics.len(), 1);
-    let verse_texts: Vec<String> = slice.lyrics[0]
+    assert!(matches!(
+        score.measures[0].parts[0].slice().kind,
+        PartKind::Notes
+    ));
+    assert!(score.measures[0].parts[0].slice().lyrics.is_none());
+    let slice = score.measures[0].parts[1].slice();
+    assert!(matches!(slice.kind, PartKind::Lyrics { .. }));
+    let verse_texts: Vec<String> = slice
+        .lyrics
+        .as_ref()
+        .unwrap()
         .syllables
         .iter()
         .map(|s| s.text.clone())

@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::parsed::{PartKind, Soundfont, VerseDecl};
+use crate::ast::parsed::{PartKind, Soundfont};
 
 pub(super) fn decl(name: &str, kind: PartKind) -> PartDecl {
     PartDecl {
@@ -11,22 +11,21 @@ pub(super) fn decl(name: &str, kind: PartKind) -> PartDecl {
         soundfont: Soundfont::default(),
         volume: 100,
         octave_offset: 0,
-        verses: Vec::new(),
     }
 }
 
-fn decl_with_verses(name: &str, verses: &[&str]) -> PartDecl {
-    PartDecl {
-        verses: verses
-            .iter()
-            .map(|abbreviation| VerseDecl {
-                abbreviation: abbreviation.to_string(),
-                abbreviation_span: Span::new(0, 0),
-                display_name: abbreviation.to_string(),
-            })
-            .collect(),
-        ..decl(name, PartKind::Notes)
-    }
+/// A `notes` part named `name` followed by one lyric part per entry of `verses`.
+fn with_verses(name: &str, verses: &[&str]) -> Vec<PartDecl> {
+    std::iter::once(decl(name, PartKind::Notes))
+        .chain(verses.iter().map(|abbreviation| {
+            decl(
+                abbreviation,
+                PartKind::Lyrics {
+                    target_part_index: 0,
+                },
+            )
+        }))
+        .collect()
 }
 
 fn decl_follow(name: &str, kind: PartKind, target: &str) -> PartDecl {
@@ -39,7 +38,6 @@ fn decl_follow(name: &str, kind: PartKind, target: &str) -> PartDecl {
         soundfont: Soundfont::default(),
         volume: 100,
         octave_offset: 0,
-        verses: Vec::new(),
     }
 }
 
@@ -66,7 +64,7 @@ fn abbreviation_reference_span_covers_only_trimmed_key_text() {
 #[test]
 fn score_lines_are_passed_through_unchanged() {
     let groups = vec![group(&["[A] 1 2 3 4", "[v1] hello"])];
-    let declarations = vec![decl_with_verses("A", &["v1"])];
+    let declarations = with_verses("A", &["v1"]);
     let (result, _slots, _, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(result[0][0].content, "1 2 3 4");
     assert_eq!(result[0][1].content, "hello");
@@ -212,11 +210,13 @@ fn non_follow_part_with_key_line_uses_key_content() {
 // --- Lyric part (`lyrics[X]`) tests ---
 
 #[test]
-fn verse_line_attaches_to_its_target_part() {
+fn lyric_part_line_is_routed_to_its_own_slot() {
     let groups = vec![group(&["[A] 1 2 3 4", "[v1] la la la la"])];
-    let declarations = vec![decl_with_verses("A", &["v1"])];
+    let declarations = with_verses("A", &["v1"]);
     let (result, slots, errors, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(slots[0].len(), 2);
+    assert_eq!(slots[0][1].role, ScoreLineRole::Lyrics);
+    assert_eq!(slots[0][1].track_index, 1);
     assert_eq!(result[0][0].content, "1 2 3 4");
     assert_eq!(result[0][1].content, "la la la la");
     assert!(errors[0].is_none());
@@ -229,7 +229,7 @@ fn verse_lines_follow_declaration_order_not_score_order() {
         "[v2] two two two two",
         "[v1] one one one one",
     ])];
-    let declarations = vec![decl_with_verses("A", &["v1", "v2"])];
+    let declarations = with_verses("A", &["v1", "v2"]);
     let (result, _slots, _, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(result[0][1].content, "one one one one", "verse 1");
     assert_eq!(result[0][2].content, "two two two two", "verse 2");
@@ -238,25 +238,27 @@ fn verse_lines_follow_declaration_order_not_score_order() {
 #[test]
 fn skipped_verse_is_filled_with_no_lyrics() {
     let groups = vec![group(&["[A] 1 2 3 4", "[v2] two two two two"])];
-    let declarations = vec![decl_with_verses("A", &["v1", "v2"])];
+    let declarations = with_verses("A", &["v1", "v2"]);
     let (result, _slots, _, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(result[0][1].content, "_", "verse 1 skipped");
     assert_eq!(result[0][2].content, "two two two two");
 }
 
 #[test]
-fn part_with_no_verse_line_has_no_lyric_slots() {
+fn lyric_part_with_no_line_is_filled_with_no_lyrics() {
     let groups = vec![group(&["[A] 1 2 3 4"])];
-    let declarations = vec![decl_with_verses("A", &["v1"])];
+    let declarations = with_verses("A", &["v1"]);
     let (result, slots, _, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
-    assert_eq!(result[0].len(), 1);
-    assert_eq!(slots[0].len(), 1);
+    assert_eq!(result[0].len(), 2);
+    assert_eq!(slots[0].len(), 2);
+    assert_eq!(result[0][1].content, "_");
+    assert!(result[0][1].is_implicit_fill);
 }
 
 #[test]
 fn verse_line_without_target_notes_line_fills_target_with_rests() {
     let groups = vec![group(&["[v1] la la la la"])];
-    let declarations = vec![decl_with_verses("A", &["v1"])];
+    let declarations = with_verses("A", &["v1"]);
     let (result, _slots, errors, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(result[0][0].content, "0 0 0 0");
     assert_eq!(result[0][1].content, "la la la la");
@@ -266,10 +268,10 @@ fn verse_line_without_target_notes_line_fills_target_with_rests() {
 #[test]
 fn follow_part_does_not_copy_its_targets_verses() {
     let groups = vec![group(&["[A] 1 2 3 4", "[v1] la la la la"])];
-    let declarations = vec![
-        decl_with_verses("A", &["v1"]),
-        decl_follow("B", PartKind::Notes, "A"),
-    ];
+    let declarations: Vec<PartDecl> = with_verses("A", &["v1"])
+        .into_iter()
+        .chain([decl_follow("B", PartKind::Notes, "A")])
+        .collect();
     let (result, slots, _, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(slots[0].len(), 3);
     assert_eq!(result[0][2].content, "1 2 3 4", "B copies notes only");
@@ -290,7 +292,7 @@ fn bare_line_is_a_missing_key_prefix_error() {
 #[test]
 fn verse_key_is_an_abbreviation_reference() {
     let groups = vec![group(&["[A] 1 2 3 4", "[v1] la la la la"])];
-    let declarations = vec![decl_with_verses("A", &["v1"])];
+    let declarations = with_verses("A", &["v1"]);
     let (_result, _slots, _errors, refs) = desugar_groups(groups, &declarations, 0).unwrap();
     assert_eq!(refs.len(), 2);
     assert_eq!(refs[1].abbreviation, "v1");
@@ -299,7 +301,7 @@ fn verse_key_is_an_abbreviation_reference() {
 #[test]
 fn duplicated_verse_line_errors() {
     let groups = vec![group(&["[A] 1 2 3 4", "[v1] a b c d", "[v1] e f g h"])];
-    let declarations = vec![decl_with_verses("A", &["v1"])];
+    let declarations = with_verses("A", &["v1"]);
     let (_result, _slots, errors, _refs) = desugar_groups(groups, &declarations, 0).unwrap();
     assert!(errors[0].is_some());
 }

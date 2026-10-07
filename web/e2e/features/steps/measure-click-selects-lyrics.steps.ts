@@ -61,7 +61,7 @@ async function loadClickTestFixture(page: import('@playwright/test').Page) {
 async function primeMeasureSpans(page: import('@playwright/test').Page) {
   await focusEditor(page)
   await page.keyboard.press('Control+g')
-  await page.keyboard.type('9')
+  await page.keyboard.type('10')
   await page.keyboard.press('Enter')
   await expect(page.locator('button.play-measure-btn')).toHaveText(/Measure/, {
     timeout: 5_000,

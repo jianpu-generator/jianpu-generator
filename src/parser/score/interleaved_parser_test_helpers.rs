@@ -1,5 +1,5 @@
 use crate::ast::parsed::{
-    ParsedMeasureSlot, ParsedTimedTrack, ParsedTrack, PartDecl, PartKind, Soundfont, VerseDecl,
+    ParsedMeasureSlot, ParsedTimedTrack, ParsedTrack, PartDecl, PartKind, Soundfont,
 };
 use crate::error::Spanned;
 use crate::error::{IrrecoverableError, RecoverableError, Span};
@@ -34,20 +34,18 @@ pub(super) fn decl(name: &str, kind: PartKind) -> PartDecl {
         soundfont: Soundfont::default(),
         volume: 100,
         octave_offset: 0,
-        verses: Vec::new(),
     }
 }
 
-/// A `notes` part with one lyric part, whose score key is `verse`.
-pub(super) fn decl_with_verse(name: &str, verse: &str) -> PartDecl {
-    PartDecl {
-        verses: vec![VerseDecl {
-            abbreviation: verse.into(),
-            abbreviation_span: Span::new(0, 0),
-            display_name: verse.into(),
-        }],
-        ..decl(name, PartKind::Notes)
-    }
+/// A lyric part keyed `abbreviation`, singing along to the declaration at
+/// `target_part_index`.
+pub(super) fn lyric_decl(abbreviation: &str, target_part_index: usize) -> PartDecl {
+    decl(abbreviation, PartKind::Lyrics { target_part_index })
+}
+
+/// A `notes` part named `name` followed by one lyric part keyed `verse`.
+pub(super) fn decls_with_verse(name: &str, verse: &str) -> Vec<PartDecl> {
+    vec![decl(name, PartKind::Notes), lyric_decl(verse, 0)]
 }
 
 pub(super) fn timed_track<'a>(tracks: &'a [ParsedTrack], abbrev: &str) -> &'a ParsedTimedTrack {
@@ -85,12 +83,6 @@ pub(super) fn total_lyrics_syllables(track: &ParsedTimedTrack) -> usize {
     track
         .lyrics
         .as_ref()
-        .map(|lyrics| {
-            lyrics
-                .measure_syllables
-                .iter()
-                .map(|measure| measure.iter().map(Vec::len).sum::<usize>())
-                .sum()
-        })
+        .map(|lyrics| lyrics.measure_syllables.iter().map(Vec::len).sum())
         .unwrap_or(0)
 }

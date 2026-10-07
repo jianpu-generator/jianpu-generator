@@ -93,6 +93,7 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
     MeasureBlock {
         rows: vec![
             MeasureRow {
+                kind: crate::compiler::types::RowKind::Sounding,
                 absorbed_rows: Vec::new(),
                 id: RowId("note".to_string()),
                 label: "note".to_string(),
@@ -117,6 +118,7 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
                 source_part_index: 0,
             },
             MeasureRow {
+                kind: crate::compiler::types::RowKind::Sounding,
                 absorbed_rows: Vec::new(),
                 id: RowId("lyric".to_string()),
                 label: "lyric".to_string(),
@@ -124,8 +126,6 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
                     column: 0,
                     content: ElementContent::Lyric {
                         text: "la".to_string(),
-                        verse: 0,
-                        verse_label: String::new(),
                         note_id: 0,
                     },
                     note_id: None,

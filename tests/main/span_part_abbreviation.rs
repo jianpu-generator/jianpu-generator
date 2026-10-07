@@ -70,16 +70,15 @@ fn lyric_spans_carry_the_abbreviation_of_the_part_after_hidden_parts_are_compact
             .spans;
 
     assert_eq!(spans.len(), 4);
-    assert!(spans
-        .iter()
-        .all(|span| span.source_part_index == 1 && span.part_abbreviation.as_deref() == Some("B")));
+    assert!(spans.iter().all(
+        |span| span.source_part_index == 2 && span.part_abbreviation.as_deref() == Some("Bv1")
+    ));
 
     let cell = LyricCell {
-        source_part_index: 1,
+        source_part_index: 2,
         note_id: spans[0].note_id,
-        verse: spans[0].verse,
     };
     let runs = group_selected_lyrics_into_contiguous_runs(&[cell], &spans);
     assert_eq!(runs.len(), 1);
-    assert_eq!(runs[0].part_abbreviation.as_deref(), Some("B"));
+    assert_eq!(runs[0].part_abbreviation.as_deref(), Some("Bv1"));
 }

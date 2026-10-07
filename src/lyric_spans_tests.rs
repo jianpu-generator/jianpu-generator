@@ -24,9 +24,12 @@ Melody lyrics [Mv1] = lyrics[M]
         spans.iter().map(|s| s.note_id).collect::<Vec<_>>(),
         vec![0, 1, 2, 3]
     );
-    assert!(spans.iter().all(|s| s.verse == 0));
     assert!(spans.iter().all(|s| s.measure_index == 0));
-    assert!(spans.iter().all(|s| s.source_part_index == 0));
+    // The lyric part's own index (after its target's), not its target's.
+    assert!(spans.iter().all(|s| s.source_part_index == 1));
+    assert!(spans
+        .iter()
+        .all(|s| s.part_abbreviation.as_deref() == Some("Mv1")));
 }
 
 #[test]
@@ -62,7 +65,7 @@ Melody lyrics [Mv1] = lyrics[M]
 }
 
 #[test]
-fn multiple_verses_produce_separate_spans_sharing_note_id() {
+fn each_lyric_part_produces_its_own_spans_sharing_note_ids() {
     let source = r#"# metadata
 title = "t"
 
@@ -81,8 +84,8 @@ Melody verse 2 [Mv2] = lyrics[M]
         .spans;
 
     assert_eq!(spans.len(), 4);
-    let verse0: Vec<_> = spans.iter().filter(|s| s.verse == 0).collect();
-    let verse1: Vec<_> = spans.iter().filter(|s| s.verse == 1).collect();
+    let verse0: Vec<_> = spans.iter().filter(|s| s.source_part_index == 1).collect();
+    let verse1: Vec<_> = spans.iter().filter(|s| s.source_part_index == 2).collect();
     assert_eq!(verse0.len(), 2);
     assert_eq!(verse1.len(), 2);
     assert_eq!(
@@ -106,7 +109,6 @@ fn test_part_abbreviation(source_part_index: usize) -> String {
 fn span(
     source_part_index: usize,
     note_id: usize,
-    verse: usize,
     measure_index: usize,
     start: usize,
     end: usize,
@@ -114,8 +116,8 @@ fn span(
     LyricSourceSpan {
         source_part_index,
         part_abbreviation: Some(test_part_abbreviation(source_part_index)),
+        target_source_part_index: None,
         note_id,
-        verse,
         measure_index,
         start,
         end,
@@ -123,27 +125,24 @@ fn span(
 }
 
 #[test]
-fn multiple_selected_cells_merge_into_one_run_per_part_verse_measure() {
+fn multiple_selected_cells_merge_into_one_run_per_lyric_part_measure() {
     let spans = vec![
-        span(0, 0, 0, 0, 10, 11),
-        span(0, 1, 0, 0, 12, 13),
-        span(0, 2, 0, 0, 14, 15),
+        span(0, 0, 0, 10, 11),
+        span(0, 1, 0, 12, 13),
+        span(0, 2, 0, 14, 15),
     ];
     let cells = vec![
         LyricCell {
             source_part_index: 0,
             note_id: 0,
-            verse: 0,
         },
         LyricCell {
             source_part_index: 0,
             note_id: 1,
-            verse: 0,
         },
         LyricCell {
             source_part_index: 0,
             note_id: 2,
-            verse: 0,
         },
     ];
 
@@ -162,18 +161,16 @@ fn multiple_selected_cells_merge_into_one_run_per_part_verse_measure() {
 }
 
 #[test]
-fn different_verses_of_the_same_note_produce_separate_runs() {
-    let spans = vec![span(0, 0, 0, 0, 10, 11), span(0, 0, 1, 0, 40, 43)];
+fn different_lyric_parts_of_the_same_note_produce_separate_runs() {
+    let spans = vec![span(1, 0, 0, 10, 11), span(2, 0, 0, 40, 43)];
     let cells = vec![
         LyricCell {
-            source_part_index: 0,
+            source_part_index: 1,
             note_id: 0,
-            verse: 0,
         },
         LyricCell {
-            source_part_index: 0,
+            source_part_index: 2,
             note_id: 0,
-            verse: 1,
         },
     ];
 
@@ -183,15 +180,15 @@ fn different_verses_of_the_same_note_produce_separate_runs() {
         runs,
         vec![
             LyricSelectionRun {
-                source_part_index: 0,
-                part_abbreviation: Some(test_part_abbreviation(0)),
+                source_part_index: 1,
+                part_abbreviation: Some(test_part_abbreviation(1)),
                 measure_index: 0,
                 start_byte: 10,
                 end_byte: 11,
             },
             LyricSelectionRun {
-                source_part_index: 0,
-                part_abbreviation: Some(test_part_abbreviation(0)),
+                source_part_index: 2,
+                part_abbreviation: Some(test_part_abbreviation(2)),
                 measure_index: 0,
                 start_byte: 40,
                 end_byte: 43,
@@ -202,7 +199,7 @@ fn different_verses_of_the_same_note_produce_separate_runs() {
 
 #[test]
 fn empty_selection_produces_no_runs() {
-    let spans = vec![span(0, 0, 0, 0, 10, 11)];
+    let spans = vec![span(0, 0, 0, 10, 11)];
 
     let runs = group_selected_lyrics_into_contiguous_runs(&[], &spans);
 
@@ -212,31 +209,27 @@ fn empty_selection_produces_no_runs() {
 #[test]
 fn output_is_sorted_by_part_then_measure() {
     let spans = vec![
-        span(1, 0, 0, 2, 50, 51),
-        span(0, 0, 0, 1, 30, 31),
-        span(1, 1, 0, 0, 10, 11),
-        span(0, 1, 0, 0, 20, 21),
+        span(1, 0, 2, 50, 51),
+        span(0, 0, 1, 30, 31),
+        span(1, 1, 0, 10, 11),
+        span(0, 1, 0, 20, 21),
     ];
     let cells = vec![
         LyricCell {
             source_part_index: 1,
             note_id: 0,
-            verse: 0,
         },
         LyricCell {
             source_part_index: 0,
             note_id: 0,
-            verse: 0,
         },
         LyricCell {
             source_part_index: 1,
             note_id: 1,
-            verse: 0,
         },
         LyricCell {
             source_part_index: 0,
             note_id: 1,
-            verse: 0,
         },
     ];
 

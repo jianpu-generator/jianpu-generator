@@ -94,28 +94,22 @@ fn each_verse_row_renders_its_own_label_text() {
 #[test]
 fn each_verse_row_gets_its_own_click_target() {
     let abs = resolve_test_score(TWO_VERSE_INPUT);
-    let targets: Vec<(usize, usize, usize, usize)> = abs[0]
+    let targets: Vec<(usize, usize, usize)> = abs[0]
         .elements
         .iter()
         .filter_map(|e| match &e.content {
             compositor::types::AbsoluteContent::LyricLabelClickTarget {
                 source_part_index,
-                verse,
                 measure_index_start,
                 measure_index_end,
                 ..
-            } => Some((
-                *source_part_index,
-                *verse,
-                *measure_index_start,
-                *measure_index_end,
-            )),
+            } => Some((*source_part_index, *measure_index_start, *measure_index_end)),
             _ => None,
         })
         .collect();
     assert_eq!(
         targets,
-        vec![(0, 0, 0, 0), (0, 1, 0, 0)],
-        "expected one click target per verse row, scoped to the system's own measure range"
+        vec![(1, 0, 0), (2, 0, 0)],
+        "expected one click target per lyric part's row, scoped to the system's own measure range"
     );
 }

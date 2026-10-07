@@ -247,12 +247,10 @@ pub(super) fn grid_to_absolute(
             text,
             source_part_index,
             note_id,
-            verse,
         } => Some(AbsoluteContent::Lyric {
             text: text.clone(),
             source_part_index: *source_part_index,
             note_id: *note_id,
-            verse: *verse,
         }),
         PostArcGridContent::LyricLine(s) => Some(AbsoluteContent::LyricLine(s.clone())),
         _ => None,

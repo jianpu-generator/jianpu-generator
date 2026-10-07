@@ -46,8 +46,8 @@ pub(super) fn lyric_span_from_wit(span: LyricSpan) -> crate::types::LyricSpanOut
     crate::types::LyricSpanOut {
         source_part_index: span.source_part_index as usize,
         part_abbreviation: span.part_abbreviation,
+        target_source_part_index: span.target_source_part_index.map(|index| index as usize),
         note_id: span.note_id as usize,
-        verse: span.verse as usize,
         measure_index: span.measure_index as usize,
         start: span.start as usize,
         end: span.end as usize,
@@ -60,7 +60,6 @@ pub(super) fn lyric_cell_in_from_wit(
     crate::lyric_selection_types::LyricCellIn {
         source_part_index: cell.source_part_index as usize,
         note_id: cell.note_id as usize,
-        verse: cell.verse as usize,
     }
 }
 
@@ -166,8 +165,8 @@ pub(super) fn lyric_span_to_wit(span: &crate::types::LyricSpanOut) -> LyricSpan 
     LyricSpan {
         source_part_index: span.source_part_index as u32,
         part_abbreviation: span.part_abbreviation.clone(),
+        target_source_part_index: span.target_source_part_index.map(|index| index as u32),
         note_id: span.note_id as u32,
-        verse: span.verse as u32,
         measure_index: span.measure_index as u32,
         start: span.start as u32,
         end: span.end as u32,

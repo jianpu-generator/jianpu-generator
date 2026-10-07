@@ -29,7 +29,7 @@ pub(super) fn init_accumulators(declarations: &[PartDecl]) -> Vec<TrackAccumulat
         .map(|decl| TrackAccumulator::Timed {
             measure_slots: Vec::new(),
             pending_events: Vec::new(),
-            syllables: if matches!(decl.kind, PartKind::Notes) {
+            syllables: if matches!(decl.kind, PartKind::Lyrics { .. }) {
                 Some(Vec::new())
             } else {
                 None
@@ -81,11 +81,6 @@ pub(super) fn build_parse_result(
                 soundfont: decl.soundfont,
                 volume: decl.volume,
                 octave_offset: decl.octave_offset,
-                verse_labels: decl
-                    .verses
-                    .iter()
-                    .map(|verse| verse.abbreviation.clone())
-                    .collect(),
                 measure_slots,
                 lyrics: syllables.map(|measure_syllables| ParsedLyrics {
                     measure_syllables,

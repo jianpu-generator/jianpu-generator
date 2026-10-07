@@ -51,7 +51,6 @@ pub enum PostArcGridContent {
         text: String,
         source_part_index: usize,
         note_id: usize,
-        verse: usize,
     },
     LyricLine(String),
     DirectiveLine {

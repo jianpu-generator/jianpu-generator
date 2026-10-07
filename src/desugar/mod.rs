@@ -2,7 +2,7 @@ use crate::ast::parsed::{AbbreviationReference, PartDecl, ScoreLineRole, ScoreLi
 use crate::error::{IrrecoverableError, RecoverableError, Span};
 use crate::parser::score::measure_group;
 use attribution::{attribute_data_lines, KeyedLine};
-use key_map::{KeyMap, PartLines};
+use key_map::KeyMap;
 
 mod attribution;
 mod key_map;
@@ -152,9 +152,10 @@ fn expand_measure_group(
             .iter()
             .enumerate()
             .flat_map(|(track_index, decl)| {
-                roles_for_group(decl, None)
-                    .into_iter()
-                    .map(move |role| ScoreLineSlot { track_index, role })
+                std::iter::once(ScoreLineSlot {
+                    track_index,
+                    role: decl.score_line_role(),
+                })
             })
             .collect();
         (Vec::new(), default_slots)
@@ -185,32 +186,14 @@ fn expand_keyed(
     resolve_tracks(&key_map, declarations, context)
 }
 
-/// The score-line roles this part contributes to this specific measure group.
-///
-/// A `Notes`/`Chords` part picks up one extra `Lyrics` role per verse up to
-/// the highest verse written in this group: no verse line means zero verses,
-/// and a skipped verse in between is filled with no-lyrics (`_`).
-///
-/// Other kinds keep their static role list.
-fn roles_for_group(decl: &PartDecl, lines: Option<&PartLines>) -> Vec<ScoreLineRole> {
-    let verse_count = lines.map_or(0, |lines| lines.verses.len());
-    decl.score_line_roles()
-        .iter()
-        .copied()
-        .chain(itertools::repeat_n(ScoreLineRole::Lyrics, verse_count))
-        .collect()
-}
-
 fn resolve_tracks(
     key_map: &KeyMap,
     declarations: &[PartDecl],
     context: &GroupContext,
 ) -> (Vec<SourceLine>, Vec<ScoreLineSlot>) {
     let mut resolved_per_track: Vec<Vec<SourceLine>> = Vec::with_capacity(declarations.len());
-    let mut roles_per_track: Vec<Vec<ScoreLineRole>> = Vec::with_capacity(declarations.len());
 
     for (i, decl) in declarations.iter().enumerate() {
-        let part_lines = key_map.get(i);
         let follow_target_index = decl.follow_target.as_ref().and_then(|target| {
             declarations
                 .get(..i)
@@ -218,49 +201,30 @@ fn resolve_tracks(
                 .iter()
                 .position(|d| &d.abbreviation == target)
         });
-
-        let roles = roles_for_group(decl, part_lines);
-
-        let track_lines: Vec<SourceLine> = roles
-            .iter()
-            .enumerate()
-            .map(|(slot_index, &role)| {
-                let written = match slot_index {
-                    0 => part_lines.and_then(|lines| lines.base.clone()),
-                    verse_slot => part_lines
-                        .and_then(|lines| lines.verses.get(verse_slot - 1).cloned().flatten()),
-                };
-                if let Some(line) = written {
-                    return line;
-                }
-                // A follow part copies its target's notes only, never its lyrics.
-                if slot_index == 0 {
-                    if let Some(line) = follow_target_index
-                        .and_then(|t| resolved_per_track.get(t))
-                        .and_then(|track| track.first())
-                    {
-                        return line.clone();
-                    }
-                }
-                SourceLine {
-                    content: implicit_fill(role, context.time_num),
+        let written = key_map.get(i).cloned().flatten();
+        let line = written.unwrap_or_else(|| {
+            // A follow part copies its target's notes only, never its lyrics:
+            // a lyric part is never a follow part, so it falls to `_` below.
+            follow_target_index
+                .and_then(|t| resolved_per_track.get(t))
+                .and_then(|track| track.first())
+                .cloned()
+                .unwrap_or_else(|| SourceLine {
+                    content: implicit_fill(decl.score_line_role(), context.time_num),
                     offset: context.pad_offset,
                     is_implicit_fill: true,
-                }
-            })
-            .collect();
-        resolved_per_track.push(track_lines);
-        roles_per_track.push(roles);
+                })
+        });
+        resolved_per_track.push(vec![line]);
     }
 
     let lines = resolved_per_track.into_iter().flatten().collect();
-    let slots = roles_per_track
-        .into_iter()
+    let slots = declarations
+        .iter()
         .enumerate()
-        .flat_map(|(track_index, roles)| {
-            roles
-                .into_iter()
-                .map(move |role| ScoreLineSlot { track_index, role })
+        .map(|(track_index, decl)| ScoreLineSlot {
+            track_index,
+            role: decl.score_line_role(),
         })
         .collect();
     (lines, slots)

@@ -50,7 +50,7 @@ function lyricInVerse(
   noteId: number,
 ) {
   return page.locator(
-    tagSelector('lyric', { sourcePartIndex: 0, verse, noteId }),
+    tagSelector('lyric', { sourcePartIndex: verse + 1, noteId }),
   )
 }
 
@@ -76,9 +76,9 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await expect(
-      page.locator(tagSelector('lyric', { sourcePartIndex: 0 })),
-    ).toHaveCount(12, { timeout: 10_000 })
+    await expect(page.locator(tagSelector('lyric'))).toHaveCount(12, {
+      timeout: 10_000,
+    })
     await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(200)
   },
@@ -134,7 +134,7 @@ Then(
       for (let noteId = noteIdStart; noteId <= noteIdEnd; noteId++) {
         await expect(
           page.locator(
-            `${tagSelector('lyric', { verse, noteId })}[data-lyric-range-selected]`,
+            `${tagSelector('lyric', { sourcePartIndex: verse + 1, noteId })}[data-lyric-range-selected]`,
           ),
         ).toHaveCount(1)
       }
@@ -147,7 +147,7 @@ Then(
   async ({ page }, verse: number) => {
     await expect(
       page.locator(
-        `${tagSelector('lyric', { verse })}[data-lyric-range-selected]`,
+        `${tagSelector('lyric', { sourcePartIndex: verse + 1 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(0)
   },

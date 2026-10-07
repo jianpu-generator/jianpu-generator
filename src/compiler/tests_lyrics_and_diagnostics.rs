@@ -29,7 +29,7 @@ fn cross_measure_tilde_tie_does_not_consume_lyric_slot_for_continuation_note() {
     )));
     let result = compile(&score);
     let blocks = result.blocks;
-    let bar2 = &blocks[1].rows[0];
+    let bar2 = &blocks[1].rows[1];
     // "sa" should be at column 4 (note 5, after the tied note 4 at column 0)
     let lyrics: Vec<_> = bar2
         .elements

@@ -39,7 +39,6 @@ pub(crate) fn resolve(
                 .map(|span| LyricCellOut {
                     source_part_index: span.source_part_index,
                     note_id: span.note_id,
-                    verse: span.verse,
                 })
                 .collect();
 

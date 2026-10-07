@@ -35,7 +35,7 @@ fn tied_note_part(tied: bool) -> PartRow {
         notes: Notes {
             events: vec![tied_note_event(tied)],
         },
-        lyrics: Vec::new(),
+        lyrics: None,
         has_error: false,
     })
 }

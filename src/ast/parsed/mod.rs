@@ -16,16 +16,13 @@ pub enum ParsedMeasureSlot {
 
 #[derive(Debug)]
 pub struct ParsedLyrics {
-    /// Measure -> verse -> syllables, in score order. Consecutive `[Part]` lyric
-    /// lines after the notes line become verses 1..N; an empty inner vec = `_`
-    /// (no lyrics) for that verse in that measure.
-    pub measure_syllables: Vec<Vec<Vec<Syllable>>>,
-    /// Byte offset of the start of the lyrics block (spanning all its verses)
-    /// for each measure, in order.
+    /// Measure -> syllables, in score order, for one lyric part. An empty inner
+    /// vec = `_` (no lyrics) for that measure.
+    pub measure_syllables: Vec<Vec<Syllable>>,
+    /// Byte offset of the start of the lyric line for each measure, in order.
     pub measure_starts: Vec<usize>,
-    /// Byte offset of the end of the lyrics block (spanning all its verses)
-    /// for each measure, in order. Used to extend the measure's source span to
-    /// cover the lyrics lines.
+    /// Byte offset of the end of the lyric line for each measure, in order.
+    /// Used to extend the measure's source span to cover the lyric line.
     pub measure_ends: Vec<usize>,
 }
 
@@ -51,19 +48,6 @@ pub struct PartDecl {
     pub volume: u8,
     /// MIDI-only octave shift applied to every note in this part (−4..=+4).
     pub octave_offset: i8,
-    /// Lyric parts (`Verse 1 [v1] = lyrics[<this abbreviation>]`) attached to
-    /// this part, in declaration order. Verse `i` of a measure is written on
-    /// the score line keyed by `verses[i].abbreviation`.
-    pub verses: Vec<VerseDecl>,
-}
-
-/// A `lyrics[X]` part declaration, attached to its target [`PartDecl`].
-#[derive(Debug, Clone, PartialEq)]
-pub struct VerseDecl {
-    pub abbreviation: String,
-    /// Byte span of the abbreviation token on its `# parts` declaration line.
-    pub abbreviation_span: Span,
-    pub display_name: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -71,6 +55,20 @@ pub enum PartKind {
     Chords,
     Notes,
     Percussion,
+    /// A `lyrics[X]` part: one verse of lyrics sung along to the notes of the
+    /// part at `target_part_index` (an index into the declaration list, always
+    /// before this part). It has no notes of its own.
+    Lyrics {
+        target_part_index: usize,
+    },
+}
+
+impl PartKind {
+    /// Whether a part of this kind makes sound. Lyric parts only align to their
+    /// target's notes.
+    pub fn sounds(self) -> bool {
+        !matches!(self, Self::Lyrics { .. })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -87,11 +85,12 @@ pub struct ScoreLineSlot {
 }
 
 impl PartDecl {
-    pub fn score_line_roles(&self) -> &'static [ScoreLineRole] {
+    /// The one score line a part owns in each measure group.
+    pub fn score_line_role(&self) -> ScoreLineRole {
         match self.kind {
-            PartKind::Chords => &[ScoreLineRole::Chord],
-            PartKind::Notes => &[ScoreLineRole::Notes],
-            PartKind::Percussion => &[ScoreLineRole::Notes],
+            PartKind::Chords => ScoreLineRole::Chord,
+            PartKind::Notes | PartKind::Percussion => ScoreLineRole::Notes,
+            PartKind::Lyrics { .. } => ScoreLineRole::Lyrics,
         }
     }
 }
@@ -109,8 +108,6 @@ pub struct ParsedTimedTrack {
     pub soundfont: Soundfont,
     pub volume: u8,
     pub octave_offset: i8,
-    /// Abbreviations of the lyric parts attached to this track, in verse order.
-    pub verse_labels: Vec<String>,
     pub measure_slots: Vec<ParsedMeasureSlot>,
     pub lyrics: Option<ParsedLyrics>,
     /// Per-measure beat-overflow error (None = no overflow for that measure).

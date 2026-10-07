@@ -110,12 +110,9 @@ function lyric(
   page: import('@playwright/test').Page,
   partIndex: number,
   noteId: number,
-  verse: number,
 ) {
   return page
-    .locator(
-      tagSelector('lyric', { sourcePartIndex: partIndex, noteId, verse }),
-    )
+    .locator(tagSelector('lyric', { sourcePartIndex: partIndex, noteId }))
     .first()
 }
 
@@ -160,11 +157,7 @@ When(
   async ({ page }) => {
     // Same note id 4 as the note-anchored scenario above, but landing on its
     // lyric syllable's own click target instead of the note's.
-    await clickThenStableClick(
-      page,
-      barNumberRect(page, 0),
-      lyric(page, 0, 4, 0),
-    )
+    await clickThenStableClick(page, barNumberRect(page, 0), lyric(page, 1, 4))
   },
 )
 

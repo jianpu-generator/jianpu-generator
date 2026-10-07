@@ -40,20 +40,18 @@ pub(super) fn serialize_group(out: &mut String, children: &[SvgElement], tag: &O
         Some(Tag::Lyric {
             source_part_index,
             note_id,
-            verse,
         }) => {
             out.push_str(&format!(
-                r#"<g data-tag="lyric" data-part-index="{source_part_index}" data-note-id="{note_id}" data-verse="{verse}">"#
+                r#"<g data-tag="lyric" data-part-index="{source_part_index}" data-note-id="{note_id}">"#
             ));
         }
         Some(Tag::LyricLabel {
             source_part_index,
-            verse,
             measure_index_start,
             measure_index_end,
         }) => {
             out.push_str(&format!(
-                r#"<g data-tag="lyric-label" data-part-index="{source_part_index}" data-verse="{verse}" data-measure-index-start="{measure_index_start}" data-measure-index-end="{measure_index_end}" style="cursor:pointer">"#
+                r#"<g data-tag="lyric-label" data-part-index="{source_part_index}" data-measure-index-start="{measure_index_start}" data-measure-index-end="{measure_index_end}" style="cursor:pointer">"#
             ));
         }
         Some(Tag::BarLine {

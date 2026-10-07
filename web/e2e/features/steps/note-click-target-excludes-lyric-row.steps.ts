@@ -73,7 +73,7 @@ Then(
       .locator(tagSelector('note', { noteId: 0 }))
       .locator(rectVariantSelector('note-click-target'))
     const lyricRect = page
-      .locator(tagSelector('lyric', { noteId: 0, verse: 0 }))
+      .locator(tagSelector('lyric', { noteId: 0 }))
       .locator('rect')
 
     const noteBox = await stableBoundingBox(noteClickRect)

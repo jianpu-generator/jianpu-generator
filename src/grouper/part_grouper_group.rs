@@ -1,8 +1,7 @@
 use super::{
-    align_empty_note_measures, attach_paired_lyrics, GroupedPart, IrrecoverableError,
-    ParsedMeasureSlot, ParsedTimedTrack, PartGrouper, PerMeasureErrors, Span,
+    align_empty_note_measures, pair_lyrics_measures, GroupedPart, IrrecoverableError,
+    ParsedMeasureSlot, ParsedTimedTrack, PartGrouper, PerMeasureErrors,
 };
-use crate::ast::grouped::GroupedMeasure;
 use crate::tuplet::apply_resolution_multiplier;
 
 /// `global_resolution_multipliers[i]` is the tuplet-rescale multiplier every part must
@@ -14,23 +13,11 @@ pub(in crate::grouper) fn group_timed_track(
     part: ParsedTimedTrack,
     global_resolution_multipliers: &[u32],
 ) -> Result<GroupedPart, IrrecoverableError> {
-    let lyrics_measure_ends: Vec<usize> = part
-        .lyrics
-        .as_ref()
-        .map(|l| l.measure_ends.clone())
-        .unwrap_or_default();
-    let lyrics_measure_starts: Vec<usize> = part
-        .lyrics
-        .as_ref()
-        .map(|l| l.measure_starts.clone())
-        .unwrap_or_default();
-    let measure_syllables = part.lyrics.as_ref().map(|l| l.measure_syllables.clone());
     let per_measure_beat_errors = part.per_measure_beat_errors.clone();
     let per_measure_dotted_eighth_errors = part.per_measure_dotted_eighth_errors.clone();
     let per_measure_chord_errors = part.per_measure_chord_errors.clone();
     let per_measure_lex_errors = part.per_measure_lex_errors.clone();
     let per_measure_lyrics_errors = part.per_measure_lyrics_errors.clone();
-    let part_abbreviation = part.abbreviation.clone();
     let part_volume = part.volume;
     let part_octave_offset = part.octave_offset;
     let mut grouper = PartGrouper::new(&part);
@@ -59,7 +46,7 @@ pub(in crate::grouper) fn group_timed_track(
         }
     }
     let (slots, name, kind, soundfont) = grouper.finish();
-    let mut measures = align_empty_note_measures(
+    let measures = align_empty_note_measures(
         slots,
         &PerMeasureErrors {
             beat_errors: &per_measure_beat_errors,
@@ -69,47 +56,38 @@ pub(in crate::grouper) fn group_timed_track(
             lyrics_errors: &per_measure_lyrics_errors,
         },
     )?;
-    for (measure, &lyrics_end) in measures.iter_mut().zip(lyrics_measure_ends.iter()) {
-        measure.source_span.end = measure.source_span.end.max(lyrics_end);
-    }
-    let mut grouped = GroupedPart {
+    Ok(GroupedPart {
         name,
         kind,
         soundfont,
         volume: part_volume,
         octave_offset: part_octave_offset,
-        verse_labels: part.verse_labels,
         measures,
-    };
-    attach_lyrics(
-        &mut grouped.measures,
-        measure_syllables,
-        &lyrics_measure_starts,
-        &lyrics_measure_ends,
-        &part_abbreviation,
-    )?;
-    Ok(grouped)
+    })
 }
 
-/// Attaches a track's parsed lyric syllables to its grouped measures,
-/// tie-pairing each verse's syllables against its own notes whenever it
-/// actually has syllables to attach (see `attach_paired_lyrics`) — this is
-/// data-presence-based, so a plain `notes` part with no lyrics attached this
-/// pass carries none.
-fn attach_lyrics(
-    measures: &mut [GroupedMeasure],
-    measure_syllables: Option<Vec<Vec<Vec<crate::ast::parsed::Syllable>>>>,
-    lyrics_measure_starts: &[usize],
-    lyrics_measure_ends: &[usize],
-    part_abbreviation: &str,
-) -> Result<(), IrrecoverableError> {
-    if measure_syllables.is_some() {
-        let lyrics_spans: Vec<Span> = lyrics_measure_starts
-            .iter()
-            .zip(lyrics_measure_ends.iter())
-            .map(|(&start, &end)| Span::new(start, end))
-            .collect();
-        attach_paired_lyrics(measures, measure_syllables, lyrics_spans, part_abbreviation)?;
+/// Groups a lyric part: it has no notes of its own, so its measures are the
+/// target's measures with the lyric line's syllables paired to the target's
+/// notes (see `pair_lyrics_measures`). `target` must already be grouped.
+pub(in crate::grouper) fn group_lyrics_track(
+    part: ParsedTimedTrack,
+    target: &GroupedPart,
+) -> GroupedPart {
+    let measures = match part.lyrics {
+        Some(lyrics) => pair_lyrics_measures(
+            &target.measures,
+            lyrics,
+            &part.per_measure_lyrics_errors,
+            &part.abbreviation,
+        ),
+        None => Vec::new(),
+    };
+    GroupedPart {
+        name: Some(part.abbreviation),
+        kind: part.kind,
+        soundfont: part.soundfont,
+        volume: part.volume,
+        octave_offset: part.octave_offset,
+        measures,
     }
-    Ok(())
 }

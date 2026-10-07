@@ -11,7 +11,7 @@ use std::collections::{HashMap, HashSet};
 
 #[path = "layout_row_classification.rs"]
 mod row_classification;
-pub(crate) use row_classification::{has_lyrics, is_chord_only_row, is_lyric_row, lyric_row_verse};
+pub(crate) use row_classification::{is_chord_only_row, is_lyric_row, is_lyric_row_of};
 
 #[path = "layout_heights.rs"]
 mod heights;

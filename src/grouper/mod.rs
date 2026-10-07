@@ -7,8 +7,8 @@ use crate::ast::grouped::{
     DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT, DEFAULT_NOTE_NUMBER_WIDTH, DEFAULT_PARTS_LIST_COLUMNS,
     DEFAULT_PART_LABEL_WIDTH_PT, DEFAULT_ROW_HEIGHT,
 };
-use crate::ast::parsed::TextStyleKind;
 use crate::ast::parsed::{ParsedDocument, ParsedMeasureSlot, ParsedMetadata, ParsedTrack};
+use crate::ast::parsed::{PartKind, TextStyleKind};
 use crate::combiner;
 use crate::error::{Diagnostic, IrrecoverableError};
 
@@ -24,7 +24,7 @@ mod tie_validation;
 
 use directive_grouper::DirectiveGrouper;
 pub use metadata_defaults::metadata_defaults;
-use part_grouper::group_timed_track;
+use part_grouper::{group_lyrics_track, group_timed_track};
 use sequence_resolution::resolve_sequence;
 use tie_validation::validate_ties;
 
@@ -41,13 +41,22 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
         .map(Diagnostic::Error)
         .collect();
     let global_resolution_multipliers = compute_global_resolution_multipliers(&doc.tracks);
-    let mut grouped_tracks = Vec::new();
+    let mut grouped_tracks: Vec<GroupedTrack> = Vec::new();
     for track in doc.tracks {
-        grouped_tracks.push(match track {
-            ParsedTrack::Timed(part) => {
-                GroupedTrack::Timed(group_timed_track(part, &global_resolution_multipliers)?)
+        let ParsedTrack::Timed(part) = track;
+        let grouped = match part.kind {
+            // A lyric part's target is declared (and so already grouped) before it.
+            PartKind::Lyrics { target_part_index } => {
+                let target = grouped_tracks
+                    .get(target_part_index)
+                    .map(|track| match track {
+                        GroupedTrack::Timed(target) => target,
+                    });
+                target.map(|target| group_lyrics_track(part, target))
             }
-        });
+            _ => Some(group_timed_track(part, &global_resolution_multipliers)?),
+        };
+        grouped_tracks.extend(grouped.map(GroupedTrack::Timed));
     }
 
     let measure_directives = DirectiveGrouper::new(

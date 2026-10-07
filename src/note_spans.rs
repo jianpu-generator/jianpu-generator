@@ -68,7 +68,7 @@ pub fn list_note_spans_from_source(
     enabled_tracks: Option<&[String]>,
 ) -> Result<NoteSpansResult, IrrecoverableError> {
     let mut score = crate::compile(source, filename, &[])?;
-    crate::filters::apply_visibility_filter(&mut score, enabled_tracks);
+    crate::filters::apply_track_filter(&mut score, enabled_tracks);
 
     let max_parts = score
         .measures

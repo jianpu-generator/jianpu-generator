@@ -10,7 +10,6 @@ use serde::Serialize;
 pub(crate) struct LyricCellIn {
     pub source_part_index: usize,
     pub note_id: usize,
-    pub verse: usize,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]

@@ -71,7 +71,7 @@ pub enum AbsoluteContent {
     HorizontalLine {
         width: f32,
     },
-    /// `source_part_index`/`note_id`/`verse` identify the syllable's source
+    /// `source_part_index`/`note_id` identify the syllable's source
     /// note, mirroring `GridContent::LyricSyllable` — used only by the
     /// renderer's `Tag::Lyric` click-target overlay, not by `render_lyric`
     /// itself (which only needs `text`).
@@ -79,7 +79,6 @@ pub enum AbsoluteContent {
         text: String,
         source_part_index: usize,
         note_id: usize,
-        verse: usize,
     },
     /// A standalone `lyrics` part's whole verse line, left-aligned starting
     /// at the element's `x`, same as [`AbsoluteContent::Lyric`] but spanning
@@ -180,7 +179,6 @@ pub enum AbsoluteContent {
         height: f32,
         source_part_index: usize,
         note_id: usize,
-        verse: usize,
     },
     /// Invisible click hit target laid over one verse's `RowLabel` text
     /// (see `grid_layout::types::LyricLabelClickTarget`) — the lyric-side
@@ -192,7 +190,6 @@ pub enum AbsoluteContent {
         width: f32,
         height: f32,
         source_part_index: usize,
-        verse: usize,
         measure_index_start: usize,
         measure_index_end: usize,
     },

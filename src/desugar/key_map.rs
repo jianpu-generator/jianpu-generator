@@ -4,46 +4,9 @@ use crate::error::{RecoverableError, Span};
 use super::attribution::KeyedLine;
 use super::{GroupContext, SourceLine};
 
-/// The lines one part owns in a measure group: its notes/chords line, and one
-/// line per verse (indexed by position in [`PartDecl::verses`]).
-#[derive(Default)]
-pub(super) struct PartLines {
-    pub(super) base: Option<SourceLine>,
-    pub(super) verses: Vec<Option<SourceLine>>,
-}
-
-/// One entry per declaration, aligned with `declarations`.
-pub(super) type KeyMap = Vec<PartLines>;
-
-/// Which slot of which declaration a `[Key]` addresses.
-enum SlotAddress {
-    Base {
-        declaration_index: usize,
-    },
-    Verse {
-        declaration_index: usize,
-        verse_index: usize,
-    },
-}
-
-fn address_of(key: &str, declarations: &[PartDecl]) -> Option<SlotAddress> {
-    declarations
-        .iter()
-        .enumerate()
-        .find_map(|(declaration_index, declaration)| {
-            if declaration.abbreviation == key {
-                return Some(SlotAddress::Base { declaration_index });
-            }
-            declaration
-                .verses
-                .iter()
-                .position(|verse| verse.abbreviation == key)
-                .map(|verse_index| SlotAddress::Verse {
-                    declaration_index,
-                    verse_index,
-                })
-        })
-}
+/// One entry per declaration, aligned with `declarations`: the line the
+/// declaration's `[Key]` addressed in this measure group, if any.
+pub(super) type KeyMap = Vec<Option<SourceLine>>;
 
 pub(super) fn filter_keyed_into_key_map(
     keyed: Vec<KeyedLine>,
@@ -51,10 +14,13 @@ pub(super) fn filter_keyed_into_key_map(
     context: &GroupContext,
     recoverable_error: &mut Option<RecoverableError>,
 ) -> KeyMap {
-    let mut key_map: KeyMap = declarations.iter().map(|_| PartLines::default()).collect();
+    let mut key_map: KeyMap = declarations.iter().map(|_| None).collect();
 
     for line in keyed {
-        let Some(address) = address_of(&line.key, declarations) else {
+        let Some(declaration_index) = declarations
+            .iter()
+            .position(|declaration| declaration.abbreviation == line.key)
+        else {
             recoverable_error.get_or_insert_with(|| {
                 RecoverableError::part_key_unknown(line.key_prefix_span, &line.key)
             });
@@ -65,21 +31,9 @@ pub(super) fn filter_keyed_into_key_map(
             offset: line.content_offset,
             is_implicit_fill: false,
         };
-        let slot = match address {
-            SlotAddress::Base { declaration_index } => key_map
-                .get_mut(declaration_index)
-                .map(|lines| &mut lines.base),
-            SlotAddress::Verse {
-                declaration_index,
-                verse_index,
-            } => key_map.get_mut(declaration_index).and_then(|lines| {
-                if lines.verses.len() <= verse_index {
-                    lines.verses.resize_with(verse_index + 1, || None);
-                }
-                lines.verses.get_mut(verse_index)
-            }),
+        let Some(slot) = key_map.get_mut(declaration_index) else {
+            continue;
         };
-        let Some(slot) = slot else { continue };
         if slot.is_some() {
             let line_span = Span::new(
                 context.base_offset + source_line.offset,

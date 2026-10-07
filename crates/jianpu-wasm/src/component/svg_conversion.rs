@@ -129,20 +129,16 @@ pub(super) fn tag_to_wit(tag: &crate::svg_types::TagOut) -> Tag {
         crate::svg_types::TagOut::Lyric {
             source_part_index,
             note_id,
-            verse,
         } => Tag::Lyric(LyricTag {
             source_part_index: *source_part_index as u32,
             note_id: *note_id as u32,
-            verse: *verse as u32,
         }),
         crate::svg_types::TagOut::LyricLabel {
             source_part_index,
-            verse,
             measure_index_start,
             measure_index_end,
         } => Tag::LyricLabel(LyricLabelTag {
             source_part_index: *source_part_index as u32,
-            verse: *verse as u32,
             measure_index_start: *measure_index_start as u32,
             measure_index_end: *measure_index_end as u32,
         }),

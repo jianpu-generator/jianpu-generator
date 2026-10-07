@@ -20,6 +20,7 @@ use rest_runs::merge_rest_runs;
 
 use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartRow, Score};
 use crate::ast::parsed::{Accidental, KeyChange, NoteName};
+use std::collections::HashSet;
 
 struct PartSliceResult {
     elements: Vec<ColumnElement>,
@@ -112,13 +113,8 @@ pub(crate) fn visible_part_indices(measure: &MultiPartMeasure) -> Vec<usize> {
 }
 
 fn is_rest_filled(part_row: &PartRow) -> bool {
-    !part_row.slice().notes.events.is_empty()
-        && part_row
-            .slice()
-            .notes
-            .events
-            .iter()
-            .all(|e| matches!(e, NoteEvent::Rest(_)))
+    let events = part_row.slice().timing_events();
+    !events.is_empty() && events.iter().all(|e| matches!(e, NoteEvent::Rest(_)))
 }
 
 fn update_cross_state(cs: &mut PartCrossState, result: &mut PartSliceResult) {
@@ -154,8 +150,11 @@ fn compile_measure(
             continue;
         };
         // Drop any incoming cross-measure tie/slur arc when this slice has errors (#28).
+        // A lyric part draws no arcs, and its ties only decide which notes take a
+        // syllable, which the grouper already settled from the notes alone.
+        let drops_incoming_arcs = part_row.slice().has_error && part_row.slice().lyrics.is_none();
         let (init_pending_opens, init_tie, init_tie_column, init_tie_measure, init_tie_note_id) =
-            if part_row.slice().has_error {
+            if drops_incoming_arcs {
                 (vec![], false, None, None, None)
             } else {
                 (
@@ -192,16 +191,24 @@ fn compile_measure(
         let name = part_row.name().cloned();
         let label = name.clone().unwrap_or_default();
         let id = RowId(name.unwrap_or_else(|| format!("__anon_{part_idx}")));
+        let kind = part_row
+            .slice()
+            .lyrics
+            .as_ref()
+            .map_or(RowKind::Sounding, |lyrics| RowKind::Lyrics {
+                target: RowId(lyrics.target_name.clone()),
+            });
         rows.push(MeasureRow {
             id,
             label,
+            kind,
             elements: slice_result.elements,
             source_part_index: part_idx,
             absorbed_rows: Vec::new(),
         });
     }
     MeasureBlock {
-        rows,
+        rows: drop_trailing_blank_lyric_rows(rows),
         decorations,
         diagnostics: measure.diagnostics.clone(),
         represents_measures: 1,
@@ -209,6 +216,39 @@ fn compile_measure(
         system_break: measure.system_break,
         source_span: measure.source_span,
     }
+}
+
+/// Drops a lyric row that has no syllables when no later lyric row of the same
+/// target has any either: an unwritten (or `_`) verse only shows as a blank
+/// row to keep a later verse of the same notes in its own slot, and a measure
+/// with no lyrics at all has no lyric rows. A blank row whose target row is
+/// absent (filtered out) is kept: it is all that stands for the measure.
+fn drop_trailing_blank_lyric_rows(rows: Vec<MeasureRow>) -> Vec<MeasureRow> {
+    let present_row_ids: HashSet<RowId> = rows.iter().map(|row| row.id.clone()).collect();
+    let has_syllable = |row: &MeasureRow| {
+        row.elements
+            .iter()
+            .any(|element| matches!(element.content, ElementContent::Lyric { .. }))
+    };
+    let mut targets_with_later_syllables: HashSet<RowId> = HashSet::new();
+    let mut kept: Vec<MeasureRow> = rows
+        .into_iter()
+        .rev()
+        .filter(|row| match &row.kind {
+            RowKind::Sounding => true,
+            RowKind::Lyrics { target } => {
+                if has_syllable(row) {
+                    targets_with_later_syllables.insert(target.clone());
+                    true
+                } else {
+                    targets_with_later_syllables.contains(target)
+                        || !present_row_ids.contains(target)
+                }
+            }
+        })
+        .collect();
+    kept.reverse();
+    kept
 }
 
 fn format_key(key: &KeyChange) -> String {

@@ -3,7 +3,7 @@ mod instrument_matching;
 mod lexer;
 mod setting_limits;
 
-use crate::ast::parsed::{PartDecl, PartKind, Soundfont, VerseDecl};
+use crate::ast::parsed::{PartDecl, PartKind, Soundfont};
 use crate::error::{RecoverableError, Span};
 
 pub use instrument_matching::InstrumentInfo;
@@ -102,6 +102,8 @@ fn raw_kind_to_source_mode(kind: &RawKind) -> (SourcePartMode, Option<String>) {
         RawKind::Concrete(PartKind::Chords) => (SourcePartMode::Chords, None),
         RawKind::Concrete(PartKind::Notes) => (SourcePartMode::Notes, None),
         RawKind::Concrete(PartKind::Percussion) => (SourcePartMode::Percussion, None),
+        // A lyric part is only ever built as `RawKind::Lyrics`.
+        RawKind::Concrete(PartKind::Lyrics { .. }) => (SourcePartMode::Lyrics, None),
         RawKind::Follow { target, .. } => (SourcePartMode::Follow, Some(target.clone())),
         RawKind::Lyrics { target, .. } => (SourcePartMode::Lyrics, Some(target.clone())),
     }
@@ -267,7 +269,6 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                         soundfont: soundfont.unwrap_or(target_decl.soundfont),
                         volume: volume.unwrap_or(target_decl.volume),
                         octave_offset: octave_offset.unwrap_or(target_decl.octave_offset),
-                        verses: Vec::new(),
                     }),
                 }
             }
@@ -280,29 +281,108 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                 soundfont: soundfont.unwrap_or_default(),
                 volume: volume.unwrap_or(DEFAULT_PART_VOLUME),
                 octave_offset: octave_offset.unwrap_or(DEFAULT_PART_OCTAVE_OFFSET),
-                verses: Vec::new(),
             }),
             RawKind::Lyrics {
                 target,
                 target_span,
             } => {
-                let target_decl = declarations.iter_mut().find(|declaration: &&mut PartDecl| {
-                    declaration.abbreviation == target
-                        && matches!(declaration.kind, PartKind::Notes | PartKind::Chords)
-                });
-                match target_decl {
-                    None => errors.push(RecoverableError::parts_lyrics_invalid_target(
-                        target_span,
-                        &target,
-                    )),
-                    Some(target_decl) => target_decl.verses.push(VerseDecl {
+                let declaration = resolve_lyrics_declaration(
+                    &declarations,
+                    LyricsDeclarationHeader {
                         abbreviation,
                         abbreviation_span,
                         display_name,
-                    }),
-                }
+                    },
+                    &target,
+                    target_span,
+                    errors,
+                );
+                declarations.extend(declaration);
             }
         }
     }
-    declarations
+    lyric_parts_after_their_targets(declarations)
+}
+
+/// The name fields of a `lyrics[X]` declaration, before its target is resolved.
+struct LyricsDeclarationHeader {
+    abbreviation: String,
+    abbreviation_span: Span,
+    display_name: String,
+}
+
+/// Resolves a `lyrics[target]` declaration against the parts declared so far,
+/// reporting an error (and yielding nothing) when `target` isn't an earlier
+/// notes or chords part.
+fn resolve_lyrics_declaration(
+    declarations: &[PartDecl],
+    header: LyricsDeclarationHeader,
+    target: &str,
+    target_span: Span,
+    errors: &mut Vec<RecoverableError>,
+) -> Option<PartDecl> {
+    let target_part_index = declarations.iter().position(|declaration| {
+        declaration.abbreviation == target
+            && matches!(declaration.kind, PartKind::Notes | PartKind::Chords)
+    });
+    let Some(target_part_index) = target_part_index else {
+        errors.push(RecoverableError::parts_lyrics_invalid_target(
+            target_span,
+            target,
+        ));
+        return None;
+    };
+    Some(PartDecl {
+        abbreviation: header.abbreviation,
+        abbreviation_span: header.abbreviation_span,
+        display_name: header.display_name,
+        kind: PartKind::Lyrics { target_part_index },
+        follow_target: None,
+        soundfont: Soundfont::default(),
+        volume: DEFAULT_PART_VOLUME,
+        octave_offset: DEFAULT_PART_OCTAVE_OFFSET,
+    })
+}
+
+/// Reorders `declarations` so each lyric part sits directly after its target
+/// (and after earlier lyric parts of the same target), keeping declaration
+/// order otherwise, then re-points every `target_part_index` at the new order.
+/// A lyric part's row is drawn directly under its target's, so part order is
+/// row order.
+fn lyric_parts_after_their_targets(declarations: Vec<PartDecl>) -> Vec<PartDecl> {
+    let lyric_target = |declaration: &PartDecl| match declaration.kind {
+        PartKind::Lyrics { target_part_index } => Some(target_part_index),
+        _ => None,
+    };
+    let old_order: Vec<usize> = declarations
+        .iter()
+        .enumerate()
+        .filter(|(_, declaration)| lyric_target(declaration).is_none())
+        .flat_map(|(index, _)| {
+            std::iter::once(index).chain(
+                declarations
+                    .iter()
+                    .enumerate()
+                    .filter(move |(_, declaration)| lyric_target(declaration) == Some(index))
+                    .map(|(lyric_index, _)| lyric_index),
+            )
+        })
+        .collect();
+    let new_index_of = |old_index: usize| {
+        old_order
+            .iter()
+            .position(|&candidate| candidate == old_index)
+            .unwrap_or(old_index)
+    };
+    let mut slots: Vec<Option<PartDecl>> = declarations.into_iter().map(Some).collect();
+    old_order
+        .iter()
+        .filter_map(|&old_index| slots.get_mut(old_index).and_then(Option::take))
+        .map(|mut declaration| {
+            if let PartKind::Lyrics { target_part_index } = &mut declaration.kind {
+                *target_part_index = new_index_of(*target_part_index);
+            }
+            declaration
+        })
+        .collect()
 }

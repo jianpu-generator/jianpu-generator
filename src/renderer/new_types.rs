@@ -158,13 +158,11 @@ pub enum Tag {
     },
     /// Identifies a lyric syllable's own click target — see
     /// `AbsoluteContent::LyricClickTarget`. `source_part_index`/`note_id`
-    /// match the syllable's underlying note's own `Tag::Note` identity;
-    /// `verse` (0-indexed) disambiguates which verse line the syllable
-    /// belongs to when a part has more than one.
+    /// are the lyric part's own index and its target's note the syllable is
+    /// sung on.
     Lyric {
         source_part_index: usize,
         note_id: usize,
-        verse: usize,
     },
     /// Identifies one verse's `RowLabel` click target — see
     /// `AbsoluteContent::LyricLabelClickTarget`. `measure_index_start`/
@@ -172,7 +170,6 @@ pub enum Tag {
     /// system it sits in, mirroring `Tag::PartLabel`.
     LyricLabel {
         source_part_index: usize,
-        verse: usize,
         measure_index_start: usize,
         measure_index_end: usize,
     },

@@ -13,6 +13,9 @@ pub struct PartInfo {
     pub abbreviation: String,
     /// Full display name from the declaration left-hand side.
     pub display_name: String,
+    /// Whether the part makes sound. False for a lyric part, which only
+    /// sings along to its target's notes.
+    pub sounds: bool,
 }
 
 /// Source-level part declaration for the Edit Parts modal (before follow inheritance).
@@ -94,17 +97,10 @@ pub fn list_parts_from_source(
     Ok(doc
         .declarations
         .into_iter()
-        .flat_map(|declaration| {
-            let verses = declaration.verses.into_iter().map(|verse| PartInfo {
-                abbreviation: verse.abbreviation,
-                display_name: verse.display_name,
-            });
-            std::iter::once(PartInfo {
-                abbreviation: declaration.abbreviation,
-                display_name: declaration.display_name,
-            })
-            .chain(verses)
-            .collect::<Vec<_>>()
+        .map(|declaration| PartInfo {
+            abbreviation: declaration.abbreviation,
+            display_name: declaration.display_name,
+            sounds: declaration.kind.sounds(),
         })
         .collect())
 }

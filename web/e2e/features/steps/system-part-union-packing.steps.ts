@@ -291,7 +291,10 @@ Then(
 Then('the first system has no Bass row', async ({ page }) => {
   await expect(
     page.locator(
-      tagSelector('part-label', { sourcePartIndex: 2, measureIndexStart: 0 }),
+      tagSelector('part-label', {
+        sourcePartIndex: PART_INDEX.Bass,
+        measureIndexStart: 0,
+      }),
     ),
   ).toHaveCount(0, { timeout: 10_000 })
 })
@@ -301,8 +304,7 @@ Then(
   async ({ page }, verse: number, from: number, to: number) => {
     const label = page.locator(
       tagSelector('lyric-label', {
-        sourcePartIndex: 0,
-        verse,
+        sourcePartIndex: verse + 1,
         measureIndexStart: from,
       }),
     )
@@ -319,8 +321,7 @@ Then(
   async ({ page }, verse: number, from: number, to: number) => {
     const label = page.locator(
       tagSelector('lyric-label', {
-        sourcePartIndex: 0,
-        verse,
+        sourcePartIndex: verse + 1,
         measureIndexStart: from,
       }),
     )
@@ -349,7 +350,7 @@ Then(
       (m) => m.melodyVerses && m.melodyVerses.length > verse,
     ).length
     await expect(
-      page.locator(tagSelector('lyric', { sourcePartIndex: 0, verse })),
+      page.locator(tagSelector('lyric', { sourcePartIndex: verse + 1 })),
     ).toHaveCount(totalRealSyllables * NOTE_TOKEN_COUNT, { timeout: 10_000 })
   },
 )

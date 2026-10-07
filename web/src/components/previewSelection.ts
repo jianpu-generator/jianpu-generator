@@ -237,6 +237,5 @@ export function lyricCellsInMeasureRange(
     .map((span) => ({
       sourcePartIndex: span.sourcePartIndex,
       noteId: span.noteId,
-      verse: span.verse,
     }))
 }

@@ -52,8 +52,7 @@ function verseLabelInSystem(
 ) {
   return page.locator(
     tagSelector('lyric-label', {
-      sourcePartIndex: 0,
-      verse,
+      sourcePartIndex: verse + 1,
       measureIndexStart,
     }),
   )
@@ -85,16 +84,14 @@ Given(
     // measure-index-start 1 — see `verseLabelInSystem`.
     await page.waitForSelector(
       tagSelector('lyric-label', {
-        sourcePartIndex: 0,
-        verse: 0,
+        sourcePartIndex: 1,
         measureIndexStart: 0,
       }),
       { timeout: 10_000 },
     )
     await page.waitForSelector(
       tagSelector('lyric-label', {
-        sourcePartIndex: 0,
-        verse: 0,
+        sourcePartIndex: 1,
         measureIndexStart: 1,
       }),
       { timeout: 10_000 },
@@ -135,7 +132,7 @@ Then(
     // ti") — the range should cover every one of them, not just the
     // anchor's own system.
     const highlightedLyrics = page.locator(
-      `${tagSelector('lyric', { verse: 0 })}[data-lyric-range-selected]`,
+      `${tagSelector('lyric', { sourcePartIndex: 1 })}[data-lyric-range-selected]`,
     )
     await expect(highlightedLyrics).toHaveCount(4)
   },

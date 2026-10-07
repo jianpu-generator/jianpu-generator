@@ -6,15 +6,11 @@
 //!    (`desugar::implicit_fill`) would already produce if that key were not
 //!    mentioned at all in this measure group — an all-rest line for a
 //!    `Notes`/`Chord`-role occurrence, or an all-`_` line for a `Lyrics`-role
-//!    occurrence. Only a key's *trailing* removable lines are eligible: an
-//!    earlier all-rest verse can't be dropped out from under a later verse
-//!    with real content, since that would shift the later verse into the
-//!    earlier one's slot. `follow[X]` parts are never touched (their
+//!    occurrence. `follow[X]` parts are never touched (their
 //!    implicit fill is the follow target's content, not rest).
 //! 2. **Part-order sorting.** A key's surviving line is moved to the position
-//!    matching its part's order in `# parts` (a lyric part's line right after
-//!    its target's notes line, in verse order), regardless of how the lines
-//!    were interleaved in the source. A key
+//!    matching its part's order in `# parts` (a lyric part right after its
+//!    target), regardless of how the lines were interleaved in the source. A key
 //!    that can't be resolved to a declared part keeps its original relative
 //!    position, ordered after every recognised part.
 //! 3. **Whitespace normalization.** Every directive line and surviving data
@@ -109,75 +105,32 @@ pub fn format_score(source: &str) -> String {
     result
 }
 
-/// The slot a `[Key]` addresses: its declaration, and which of that part's
-/// lines it is (0 = its notes/chords line, `n` = verse `n`).
-#[derive(Clone, Copy)]
-struct KeySlot {
-    declaration_index: usize,
-    slot_index: usize,
-}
-
-fn key_slot(key: &str, declarations: &[PartDecl]) -> Option<KeySlot> {
+/// The declaration a `[Key]` addresses.
+fn declaration_index_of(key: &str, declarations: &[PartDecl]) -> Option<usize> {
     declarations
         .iter()
-        .enumerate()
-        .find_map(|(declaration_index, decl)| {
-            if decl.abbreviation == key {
-                return Some(KeySlot {
-                    declaration_index,
-                    slot_index: 0,
-                });
-            }
-            decl.verses
-                .iter()
-                .position(|verse| verse.abbreviation == key)
-                .map(|verse_position| KeySlot {
-                    declaration_index,
-                    slot_index: verse_position + 1,
-                })
-        })
+        .position(|decl| decl.abbreviation == key)
 }
 
-/// Which data lines are redundant with implicit fill. Per part, walks its
-/// lines from the highest slot down and stops at the first one that isn't:
-/// an earlier no-lyrics verse can't be dropped out from under a later verse
-/// with real content, and a rest notes line stays while any verse is kept.
-/// `follow[X]` notes lines are never removable (their implicit fill is the
+/// Which data lines are redundant with implicit fill: a line whose content is
+/// exactly what its part would be filled with when unmentioned.
+/// `follow[X]` lines are never removable (their implicit fill is the
 /// target's content, not rest).
 fn removable_lines(parsed: &[Option<(&str, &str)>], declarations: &[PartDecl]) -> Vec<bool> {
-    let slots: Vec<Option<KeySlot>> = parsed
+    parsed
         .iter()
-        .map(|entry| entry.and_then(|(key, _)| key_slot(key, declarations)))
-        .collect();
-    let mut removable = vec![false; parsed.len()];
-    for (declaration_index, decl) in declarations.iter().enumerate() {
-        let mut part_lines: Vec<(usize, usize)> = slots
-            .iter()
-            .enumerate()
-            .filter_map(|(index, slot)| {
-                slot.filter(|slot| slot.declaration_index == declaration_index)
-                    .map(|slot| (index, slot.slot_index))
-            })
-            .collect();
-        part_lines.sort_by_key(|&(_, slot_index)| std::cmp::Reverse(slot_index));
-        for (index, slot_index) in part_lines {
-            let role = match (slot_index, decl.follow_target.is_some()) {
-                (0, true) => break,
-                (0, false) => decl.score_line_roles().first().copied(),
-                _ => Some(ScoreLineRole::Lyrics),
-            };
-            let content = parsed.get(index).copied().flatten().map(|(_, c)| c);
-            match (role, content) {
-                (Some(role), Some(content)) if is_removable(role, content) => {
-                    if let Some(flag) = removable.get_mut(index) {
-                        *flag = true;
-                    }
-                }
-                _ => break,
-            }
-        }
-    }
-    removable
+        .map(|entry| {
+            entry
+                .and_then(|(key, content)| {
+                    let decl = declarations.get(declaration_index_of(key, declarations)?)?;
+                    Some(
+                        decl.follow_target.is_none()
+                            && is_removable(decl.score_line_role(), content),
+                    )
+                })
+                .unwrap_or(false)
+        })
+        .collect()
 }
 
 /// Every whitespace-split token is a rest: `0` optionally followed by a run
@@ -314,10 +267,8 @@ fn sort_data_lines_by_declaration<'a>(
     // unrecognised-key block, which all rank `usize::MAX`) keep their
     // first-seen relative order.
     blocks.sort_by_key(|(block_key, _)| match block_key {
-        DataLineBlockKey::Key(key) => key_slot(key, declarations).map_or((usize::MAX, 0), |slot| {
-            (slot.declaration_index, slot.slot_index)
-        }),
-        DataLineBlockKey::Unparsed(_) => (usize::MAX, 0),
+        DataLineBlockKey::Key(key) => declaration_index_of(key, declarations).unwrap_or(usize::MAX),
+        DataLineBlockKey::Unparsed(_) => usize::MAX,
     });
 
     blocks.into_iter().flat_map(|(_, lines)| lines).collect()

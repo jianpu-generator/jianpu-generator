@@ -4,8 +4,9 @@ use super::slur_chains::{extend_note_chains, PendingSlurOpen, SlurChainContext, 
 use super::timed_unit::TimedUnit;
 use super::tuplet_spans::{finish_tuplet_spans, record_tuplet_tag, TupletSpanContext};
 use super::PartSliceResult;
-use crate::ast::grouped::{GroupedRest, NoteEvent, PartSlice};
+use crate::ast::grouped::{GroupedRest, LyricsSlice, NoteEvent, PartSlice};
 use crate::compiler::types::{ArcKind, ColumnElement, ElementContent, SlurSpan, TupletSpan};
+use crate::lyric_slots::measure_lyric_slots;
 
 // ── Top-level entry point ─────────────────────────────────────────────────────
 
@@ -26,6 +27,9 @@ pub(super) fn compile_part_slice(
     slur_spans: &mut Vec<SlurSpan>,
     tuplet_spans: &mut Vec<TupletSpan>,
 ) -> PartSliceResult {
+    if let Some(lyrics) = &slice.lyrics {
+        return compile_lyrics_slice(lyrics, &input);
+    }
     let mut elements: Vec<ColumnElement> = Vec::new();
     let mut beam_buf: Vec<BeamEntry> = Vec::new();
     let mut pending_chains: Vec<Vec<(u32, SlurKey)>> = Vec::new();
@@ -87,40 +91,51 @@ pub(super) fn compile_part_slice(
     }
 }
 
-fn process_events(state: &mut PartState<'_>, slice: &PartSlice) {
-    let mut lyrics_iters: Vec<_> = slice
-        .lyrics
+/// Compiles a lyric part's row: a `Lyric` element at the column of each of its
+/// target's notes that takes a syllable, then the bar line. It has no arcs,
+/// beams or tuplets of its own, and its note ids count the target's events the
+/// same way the target's own compile does, so `(part, note_id)` of a syllable
+/// names the note it is sung on.
+fn compile_lyrics_slice(lyrics: &LyricsSlice, input: &PartSliceInput) -> PartSliceResult {
+    let measure_slots = measure_lyric_slots(&lyrics.target_events, input.prev_tie);
+    let elements = measure_slots
+        .slots
         .iter()
-        .map(|l| (l.label.as_str(), l.syllables.iter()))
+        .zip(&lyrics.syllables)
+        .map(|(slot, syllable)| ColumnElement {
+            column: slot.column,
+            content: ElementContent::Lyric {
+                text: syllable.text.clone(),
+                note_id: input.next_note_id + slot.event_index,
+            },
+            note_id: None,
+        })
+        .chain(std::iter::once(ColumnElement {
+            column: measure_slots.end_column,
+            content: ElementContent::BarLine,
+            note_id: None,
+        }))
         .collect();
+    PartSliceResult {
+        elements,
+        final_pending_opens: Vec::new(),
+        final_tie: measure_slots.exits_tied,
+        final_tie_column: None,
+        final_tie_measure: None,
+        final_tie_note_id: None,
+        final_next_note_id: input.next_note_id + lyrics.target_events.len(),
+    }
+}
+
+fn process_events(state: &mut PartState<'_>, slice: &PartSlice) {
     for event in &slice.notes.events {
         let note_id = *state.next_note_id;
         *state.next_note_id += 1;
         match event {
-            NoteEvent::Note(note) => {
-                let is_tie_continuation = *state.prev_tie;
-                let lyrics: Vec<ElementContent> =
-                    if !lyrics_iters.is_empty() && !is_tie_continuation {
-                        lyrics_iters
-                            .iter_mut()
-                            .enumerate()
-                            .filter_map(|(verse, (label, it))| {
-                                it.next().map(|s| ElementContent::Lyric {
-                                    text: s.text.clone(),
-                                    verse,
-                                    verse_label: (*label).to_string(),
-                                    note_id,
-                                })
-                            })
-                            .collect()
-                    } else {
-                        Vec::new()
-                    };
-                compile_timed_unit(state, note, 0, lyrics, note_id);
-            }
+            NoteEvent::Note(note) => compile_timed_unit(state, note, 0, note_id),
             NoteEvent::Rest(rest) => compile_rest(state, rest, 0, note_id),
-            NoteEvent::Chord(chord) => compile_timed_unit(state, chord, 0, Vec::new(), note_id),
-            NoteEvent::Percussion(hit) => compile_timed_unit(state, hit, 0, Vec::new(), note_id),
+            NoteEvent::Chord(chord) => compile_timed_unit(state, chord, 0, note_id),
+            NoteEvent::Percussion(hit) => compile_timed_unit(state, hit, 0, note_id),
         }
     }
     flush_beam_buffer(state.beam_buf, state.elements);
@@ -171,7 +186,6 @@ fn compile_timed_unit<T: TimedUnit>(
     state: &mut PartState<'_>,
     unit: &T,
     measure_col_start: u32,
-    lyrics: Vec<ElementContent>,
     note_id: usize,
 ) {
     let is_tie_continuation = *state.prev_tie;
@@ -200,14 +214,6 @@ fn compile_timed_unit<T: TimedUnit>(
         *state.prev_tie_column = None;
         *state.prev_tie_measure = None;
         *state.prev_tie_note_id = None;
-    }
-
-    for content in lyrics {
-        state.elements.push(ColumnElement {
-            column: *state.col,
-            content,
-            note_id: None,
-        });
     }
 
     let event_col = *state.col;

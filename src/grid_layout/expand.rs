@@ -1,8 +1,7 @@
 use crate::compiler::types::{BarLineKind, MeasureBlock, MeasureRow};
 use crate::grid_layout::layout::{
-    block_column_width, chord_part_sub_row_heights, compute_bar_height, has_lyrics,
-    is_chord_only_row, is_lyric_row, note_part_sub_row_heights, LyricSizing, LABEL_COLS,
-    MUSIC_START_COL,
+    block_column_width, chord_part_sub_row_heights, compute_bar_height, is_chord_only_row,
+    is_lyric_row, note_part_sub_row_heights, LyricSizing, LABEL_COLS, MUSIC_START_COL,
 };
 use crate::grid_layout::types::{
     GridContent, GridElement, GridRow, HAlign, MeasureColumnLayout, VAlign,
@@ -203,7 +202,6 @@ pub(crate) fn expand_system_to_rows(
                     base,
                     column_count,
                     bar_height,
-                    draw_bar_line: true,
                     measure_layout,
                     lyric_sizing,
                 },
@@ -228,20 +226,6 @@ pub(crate) fn expand_system_to_rows(
                     notes_vertical_padding_pt: lyric_sizing.notes_vertical_padding_pt,
                 },
             ));
-            if has_lyrics(part_template) {
-                all_rows.push(expand_lyric_part(
-                    system,
-                    &LyricPartParams {
-                        part_idx,
-                        base,
-                        column_count,
-                        bar_height,
-                        draw_bar_line: false,
-                        measure_layout,
-                        lyric_sizing,
-                    },
-                ));
-            }
         }
     }
     all_rows

@@ -1,6 +1,8 @@
 use crate::types::{LyricSpanOut, NoteSpanOut};
 
-use super::helpers::{note_measure_index, MeasureSpan, NoteEndpoint};
+use super::helpers::{
+    lyric_part_in_range_or_target_in_range, note_measure_index, MeasureSpan, NoteEndpoint,
+};
 use super::types::{ClickableElementId, LyricCellOut, NoteCellOut, ResolveSelectionRangeResponse};
 
 /// `PartLabel ↔ PartLabel` and `Note ↔ PartLabel`. See [`part_label_range`]
@@ -130,15 +132,13 @@ fn part_label_range(
         lyric_spans
             .iter()
             .filter(|span| {
-                span.source_part_index >= part_start
-                    && span.source_part_index <= part_end
+                lyric_part_in_range_or_target_in_range(span, part_start, part_end)
                     && span.measure_index >= measure_start
                     && span.measure_index <= measure_end
             })
             .map(|span| LyricCellOut {
                 source_part_index: span.source_part_index,
                 note_id: span.note_id,
-                verse: span.verse,
             })
             .collect()
     };

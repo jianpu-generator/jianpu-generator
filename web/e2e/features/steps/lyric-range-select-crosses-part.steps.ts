@@ -52,14 +52,8 @@ const source = [
   '[Hv1] sol',
 ].join('\n')
 
-function lyricInPart(
-  page: import('@playwright/test').Page,
-  partIndex: number,
-  verse: number,
-) {
-  return page.locator(
-    tagSelector('lyric', { sourcePartIndex: partIndex, verse }),
-  )
+function lyricInPart(page: import('@playwright/test').Page, partIndex: number) {
+  return page.locator(tagSelector('lyric', { sourcePartIndex: partIndex }))
 }
 
 Given(
@@ -84,8 +78,8 @@ Given(
     await page.waitForSelector('[data-testid="play-measure-button"]', {
       timeout: 15_000,
     })
-    await expect(lyricInPart(page, 0, 0)).toHaveCount(3, { timeout: 10_000 })
-    await expect(lyricInPart(page, 1, 0)).toHaveCount(3, { timeout: 10_000 })
+    await expect(lyricInPart(page, 1)).toHaveCount(3, { timeout: 10_000 })
+    await expect(lyricInPart(page, 3)).toHaveCount(3, { timeout: 10_000 })
     await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(200)
   },
@@ -94,8 +88,8 @@ Given(
 When(
   "I click-and-click select Melody's verse 0 syllable {int} then Harmony's verse 0 syllable {int}",
   async ({ page }, fromIndex: number, toIndex: number) => {
-    const fromLyric = lyricInPart(page, 0, 0).nth(fromIndex)
-    const toLyric = lyricInPart(page, 1, 0).nth(toIndex)
+    const fromLyric = lyricInPart(page, 1).nth(fromIndex)
+    const toLyric = lyricInPart(page, 3).nth(toIndex)
     await expect(fromLyric).toBeVisible({ timeout: 5_000 })
     await expect(toLyric).toBeVisible({ timeout: 5_000 })
 
@@ -125,10 +119,10 @@ Then(
     )
     const expectedCount = (measureEnd - measureStart + 1) * 2
     await expect(selectedLyrics).toHaveCount(expectedCount)
-    for (const partIndex of [0, 1]) {
+    for (const partIndex of [1, 3]) {
       await expect(
         page.locator(
-          `${tagSelector('lyric', { sourcePartIndex: partIndex, verse: 0 })}[data-lyric-range-selected]`,
+          `${tagSelector('lyric', { sourcePartIndex: partIndex })}[data-lyric-range-selected]`,
         ),
       ).toHaveCount(measureEnd - measureStart + 1)
     }
@@ -144,9 +138,9 @@ Then(
     // order instead: this fixture renders one syllable per measure per part,
     // in measure order, so index `measureIndex` picks out that measure's
     // syllable directly.
-    for (const partIndex of [0, 1]) {
+    for (const partIndex of [1, 3]) {
       await expect(
-        lyricInPart(page, partIndex, 0).nth(measureIndex),
+        lyricInPart(page, partIndex).nth(measureIndex),
       ).not.toHaveAttribute('data-lyric-range-selected', '')
     }
   },

@@ -32,7 +32,6 @@ function cellFromLyricSpan(span: LyricSpan): LyricCell {
   return {
     sourcePartIndex: span.sourcePartIndex,
     noteId: span.noteId,
-    verse: span.verse,
   }
 }
 

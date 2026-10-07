@@ -1,5 +1,4 @@
 use super::*;
-use crate::ast::parsed::PartKind;
 
 #[test]
 fn list_parts_from_source_returns_declarations() {
@@ -226,7 +225,7 @@ fn split_pdf_filename_sanitizes_track_name() {
 }
 
 #[test]
-fn apply_visibility_filter_keeps_only_enabled_lyric_parts() {
+fn apply_track_filter_keeps_only_enabled_lyric_parts() {
     let input = concat!(
         "# metadata\n",
         "title = \"t\"\n",
@@ -246,26 +245,25 @@ fn apply_visibility_filter_keeps_only_enabled_lyric_parts() {
         "[Altov1] alt alt alt alt\n",
     );
     let mut score = compile(input, "test.jianpu", &[]).unwrap();
-    let lyrics_only = apply_visibility_filter(
+    apply_track_filter(
         &mut score,
         Some(&["Soprano".into(), "Alto".into(), "Altov1".into()]),
     );
-    assert!(lyrics_only.is_empty());
-    let soprano_slice = score.measures[0].parts[0].slice();
-    assert_eq!(soprano_slice.kind, PartKind::Notes);
-    assert!(
-        soprano_slice.lyrics.is_empty(),
-        "a lyric part that is not enabled should be dropped"
+    let names: Vec<&str> = score.measures[0]
+        .parts
+        .iter()
+        .filter_map(|part| part.name().map(String::as_str))
+        .collect();
+    assert_eq!(
+        names,
+        ["Soprano", "Alto", "Altov1"],
+        "a lyric part that is not enabled should be dropped, like any other part"
     );
-    let alto_slice = score.measures[0].parts[1].slice();
-    assert!(
-        !alto_slice.lyrics.is_empty(),
-        "an enabled lyric part should be kept"
-    );
+    assert!(score.measures[0].parts[2].slice().lyrics.is_some());
 }
 
 #[test]
-fn apply_visibility_filter_keeps_a_part_for_its_enabled_lyric_part_only() {
+fn apply_track_filter_keeps_a_lyric_part_whose_target_is_hidden() {
     let input = concat!(
         "# parts\n",
         "Melody [M] = notes\n",
@@ -276,9 +274,16 @@ fn apply_visibility_filter_keeps_a_part_for_its_enabled_lyric_part_only() {
         "[v1] do re mi fa\n",
     );
     let mut score = compile(input, "test.jianpu", &[]).unwrap();
-    let lyrics_only = apply_visibility_filter(&mut score, Some(&["v1".into()]));
-    assert_eq!(lyrics_only, vec!["M".to_string()]);
+    apply_track_filter(&mut score, Some(&["v1".into()]));
     assert_eq!(score.measures[0].parts.len(), 1);
+    let lyrics = score.measures[0].parts[0].slice().lyrics.as_ref().unwrap();
+    assert_eq!(lyrics.target_name, "M");
+    assert_eq!(lyrics.syllables.len(), 4);
+    assert_eq!(
+        lyrics.target_events.len(),
+        4,
+        "the lyric part still carries its target's timing"
+    );
 }
 
 #[test]

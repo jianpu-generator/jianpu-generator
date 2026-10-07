@@ -207,8 +207,13 @@ fn lyrics_distributed_per_measure() {
     let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
     let score = group(doc).unwrap();
     assert_eq!(score.measures.len(), 2);
-    let m0_lyrics = &score.measures[0].parts[0].slice().lyrics[0];
-    let m1_lyrics = &score.measures[1].parts[0].slice().lyrics[0];
+    let m0_lyrics = score.measures[0].parts[1].slice().lyrics.as_ref().unwrap();
+    let m1_lyrics = score.measures[1].parts[1].slice().lyrics.as_ref().unwrap();
     assert_eq!(m0_lyrics.syllables.len(), 4);
     assert_eq!(m1_lyrics.syllables.len(), 4);
+    assert_eq!(m0_lyrics.target_name, "Melody");
+    assert_eq!(m0_lyrics.target_events.len(), 4);
+    // The lyric part has no notes of its own, and the target no lyrics.
+    assert!(score.measures[0].parts[1].slice().notes.events.is_empty());
+    assert!(score.measures[0].parts[0].slice().lyrics.is_none());
 }

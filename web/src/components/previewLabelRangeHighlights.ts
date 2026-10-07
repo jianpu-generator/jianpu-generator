@@ -33,7 +33,6 @@ function lyricLabelHitFromGroup(group: Element): LyricLabelHit | undefined {
   if (tag?.tag !== 'lyric-label') return undefined
   return {
     sourcePartIndex: tag.val.sourcePartIndex,
-    verse: tag.val.verse,
     measureIndexStart: tag.val.measureIndexStart,
     measureIndexEnd: tag.val.measureIndexEnd,
   }
@@ -175,7 +174,7 @@ export function applyPartLabelRangeHighlight(
  * marquee spanned by `anchor`/`current`, restricted to `anchorSystem` — the
  * lyric-side mirror of `partLabelsInMarquee`. Every lyric label in a given
  * system shares the same `measureIndexStart`/`measureIndexEnd` (one
- * `LyricLabelClickTarget` per verse row *per system*, see
+ * `LyricLabelClickTarget` per lyric row *per system*, see
  * `grid_layout::click_targets::compute_all_lyric_label_click_targets`), so
  * that pair is a reliable key for "which system", same as `partLabelsInMarquee`. */
 export function lyricLabelsInMarquee(
@@ -224,7 +223,7 @@ export function applyLyricLabelRangeHighlight(
   const activeKeys = new Set(
     hits.map(
       (hit) =>
-        `${hit.sourcePartIndex}:${hit.verse}:${hit.measureIndexStart}:${hit.measureIndexEnd}`,
+        `${hit.sourcePartIndex}:${hit.measureIndexStart}:${hit.measureIndexEnd}`,
     ),
   )
   for (const rect of Array.from(
@@ -236,7 +235,7 @@ export function applyLyricLabelRangeHighlight(
     const hit = group && lyricLabelHitFromGroup(group)
     const key =
       hit &&
-      `${hit.sourcePartIndex}:${hit.verse}:${hit.measureIndexStart}:${hit.measureIndexEnd}`
+      `${hit.sourcePartIndex}:${hit.measureIndexStart}:${hit.measureIndexEnd}`
     if (typeof key === 'string' && activeKeys.has(key)) {
       rect.setAttribute(DATA_RANGE_ACTIVE_FLAG.lyricLabel, '')
     } else {
@@ -248,7 +247,7 @@ export function applyLyricLabelRangeHighlight(
 /** Re-applies the lyric-label hover fill from the given selected lyric
  * cells rather than from a live selection — the lyric-side mirror of
  * `applyPersistedPartLabelHighlights`. A lyric label counts as selected
- * once *every* syllable it covers (its verse across its whole system, see
+ * once *every* syllable it covers (its lyric part across its whole system, see
  * `lyricCellsForLyricLabels`) is present in `selectedLyricCells`. */
 export function applyPersistedLyricLabelHighlights(
   container: HTMLElement,
@@ -256,9 +255,7 @@ export function applyPersistedLyricLabelHighlights(
   selectedLyricCells: LyricCell[],
 ): void {
   const selectedKeys = new Set(
-    selectedLyricCells.map(
-      (c) => `${c.sourcePartIndex}:${c.noteId}:${c.verse}`,
-    ),
+    selectedLyricCells.map((c) => `${c.sourcePartIndex}:${c.noteId}`),
   )
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(
@@ -272,9 +269,7 @@ export function applyPersistedLyricLabelHighlights(
     const fullySelected =
       cells.length > 0 &&
       cells.every((cell) =>
-        selectedKeys.has(
-          `${cell.sourcePartIndex}:${cell.noteId}:${cell.verse}`,
-        ),
+        selectedKeys.has(`${cell.sourcePartIndex}:${cell.noteId}`),
       )
     if (fullySelected) {
       rect.setAttribute(DATA_RANGE_ACTIVE_FLAG.lyricLabel, '')

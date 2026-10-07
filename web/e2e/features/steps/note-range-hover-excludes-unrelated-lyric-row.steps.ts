@@ -75,7 +75,7 @@ Given(
     })
     await expect(noteInPart(page, 0)).toHaveCount(3, { timeout: 10_000 })
     await expect(noteInPart(page, 1)).toHaveCount(3, { timeout: 10_000 })
-    await expect(lyricInPart(page, 1)).toHaveCount(3, { timeout: 10_000 })
+    await expect(lyricInPart(page, 2)).toHaveCount(3, { timeout: 10_000 })
   },
 )
 
@@ -109,7 +109,7 @@ When(
 Then("Harmony's lyric syllables are not range-selected", async ({ page }) => {
   await expect(
     page.locator(
-      `${tagSelector('lyric', { sourcePartIndex: 1 })}[data-lyric-range-selected]`,
+      `${tagSelector('lyric', { sourcePartIndex: 2 })}[data-lyric-range-selected]`,
     ),
   ).toHaveCount(0)
 })

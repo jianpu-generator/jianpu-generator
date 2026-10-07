@@ -71,7 +71,6 @@ export function resolvePartLabelSelection(
     lyricCells = response.val.lyricCells.map((cell) => ({
       sourcePartIndex: cell.sourcePartIndex,
       noteId: cell.noteId,
-      verse: cell.verse,
     }))
   } else {
     const hits: PartLabelHit[] = container
@@ -176,7 +175,6 @@ export function resolveLyricLabelSelection(
     lyricCells = response.val.lyricCells.map((cell) => ({
       sourcePartIndex: cell.sourcePartIndex,
       noteId: cell.noteId,
-      verse: cell.verse,
     }))
   } else {
     const hits = container

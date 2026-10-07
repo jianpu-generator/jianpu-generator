@@ -1,11 +1,5 @@
-//! Cucumber harness for the positional-lyrics syntax proposal (bare,
-//! unprefixed lyric lines attaching to the nearest preceding part, or
-//! standing alone as an adurational block when they open a measure — see
-//! `tests/features/lyric_parts.feature`).
-//!
-//! This syntax is not implemented yet. Every scenario in that feature file
-//! is expected to FAIL until the parser/desugar work lands — do not "fix"
-//! these tests by loosening their expectations; fix the implementation.
+//! Cucumber harness for lyric parts (`lyrics[X]` declarations whose score
+//! lines attach to their target part; see `tests/features/lyric_parts.feature`).
 //!
 //! Clippy's `allow-*-in-tests` (clippy.toml) only recognizes `#[test]`-
 //! attributed functions as test code; cucumber's `#[given]`/`#[when]`/
@@ -22,6 +16,7 @@
 
 use cucumber::gherkin::Step;
 use cucumber::{given, then, when, World as _};
+use jianpu_generator::ast::grouped::MultiPartMeasure;
 use jianpu_generator::compile;
 
 #[derive(Debug, Clone, Default)]
@@ -65,6 +60,18 @@ fn find_verse(part: &PartSnapshot, verse: usize) -> &Vec<String> {
     })
 }
 
+/// Each lyric part singing along to `target`, in declaration order, as the
+/// text of its syllables.
+fn lyric_verses_of(measure: &MultiPartMeasure, target: &str) -> Vec<Vec<String>> {
+    measure
+        .parts
+        .iter()
+        .filter_map(|part| part.slice().lyrics.as_ref())
+        .filter(|lyrics| lyrics.target_name == target)
+        .map(|lyrics| lyrics.syllables.iter().map(|s| s.text.clone()).collect())
+        .collect()
+}
+
 #[given(expr = "the score source:")]
 fn given_score_source(world: &mut JianpuWorld, step: &Step) {
     world.source = step.docstring().cloned().unwrap_or_default();
@@ -82,16 +89,14 @@ fn when_compiled(world: &mut JianpuWorld) {
             parts: measure
                 .parts
                 .iter()
+                .filter(|part| part.slice().lyrics.is_none())
                 .map(|part| {
                     let slice = part.slice();
+                    let name = slice.name.clone().unwrap_or_default();
                     PartSnapshot {
-                        name: slice.name.clone().unwrap_or_default(),
                         note_event_count: slice.notes.events.len(),
-                        lyric_verses: slice
-                            .lyrics
-                            .iter()
-                            .map(|verse| verse.syllables.iter().map(|s| s.text.clone()).collect())
-                            .collect(),
+                        lyric_verses: lyric_verses_of(measure, &name),
+                        name,
                     }
                 })
                 .collect(),

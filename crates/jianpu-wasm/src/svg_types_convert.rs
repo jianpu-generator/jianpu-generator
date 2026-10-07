@@ -123,20 +123,16 @@ fn tag_to_out(tag: &Tag) -> TagOut {
         Tag::Lyric {
             source_part_index,
             note_id,
-            verse,
         } => TagOut::Lyric {
             source_part_index: *source_part_index,
             note_id: *note_id,
-            verse: *verse,
         },
         Tag::LyricLabel {
             source_part_index,
-            verse,
             measure_index_start,
             measure_index_end,
         } => TagOut::LyricLabel {
             source_part_index: *source_part_index,
-            verse: *verse,
             measure_index_start: *measure_index_start,
             measure_index_end: *measure_index_end,
         },

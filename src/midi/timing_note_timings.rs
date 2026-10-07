@@ -1,6 +1,6 @@
 use crate::ast::grouped::Score;
 use crate::error::IrrecoverableError;
-use crate::filters::apply_visibility_filter;
+use crate::filters::apply_track_filter;
 
 use super::navigation::{
     expand_navigation_with_note_positions, filter_expanded_tracks, ExpandedMeasureOrigin,
@@ -35,7 +35,7 @@ fn visible_score(score: &Score, visible_tracks: Option<&[String]>) -> Score {
         return score.clone();
     }
     let mut score = score.clone();
-    apply_visibility_filter(&mut score, visible_tracks);
+    apply_track_filter(&mut score, visible_tracks);
     score
 }
 

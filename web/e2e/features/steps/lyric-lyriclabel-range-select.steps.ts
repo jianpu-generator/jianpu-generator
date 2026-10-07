@@ -47,7 +47,7 @@ const source = [
 ].join('\n')
 
 function lyricInVerse(page: import('@playwright/test').Page, verse: number) {
-  return page.locator(tagSelector('lyric', { sourcePartIndex: 0, verse }))
+  return page.locator(tagSelector('lyric', { sourcePartIndex: verse + 1 }))
 }
 
 function verseLabelInSystem(
@@ -57,8 +57,7 @@ function verseLabelInSystem(
 ) {
   return page.locator(
     tagSelector('lyric-label', {
-      sourcePartIndex: 0,
-      verse,
+      sourcePartIndex: verse + 1,
       measureIndexStart,
     }),
   )
@@ -90,8 +89,7 @@ Given(
     await expect(lyricInVerse(page, 1)).toHaveCount(3, { timeout: 10_000 })
     await page.waitForSelector(
       tagSelector('lyric-label', {
-        sourcePartIndex: 0,
-        verse: 1,
+        sourcePartIndex: 2,
         measureIndexStart: 1,
       }),
       { timeout: 10_000 },

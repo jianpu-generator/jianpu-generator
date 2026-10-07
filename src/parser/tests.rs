@@ -19,6 +19,16 @@ fn notes_track(doc: &ParsedDocument) -> &ParsedTimedTrack {
         .expect("expected a notes track")
 }
 
+fn lyrics_track<'a>(doc: &'a ParsedDocument, abbreviation: &str) -> &'a ParsedTimedTrack {
+    doc.tracks
+        .iter()
+        .map(|t| match t {
+            ParsedTrack::Timed(n) => n,
+        })
+        .find(|n| n.abbreviation == abbreviation)
+        .expect("expected a lyric track")
+}
+
 #[test]
 fn parses_full_document() {
     let input = concat!(
@@ -38,8 +48,8 @@ fn parses_full_document() {
     let doc = parse(input, "test.jianpu", &[]).unwrap();
     assert_eq!(doc.metadata.title, Some("hello world".to_string()));
     assert_eq!(doc.metadata.author, Some("foo".to_string()));
-    assert_eq!(doc.declarations.len(), 1);
-    assert_eq!(doc.tracks.len(), 1);
+    assert_eq!(doc.declarations.len(), 2);
+    assert_eq!(doc.tracks.len(), 2);
     let notes = notes_track(&doc);
     let event_count: usize = notes
         .measure_slots
@@ -50,10 +60,8 @@ fn parses_full_document() {
         })
         .sum();
     assert_eq!(event_count, 7);
-    assert_eq!(
-        notes.lyrics.as_ref().unwrap().measure_syllables[0][0].len(),
-        4
-    );
+    let verse = lyrics_track(&doc, "Melodyv1");
+    assert_eq!(verse.lyrics.as_ref().unwrap().measure_syllables[0].len(), 4);
 }
 
 #[test]
@@ -158,17 +166,9 @@ fn parses_two_named_parts() {
             ParsedTrack::Timed(_) => None,
         })
         .unwrap();
-    // `Notes` parts now always carry a (possibly empty) lyrics structure, so
-    // positionally-attached bare lines have somewhere to land; with none
-    // written here, every measure has zero verses.
-    assert!(soprano
-        .lyrics
-        .as_ref()
-        .is_some_and(|l| l.measure_syllables.iter().all(Vec::is_empty)));
-    assert!(alto
-        .lyrics
-        .as_ref()
-        .is_some_and(|l| l.measure_syllables.iter().all(Vec::is_empty)));
+    // Only a lyric part carries lyrics.
+    assert!(soprano.lyrics.is_none());
+    assert!(alto.lyrics.is_none());
 }
 
 #[test]
@@ -241,8 +241,9 @@ fn single_unnamed_part_remains_compatible() {
         "[Melodyv1] a b c d\n",
     );
     let doc = parse(input, "test.jianpu", &[]).unwrap();
-    assert_eq!(doc.tracks.len(), 1);
+    assert_eq!(doc.tracks.len(), 2);
     let notes = notes_track(&doc);
     assert_eq!(notes.abbreviation, "Melody");
-    assert!(notes.lyrics.is_some());
+    assert!(notes.lyrics.is_none());
+    assert!(lyrics_track(&doc, "Melodyv1").lyrics.is_some());
 }

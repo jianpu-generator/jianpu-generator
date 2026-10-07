@@ -5,6 +5,14 @@ fn part(abbreviation: &str, display_name: &str) -> PartInfo {
     PartInfo {
         abbreviation: abbreviation.to_string(),
         display_name: display_name.to_string(),
+        sounds: true,
+    }
+}
+
+fn lyric_part(abbreviation: &str, display_name: &str) -> PartInfo {
+    PartInfo {
+        sounds: false,
+        ..part(abbreviation, display_name)
     }
 }
 
@@ -15,7 +23,7 @@ fn names(items: &[&str]) -> Vec<String> {
 fn melody_verse_and_chords() -> Vec<PartInfo> {
     vec![
         part("M", "Melody"),
-        part("v1", "Verse 1"),
+        lyric_part("v1", "Verse 1"),
         part("C", "Chords"),
     ]
 }
@@ -37,11 +45,8 @@ fn hiding_a_part_removes_only_that_part() {
     let resolved = resolve_part_visibility(&melody_verse_and_chords(), &state);
 
     assert_eq!(resolved.rendered_tracks, Some(names(&["v1", "C"])));
-    assert_eq!(resolved.sounding_tracks, Some(names(&["v1", "C"])));
-    assert_eq!(
-        resolved.sounding_display_names,
-        Some(names(&["Verse 1", "Chords"]))
-    );
+    assert_eq!(resolved.sounding_tracks, Some(names(&["C"])));
+    assert_eq!(resolved.sounding_display_names, Some(names(&["Chords"])));
 }
 
 #[test]
@@ -54,6 +59,19 @@ fn hiding_a_lyric_part_is_the_same_as_hiding_any_other_part() {
     let resolved = resolve_part_visibility(&melody_verse_and_chords(), &state);
 
     assert_eq!(resolved.rendered_tracks, Some(names(&["M", "C"])));
+}
+
+#[test]
+fn a_lyric_part_never_counts_as_sounding() {
+    let hidden = PartToggleState {
+        hidden_parts: names(&["v1"]),
+        ..Default::default()
+    };
+
+    let resolved = resolve_part_visibility(&melody_verse_and_chords(), &hidden);
+
+    assert_eq!(resolved.sounding_tracks, None);
+    assert_eq!(resolved.sounding_display_names, None);
 }
 
 #[test]

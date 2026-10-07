@@ -112,7 +112,7 @@ Feature: Lyric parts
     And part "Melody" measure 1 verse 1 has 0 syllables
     And part "Melody" measure 1 verse 2 has syllables "la, la, la, la"
 
-  Scenario: A measure that writes no lyric line has no verse rows
+  Scenario: A measure that writes no lyric line has a blank verse
     Given the score source:
       """
       # metadata
@@ -132,7 +132,8 @@ Feature: Lyric parts
       """
     When it is compiled
     Then part "Alto" measure 1 has 1 lyric verse
-    And part "Alto" measure 2 has 0 lyric verses
+    And part "Alto" measure 2 has 1 lyric verse
+    And part "Alto" measure 2 verse 1 has 0 syllables
 
   Scenario: Each notes part carries its own lyric parts
     Given the score source:

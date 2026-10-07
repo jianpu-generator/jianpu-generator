@@ -123,9 +123,10 @@ fn lyrics_only_measure_without_lyrics_is_a_blank_lyric_row_not_a_rest() {
             .svgs
             .concat();
 
+    // The blank first measure draws no syllable text (and no rest).
     assert_eq!(
         texts_of_variant(&svg, "lyric"),
-        vec!["", "la", "la", "la", "la"]
+        vec!["la", "la", "la", "la"]
     );
     assert!(texts_of_variant(&svg, "note-head").is_empty());
     assert!(texts_of_variant(&svg, "rest").is_empty());

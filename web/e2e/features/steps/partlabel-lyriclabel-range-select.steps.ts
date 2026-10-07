@@ -76,16 +76,14 @@ function partLabelInSystem(
   )
 }
 
-function verseLabelInSystem(
+function lyricLabelInSystem(
   page: import('@playwright/test').Page,
   partIndex: number,
-  verse: number,
   measureIndexStart: number,
 ) {
   return page.locator(
     tagSelector('lyric-label', {
       sourcePartIndex: partIndex,
-      verse,
       measureIndexStart,
     }),
   )
@@ -121,8 +119,7 @@ Given(
     )
     await page.waitForSelector(
       tagSelector('lyric-label', {
-        sourcePartIndex: 1,
-        verse: 0,
+        sourcePartIndex: 2,
         measureIndexStart: 1,
       }),
       { timeout: 10_000 },
@@ -136,7 +133,7 @@ When(
   "I click-and-click select Melody's label in system 0 then Harmony's verse label in system 1",
   async ({ page }) => {
     const fromLabel = partLabelInSystem(page, 0, 0)
-    const toLabel = verseLabelInSystem(page, 1, 0, 1)
+    const toLabel = lyricLabelInSystem(page, 2, 1)
     await expect(fromLabel).toBeVisible({ timeout: 5_000 })
     await expect(toLabel).toBeVisible({ timeout: 5_000 })
 
@@ -156,15 +153,15 @@ Then(
 Then(
   '{int} syllables are range-selected in total, as seen in partlabel lyriclabel range select',
   async ({ page }, count: number) => {
-    // Only Harmony's verse 0 (the label's own verse) should be selected —
-    // verse 1 sits in range but on the wrong verse.
+    // Only Harmony's first lyric part (the label's own) lies in the swept
+    // rows; its second lyric part sits below the label.
     const selected = page.locator(
       `${tagSelector('lyric')}[data-lyric-range-selected]`,
     )
     await expect(selected).toHaveCount(count)
     await expect(
       page.locator(
-        `${tagSelector('lyric', { sourcePartIndex: 1, verse: 1 })}[data-lyric-range-selected]`,
+        `${tagSelector('lyric', { sourcePartIndex: 3 })}[data-lyric-range-selected]`,
       ),
     ).toHaveCount(0)
   },

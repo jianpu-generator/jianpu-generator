@@ -6,15 +6,6 @@ use crate::grid_layout::layout::{
 use crate::grid_layout::types::{GridElement, Header, MeasureHighlight, MeasureRange};
 use std::collections::HashMap;
 
-fn has_lyrics(row: &crate::compiler::types::MeasureRow) -> bool {
-    row.elements.iter().any(|e| {
-        matches!(
-            e.content,
-            crate::compiler::types::ElementContent::Lyric { .. }
-        )
-    })
-}
-
 /// Column bounds of a measure block, in fractional grid columns, matching where its
 /// bar lines are actually rendered. Interior bar lines are centered within their own
 /// dedicated column, but the system-leading bar line (`is_first_block`) is flush
@@ -58,15 +49,12 @@ pub(crate) fn system_musical_row_count(
         .map(|(idx, part_template)| {
             if is_lyric_row(part_template) {
                 1
+            } else if is_chord_only_row(part_template) {
+                4
+            } else if tuplet_part_indices.contains(&idx) {
+                7
             } else {
-                let sub_count = if is_chord_only_row(part_template) {
-                    4
-                } else if tuplet_part_indices.contains(&idx) {
-                    7
-                } else {
-                    6
-                };
-                sub_count + if has_lyrics(part_template) { 1 } else { 0 }
+                6
             }
         })
         .sum()
