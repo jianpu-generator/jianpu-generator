@@ -2,7 +2,8 @@ use jianpu_generator::parser::parts_parser::InstrumentInfo;
 use jianpu_generator::{
     compile, find_measure_at_byte_offset, list_lyric_spans_from_source,
     list_measure_spans_from_source, list_note_spans_from_source,
-    render_documents_from_source_filtered_with_lyrics, render_documents_with_highlight_range,
+    render_documents_from_source_with_visibility,
+    render_documents_with_highlight_range_and_visibility, ResolvedPartVisibility,
 };
 
 use crate::diagnostics::{
@@ -42,15 +43,13 @@ pub(crate) use responses_midi::*;
 
 pub(crate) fn render_response(
     source: &str,
-    enabled_tracks: Option<&[String]>,
-    disabled_lyrics: Option<&[String]>,
+    visibility: &ResolvedPartVisibility,
     instruments: &[InstrumentInfo],
 ) -> RenderResponse {
-    match render_documents_from_source_filtered_with_lyrics(
+    match render_documents_from_source_with_visibility(
         source,
         "input.jianpu",
-        enabled_tracks,
-        disabled_lyrics,
+        visibility,
         instruments,
     ) {
         Ok(output) => {
@@ -80,16 +79,14 @@ pub(crate) fn render_response(
 pub(crate) fn render_with_highlight_range_response(
     source: &str,
     measure_ranges: &[jianpu_generator::grid_layout::MeasureRange],
-    enabled_tracks: Option<&[String]>,
-    disabled_lyrics: Option<&[String]>,
+    visibility: &ResolvedPartVisibility,
     instruments: &[InstrumentInfo],
 ) -> RenderResponse {
-    match render_documents_with_highlight_range(
+    match render_documents_with_highlight_range_and_visibility(
         source,
         "input.jianpu",
         measure_ranges,
-        enabled_tracks,
-        disabled_lyrics,
+        visibility,
         instruments,
     ) {
         Ok(output) => {

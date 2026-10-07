@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { ALL_PARTS_VISIBLE } from '../hooks/workerHelpers'
 import type { WorkerRequest } from './messages'
 
 /**
@@ -103,7 +104,7 @@ vi.mock('../../../crates/jianpu-wasm/pkg-component/jianpu_wasm.js', () => ({
 }))
 
 const raceMessages: WorkerRequest[] = [
-  { type: 'render', source: '', id: 1 },
+  { type: 'render', source: '', id: 1, visibility: ALL_PARTS_VISIBLE },
   { type: 'listParts', source: '', id: 2 },
   {
     type: 'updatePartDeclaration',
@@ -117,7 +118,7 @@ const raceMessages: WorkerRequest[] = [
     },
     id: 3,
   },
-  { type: 'generatePdf', source: '', id: 4 },
+  { type: 'generatePdf', source: '', id: 4, visibility: ALL_PARTS_VISIBLE },
   { type: 'generateSplitPdf', source: '', id: 5, baseName: 'x' },
   { type: 'generateMidi', source: '', id: 6 },
   { type: 'generateSplitMidi', source: '', id: 7, baseName: 'x' },
@@ -137,6 +138,7 @@ const raceMessages: WorkerRequest[] = [
     source: '',
     id: 11,
     ranges: [{ start: 0, end: 0 }],
+    visibility: ALL_PARTS_VISIBLE,
   },
   { type: 'listMeasureSpans', source: '', id: 12 },
   { type: 'previewInstrument', id: 13, programNumber: 0 },

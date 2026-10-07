@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
 import type { FontBytesByFamily } from '../jianpuWasm'
+import type { PartToggleState } from '../types'
 import { useJianpuWorkerActions } from './useJianpuWorkerActions'
 import { useJianpuWorkerState } from './useJianpuWorkerState'
 import type { JianpuWorkerState } from './useJianpuWorkerTypes'
@@ -8,9 +9,8 @@ export type { JianpuWorkerState } from './useJianpuWorkerTypes'
 
 export function useJianpuWorker(
   source: string,
-  disabledParts: ReadonlySet<string>,
-  disabledLyrics: ReadonlySet<string>,
-  soloedParts: ReadonlySet<string>,
+  partToggles: PartToggleState,
+  wasmReady: boolean,
   activeFile: string,
   soundfontBytes: Uint8Array | null,
   fontBytes: FontBytesByFamily | null,
@@ -38,15 +38,10 @@ export function useJianpuWorker(
   measureRangeSelectedPartNamesRef: RefObject<string[] | undefined>,
   debounceMs = 300,
 ): JianpuWorkerState {
-  const state = useJianpuWorkerState(
-    source,
-    activeFile,
-    disabledParts,
-    disabledLyrics,
-    soloedParts,
-  )
+  const state = useJianpuWorkerState(source, activeFile, partToggles, wasmReady)
   const {
     parts,
+    visibility,
     partDeclarations,
     partsLoading,
     documents,
@@ -96,6 +91,7 @@ export function useJianpuWorker(
 
   return {
     parts,
+    visibility,
     partDeclarations,
     partsLoading,
     documents,

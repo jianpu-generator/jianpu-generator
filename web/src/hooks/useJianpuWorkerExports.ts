@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import type { ResolvedPartVisibility } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
 import { baseNameFromActiveFile, postAfterPaint } from './workerHelpers'
 
@@ -7,7 +8,7 @@ interface UseJianpuWorkerExportsParams {
   sourceRef: React.RefObject<string>
   activeFileRef: React.RefObject<string>
   enabledTracksRef: React.RefObject<string[] | undefined>
-  disabledLyricsRef: React.RefObject<string[] | undefined>
+  visibilityRef: React.RefObject<ResolvedPartVisibility>
   pdfExporting: boolean
   splitPdfExporting: boolean
   midiExporting: boolean
@@ -43,7 +44,7 @@ export function useJianpuWorkerExports({
   sourceRef,
   activeFileRef,
   enabledTracksRef,
-  disabledLyricsRef,
+  visibilityRef,
   pdfExporting,
   splitPdfExporting,
   midiExporting,
@@ -85,8 +86,7 @@ export function useJianpuWorkerExports({
       type: 'generatePdf',
       source: sourceRef.current,
       id,
-      enabledTracks: enabledTracksRef.current,
-      disabledLyrics: disabledLyricsRef.current,
+      visibility: visibilityRef.current,
     }
     postAfterPaint(worker, payload)
   }, [
@@ -97,8 +97,7 @@ export function useJianpuWorkerExports({
     latestPdfIdRef,
     setPdfExporting,
     sourceRef,
-    enabledTracksRef,
-    disabledLyricsRef,
+    visibilityRef,
   ])
 
   const exportSplitPdf = useCallback(() => {

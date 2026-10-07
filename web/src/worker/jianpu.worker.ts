@@ -245,8 +245,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const result = jianpuWasm().renderSvgWithHighlightRange(
       msg.source,
       msg.ranges,
-      msg.enabledTracks,
-      msg.disabledLyrics,
+      msg.visibility,
       GM_INSTRUMENTS,
     )
     if (result.tag === 'ok') {
@@ -309,8 +308,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
 
   const result = jianpuWasm().renderSvg(
     msg.source,
-    msg.enabledTracks,
-    msg.disabledLyrics,
+    msg.visibility,
     GM_INSTRUMENTS,
   )
   if (result.tag === 'ok') {

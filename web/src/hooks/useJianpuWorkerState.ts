@@ -8,6 +8,8 @@ import type {
   NoteSpan,
   PartDeclaration,
   PartInfo,
+  PartToggleState,
+  ResolvedPartVisibility,
   SectionRange,
   SequenceEntry,
 } from '../types'
@@ -18,10 +20,9 @@ import type {
   TextRequestTracker,
 } from './useJianpuWorkerTypes'
 import {
-  disabledLyricsForRender,
-  enabledPartNamesForFilename,
-  enabledTracksForRender,
+  ALL_PARTS_VISIBLE,
   mp3FilenameFromActiveFile,
+  resolvePartVisibility,
   triggerAnchorDownload,
   wavFilenameFromActiveFile,
 } from './workerHelpers'
@@ -34,9 +35,10 @@ import {
 export function useJianpuWorkerState(
   source: string,
   activeFile: string,
-  disabledParts: ReadonlySet<string>,
-  disabledLyrics: ReadonlySet<string>,
-  soloedParts: ReadonlySet<string>,
+  partToggles: PartToggleState,
+  /** Whether the main thread's wasm component is instantiated, which
+   * resolving `partToggles` needs. */
+  wasmReady: boolean,
 ) {
   const [parts, setParts] = useState<PartInfo[]>([])
   const [partDeclarations, setPartDeclarations] = useState<PartDeclaration[]>(
@@ -158,9 +160,10 @@ export function useJianpuWorkerState(
   const latestSplitMp3IdRef = useRef(0)
   const sourceRef = useRef(source)
   const activeFileRef = useRef(activeFile)
+  const visibilityRef = useRef<ResolvedPartVisibility>(ALL_PARTS_VISIBLE)
   const enabledTracksRef = useRef<string[] | undefined>(undefined)
+  const renderedTracksRef = useRef<string[] | undefined>(undefined)
   const enabledPartNamesRef = useRef<string[] | undefined>(undefined)
-  const disabledLyricsRef = useRef<string[] | undefined>(undefined)
   const audioAvailableRef = useRef(false)
   const cursorOffsetTimerRef = useRef<number | null>(null)
   const lastSelectionRef = useRef<{
@@ -199,27 +202,22 @@ export function useJianpuWorkerState(
     setPendingDownload(null)
   }
 
-  const effectiveDisabledParts = useMemo(() => {
-    if (soloedParts.size === 0) return disabledParts
-    return new Set(
-      parts
-        .map((part) => part.abbreviation)
-        .filter((abbr) => !soloedParts.has(abbr)),
-    )
-  }, [soloedParts, parts, disabledParts])
-
-  const enabledTracks = useMemo(
-    () => enabledTracksForRender(parts, effectiveDisabledParts),
-    [parts, effectiveDisabledParts],
+  const resolvedVisibility = useMemo(
+    () =>
+      wasmReady ? resolvePartVisibility(parts, partToggles) : ALL_PARTS_VISIBLE,
+    [wasmReady, parts, partToggles],
   )
-  const enabledPartNames = useMemo(
-    () => enabledPartNamesForFilename(parts, effectiveDisabledParts),
-    [parts, effectiveDisabledParts],
-  )
-  const disabledLyricsTracks = useMemo(
-    () => disabledLyricsForRender(parts, disabledLyrics),
-    [parts, disabledLyrics],
-  )
+  // `parts` is a fresh array after every re-listing, so keep the previous
+  // `visibility` whenever the resolved content is unchanged — otherwise every
+  // keystroke would re-render the preview for an identical result.
+  const visibilityKey = JSON.stringify(resolvedVisibility)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: visibilityKey is the content of resolvedVisibility
+  const visibility = useMemo(() => resolvedVisibility, [visibilityKey])
+  /** Parts whose notes sound; `undefined` when every part's notes show. */
+  const enabledTracks = visibility.soundingTracks
+  /** Parts drawn (notes and/or lyrics); `undefined` when every part is. */
+  const renderedTracks = visibility.renderedTracks
+  const enabledPartNames = visibility.soundingDisplayNames
   const wavFilename = useMemo(
     () => wavFilenameFromActiveFile(activeFile, enabledPartNames),
     [activeFile, enabledPartNames],
@@ -231,9 +229,10 @@ export function useJianpuWorkerState(
 
   sourceRef.current = source
   activeFileRef.current = activeFile
+  visibilityRef.current = visibility
   enabledTracksRef.current = enabledTracks
+  renderedTracksRef.current = renderedTracks
   enabledPartNamesRef.current = enabledPartNames
-  disabledLyricsRef.current = disabledLyricsTracks
   measureSpansRef.current = measureSpans
 
   return {
@@ -346,13 +345,15 @@ export function useJianpuWorkerState(
     activeFileRef,
     enabledTracksRef,
     enabledPartNamesRef,
-    disabledLyricsRef,
+    visibilityRef,
+    renderedTracksRef,
     audioAvailableRef,
     cursorOffsetTimerRef,
     lastSelectionRef,
     enabledTracks,
     enabledPartNames,
-    disabledLyricsTracks,
+    visibility,
+    renderedTracks,
     wavFilename,
     mp3Filename,
   }

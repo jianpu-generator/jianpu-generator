@@ -68,9 +68,13 @@ fn wide_chord_symbols_align_their_root_digit_with_the_note() {
         "[n] 1 2 3 4\n",
     );
 
-    let output =
-        render_documents_from_source_filtered_with_lyrics(input, "test.jianpu", None, None, &[])
-            .unwrap();
+    let output = render_documents_from_source_with_visibility(
+        input,
+        "test.jianpu",
+        &ResolvedPartVisibility::default(),
+        &[],
+    )
+    .unwrap();
 
     let mut chords = Vec::new();
     let mut notes = Vec::new();
@@ -111,9 +115,13 @@ n = notes
 [n] 1 2 3 4
 "#;
 
-    let output =
-        render_documents_from_source_filtered_with_lyrics(input, "test.jianpu", None, None, &[])
-            .unwrap();
+    let output = render_documents_from_source_with_visibility(
+        input,
+        "test.jianpu",
+        &ResolvedPartVisibility::default(),
+        &[],
+    )
+    .unwrap();
 
     let mut chords = Vec::new();
     let mut notes = Vec::new();
@@ -166,9 +174,13 @@ fn notes_and_chords_parts_align_on_the_same_beat() {
         "[b] 1\n",
     );
 
-    let output =
-        render_documents_from_source_filtered_with_lyrics(input, "test.jianpu", None, None, &[])
-            .unwrap();
+    let output = render_documents_from_source_with_visibility(
+        input,
+        "test.jianpu",
+        &ResolvedPartVisibility::default(),
+        &[],
+    )
+    .unwrap();
 
     let mut chords = Vec::new();
     let mut notes = Vec::new();

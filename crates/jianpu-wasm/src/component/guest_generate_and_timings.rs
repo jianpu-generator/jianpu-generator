@@ -84,14 +84,12 @@ pub(super) fn generate_split_mp3s(
 
 pub(super) fn generate_pdf(
     source: String,
-    enabled_tracks: Option<Vec<String>>,
-    disabled_lyrics: Option<Vec<String>>,
+    visibility: ResolvedPartVisibility,
     fonts: FontBytesByFamily,
 ) -> GeneratePdfResponse {
     generate_pdf_response_to_wit(crate::responses::generate_pdf_response(
         &source,
-        enabled_tracks.as_deref(),
-        disabled_lyrics.as_deref(),
+        &resolved_part_visibility_from_wit(visibility),
         &font_bytes_by_family_from_wit(fonts),
     ))
 }

@@ -1,21 +1,58 @@
 use crate::compiler::types::{
     ColumnElement, CompileResult, ElementContent, MeasureBlock, MeasureRow, RowId,
 };
+use std::collections::HashSet;
 
-pub fn consolidate(mut result: CompileResult) -> CompileResult {
-    result.blocks = result.blocks.into_iter().map(consolidate_block).collect();
+pub fn consolidate(result: CompileResult) -> CompileResult {
+    consolidate_with_lyrics_only(result, &[])
+}
+
+/// Like [`consolidate`], but each part named in `lyrics_only_parts` keeps only
+/// its lyric rows: its notes row is dropped (and with it the part's slur and
+/// tuplet arcs), while every lyric element stays at its original column. A
+/// lyrics-only part's measure with no lyrics has no row at all, which
+/// `grid_layout::layout_systems`'s union-of-parts packing pads with a blank
+/// lyric row whenever a neighbouring measure in the system has lyrics.
+pub fn consolidate_with_lyrics_only(
+    mut result: CompileResult,
+    lyrics_only_parts: &[String],
+) -> CompileResult {
+    let lyrics_only_indices: HashSet<usize> = result
+        .blocks
+        .iter()
+        .flat_map(|block| &block.rows)
+        .filter(|row| lyrics_only_parts.contains(&row.label))
+        .map(|row| row.source_part_index)
+        .collect();
+    result
+        .slur_spans
+        .retain(|span| !lyrics_only_indices.contains(&span.part_index));
+    result
+        .tuplet_spans
+        .retain(|span| !lyrics_only_indices.contains(&span.part_index));
+    result.blocks = result
+        .blocks
+        .into_iter()
+        .map(|block| consolidate_block(block, lyrics_only_parts))
+        .collect();
     result
 }
 
-fn consolidate_block(mut block: MeasureBlock) -> MeasureBlock {
+fn consolidate_block(mut block: MeasureBlock, lyrics_only_parts: &[String]) -> MeasureBlock {
     let merge_across_parts = block.merge_duplicate_measures_across_parts;
-    block.rows = consolidate_rows(expand_mixed_rows(block.rows), merge_across_parts);
+    block.rows = consolidate_rows(
+        expand_mixed_rows(block.rows, lyrics_only_parts),
+        merge_across_parts,
+    );
     block
 }
 
-fn expand_mixed_rows(rows: Vec<MeasureRow>) -> Vec<MeasureRow> {
+fn expand_mixed_rows(rows: Vec<MeasureRow>, lyrics_only_parts: &[String]) -> Vec<MeasureRow> {
     rows.into_iter()
         .flat_map(|row| {
+            if lyrics_only_parts.contains(&row.label) {
+                return lyrics_rows(&row);
+            }
             let has_note_or_rest = row_has_note_or_rest(&row);
             let verse_count = lyric_verse_count(&row);
             if has_note_or_rest && verse_count > 0 {

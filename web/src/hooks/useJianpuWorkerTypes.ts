@@ -12,6 +12,7 @@ import type {
   PartSettings,
   PitchDescription,
   RangeEditOperation,
+  ResolvedPartVisibility,
   SectionRange,
   SequenceEntry,
 } from '../types'
@@ -67,6 +68,8 @@ export interface PendingDownload {
 
 export interface JianpuWorkerState {
   parts: PartInfo[]
+  /** What Rust resolved the raw part toggles to. */
+  visibility: ResolvedPartVisibility
   partDeclarations: PartDeclaration[]
   partsLoading: boolean
   documents: SvgDocument[]

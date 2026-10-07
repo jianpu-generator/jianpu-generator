@@ -1,6 +1,7 @@
 use super::*;
 use crate::responses::render_response;
 use crate::types::RenderResponse;
+use jianpu_generator::ResolvedPartVisibility;
 use types::DiagnosticSeverity;
 
 #[test]
@@ -18,7 +19,7 @@ fn ok_response_has_svgs() {
         "[Melody] 1 2 3 4\n",
         "a b c d\n",
     );
-    let resp = render_response(input, None, None, &[]);
+    let resp = render_response(input, &ResolvedPartVisibility::default(), &[]);
     match resp {
         RenderResponse::Ok { documents, .. } => {
             assert_eq!(documents.len(), 1);
@@ -46,15 +47,21 @@ fn render_with_disabled_lyrics_hides_lyrics_for_part() {
         "[Alto] 5 6 7 1\n",
         "alt alt alt alt\n",
     );
-    let all = match render_response(input, None, None, &[]) {
+    let all = match render_response(input, &ResolvedPartVisibility::default(), &[]) {
         RenderResponse::Ok { documents, .. } => documents,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
-    let alto_lyrics_hidden =
-        match render_response(input, None, Some(vec!["Alto".into()]).as_deref(), &[]) {
-            RenderResponse::Ok { documents, .. } => documents,
-            RenderResponse::Err { .. } => panic!("expected ok"),
-        };
+    let alto_lyrics_hidden = match render_response(
+        input,
+        &ResolvedPartVisibility {
+            disabled_lyrics: vec!["Alto".into()],
+            ..Default::default()
+        },
+        &[],
+    ) {
+        RenderResponse::Ok { documents, .. } => documents,
+        RenderResponse::Err { .. } => panic!("expected ok"),
+    };
     // With lyrics, both parts render more elements than without
     assert!(all[0].elements.len() > alto_lyrics_hidden[0].elements.len());
 }
@@ -75,15 +82,21 @@ fn render_with_enabled_tracks_filters_parts() {
         "[Soprano] 1 2 3 4\n",
         "[Alto] 5 6 7 1\n",
     );
-    let all = match render_response(input, None, None, &[]) {
+    let all = match render_response(input, &ResolvedPartVisibility::default(), &[]) {
         RenderResponse::Ok { documents, .. } => documents,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
-    let soprano_only =
-        match render_response(input, Some(vec!["Soprano".into()]).as_deref(), None, &[]) {
-            RenderResponse::Ok { documents, .. } => documents,
-            RenderResponse::Err { .. } => panic!("expected ok"),
-        };
+    let soprano_only = match render_response(
+        input,
+        &ResolvedPartVisibility {
+            rendered_tracks: Some(vec!["Soprano".into()]),
+            ..Default::default()
+        },
+        &[],
+    ) {
+        RenderResponse::Ok { documents, .. } => documents,
+        RenderResponse::Err { .. } => panic!("expected ok"),
+    };
     // Rendering both parts produces more elements than rendering one
     assert_ne!(all[0].elements.len(), soprano_only[0].elements.len());
 }
@@ -91,7 +104,7 @@ fn render_with_enabled_tracks_filters_parts() {
 #[test]
 fn err_response_has_structured_diagnostic() {
     // Missing sections are now recoverable; render returns Ok with error diagnostics.
-    let resp = render_response("not valid jianpu", None, None, &[]);
+    let resp = render_response("not valid jianpu", &ResolvedPartVisibility::default(), &[]);
     let diagnostics = match resp {
         RenderResponse::Err { diagnostics, .. } | RenderResponse::Ok { diagnostics, .. } => {
             diagnostics
@@ -110,7 +123,7 @@ fn recoverable_error_produces_warning_severity_view_zone() {
         "# parts\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\na b\n",
     );
-    let resp = render_response(input, None, None, &[]);
+    let resp = render_response(input, &ResolvedPartVisibility::default(), &[]);
     match resp {
         RenderResponse::Ok {
             diagnostics,
@@ -134,7 +147,7 @@ fn recoverable_error_produces_warning_severity_view_zone() {
 fn reference_jianpu_renders() {
     for path in demo_file_paths() {
         let source = read_demo_file(&path);
-        let resp = render_response(&source, None, None, &[]);
+        let resp = render_response(&source, &ResolvedPartVisibility::default(), &[]);
         match resp {
             RenderResponse::Ok {
                 documents,
@@ -183,7 +196,7 @@ fn diagnostic_span_is_utf8_byte_offset() {
         "a b c d\n",
     );
     let token_byte_start = source.find('z').expect("error token in source");
-    let resp = render_response(source, None, None, &[]);
+    let resp = render_response(source, &ResolvedPartVisibility::default(), &[]);
     let diagnostics = match resp {
         RenderResponse::Ok { diagnostics, .. } => diagnostics,
         RenderResponse::Err { diagnostics, .. } => diagnostics,
@@ -237,7 +250,7 @@ fn follow_part_with_explicit_override_in_some_sections_renders_ok() {
         "[s1] 5---\n",
         "[a] 1---\n",
     );
-    let resp = render_response(input, None, None, &[]);
+    let resp = render_response(input, &ResolvedPartVisibility::default(), &[]);
     match resp {
         RenderResponse::Ok {
             documents,
@@ -292,7 +305,7 @@ fn two_parts_with_non_four_four_first_section_has_no_diagnostics() {
         "[a] 5\n",
         "[b] 1\n",
     );
-    let resp = render_response(input, None, None, &[]);
+    let resp = render_response(input, &ResolvedPartVisibility::default(), &[]);
     match resp {
         RenderResponse::Ok {
             documents,

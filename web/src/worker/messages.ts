@@ -11,6 +11,7 @@ import type {
   PartSettings,
   PitchDescription,
   RangeEditOperation,
+  ResolvedPartVisibility,
   SectionRange,
   SequenceEntry,
 } from '../types'
@@ -30,8 +31,7 @@ export type WorkerRequest =
       type: 'render'
       source: string
       id: number
-      enabledTracks?: string[]
-      disabledLyrics?: string[]
+      visibility: ResolvedPartVisibility
     }
   | { type: 'listParts'; source: string; id: number }
   | {
@@ -45,8 +45,7 @@ export type WorkerRequest =
       type: 'generatePdf'
       source: string
       id: number
-      enabledTracks?: string[]
-      disabledLyrics?: string[]
+      visibility: ResolvedPartVisibility
     }
   | {
       type: 'generateSplitPdf'
@@ -144,8 +143,7 @@ export type WorkerRequest =
        * highlight several disjoint measures at once (e.g. "C" and a later
        * repeat of "A", but not "B" in between). */
       ranges: { start: number; end: number }[]
-      enabledTracks?: string[]
-      disabledLyrics?: string[]
+      visibility: ResolvedPartVisibility
     }
   | { type: 'listMeasureSpans'; source: string; id: number }
   | {

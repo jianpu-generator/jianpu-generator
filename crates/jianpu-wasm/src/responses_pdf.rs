@@ -1,6 +1,7 @@
 use jianpu_generator::fonts::FontBytesByFamily;
 use jianpu_generator::{
-    write_pdf_from_source_filtered_with_lyrics, write_split_pdfs_from_source, zip_split_pdfs,
+    write_pdf_from_source_with_visibility, write_split_pdfs_from_source, zip_split_pdfs,
+    ResolvedPartVisibility,
 };
 
 use super::diagnostic_from_error;
@@ -8,18 +9,10 @@ use crate::types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
 
 pub(crate) fn generate_pdf_response(
     source: &str,
-    enabled_tracks: Option<&[String]>,
-    disabled_lyrics: Option<&[String]>,
+    visibility: &ResolvedPartVisibility,
     fonts: &FontBytesByFamily,
 ) -> GeneratePdfResponse {
-    match write_pdf_from_source_filtered_with_lyrics(
-        source,
-        "input.jianpu",
-        enabled_tracks,
-        disabled_lyrics,
-        fonts,
-        &[],
-    ) {
+    match write_pdf_from_source_with_visibility(source, "input.jianpu", visibility, fonts, &[]) {
         Ok(pdf) => GeneratePdfResponse::Ok { pdf },
         Err(e) => GeneratePdfResponse::Err {
             diagnostics: vec![diagnostic_from_error(&e)],

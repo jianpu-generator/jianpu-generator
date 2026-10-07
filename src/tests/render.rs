@@ -14,6 +14,8 @@ mod tests_render_filtering;
 mod tests_render_filtering_slur;
 #[path = "tests_render_low_octave_dots.rs"]
 mod tests_render_low_octave_dots;
+#[path = "tests_render_lyrics_only.rs"]
+mod tests_render_lyrics_only;
 #[path = "tests_render_rendering.rs"]
 mod tests_render_rendering;
 #[path = "tests_render_rendering_tuplets.rs"]

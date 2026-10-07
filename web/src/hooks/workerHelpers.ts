@@ -1,5 +1,11 @@
 import { findIndex, findLastIndex } from 'remeda'
-import type { MeasureSpan, PartInfo } from '../types'
+import { jianpuWasm } from '../jianpuWasm'
+import type {
+  MeasureSpan,
+  PartInfo,
+  PartToggleState,
+  ResolvedPartVisibility,
+} from '../types'
 
 export function measureRangeInSpan(
   spans: MeasureSpan[],
@@ -50,41 +56,30 @@ export function measureRangeInSpanWithReveal(
   }
 }
 
-export function enabledTracksForRender(
-  parts: PartInfo[],
-  disabledParts: ReadonlySet<string>,
-): string[] | undefined {
-  if (parts.length === 0) return undefined
-  const enabled = parts
-    .filter((part) => !disabledParts.has(part.abbreviation))
-    .map((part) => part.abbreviation)
-  if (enabled.length === parts.length) return undefined
-  return enabled
+/** What is drawn and what sounds when nothing is hidden or soloed, and what
+ * is used while the score's parts are not known yet. */
+export const ALL_PARTS_VISIBLE: ResolvedPartVisibility = {
+  lyricsOnlyTracks: [],
+  disabledLyrics: [],
 }
 
-export function enabledPartNamesForFilename(
+/** Resolves the toggle UI's raw hide/solo state into what is drawn and what
+ * sounds. The rules live in Rust (`resolve_part_visibility`); this only
+ * hands the state over. */
+export function resolvePartVisibility(
   parts: PartInfo[],
-  disabledParts: ReadonlySet<string>,
-): string[] | undefined {
-  if (parts.length === 0) return undefined
-  const enabled = parts
-    .filter((part) => !disabledParts.has(part.abbreviation))
-    .map((part) => part.displayName)
-  if (enabled.length === parts.length) return undefined
-  return enabled
+  toggles: PartToggleState,
+): ResolvedPartVisibility {
+  if (parts.length === 0) return ALL_PARTS_VISIBLE
+  return jianpuWasm().resolvePartVisibility(parts, toggles)
 }
 
-export function disabledLyricsForRender(
+/** True when the toggles leave no part drawn at all. */
+export function noPartsSelected(
   parts: PartInfo[],
-  disabledLyrics: ReadonlySet<string>,
-): string[] | undefined {
-  const lyricParts = parts.filter((part) => part.hasLyrics)
-  if (lyricParts.length === 0) return undefined
-  const disabled = lyricParts
-    .filter((part) => disabledLyrics.has(part.abbreviation))
-    .map((part) => part.abbreviation)
-  if (disabled.length === 0) return undefined
-  return disabled
+  visibility: ResolvedPartVisibility,
+): boolean {
+  return parts.length > 0 && visibility.renderedTracks?.length === 0
 }
 
 /** Wraps export bytes in an object URL of the given MIME type — the URL is

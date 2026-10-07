@@ -1,5 +1,6 @@
 use crate::ast::grouped::Score;
 use crate::error::IrrecoverableError;
+use crate::filters::ResolvedPartVisibility;
 use crate::part_info::PartInfo;
 
 /// Output of a successful render: typed SVG document tree and any diagnostics.
@@ -22,11 +23,13 @@ struct DocumentsResult {
 fn render_documents(
     score: &Score,
     parts: &[PartInfo],
+    lyrics_only_tracks: &[String],
 ) -> Result<DocumentsResult, IrrecoverableError> {
     let config = crate::render_config::RenderConfig::from_metadata(&score.metadata);
     let header = crate::build_header(score, parts);
     let compile_result = crate::compiler::compile(score);
-    let compile_result = crate::consolidator::consolidate(compile_result);
+    let compile_result =
+        crate::consolidator::consolidate_with_lyrics_only(compile_result, lyrics_only_tracks);
     let crate::grid_layout::LayoutOutput {
         pages: grid_pages,
         diagnostics,
@@ -75,12 +78,14 @@ fn render_documents(
 fn render_documents_with_range(
     score: &Score,
     parts: &[PartInfo],
+    lyrics_only_tracks: &[String],
     measure_ranges: &[crate::grid_layout::MeasureRange],
 ) -> Result<DocumentsResult, IrrecoverableError> {
     let config = crate::render_config::RenderConfig::from_metadata(&score.metadata);
     let header = crate::build_header(score, parts);
     let compile_result = crate::compiler::compile(score);
-    let compile_result = crate::consolidator::consolidate(compile_result);
+    let compile_result =
+        crate::consolidator::consolidate_with_lyrics_only(compile_result, lyrics_only_tracks);
     let crate::grid_layout::LayoutOutput {
         pages: grid_pages,
         diagnostics,
@@ -133,27 +138,27 @@ fn render_documents_with_range(
     })
 }
 
-/// Parse, group, optionally filter tracks and lyrics, and return typed SVG document trees.
+/// Parse, group, apply a resolved part visibility, and return typed SVG document trees.
 ///
-/// When `enabled_tracks` is `None`, all parts are rendered.
-/// When `Some(tracks)` is empty, no parts are rendered.
-/// When `disabled_lyrics` lists part abbreviations, lyrics are hidden for those parts.
-pub fn render_documents_from_source_filtered_with_lyrics(
+/// Parts outside `visibility.rendered_tracks` are not rendered, parts in
+/// `visibility.lyrics_only_tracks` are rendered with only their lyrics, and
+/// `visibility.disabled_lyrics` lists parts rendered without their lyrics.
+pub fn render_documents_from_source_with_visibility(
     source: &str,
     filename: &str,
-    enabled_tracks: Option<&[String]>,
-    disabled_lyrics: Option<&[String]>,
+    visibility: &ResolvedPartVisibility,
     instruments: &[crate::parser::parts_parser::InstrumentInfo],
 ) -> Result<RenderDocumentOutput, IrrecoverableError> {
+    let enabled_tracks = visibility.rendered_tracks.as_deref();
     let parts = crate::filter_part_list(
         crate::list_parts_from_source(source, filename, instruments)?,
         enabled_tracks,
     );
     let mut score = crate::compile(source, filename, instruments)?;
     crate::apply_track_filter(&mut score, enabled_tracks);
-    crate::apply_lyrics_filter(&mut score, disabled_lyrics);
+    crate::apply_lyrics_filter(&mut score, Some(&visibility.disabled_lyrics));
     let mut diagnostics = crate::collect_measure_diagnostics(&score);
-    let result = render_documents(&score, &parts)?;
+    let result = render_documents(&score, &parts, &visibility.lyrics_only_tracks)?;
     diagnostics.extend(result.diagnostics);
     Ok(RenderDocumentOutput {
         documents: result.documents,
@@ -161,30 +166,30 @@ pub fn render_documents_from_source_filtered_with_lyrics(
     })
 }
 
-/// Parse, group, optionally filter tracks and lyrics, and return typed SVG document trees with highlighted measure ranges.
-///
-/// When `enabled_tracks` is `None`, all parts are rendered.
-/// When `Some(tracks)` is empty, no parts are rendered.
-/// When `disabled_lyrics` lists part abbreviations, lyrics are hidden for those parts.
-/// `measure_ranges` lists the disjoint, inclusive ranges of measures to highlight (a `#
-/// sequence` chain selection can span several disjoint measures at once).
-pub fn render_documents_with_highlight_range(
+/// Like [`render_documents_from_source_with_visibility`], with `measure_ranges`
+/// (disjoint, inclusive) highlighted.
+pub fn render_documents_with_highlight_range_and_visibility(
     source: &str,
     filename: &str,
     measure_ranges: &[crate::grid_layout::MeasureRange],
-    enabled_tracks: Option<&[String]>,
-    disabled_lyrics: Option<&[String]>,
+    visibility: &ResolvedPartVisibility,
     instruments: &[crate::parser::parts_parser::InstrumentInfo],
 ) -> Result<RenderDocumentOutput, IrrecoverableError> {
+    let enabled_tracks = visibility.rendered_tracks.as_deref();
     let parts = crate::filter_part_list(
         crate::list_parts_from_source(source, filename, instruments)?,
         enabled_tracks,
     );
     let mut score = crate::compile(source, filename, instruments)?;
     crate::apply_track_filter(&mut score, enabled_tracks);
-    crate::apply_lyrics_filter(&mut score, disabled_lyrics);
+    crate::apply_lyrics_filter(&mut score, Some(&visibility.disabled_lyrics));
     let mut diagnostics = crate::collect_measure_diagnostics(&score);
-    let result = render_documents_with_range(&score, &parts, measure_ranges)?;
+    let result = render_documents_with_range(
+        &score,
+        &parts,
+        &visibility.lyrics_only_tracks,
+        measure_ranges,
+    )?;
     diagnostics.extend(result.diagnostics);
     Ok(RenderDocumentOutput {
         documents: result.documents,
