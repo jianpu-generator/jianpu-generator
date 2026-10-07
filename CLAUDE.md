@@ -34,6 +34,10 @@ Test cases should not be inlined with the source code, they should live in separ
 
 Never use tuple in new data structures, always use struct instead.
 
+## Web frontend must stay dumb
+
+Keep the TypeScript web frontend as dumb as possible; put logic in Rust (compiled to wasm for the worker). The web layer passes raw UI state (e.g. hidden/soloed sets) to Rust and renders what comes back. Don't derive effective state (solo resolution, track filtering) in TS hooks.
+
 ## Architecture documentation
 
 The rendering pipeline layers, entry points, key types, and domain glossary are documented in `ARCHITECTURE.md`.
