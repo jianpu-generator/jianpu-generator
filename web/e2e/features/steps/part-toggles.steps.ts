@@ -198,7 +198,9 @@ Then(
     expect(recordedLyricX).not.toBeNull()
     await expect
       .poll(async () => (await firstLyricLocator(page).boundingBox())?.x)
-      .toBeCloseTo(recordedLyricX as number, 1)
+      // Column widths no longer include the hidden notes, so the layout may
+      // shift sub-pixel; the Rust render test uses the same 0.5 tolerance.
+      .toBeCloseTo(recordedLyricX as number, 0)
   },
 )
 
