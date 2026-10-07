@@ -26,3 +26,4 @@ package-lock.json
 # Generated SVG output from `cargo run -- generate svg`
 /*.svg
 /fixtures/*.svg
+dev.log
