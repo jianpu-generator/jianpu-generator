@@ -27,7 +27,6 @@ fn simple_block(col_count: u32) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
             kind: crate::ast::parsed::PartKind::Notes,
-            lyric_target: None,
             absorbed_rows: Vec::new(),
             id: RowId("S".to_string()),
             label: String::new(),

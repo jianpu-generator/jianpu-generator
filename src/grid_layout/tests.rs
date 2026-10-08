@@ -64,7 +64,6 @@ fn column_geometry_label_width_is_independent_of_musical_density() {
 fn note_row(id: &str) -> MeasureRow {
     MeasureRow {
         kind: crate::ast::parsed::PartKind::Notes,
-        lyric_target: None,
         absorbed_rows: Vec::new(),
         id: RowId(id.to_string()),
         label: id.to_string(),
@@ -86,7 +85,6 @@ fn note_row(id: &str) -> MeasureRow {
 fn chord_row(id: &str) -> MeasureRow {
     MeasureRow {
         kind: crate::ast::parsed::PartKind::Notes,
-        lyric_target: None,
         absorbed_rows: Vec::new(),
         id: RowId(id.to_string()),
         label: id.to_string(),
@@ -108,7 +106,6 @@ fn lyric_row(id: &str) -> MeasureRow {
         kind: crate::ast::parsed::PartKind::Lyrics {
             target_part_index: 0,
         },
-        lyric_target: Some(RowId("S".to_string())),
         absorbed_rows: Vec::new(),
         id: RowId(id.to_string()),
         label: id.to_string(),
@@ -134,7 +131,6 @@ pub(crate) fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
             kind: crate::ast::parsed::PartKind::Notes,
-            lyric_target: None,
             absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
             label: row_id.to_string(),

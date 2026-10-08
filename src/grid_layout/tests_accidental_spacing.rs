@@ -58,7 +58,6 @@ fn make_block_with_accidental_note(
     MeasureBlock {
         rows: vec![MeasureRow {
             kind: crate::ast::parsed::PartKind::Notes,
-            lyric_target: None,
             absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
             label: row_id.to_string(),
@@ -207,7 +206,6 @@ fn make_block_with_chord(text: &str) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
             kind: crate::ast::parsed::PartKind::Notes,
-            lyric_target: None,
             absorbed_rows: Vec::new(),
             id: RowId("C".to_string()),
             label: "C".to_string(),

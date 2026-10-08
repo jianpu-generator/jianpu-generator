@@ -62,12 +62,6 @@ pub struct MeasureRow {
     /// The kind of the part this row was compiled from; what a row draws
     /// (e.g. lyric syllables vs. notes) follows from it.
     pub kind: PartKind,
-    /// TEMPORARY (removed in stage 3 of PLAN-lyric-parts-uniform.md): for a
-    /// lyric row (`kind` is `PartKind::Lyrics`), the `RowId` of the row it sings
-    /// along to, which may be absent from the block when filtered out. `None`
-    /// for every other kind. Only grid layout's "absorb following lyric rows"
-    /// grouping reads it, via `is_lyric_row_of`.
-    pub lyric_target: Option<RowId>,
     pub elements: Vec<ColumnElement>,
     /// The original part index this row was compiled from, before consolidation.
     /// Used to look up slur arcs keyed by original part index.
@@ -213,6 +207,18 @@ pub struct CompileResult {
     pub blocks: Vec<MeasureBlock>,
     pub slur_spans: Vec<SlurSpan>,
     pub tuplet_spans: Vec<TupletSpan>,
+    /// Which lyric part sings along to which part, by row id. Built from the
+    /// part-level `LyricsSlice::target_name`; rows themselves carry no target.
+    /// Grid layout reads it to group a note row with the lyric rows under it.
+    pub lyric_links: Vec<LyricLink>,
+}
+
+/// A lyric part's link to the part it sings along to, as row ids. The target
+/// may be absent from a block's rows when it is hidden or filtered out.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LyricLink {
+    pub lyric_row_id: RowId,
+    pub target_row_id: RowId,
 }
 
 #[derive(Debug, Clone, PartialEq)]

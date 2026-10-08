@@ -64,7 +64,6 @@ fn make_block(row_id: &str, content: ElementContent, bar_col: u32) -> MeasureBlo
     MeasureBlock {
         rows: vec![MeasureRow {
             kind: crate::ast::parsed::PartKind::Notes,
-            lyric_target: None,
             absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
             label: row_id.to_string(),

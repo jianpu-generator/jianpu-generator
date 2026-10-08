@@ -48,7 +48,6 @@ fn merge_rest_run(run: &[MeasureBlock]) -> MeasureBlock {
                     id: row.id.clone(),
                     label: row.label.clone(),
                     kind: row.kind,
-                    lyric_target: row.lyric_target.clone(),
                     elements: vec![
                         ColumnElement {
                             column: 0,

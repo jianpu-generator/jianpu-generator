@@ -11,7 +11,7 @@ use std::collections::{HashMap, HashSet};
 
 #[path = "layout_row_classification.rs"]
 mod row_classification;
-pub(crate) use row_classification::{is_chord_only_row, is_lyric_row, is_lyric_row_of};
+pub(crate) use row_classification::{is_chord_only_row, is_lyric_row, sings_along_to};
 
 #[path = "layout_heights.rs"]
 mod heights;
@@ -304,6 +304,7 @@ pub fn layout(
     let highlight_and_click_infos =
         compute_highlight_and_click_infos(&HighlightAndClickInfosParams {
             blocks,
+            lyric_links: &compile_result.lyric_links,
             page_systems: &page_systems,
             tuplet_bracket_map: &tuplet_bracket_map,
             header,

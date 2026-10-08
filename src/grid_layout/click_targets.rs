@@ -1,4 +1,4 @@
-use crate::compiler::types::MeasureBlock;
+use crate::compiler::types::{LyricLink, MeasureBlock};
 use crate::grid_layout::highlight::measure_column_bounds;
 use crate::grid_layout::layout::{
     block_column_width, directive_line_should_emit, is_lyric_row, LABEL_COLS, MUSIC_START_COL,
@@ -216,6 +216,7 @@ pub(crate) fn targets_on_page<T: Clone>(targets: &[(usize, T)], page_idx: usize)
 /// `page_systems` in identical order, so the running total agrees at every
 /// system boundary.
 pub(crate) fn compute_all_part_label_click_targets(
+    lyric_links: &[LyricLink],
     page_systems: &[Vec<Vec<MeasureBlock>>],
     tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
     header: &Header,
@@ -232,7 +233,7 @@ pub(crate) fn compute_all_part_label_click_targets(
         base,
         hide_system_dividers,
         |page_idx, system, row_offset, tuplet_part_indices, _musical_row_count| {
-            let part_spans = note_row_spans(system, row_offset, tuplet_part_indices);
+            let part_spans = note_row_spans(lyric_links, system, row_offset, tuplet_part_indices);
 
             let measure_index_start = global_measure_index;
             for block in system {
@@ -294,6 +295,7 @@ pub(crate) struct HighlightAndClickInfos {
 
 pub(crate) struct HighlightAndClickInfosParams<'a> {
     pub(crate) blocks: &'a [MeasureBlock],
+    pub(crate) lyric_links: &'a [LyricLink],
     pub(crate) page_systems: &'a [Vec<Vec<MeasureBlock>>],
     pub(crate) tuplet_bracket_map: &'a HashMap<(usize, usize), Vec<GridElement>>,
     pub(crate) header: &'a Header,
@@ -307,6 +309,7 @@ pub(crate) fn compute_highlight_and_click_infos(
 ) -> HighlightAndClickInfos {
     let HighlightAndClickInfosParams {
         blocks,
+        lyric_links,
         page_systems,
         tuplet_bracket_map,
         header,
@@ -314,8 +317,9 @@ pub(crate) fn compute_highlight_and_click_infos(
         hide_system_dividers,
         highlighted_measure_ranges,
     } = params;
-    let (blocks, page_systems, tuplet_bracket_map, header, base, hide_system_dividers) = (
+    let (blocks, lyric_links, page_systems, tuplet_bracket_map, header, base, hide_system_dividers) = (
         *blocks,
+        *lyric_links,
         *page_systems,
         *tuplet_bracket_map,
         *header,
@@ -351,8 +355,9 @@ pub(crate) fn compute_highlight_and_click_infos(
     // call to one line instead of a 6-line block, keeping this function
     // under the repo's max-line-count lint.
     macro_rules! compute_all {
-        ($f:expr) => {
+        ($f:expr $(, $links:expr)?) => {
             $f(
+                $($links,)?
                 page_systems,
                 tuplet_bracket_map,
                 header,
@@ -362,10 +367,13 @@ pub(crate) fn compute_highlight_and_click_infos(
         };
     }
     let all_click_target_infos = compute_all!(compute_all_measure_click_targets);
-    let all_playback_cursor_target_infos = compute_all!(compute_all_playback_cursor_targets);
-    let all_part_label_click_target_infos = compute_all!(compute_all_part_label_click_targets);
-    let all_lyric_click_target_infos = compute_all!(compute_all_lyric_click_targets);
-    let all_lyric_label_click_target_infos = compute_all!(compute_all_lyric_label_click_targets);
+    let all_playback_cursor_target_infos =
+        compute_all!(compute_all_playback_cursor_targets, lyric_links);
+    let all_part_label_click_target_infos =
+        compute_all!(compute_all_part_label_click_targets, lyric_links);
+    let all_lyric_click_target_infos = compute_all!(compute_all_lyric_click_targets, lyric_links);
+    let all_lyric_label_click_target_infos =
+        compute_all!(compute_all_lyric_label_click_targets, lyric_links);
     let all_bar_number_click_target_infos = compute_all!(compute_all_bar_number_click_targets);
     let all_bar_line_click_target_infos = compute_all!(compute_all_bar_line_click_targets);
 

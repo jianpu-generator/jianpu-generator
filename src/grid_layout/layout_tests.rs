@@ -10,6 +10,9 @@ mod tests_layout_directives;
 #[path = "tests_highlight.rs"]
 mod tests_highlight;
 
+#[path = "tests_lyric_links.rs"]
+mod tests_lyric_links;
+
 #[path = "tests_playback_cursor.rs"]
 mod tests_playback_cursor;
 

@@ -20,6 +20,7 @@ use rest_runs::merge_rest_runs;
 
 use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartRow, Score};
 use crate::ast::parsed::{Accidental, KeyChange, NoteName, PartKind};
+use itertools::Itertools;
 
 struct PartSliceResult {
     elements: Vec<ColumnElement>,
@@ -78,10 +79,37 @@ pub fn compile(score: &Score) -> CompileResult {
     }
 
     CompileResult {
+        lyric_links: lyric_links(score),
         blocks,
         slur_spans,
         tuplet_spans,
     }
+}
+
+/// Every lyric part's link to its target part, read from the part level
+/// (`LyricsSlice::target_name`) and named by the same `RowId`s the rows get.
+fn lyric_links(score: &Score) -> Vec<LyricLink> {
+    score
+        .measures
+        .iter()
+        .flat_map(|measure| measure.parts.iter().enumerate())
+        .filter_map(|(part_idx, part_row)| {
+            part_row.slice().lyrics.as_ref().map(|lyrics| LyricLink {
+                lyric_row_id: part_row_id(part_row, part_idx),
+                target_row_id: RowId(lyrics.target_name.clone()),
+            })
+        })
+        .unique()
+        .collect()
+}
+
+fn part_row_id(part_row: &PartRow, part_idx: usize) -> RowId {
+    RowId(
+        part_row
+            .name()
+            .cloned()
+            .unwrap_or_else(|| format!("__anon_{part_idx}")),
+    )
 }
 
 /// Indices into `measure.parts` that are actually compiled/sounded for this
@@ -199,20 +227,13 @@ fn compile_measure(
         };
         update_cross_state(cs, &mut slice_result);
 
-        let name = part_row.name().cloned();
-        let label = name.clone().unwrap_or_default();
-        let id = RowId(name.unwrap_or_else(|| format!("__anon_{part_idx}")));
+        let label = part_row.name().cloned().unwrap_or_default();
+        let id = part_row_id(part_row, part_idx);
         let kind = part_row.slice().kind;
-        let lyric_target = part_row
-            .slice()
-            .lyrics
-            .as_ref()
-            .map(|lyrics| RowId(lyrics.target_name.clone()));
         rows.push(MeasureRow {
             id,
             label,
             kind,
-            lyric_target,
             elements: slice_result.elements,
             source_part_index: part_idx,
             absorbed_rows: Vec::new(),
