@@ -163,7 +163,7 @@ fn make_padding_row(template_row: &MeasureRow, block: &MeasureBlock) -> MeasureR
     MeasureRow {
         id: template_row.id.clone(),
         label: template_row.label.clone(),
-        kind: template_row.kind.clone(),
+        kind: template_row.kind,
         elements,
         source_part_index: template_row.source_part_index,
         absorbed_rows: Vec::new(),

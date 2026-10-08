@@ -26,7 +26,7 @@ fn no_header() -> Header {
 /// line, sharing `source_part_index` with `lyric_verse_row`.
 fn notes_row_with_two_notes() -> MeasureRow {
     MeasureRow {
-        kind: crate::compiler::types::RowKind::Sounding,
+        kind: crate::ast::parsed::PartKind::Notes,
         absorbed_rows: Vec::new(),
         id: RowId("V".to_string()),
         label: String::new(),
@@ -68,8 +68,8 @@ fn notes_row_with_two_notes() -> MeasureRow {
 /// own row rather than the notes row's own elements.
 fn lyric_verse_row() -> MeasureRow {
     MeasureRow {
-        kind: crate::compiler::types::RowKind::Lyrics {
-            target: RowId("V".to_string()),
+        kind: crate::ast::parsed::PartKind::Lyrics {
+            target_part_index: 0,
         },
         absorbed_rows: Vec::new(),
         id: RowId("V-lyrics-0".to_string()),
@@ -152,6 +152,7 @@ fn playback_cursor_target_extends_over_its_lyric_verse_row() {
             blocks: vec![block],
             slur_spans: vec![],
             tuplet_spans: vec![],
+            lyric_links: vec![verse_link()],
         },
         &test_render_config(),
         &no_header(),
@@ -203,6 +204,7 @@ fn note_click_target_does_not_extend_over_its_lyric_verse_row() {
             blocks: vec![block],
             slur_spans: vec![],
             tuplet_spans: vec![],
+            lyric_links: vec![verse_link()],
         },
         &test_render_config(),
         &no_header(),
@@ -234,3 +236,11 @@ fn note_click_target_does_not_extend_over_its_lyric_verse_row() {
 #[cfg(test)]
 #[path = "tests_playback_cursor_bar_line_snapping.rs"]
 mod tests_bar_line_snapping;
+
+/// The compile-time link from `lyric_verse_row` to its notes row.
+fn verse_link() -> crate::compiler::types::LyricLink {
+    crate::compiler::types::LyricLink {
+        lyric_row_id: RowId("V-lyrics-0".to_string()),
+        target_row_id: RowId("V".to_string()),
+    }
+}

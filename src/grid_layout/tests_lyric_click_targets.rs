@@ -56,7 +56,7 @@ fn test_render_config() -> RenderConfig {
 /// `source_part_index` with `lyric_verse_row`.
 fn notes_row_with_a_two_beat_note() -> MeasureRow {
     MeasureRow {
-        kind: crate::compiler::types::RowKind::Sounding,
+        kind: crate::ast::parsed::PartKind::Notes,
         absorbed_rows: Vec::new(),
         id: RowId("V".to_string()),
         label: String::new(),
@@ -107,8 +107,8 @@ fn notes_row_with_a_two_beat_note() -> MeasureRow {
 /// rather than the notes row's own elements).
 fn lyric_verse_row() -> MeasureRow {
     MeasureRow {
-        kind: crate::compiler::types::RowKind::Lyrics {
-            target: RowId("V".to_string()),
+        kind: crate::ast::parsed::PartKind::Lyrics {
+            target_part_index: 0,
         },
         absorbed_rows: Vec::new(),
         id: RowId("V-lyrics-0".to_string()),
@@ -162,6 +162,7 @@ fn lyric_click_target_spans_its_note_full_column_width() {
             blocks: vec![block],
             slur_spans: vec![],
             tuplet_spans: vec![],
+            lyric_links: vec![verse_link()],
         },
         &test_render_config(),
         &no_header(),
@@ -234,6 +235,7 @@ fn lyric_click_target_of_first_syllable_snaps_to_leading_bar_line() {
             blocks: vec![block],
             slur_spans: vec![],
             tuplet_spans: vec![],
+            lyric_links: vec![verse_link()],
         },
         &test_render_config(),
         &no_header(),
@@ -316,6 +318,7 @@ fn lyric_click_target_of_last_syllable_snaps_to_trailing_bar_line() {
             blocks: vec![block1, block2],
             slur_spans: vec![],
             tuplet_spans: vec![],
+            lyric_links: vec![verse_link()],
         },
         &test_render_config(),
         &no_header(),
@@ -350,4 +353,12 @@ fn lyric_click_target_of_last_syllable_snaps_to_trailing_bar_line() {
          column, so the last syllable's right edge should snap there \
          exactly, not to a half-column x"
     );
+}
+
+/// The compile-time link from `lyric_verse_row` to its notes row.
+fn verse_link() -> crate::compiler::types::LyricLink {
+    crate::compiler::types::LyricLink {
+        lyric_row_id: RowId("V-lyrics-0".to_string()),
+        target_row_id: RowId("V".to_string()),
+    }
 }

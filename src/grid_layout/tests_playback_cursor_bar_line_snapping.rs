@@ -10,7 +10,7 @@ use crate::compiler::types::{
 /// system without colliding.
 fn notes_row_two_notes(first_note_id: usize) -> MeasureRow {
     MeasureRow {
-        kind: crate::compiler::types::RowKind::Sounding,
+        kind: crate::ast::parsed::PartKind::Notes,
         absorbed_rows: Vec::new(),
         id: RowId("V".to_string()),
         label: String::new(),
@@ -70,6 +70,7 @@ fn playback_cursor_targets_snap_to_bar_lines_at_measure_edges() {
             blocks: vec![block(0), block(2)],
             slur_spans: vec![],
             tuplet_spans: vec![],
+            lyric_links: vec![],
         },
         &test_render_config(),
         &no_header(),
@@ -118,7 +119,7 @@ fn playback_cursor_target_snaps_to_bar_line_despite_trailing_subdivision_padding
     // adjacent to it.
     let block = MeasureBlock {
         rows: vec![MeasureRow {
-            kind: crate::compiler::types::RowKind::Sounding,
+            kind: crate::ast::parsed::PartKind::Notes,
             absorbed_rows: Vec::new(),
             id: RowId("V".to_string()),
             label: String::new(),
@@ -155,6 +156,7 @@ fn playback_cursor_target_snaps_to_bar_line_despite_trailing_subdivision_padding
             blocks: vec![block],
             slur_spans: vec![],
             tuplet_spans: vec![],
+            lyric_links: vec![],
         },
         &test_render_config(),
         &no_header(),
@@ -182,7 +184,7 @@ fn playback_cursor_target_extends_to_next_note_without_its_own_trailing_column()
     // between the two notes' playback-cursor rects).
     let block = MeasureBlock {
         rows: vec![MeasureRow {
-            kind: crate::compiler::types::RowKind::Sounding,
+            kind: crate::ast::parsed::PartKind::Notes,
             absorbed_rows: Vec::new(),
             id: RowId("V".to_string()),
             label: String::new(),
@@ -230,6 +232,7 @@ fn playback_cursor_target_extends_to_next_note_without_its_own_trailing_column()
             blocks: vec![block],
             slur_spans: vec![],
             tuplet_spans: vec![],
+            lyric_links: vec![],
         },
         &test_render_config(),
         &no_header(),

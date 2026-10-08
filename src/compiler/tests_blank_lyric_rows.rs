@@ -1,10 +1,27 @@
-use crate::compiler::{compile, types::*};
+use crate::compiler::compile;
 use crate::grouper::group;
 use crate::parser::parse;
 
+/// Test helper: parse and compile a score with the given hide_resting_parts setting.
+fn compile_with_hide_resting(source: &str, hide_resting: bool) -> Vec<String> {
+    let source = if hide_resting {
+        source.replace("# metadata\n", "# metadata\nhide_resting_parts = yes\n")
+    } else {
+        source.replace("# metadata\n", "# metadata\nhide_resting_parts = no\n")
+    };
+    let score = group(parse(&source, "test", &[]).unwrap()).unwrap();
+    compile(&score).blocks[0]
+        .rows
+        .iter()
+        .map(|row| row.id.0.clone())
+        .collect()
+}
+
 #[test]
-fn blank_lyric_part_before_a_written_one_draws_no_row() {
+fn blank_lyric_part_hidden_when_hide_resting_parts_is_yes() {
     let source = concat!(
+        "# metadata\n",
+        "\n",
         "# parts\n",
         "S = notes\n",
         "V1 = lyrics[S]\n",
@@ -15,16 +32,34 @@ fn blank_lyric_part_before_a_written_one_draws_no_row() {
         "[S] 1 2 3 4\n",
         "[V2] la la la la\n",
     );
-    let score = group(parse(source, "test", &[]).unwrap()).unwrap();
-
-    let rows = &compile(&score).blocks[0].rows;
-
-    let ids: Vec<&str> = rows.iter().map(|row| row.id.0.as_str()).collect();
-    assert_eq!(ids, vec!["S", "V2"]);
-    assert!(matches!(rows[1].kind, RowKind::Lyrics { .. }));
+    let rows = compile_with_hide_resting(source, true);
+    // When hide_resting_parts is yes, blank V1 is hidden since V2 has content
+    assert_eq!(rows, vec!["S", "V2"]);
 }
 
-const HIDDEN_NOTES_SOURCE: &str = concat!(
+#[test]
+fn blank_lyric_part_drawn_when_hide_resting_parts_is_no() {
+    let source = concat!(
+        "# metadata\n",
+        "\n",
+        "# parts\n",
+        "S = notes\n",
+        "V1 = lyrics[S]\n",
+        "V2 = lyrics[S]\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[S] 1 2 3 4\n",
+        "[V2] la la la la\n",
+    );
+    let rows = compile_with_hide_resting(source, false);
+    // When hide_resting_parts is no, blank V1 is drawn
+    assert_eq!(rows, vec!["S", "V1", "V2"]);
+}
+
+const BASE_SOURCE: &str = concat!(
+    "# metadata\n",
+    "\n",
     "# parts\n",
     "S = notes\n",
     "V1 = lyrics[S]\n",
@@ -38,8 +73,13 @@ const HIDDEN_NOTES_SOURCE: &str = concat!(
     "[C] 1 - - -\n",
 );
 
-fn row_ids_with_tracks(source: &str, tracks: &[&str]) -> Vec<String> {
-    let mut score = group(parse(source, "test", &[]).unwrap()).unwrap();
+fn row_ids_with_tracks(source: &str, tracks: &[&str], hide_resting: bool) -> Vec<String> {
+    let source = if hide_resting {
+        source.to_string()
+    } else {
+        source.replace("hide_resting_parts = yes", "hide_resting_parts = no")
+    };
+    let mut score = group(parse(&source, "test", &[]).unwrap()).unwrap();
     let tracks: Vec<String> = tracks.iter().map(|track| track.to_string()).collect();
     crate::apply_track_filter(&mut score, Some(&tracks));
     compile(&score).blocks[0]
@@ -50,20 +90,22 @@ fn row_ids_with_tracks(source: &str, tracks: &[&str]) -> Vec<String> {
 }
 
 #[test]
-fn blank_lyric_part_draws_no_row_when_its_notes_are_hidden() {
+fn blank_lyric_part_hidden_when_other_parts_visible() {
+    let source = BASE_SOURCE.replace("# metadata\n", "# metadata\nhide_resting_parts = yes\n");
     assert_eq!(
-        row_ids_with_tracks(HIDDEN_NOTES_SOURCE, &["V1", "V2", "C"]),
+        row_ids_with_tracks(&source, &["V1", "V2", "C"], true),
         vec!["V2", "C"]
     );
 }
 
 #[test]
-fn measure_with_only_blank_lyric_parts_keeps_one_row() {
+fn measure_with_only_blank_lyric_parts_keeps_all() {
+    let source = BASE_SOURCE
+        .replace("# metadata\n", "# metadata\nhide_resting_parts = yes\n")
+        .replace("[V2] la la la la\n", "");
+    // When only blank lyric parts are visible, they are kept (like all-rest notes parts)
     assert_eq!(
-        row_ids_with_tracks(
-            &HIDDEN_NOTES_SOURCE.replace("[V2] la la la la\n", ""),
-            &["V1", "V2"]
-        ),
-        vec!["V1"]
+        row_ids_with_tracks(&source, &["V1", "V2"], true),
+        vec!["V1", "V2"]
     );
 }

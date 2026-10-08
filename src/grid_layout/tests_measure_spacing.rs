@@ -74,7 +74,7 @@ fn make_block_with_notes(row_id: &str, note_count: u32, bar_col: u32) -> Measure
     });
     MeasureBlock {
         rows: vec![MeasureRow {
-            kind: crate::compiler::types::RowKind::Sounding,
+            kind: crate::ast::parsed::PartKind::Notes,
             absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
             label: row_id.to_string(),
@@ -94,7 +94,7 @@ fn make_block_with_dash(row_id: &str, bar_col: u32) -> MeasureBlock {
     // A single half note (`NoteHead` followed by one `NoteDash`) plus a bar line.
     MeasureBlock {
         rows: vec![MeasureRow {
-            kind: crate::compiler::types::RowKind::Sounding,
+            kind: crate::ast::parsed::PartKind::Notes,
             absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
             label: row_id.to_string(),

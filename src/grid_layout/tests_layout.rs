@@ -56,7 +56,7 @@ fn cfg_wide() -> RenderConfig {
 fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
-            kind: crate::compiler::types::RowKind::Sounding,
+            kind: crate::ast::parsed::PartKind::Notes,
             absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
             label: row_id.to_string(),
@@ -96,6 +96,7 @@ fn layout_single_block_produces_one_page() {
         blocks,
         slur_spans: vec![],
         tuplet_spans: vec![],
+        lyric_links: vec![],
     };
     let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     assert_eq!(pages.len(), 1);
@@ -108,6 +109,7 @@ fn layout_page_has_correct_dimensions() {
         blocks,
         slur_spans: vec![],
         tuplet_spans: vec![],
+        lyric_links: vec![],
     };
     let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     assert!((pages[0].width_pt - 595.0).abs() < 0.001);
@@ -121,6 +123,7 @@ fn layout_rows_include_header_and_footer() {
         blocks,
         slur_spans: vec![],
         tuplet_spans: vec![],
+        lyric_links: vec![],
     };
     let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     // At minimum: header title row, header subtitle+author row, footer row
@@ -134,6 +137,7 @@ fn layout_page_total_height_does_not_exceed_page_height() {
         blocks,
         slur_spans: vec![],
         tuplet_spans: vec![],
+        lyric_links: vec![],
     };
     let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     for page in &pages {
@@ -153,6 +157,7 @@ fn footer_row_fills_remaining_page_height() {
         blocks,
         slur_spans: vec![],
         tuplet_spans: vec![],
+        lyric_links: vec![],
     };
     let page_height = 842.0_f32;
     let pages = layout(
@@ -184,6 +189,7 @@ fn footer_element_valign_is_bottom() {
         blocks,
         slur_spans: vec![],
         tuplet_spans: vec![],
+        lyric_links: vec![],
     };
     let pages = layout(&compile_result, &cfg_wide(), &hdr(), 595.0, 842.0, None).pages;
     let footer_row = pages[0].rows.last().unwrap();
@@ -221,6 +227,7 @@ fn layout_draws_divider_between_systems_by_default() {
         blocks,
         slur_spans: vec![],
         tuplet_spans: vec![],
+        lyric_links: vec![],
     };
     let pages = layout(
         &compile_result,
@@ -241,6 +248,7 @@ fn layout_omits_divider_when_hide_system_dividers_is_set() {
         blocks,
         slur_spans: vec![],
         tuplet_spans: vec![],
+        lyric_links: vec![],
     };
     let pages = layout(
         &compile_result,

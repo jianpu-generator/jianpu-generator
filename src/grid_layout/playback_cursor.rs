@@ -1,6 +1,6 @@
-use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock};
+use crate::compiler::types::{ColumnElement, ElementContent, LyricLink, MeasureBlock};
 use crate::grid_layout::layout::{
-    block_column_width, is_chord_only_row, is_lyric_row, is_lyric_row_of, LABEL_COLS,
+    block_column_width, is_chord_only_row, is_lyric_row, sings_along_to, LABEL_COLS,
     MUSIC_START_COL,
 };
 use crate::grid_layout::system_walk::for_each_system;
@@ -64,7 +64,7 @@ pub(crate) struct NoteRowSpan {
 
 /// A lyric part is its own row in `first.rows` (an `is_lyric_row` entry per
 /// lyric part, immediately following the row it sings along to — see
-/// `RowKind::Lyrics`). This absorbs those following lyric rows into the note
+/// `PartKind::Lyrics`). This absorbs those following lyric rows into the note
 /// row's `playback_row_end` (so its
 /// playback cursor rect extends down to cover the lyric text) while capturing
 /// `click_row_end` *before* that absorption, and gives each absorbed verse
@@ -72,6 +72,7 @@ pub(crate) struct NoteRowSpan {
 /// so `compute_all_playback_cursor_targets` never emits a playback cursor
 /// target for their own entry anyway.
 pub(crate) fn note_row_spans(
+    lyric_links: &[LyricLink],
     system: &[MeasureBlock],
     row_offset: usize,
     tuplet_part_indices: &HashSet<usize>,
@@ -110,7 +111,7 @@ pub(crate) fn note_row_spans(
         while first
             .rows
             .get(verse_end)
-            .is_some_and(|verse_row| is_lyric_row_of(verse_row, part_template))
+            .is_some_and(|verse_row| sings_along_to(lyric_links, verse_row, part_template))
         {
             cursor += 1;
             verse_end += 1;
@@ -130,6 +131,7 @@ pub(crate) fn note_row_spans(
 }
 
 pub(crate) fn compute_all_playback_cursor_targets(
+    lyric_links: &[LyricLink],
     page_systems: &[Vec<Vec<MeasureBlock>>],
     tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
     header: &Header,
@@ -145,7 +147,7 @@ pub(crate) fn compute_all_playback_cursor_targets(
         base,
         hide_system_dividers,
         |page_idx, system, row_offset, tuplet_part_indices, _musical_row_count| {
-            let part_spans = note_row_spans(system, row_offset, tuplet_part_indices);
+            let part_spans = note_row_spans(lyric_links, system, row_offset, tuplet_part_indices);
 
             let last_block_idx = system.len() - 1;
             let mut col_offset: u32 = MUSIC_START_COL;

@@ -2,9 +2,9 @@
 //! keep that file under the max file-length cap. Every `Lyric*` click target
 //! (syllable and verse-label alike) is computed here.
 
-use crate::compiler::types::{ElementContent, MeasureBlock, MeasureRow};
+use crate::compiler::types::{ElementContent, LyricLink, MeasureBlock, MeasureRow};
 use crate::grid_layout::layout::{
-    block_column_width, is_chord_only_row, is_lyric_row, is_lyric_row_of, LABEL_COLS,
+    block_column_width, is_chord_only_row, is_lyric_row, sings_along_to, LABEL_COLS,
     MUSIC_START_COL,
 };
 use crate::grid_layout::playback_cursor::{block_has_bar_line, group_elements_by_note_id};
@@ -20,6 +20,7 @@ use std::collections::{HashMap, HashSet};
 /// lyric syllable's click target needs to sit on exactly the one row its
 /// text is drawn on.
 fn lyric_row_absolute_indices(
+    lyric_links: &[LyricLink],
     system: &[MeasureBlock],
     row_offset: usize,
     tuplet_part_indices: &HashSet<usize>,
@@ -50,7 +51,7 @@ fn lyric_row_absolute_indices(
         while first
             .rows
             .get(verse_end)
-            .is_some_and(|verse_row| is_lyric_row_of(verse_row, part_template))
+            .is_some_and(|verse_row| sings_along_to(lyric_links, verse_row, part_template))
         {
             result.push(Some(cursor));
             cursor += 1;
@@ -67,7 +68,10 @@ fn lyric_row_absolute_indices(
 /// the same lyric-row absorption walk `note_row_spans`/`lyric_row_absolute_indices` use,
 /// so a lyric syllable's click target can be widened to match its note's own
 /// written column span.
-fn lyric_owner_note_row_indices(system: &[MeasureBlock]) -> Vec<Option<usize>> {
+fn lyric_owner_note_row_indices(
+    lyric_links: &[LyricLink],
+    system: &[MeasureBlock],
+) -> Vec<Option<usize>> {
     let Some(first) = system.first() else {
         return Vec::new();
     };
@@ -83,7 +87,7 @@ fn lyric_owner_note_row_indices(system: &[MeasureBlock]) -> Vec<Option<usize>> {
         while first
             .rows
             .get(verse_idx)
-            .is_some_and(|verse_row| is_lyric_row_of(verse_row, part_template))
+            .is_some_and(|verse_row| sings_along_to(lyric_links, verse_row, part_template))
         {
             if let Some(slot) = result.get_mut(verse_idx) {
                 *slot = Some(note_idx);
@@ -195,6 +199,7 @@ fn push_lyric_click_targets_for_row(
 /// exactly like `compute_all_playback_cursor_targets` snaps a note's own
 /// click target.
 pub(crate) fn compute_all_lyric_click_targets(
+    lyric_links: &[LyricLink],
     page_systems: &[Vec<Vec<MeasureBlock>>],
     tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
     header: &Header,
@@ -210,8 +215,9 @@ pub(crate) fn compute_all_lyric_click_targets(
         base,
         hide_system_dividers,
         |page_idx, system, row_offset, tuplet_part_indices, _musical_row_count| {
-            let row_indices = lyric_row_absolute_indices(system, row_offset, tuplet_part_indices);
-            let owner_note_row_indices = lyric_owner_note_row_indices(system);
+            let row_indices =
+                lyric_row_absolute_indices(lyric_links, system, row_offset, tuplet_part_indices);
+            let owner_note_row_indices = lyric_owner_note_row_indices(lyric_links, system);
 
             let last_block_idx = system.len().saturating_sub(1);
             let mut col_offset: u32 = MUSIC_START_COL;
@@ -269,6 +275,7 @@ pub(crate) fn compute_all_lyric_click_targets(
 /// (the same per-verse-row index walk `compute_all_lyric_click_targets`
 /// uses) instead of `note_row_spans`.
 pub(crate) fn compute_all_lyric_label_click_targets(
+    lyric_links: &[LyricLink],
     page_systems: &[Vec<Vec<MeasureBlock>>],
     tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
     header: &Header,
@@ -285,7 +292,8 @@ pub(crate) fn compute_all_lyric_label_click_targets(
         base,
         hide_system_dividers,
         |page_idx, system, row_offset, tuplet_part_indices, _musical_row_count| {
-            let row_indices = lyric_row_absolute_indices(system, row_offset, tuplet_part_indices);
+            let row_indices =
+                lyric_row_absolute_indices(lyric_links, system, row_offset, tuplet_part_indices);
 
             let measure_index_start = global_measure_index;
             for block in system {

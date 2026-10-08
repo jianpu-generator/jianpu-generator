@@ -1,4 +1,4 @@
-use crate::ast::parsed::{Accidental, JianPuPitch};
+use crate::ast::parsed::{Accidental, JianPuPitch, PartKind};
 use crate::error::{Diagnostic, Span};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -55,23 +55,13 @@ impl PartialEq for MeasureBlock {
     }
 }
 
-/// What a row draws, which decides how it lays out.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum RowKind {
-    /// Notes, chords, percussion or rests.
-    Sounding,
-    /// One verse of lyrics, drawn directly under the row `target` (its
-    /// `RowId`), which it sings along to. The target's row may be absent from
-    /// the block (filtered out) — the lyric row's elements still sit at the
-    /// target's columns.
-    Lyrics { target: RowId },
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeasureRow {
     pub id: RowId,
     pub label: String,
-    pub kind: RowKind,
+    /// The kind of the part this row was compiled from; what a row draws
+    /// (e.g. lyric syllables vs. notes) follows from it.
+    pub kind: PartKind,
     pub elements: Vec<ColumnElement>,
     /// The original part index this row was compiled from, before consolidation.
     /// Used to look up slur arcs keyed by original part index.
@@ -217,6 +207,18 @@ pub struct CompileResult {
     pub blocks: Vec<MeasureBlock>,
     pub slur_spans: Vec<SlurSpan>,
     pub tuplet_spans: Vec<TupletSpan>,
+    /// Which lyric part sings along to which part, by row id. Built from the
+    /// part-level `LyricsSlice::target_name`; rows themselves carry no target.
+    /// Grid layout reads it to group a note row with the lyric rows under it.
+    pub lyric_links: Vec<LyricLink>,
+}
+
+/// A lyric part's link to the part it sings along to, as row ids. The target
+/// may be absent from a block's rows when it is hidden or filtered out.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LyricLink {
+    pub lyric_row_id: RowId,
+    pub target_row_id: RowId,
 }
 
 #[derive(Debug, Clone, PartialEq)]
