@@ -10,6 +10,9 @@ use crate::grid_layout::types::{
     GridContent, GridElement, GridRow, HAlign, MeasureColumnLayout, VAlign,
 };
 
+#[path = "expand_lyric_rest_run.rs"]
+mod rest_run;
+
 pub(crate) struct LyricPartParams<'a> {
     pub(crate) part_idx: usize,
     pub(crate) base: f32,
@@ -150,5 +153,7 @@ pub(crate) fn expand_lyric_part(system: &[MeasureBlock], params: &LyricPartParam
         }
         measure_col_offset += col_w;
     }
+    row.elements
+        .extend(rest_run::blank_lyric_rest_bars(system, part_idx));
     row
 }
