@@ -208,7 +208,7 @@ fn compile_measure(
         });
     }
     MeasureBlock {
-        rows: drop_trailing_blank_lyric_rows(rows),
+        rows: drop_blank_lyric_rows(rows),
         decorations,
         diagnostics: measure.diagnostics.clone(),
         represents_measures: 1,
@@ -218,37 +218,24 @@ fn compile_measure(
     }
 }
 
-/// Drops a lyric row that has no syllables when no later lyric row of the same
-/// target has any either: an unwritten (or `_`) verse only shows as a blank
-/// row to keep a later verse of the same notes in its own slot, and a measure
-/// with no lyrics at all has no lyric rows. A blank row whose target row is
-/// absent (filtered out) is kept: it is all that stands for the measure.
-fn drop_trailing_blank_lyric_rows(rows: Vec<MeasureRow>) -> Vec<MeasureRow> {
+/// Drops a lyric row that has no syllables while its target row is present: an
+/// unwritten (or `_`) lyric part has nothing to show, and each lyric row
+/// carries its own part label, so a later verse needs no blank row to keep its
+/// slot. A blank row whose target row is absent (filtered out) is kept: it is
+/// all that stands for the measure.
+fn drop_blank_lyric_rows(rows: Vec<MeasureRow>) -> Vec<MeasureRow> {
     let present_row_ids: HashSet<RowId> = rows.iter().map(|row| row.id.clone()).collect();
     let has_syllable = |row: &MeasureRow| {
         row.elements
             .iter()
             .any(|element| matches!(element.content, ElementContent::Lyric { .. }))
     };
-    let mut targets_with_later_syllables: HashSet<RowId> = HashSet::new();
-    let mut kept: Vec<MeasureRow> = rows
-        .into_iter()
-        .rev()
+    rows.into_iter()
         .filter(|row| match &row.kind {
             RowKind::Sounding => true,
-            RowKind::Lyrics { target } => {
-                if has_syllable(row) {
-                    targets_with_later_syllables.insert(target.clone());
-                    true
-                } else {
-                    targets_with_later_syllables.contains(target)
-                        || !present_row_ids.contains(target)
-                }
-            }
+            RowKind::Lyrics { target } => has_syllable(row) || !present_row_ids.contains(target),
         })
-        .collect();
-    kept.reverse();
-    kept
+        .collect()
 }
 
 fn format_key(key: &KeyChange) -> String {
@@ -284,6 +271,8 @@ fn collect_decorations(measure: &MultiPartMeasure, bar_number: usize) -> Vec<Dec
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_blank_lyric_rows;
 #[cfg(test)]
 mod tests_directive_mid_score;
 #[cfg(test)]
