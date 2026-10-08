@@ -60,18 +60,6 @@
   background: var(--editor-bg);
 }
 
-/* Non-interactive abbreviation segment */
-.part-toggle-abbr {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.55rem;
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--muted);
-  user-select: none;
-  border-right: 1px solid color-mix(in srgb, var(--muted) 30%, var(--border));
-}
-
 /* Icon segments */
 .part-toggle-segment {
   position: relative;
@@ -79,13 +67,16 @@
   align-items: center;
   justify-content: center;
   padding: 0.25rem 0.45rem;
-  border-left: 1px solid color-mix(in srgb, var(--muted) 30%, var(--border));
   cursor: pointer;
   color: var(--muted);
   user-select: none;
   transition:
     background 0.15s ease,
     color 0.15s ease;
+}
+
+.part-toggle-segment + .part-toggle-segment {
+  border-left: 1px solid color-mix(in srgb, var(--muted) 30%, var(--border));
 }
 
 /* Hide native checkbox — it stays in the DOM for e2e tests */
@@ -99,7 +90,7 @@
 
 /* Hover (unchecked, enabled) */
 .part-toggle-segment:hover:not(:has(input:disabled)):not(:has(input:checked)) {
-  background: var(--preview-bg);
+  background-color: var(--preview-bg);
   color: var(--muted);
 }
 
@@ -115,7 +106,14 @@
   cursor: not-allowed;
 }
 
-/* Eye: active = part is visible (blue) */
+/* Label (show/hide): filled = visible (blue); hidden = dimmed and crossed
+   corner to corner by a thin diagonal X. */
+.part-toggle-segment--eye {
+  padding: 0.25rem 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+}
+
 .part-toggle-segment--eye:has(input:checked) {
   background: var(--accent-selected-bg);
   color: var(--accent-selected-text);
@@ -123,6 +121,46 @@
 
 .part-toggle-segment--eye:has(input:checked):hover:not(:has(input:disabled)) {
   background: var(--accent-selected-bg-hover);
+}
+
+.part-toggle-segment--eye:not(:has(input:checked)) {
+  --part-toggle-cross: color-mix(in srgb, var(--muted) 70%, transparent);
+  background-image:
+    linear-gradient(
+      to top right,
+      transparent calc(50% - 0.5px),
+      var(--part-toggle-cross) calc(50% - 0.5px),
+      var(--part-toggle-cross) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px)
+    ),
+    linear-gradient(
+      to bottom right,
+      transparent calc(50% - 0.5px),
+      var(--part-toggle-cross) calc(50% - 0.5px),
+      var(--part-toggle-cross) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px)
+    );
+}
+
+/* Lyric parts: italic label with a note prefix. */
+.part-toggle-pill--lyric .part-toggle-segment--eye {
+  font-style: italic;
+}
+
+.part-toggle-pill--lyric .part-toggle-segment--eye::before {
+  content: "♪";
+  font-style: normal;
+  margin-right: 0.2rem;
+  opacity: 0.8;
+}
+
+/* While any part is soloed, the others are silent. */
+.part-toggle-pill--silenced {
+  border-style: dashed;
+}
+
+.part-toggle-pill--silenced .part-toggle-segment--headphones {
+  opacity: 0.55;
 }
 
 /* Headphones: active = soloed (amber) */
@@ -148,4 +186,12 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   user-select: none;
   z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.part-toggle-tooltip-hint {
+  font-size: 0.65rem;
+  opacity: 0.75;
 }
