@@ -44,7 +44,35 @@ pub(crate) trait IdentityProvider {
         &self,
         db: &D1Database,
         identity_token: &str,
-    ) -> Result<ResolvedIdentity>;
+    ) -> std::result::Result<ResolvedIdentity, IdentityError>;
+}
+
+/// Why an `IdentityProvider` could not resolve a token. The split matters to
+/// the client: only `TokenRejected` means the stored token is dead and the
+/// user must sign in again; `Unavailable` (GitHub 5xx/rate limit, network,
+/// D1) is transient, so the token must be kept and the request retried.
+#[derive(Debug)]
+pub(crate) enum IdentityError {
+    /// The provider itself said the token is invalid or revoked.
+    TokenRejected(String),
+    /// Verification could not be completed for a reason unrelated to the
+    /// token's validity.
+    Unavailable(worker::Error),
+}
+
+impl std::fmt::Display for IdentityError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            IdentityError::TokenRejected(reason) => formatter.write_str(reason),
+            IdentityError::Unavailable(error) => error.fmt(formatter),
+        }
+    }
+}
+
+impl From<worker::Error> for IdentityError {
+    fn from(error: worker::Error) -> Self {
+        IdentityError::Unavailable(error)
+    }
 }
 
 /// Optional `[vars]` override for how long a cached `oauth_sessions`
@@ -76,8 +104,11 @@ pub(crate) fn session_ttl_millis_from_env(ctx: &RouteContext<()>) -> i64 {
 ///    `MAX_TOTAL_WAIT`) before failing closed. On success, refresh/insert
 ///    the `oauth_sessions` row and return the resolved `user_id`.
 ///
-/// A verification failure (after retries) is reported as `Err`, never as a
-/// fallback identity -- callers (`handlers.rs`) must reject the write.
+/// A rejected token (after retries) is reported as the inner `Err`, never as
+/// a fallback identity -- callers (`handlers.rs`) must reject the write. A
+/// failure that says nothing about the token (GitHub down, D1 error) is the
+/// outer `Err` instead, so it surfaces as a retryable server error rather
+/// than an `unauthorized` that makes the client discard a valid token.
 pub(crate) async fn resolve_verified_user_id(
     db: &D1Database,
     identity_provider: &impl IdentityProvider,
@@ -111,13 +142,16 @@ pub(crate) async fn resolve_verified_user_id(
 
     let resolved = match retry_result {
         Ok(resolved) => resolved,
-        Err(failure) => {
-            return Ok(Err(VerificationFailure {
-                reason: failure.last_error.to_string(),
-                failed_at: now,
-                attempts: failure.attempts,
-            }))
-        }
+        Err(failure) => match failure.last_error {
+            IdentityError::TokenRejected(reason) => {
+                return Ok(Err(VerificationFailure {
+                    reason,
+                    failed_at: now,
+                    attempts: failure.attempts,
+                }))
+            }
+            IdentityError::Unavailable(error) => return Err(error),
+        },
     };
 
     db::upsert_oauth_session(

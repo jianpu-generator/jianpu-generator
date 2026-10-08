@@ -13,7 +13,7 @@ use worker::{D1Database, Error};
 use worker::{Fetch, Headers, Method, Request, RequestInit, Result};
 
 use crate::db;
-use crate::identity::{IdentityProvider, ResolvedIdentity};
+use crate::identity::{IdentityError, IdentityProvider, ResolvedIdentity};
 use crate::share_id::{generate_id, USER_ID_LENGTH};
 
 pub(crate) const GITHUB_PROVIDER: &str = "github";
@@ -78,7 +78,7 @@ impl IdentityProvider for GithubIdentityProvider {
         &self,
         db: &D1Database,
         identity_token: &str,
-    ) -> Result<ResolvedIdentity> {
+    ) -> std::result::Result<ResolvedIdentity, IdentityError> {
         let github_user = fetch_github_user(&self.user_endpoint, identity_token).await?;
         let provider_user_id = github_user.id.to_string();
 
@@ -123,14 +123,19 @@ pub(crate) async fn fetch_github_login(
     fetch_github_user(user_endpoint, identity_token)
         .await
         .map(|user| user.login)
+        .map_err(|error| Error::RustError(error.to_string()))
 }
 
 /// Calls `GET {user_endpoint}` (the real GitHub API, or a mock in e2e --
 /// see `user_endpoint_from_env`) with `identity_token` as a bearer token. No
 /// retry/backoff here (that's the §0 policy task 7 wraps around the
 /// *cached* verification path) -- a single failed call here is simply a
-/// failed `resolve_user_id` call.
-async fn fetch_github_user(user_endpoint: &str, identity_token: &str) -> Result<GithubUser> {
+/// failed `resolve_user_id` call. Only a `401` is `TokenRejected`; any other
+/// non-200 (5xx, a 403 rate limit) or transport error is `Unavailable`.
+async fn fetch_github_user(
+    user_endpoint: &str,
+    identity_token: &str,
+) -> std::result::Result<GithubUser, IdentityError> {
     let headers = Headers::new();
     headers.set("Authorization", &format!("Bearer {identity_token}"))?;
     headers.set("Accept", "application/vnd.github+json")?;
@@ -144,12 +149,15 @@ async fn fetch_github_user(user_endpoint: &str, identity_token: &str) -> Result<
     let mut response = Fetch::Request(request).send().await?;
 
     if response.status_code() != 200 {
+        let status = response.status_code();
         let body = response.text().await.unwrap_or_default();
-        return Err(Error::RustError(format!(
-            "GitHub GET /user failed: status={}, body={body}",
-            response.status_code()
-        )));
+        let reason = format!("GitHub GET /user failed: status={status}, body={body}");
+        return Err(if status == 401 {
+            IdentityError::TokenRejected(reason)
+        } else {
+            IdentityError::Unavailable(Error::RustError(reason))
+        });
     }
 
-    response.json::<GithubUser>().await
+    Ok(response.json::<GithubUser>().await?)
 }
