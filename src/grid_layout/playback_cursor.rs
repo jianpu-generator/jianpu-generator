@@ -64,7 +64,7 @@ pub(crate) struct NoteRowSpan {
 
 /// A lyric part is its own row in `first.rows` (an `is_lyric_row` entry per
 /// lyric part, immediately following the row it sings along to — see
-/// `RowKind::Lyrics`). This absorbs those following lyric rows into the note
+/// `PartKind::Lyrics`). This absorbs those following lyric rows into the note
 /// row's `playback_row_end` (so its
 /// playback cursor rect extends down to cover the lyric text) while capturing
 /// `click_row_end` *before* that absorption, and gives each absorbed verse

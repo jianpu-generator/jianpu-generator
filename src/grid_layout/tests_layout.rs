@@ -56,7 +56,8 @@ fn cfg_wide() -> RenderConfig {
 fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
-            kind: crate::compiler::types::RowKind::Sounding,
+            kind: crate::ast::parsed::PartKind::Notes,
+            lyric_target: None,
             absorbed_rows: Vec::new(),
             id: RowId(row_id.to_string()),
             label: row_id.to_string(),

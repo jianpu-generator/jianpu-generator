@@ -52,7 +52,8 @@ fn notes_row(note_count: u32, bar_col: u32) -> MeasureRow {
         note_id: None,
     });
     MeasureRow {
-        kind: crate::compiler::types::RowKind::Sounding,
+        kind: crate::ast::parsed::PartKind::Notes,
+        lyric_target: None,
         absorbed_rows: Vec::new(),
         id: RowId("notes".to_string()),
         label: "M".to_string(),
@@ -63,7 +64,8 @@ fn notes_row(note_count: u32, bar_col: u32) -> MeasureRow {
 
 fn lyric_line_row(text: &str) -> MeasureRow {
     MeasureRow {
-        kind: crate::compiler::types::RowKind::Sounding,
+        kind: crate::ast::parsed::PartKind::Notes,
+        lyric_target: None,
         absorbed_rows: Vec::new(),
         id: RowId("lyrics".to_string()),
         label: "C".to_string(),

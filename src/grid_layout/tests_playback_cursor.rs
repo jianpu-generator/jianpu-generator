@@ -26,7 +26,8 @@ fn no_header() -> Header {
 /// line, sharing `source_part_index` with `lyric_verse_row`.
 fn notes_row_with_two_notes() -> MeasureRow {
     MeasureRow {
-        kind: crate::compiler::types::RowKind::Sounding,
+        kind: crate::ast::parsed::PartKind::Notes,
+        lyric_target: None,
         absorbed_rows: Vec::new(),
         id: RowId("V".to_string()),
         label: String::new(),
@@ -68,9 +69,10 @@ fn notes_row_with_two_notes() -> MeasureRow {
 /// own row rather than the notes row's own elements.
 fn lyric_verse_row() -> MeasureRow {
     MeasureRow {
-        kind: crate::compiler::types::RowKind::Lyrics {
-            target: RowId("V".to_string()),
+        kind: crate::ast::parsed::PartKind::Lyrics {
+            target_part_index: 0,
         },
+        lyric_target: Some(RowId("V".to_string())),
         absorbed_rows: Vec::new(),
         id: RowId("V-lyrics-0".to_string()),
         label: String::new(),

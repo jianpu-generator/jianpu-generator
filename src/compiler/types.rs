@@ -1,4 +1,4 @@
-use crate::ast::parsed::{Accidental, JianPuPitch};
+use crate::ast::parsed::{Accidental, JianPuPitch, PartKind};
 use crate::error::{Diagnostic, Span};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -55,23 +55,19 @@ impl PartialEq for MeasureBlock {
     }
 }
 
-/// What a row draws, which decides how it lays out.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum RowKind {
-    /// Notes, chords, percussion or rests.
-    Sounding,
-    /// One verse of lyrics, drawn directly under the row `target` (its
-    /// `RowId`), which it sings along to. The target's row may be absent from
-    /// the block (filtered out) — the lyric row's elements still sit at the
-    /// target's columns.
-    Lyrics { target: RowId },
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeasureRow {
     pub id: RowId,
     pub label: String,
-    pub kind: RowKind,
+    /// The kind of the part this row was compiled from; what a row draws
+    /// (e.g. lyric syllables vs. notes) follows from it.
+    pub kind: PartKind,
+    /// TEMPORARY (removed in stage 3 of PLAN-lyric-parts-uniform.md): for a
+    /// lyric row (`kind` is `PartKind::Lyrics`), the `RowId` of the row it sings
+    /// along to, which may be absent from the block when filtered out. `None`
+    /// for every other kind. Only grid layout's "absorb following lyric rows"
+    /// grouping reads it, via `is_lyric_row_of`.
+    pub lyric_target: Option<RowId>,
     pub elements: Vec<ColumnElement>,
     /// The original part index this row was compiled from, before consolidation.
     /// Used to look up slur arcs keyed by original part index.

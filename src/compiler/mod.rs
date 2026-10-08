@@ -19,7 +19,7 @@ mod rest_runs;
 use rest_runs::merge_rest_runs;
 
 use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartRow, Score};
-use crate::ast::parsed::{Accidental, KeyChange, NoteName};
+use crate::ast::parsed::{Accidental, KeyChange, NoteName, PartKind};
 
 struct PartSliceResult {
     elements: Vec<ColumnElement>,
@@ -162,7 +162,8 @@ fn compile_measure(
         // Drop any incoming cross-measure tie/slur arc when this slice has errors (#28).
         // A lyric part draws no arcs, and its ties only decide which notes take a
         // syllable, which the grouper already settled from the notes alone.
-        let drops_incoming_arcs = part_row.slice().has_error && part_row.slice().lyrics.is_none();
+        let drops_incoming_arcs =
+            part_row.slice().has_error && !matches!(part_row.slice().kind, PartKind::Lyrics { .. });
         let (init_pending_opens, init_tie, init_tie_column, init_tie_measure, init_tie_note_id) =
             if drops_incoming_arcs {
                 (vec![], false, None, None, None)
@@ -201,17 +202,17 @@ fn compile_measure(
         let name = part_row.name().cloned();
         let label = name.clone().unwrap_or_default();
         let id = RowId(name.unwrap_or_else(|| format!("__anon_{part_idx}")));
-        let kind = part_row
+        let kind = part_row.slice().kind;
+        let lyric_target = part_row
             .slice()
             .lyrics
             .as_ref()
-            .map_or(RowKind::Sounding, |lyrics| RowKind::Lyrics {
-                target: RowId(lyrics.target_name.clone()),
-            });
+            .map(|lyrics| RowId(lyrics.target_name.clone()));
         rows.push(MeasureRow {
             id,
             label,
             kind,
+            lyric_target,
             elements: slice_result.elements,
             source_part_index: part_idx,
             absorbed_rows: Vec::new(),
@@ -274,6 +275,8 @@ mod tests_implicit_fill_rest;
 mod tests_lyrics_and_diagnostics;
 #[cfg(test)]
 mod tests_multi_measure_rest;
+#[cfg(test)]
+mod tests_row_part_kind;
 #[cfg(test)]
 mod tests_slur;
 #[cfg(test)]
