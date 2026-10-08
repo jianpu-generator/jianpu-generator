@@ -20,7 +20,6 @@ use rest_runs::merge_rest_runs;
 
 use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartRow, Score};
 use crate::ast::parsed::{Accidental, KeyChange, NoteName};
-use std::collections::HashSet;
 
 struct PartSliceResult {
     elements: Vec<ColumnElement>,
@@ -218,24 +217,27 @@ fn compile_measure(
     }
 }
 
-/// Drops a lyric row that has no syllables while its target row is present: an
-/// unwritten (or `_`) lyric part has nothing to show, and each lyric row
-/// carries its own part label, so a later verse needs no blank row to keep its
-/// slot. A blank row whose target row is absent (filtered out) is kept: it is
-/// all that stands for the measure.
+/// Drops every lyric row that has no syllables: an unwritten (or `_`) lyric
+/// part has nothing to show, and each lyric row carries its own part label, so
+/// no blank row is needed to hold a slot. Whether the target row is visible
+/// does not matter. The one exception is a measure left with no rows at all:
+/// its first blank lyric row is kept, since a measure needs a row to occupy
+/// its width.
 fn drop_blank_lyric_rows(rows: Vec<MeasureRow>) -> Vec<MeasureRow> {
-    let present_row_ids: HashSet<RowId> = rows.iter().map(|row| row.id.clone()).collect();
-    let has_syllable = |row: &MeasureRow| {
-        row.elements
-            .iter()
-            .any(|element| matches!(element.content, ElementContent::Lyric { .. }))
+    let is_blank_lyric_row = |row: &MeasureRow| {
+        matches!(row.kind, RowKind::Lyrics { .. })
+            && !row
+                .elements
+                .iter()
+                .any(|element| matches!(element.content, ElementContent::Lyric { .. }))
     };
-    rows.into_iter()
-        .filter(|row| match &row.kind {
-            RowKind::Sounding => true,
-            RowKind::Lyrics { target } => has_syllable(row) || !present_row_ids.contains(target),
-        })
-        .collect()
+    let (blank, drawn): (Vec<MeasureRow>, Vec<MeasureRow>) =
+        rows.into_iter().partition(is_blank_lyric_row);
+    if drawn.is_empty() {
+        blank.into_iter().take(1).collect()
+    } else {
+        drawn
+    }
 }
 
 fn format_key(key: &KeyChange) -> String {
