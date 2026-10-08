@@ -561,7 +561,7 @@ Other time signatures skip these checks for now. Violations are diagnostics atta
 
 ### Multi-measure rests
 
-This isn't new input syntax — it's automatic rendering behavior. When 2 or more consecutive measures are entirely rests (on every currently-visible part, after any `--tracks` filtering) and none of them carries its own directive (label, navigation marker, time signature/BPM/key change) or diagnostic, they render as a single wide rest bar showing the collapsed measure count, instead of one rest measure per bar. A single isolated all-rest measure still renders normally.
+This isn't new input syntax — it's automatic rendering behavior. When 2 or more consecutive measures are entirely rests (on every currently-visible part, after any `--tracks` filtering) and none of them carries its own directive (label, navigation marker, time signature/BPM/key change) or diagnostic, they render as a single wide rest bar showing the collapsed measure count, instead of one rest measure per bar. A single isolated all-rest measure still renders normally. A lyric part with no syllables counts as resting, so when only lyric parts are visible (the notes they sing along to being hidden or not soloed), a run of blank lyric measures collapses too; while any visible part still plays in those measures, nothing collapses.
 
 ### Examples
 

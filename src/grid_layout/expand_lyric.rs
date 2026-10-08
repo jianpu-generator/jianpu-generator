@@ -1,7 +1,7 @@
 //! Lyric verse row expansion — split out of `expand.rs` to keep it under the
 //! max-file-lines lint.
 
-use crate::compiler::types::{BarLineKind, ElementContent, MeasureBlock};
+use crate::compiler::types::{BarLineKind, ElementContent, MeasureBlock, MULTI_MEASURE_REST_WIDTH};
 use crate::coordinate_resolver::LyricFontSizes;
 use crate::grid_layout::layout::{
     block_column_width, lyric_row_height, LyricSizing, LABEL_COLS, MUSIC_START_COL,
@@ -124,6 +124,17 @@ pub(crate) fn expand_lyric_part(system: &[MeasureBlock], params: &LyricPartParam
                                 text: text.clone(),
                                 source_part_index: part_row.source_part_index,
                                 note_id: *note_id,
+                            },
+                        });
+                    }
+                    ElementContent::MultiMeasureRest { count } => {
+                        row.elements.push(GridElement {
+                            column: MUSIC_START_COL + measure_col_offset + el.column,
+                            column_span: MULTI_MEASURE_REST_WIDTH,
+                            halign: HAlign::Center,
+                            valign: VAlign::Center,
+                            content: GridContent::MultiMeasureRest {
+                                count: *count as u32,
                             },
                         });
                     }
