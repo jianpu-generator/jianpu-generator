@@ -31,7 +31,7 @@ fn measure_carries_no_directive(measure: &MultiPartMeasure, measure_index: usize
 }
 
 fn is_collapsible(measure: &MultiPartMeasure, measure_index: usize, block: &MeasureBlock) -> bool {
-    measure.parts.iter().all(super::is_rest_filled)
+    measure.parts.iter().all(super::is_resting)
         && measure_carries_no_directive(measure, measure_index)
         && block.diagnostics.is_empty()
 }

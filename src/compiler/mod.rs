@@ -85,15 +85,15 @@ pub fn compile(score: &Score) -> CompileResult {
 }
 
 /// Indices into `measure.parts` that are actually compiled/sounded for this
-/// measure — i.e. `measure.parts` minus whichever all-rest parts
+/// measure — i.e. `measure.parts` minus whichever resting parts
 /// `hide_resting_parts` hides when at least one other part has real content.
 /// Shared with `midi::timing::note_timings_seconds`, which must walk exactly
 /// these same parts in the same order for its `note_id` counters to line up
 /// with `ColumnElement::note_id` (see `compile_measure`, which uses this too).
 pub(crate) fn visible_part_indices(measure: &MultiPartMeasure) -> Vec<usize> {
     let visible_part_count =
-        if measure.hide_resting_parts && measure.parts.iter().any(|p| !is_rest_filled(p)) {
-            measure.parts.iter().filter(|p| !is_rest_filled(p)).count()
+        if measure.hide_resting_parts && measure.parts.iter().any(|p| !is_resting(p)) {
+            measure.parts.iter().filter(|p| !is_resting(p)).count()
         } else {
             measure.parts.len()
         };
@@ -102,7 +102,7 @@ pub(crate) fn visible_part_indices(measure: &MultiPartMeasure) -> Vec<usize> {
         .iter()
         .enumerate()
         .filter_map(|(part_idx, part_row)| {
-            if visible_part_count < measure.parts.len() && is_rest_filled(part_row) {
+            if visible_part_count < measure.parts.len() && is_resting(part_row) {
                 None
             } else {
                 Some(part_idx)
@@ -111,8 +111,19 @@ pub(crate) fn visible_part_indices(measure: &MultiPartMeasure) -> Vec<usize> {
         .collect()
 }
 
-fn is_rest_filled(part_row: &PartRow) -> bool {
-    let events = part_row.slice().timing_events();
+/// Determines if a part row is "resting" — either all notes are rests, or it's a
+/// lyric part with no syllables. A resting part is hidden when `hide_resting_parts`
+/// is on and at least one other part has real content.
+pub(crate) fn is_resting(part_row: &PartRow) -> bool {
+    let slice = part_row.slice();
+
+    // A lyric part with no syllables is resting (nothing to sing)
+    if let Some(lyrics) = &slice.lyrics {
+        return lyrics.syllables.is_empty();
+    }
+
+    // A non-lyric part is resting if all its notes are rests
+    let events = slice.timing_events();
     !events.is_empty() && events.iter().all(|e| matches!(e, NoteEvent::Rest(_)))
 }
 
@@ -206,37 +217,15 @@ fn compile_measure(
             absorbed_rows: Vec::new(),
         });
     }
+
     MeasureBlock {
-        rows: drop_blank_lyric_rows(rows),
+        rows,
         decorations,
         diagnostics: measure.diagnostics.clone(),
         represents_measures: 1,
         merge_duplicate_measures_across_parts: measure.merge_duplicate_measures_across_parts,
         system_break: measure.system_break,
         source_span: measure.source_span,
-    }
-}
-
-/// Drops every lyric row that has no syllables: an unwritten (or `_`) lyric
-/// part has nothing to show, and each lyric row carries its own part label, so
-/// no blank row is needed to hold a slot. Whether the target row is visible
-/// does not matter. The one exception is a measure left with no rows at all:
-/// its first blank lyric row is kept, since a measure needs a row to occupy
-/// its width.
-fn drop_blank_lyric_rows(rows: Vec<MeasureRow>) -> Vec<MeasureRow> {
-    let is_blank_lyric_row = |row: &MeasureRow| {
-        matches!(row.kind, RowKind::Lyrics { .. })
-            && !row
-                .elements
-                .iter()
-                .any(|element| matches!(element.content, ElementContent::Lyric { .. }))
-    };
-    let (blank, drawn): (Vec<MeasureRow>, Vec<MeasureRow>) =
-        rows.into_iter().partition(is_blank_lyric_row);
-    if drawn.is_empty() {
-        blank.into_iter().take(1).collect()
-    } else {
-        drawn
     }
 }
 
@@ -273,6 +262,8 @@ fn collect_decorations(measure: &MultiPartMeasure, bar_number: usize) -> Vec<Dec
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_all_rest_notes_measures;
 #[cfg(test)]
 mod tests_blank_lyric_rows;
 #[cfg(test)]

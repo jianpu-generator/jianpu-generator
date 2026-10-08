@@ -765,7 +765,7 @@ Kick = percussion "36: Bass Drum 1"
 
 ## Not-mentioned parts
 
-When a part is **not mentioned** in a measure (no `[Key]` line covers it), it is filled with rests (`0`) or no-lyrics (`_`). If, after filling, that part's row is all rests for the measure **and at least one other part in the same measure has real content**, the row is **not rendered** for that measure — the vertical space is reclaimed and rows below move up. This suppression is controlled by the `hide_resting_parts` metadata field (default `yes`); set it to `no` to always render every part's row, even when it's all rests.
+When a part is **not mentioned** in a measure (no `[Key]` line covers it), it is filled with rests (`0`) or no-lyrics (`_`). If, after filling, that part's row is all rests for the measure **and at least one other part in the same measure has real content**, the row is **not rendered** for that measure — the vertical space is reclaimed and rows below move up. This suppression is controlled by the `hide_resting_parts` metadata field (default `yes`); set it to `no` to always render every part's row, even when it's all rests. A lyric part with no syllables in a measure (not written, or `_`) counts as resting in the same way: it is hidden under `hide_resting_parts=yes` when another part has content, drawn as a blank row under `no`, and kept whenever every part in the measure is resting.
 
 - A `follow[X]` part that is not mentioned copies `X`'s content (audio plays the same as X).
 - A non-follow part that is not mentioned is filled with rests (`0`) or no-lyrics (`_`).
