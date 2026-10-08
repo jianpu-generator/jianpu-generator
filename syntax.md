@@ -563,6 +563,8 @@ Other time signatures skip these checks for now. Violations are diagnostics atta
 
 This isn't new input syntax — it's automatic rendering behavior. When 2 or more consecutive measures are entirely rests (on every currently-visible part, after any `--tracks` filtering) and none of them carries its own directive (label, navigation marker, time signature/BPM/key change) or diagnostic, they render as a single wide rest bar showing the collapsed measure count, instead of one rest measure per bar. A single isolated all-rest measure still renders normally.
 
+A lyric row collapses on its own too: when a lyric part sings nothing for 2 or more consecutive measures, that row alone shows one rest bar with the measure count above it, even though the notes it sings along to keep playing (those rows are untouched). The bar spans from the first blank measure to the last one within a system, so a run split across two systems shows one bar per system. A single blank lyric measure stays empty.
+
 ### Examples
 
 | Token | Meaning |
