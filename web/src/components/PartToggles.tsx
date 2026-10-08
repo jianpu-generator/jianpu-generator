@@ -1,11 +1,5 @@
 import * as Tooltip from '@radix-ui/react-tooltip'
-import {
-  ChevronDown,
-  ChevronRight,
-  Eye,
-  EyeOff,
-  Headphones,
-} from 'lucide-react'
+import { ChevronDown, ChevronRight, Headphones } from 'lucide-react'
 import { useState } from 'react'
 import type { PartInfo } from '../types'
 import './PartToggles.css'
@@ -22,7 +16,7 @@ function TooltipLabel({
   tooltip,
   children,
 }: {
-  tooltip: string
+  tooltip: React.ReactNode
   children: React.ReactNode
 }) {
   return (
@@ -39,40 +33,53 @@ function TooltipLabel({
 
 interface TogglePillProps {
   label: string
-  tooltip: string
+  displayName: string
+  /** Lyric parts only sing along to their target; they get a distinct label. */
+  lyric: boolean
   visible: boolean
   soloed: boolean
+  anySoloed: boolean
   onVisibleChange: (visible: boolean) => void
   onSoloChange: (soloed: boolean) => void
 }
 
-/** One show/hide + solo pill: used once for a part's notes row and once for
- * its lyrics row. */
+/** One pill with two buttons: the label shows/hides the part, the headphones
+ * solo it. */
 function TogglePill({
   label,
-  tooltip,
+  displayName,
+  lyric,
   visible,
   soloed,
+  anySoloed,
   onVisibleChange,
   onSoloChange,
 }: TogglePillProps) {
   return (
-    <div className="part-toggle-pill">
-      <TooltipLabel tooltip={tooltip}>
-        <span className="part-toggle-abbr">{label}</span>
-      </TooltipLabel>
-      <TooltipLabel tooltip="Show/Hide">
-        <label className="part-toggle-segment part-toggle-segment--eye">
+    <div
+      className={[
+        'part-toggle-pill',
+        lyric ? 'part-toggle-pill--lyric' : '',
+        anySoloed && !soloed ? 'part-toggle-pill--silenced' : '',
+      ].join(' ')}
+    >
+      <TooltipLabel
+        tooltip={
+          <>
+            <span>{displayName}</span>
+            <span className="part-toggle-tooltip-hint">
+              {visible ? 'Click to hide' : 'Click to show'}
+            </span>
+          </>
+        }
+      >
+        <label className="part-toggle-segment part-toggle-segment--eye part-toggle-abbr">
           <input
             type="checkbox"
             checked={visible}
             onChange={(event) => onVisibleChange(event.target.checked)}
           />
-          {visible ? (
-            <Eye size={14} aria-hidden="true" />
-          ) : (
-            <EyeOff size={14} aria-hidden="true" />
-          )}
+          {label}
         </label>
       </TooltipLabel>
       <TooltipLabel tooltip="Solo">
@@ -134,9 +141,11 @@ export function PartToggles({
               <li key={part.abbreviation}>
                 <TogglePill
                   label={part.abbreviation}
-                  tooltip={part.displayName}
+                  displayName={part.displayName}
+                  lyric={!part.sounds}
                   visible={!disabledParts.has(part.abbreviation)}
                   soloed={soloedParts.has(part.abbreviation)}
+                  anySoloed={soloedParts.size > 0}
                   onVisibleChange={(visible) =>
                     onPartToggle(part.abbreviation, visible)
                   }
