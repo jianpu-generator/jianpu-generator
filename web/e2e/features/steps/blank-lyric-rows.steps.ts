@@ -267,11 +267,24 @@ Then(
     expect(Object.keys(before).length).toBeGreaterThan(0)
     // Hiding Melody removes its row; poll until the preview re-renders.
     await expect(page.locator(tagSelector('note'))).toHaveCount(0)
+    // Column rods come from every visible row, so hiding the Melody row
+    // shifts the columns by ~1px (slack is shared out differently). The
+    // lyrics still sit at the notes' columns: same note ids, same
+    // left-to-right order, each within TOLERANCE_PX of where it was.
+    const TOLERANCE_PX = 2
+    const idsLeftToRight = (xs: Record<string, number>) =>
+      Object.entries(xs)
+        .sort(([, a], [, b]) => a - b)
+        .map(([noteId]) => noteId)
     await expect
       .poll(async () => {
         const after = await verse1SyllableXs(page)
-        return Object.entries(before).every(
-          ([noteId, x]) => Math.abs((after[noteId] ?? Number.NaN) - x) < 0.5,
+        return (
+          idsLeftToRight(after).join() === idsLeftToRight(before).join() &&
+          Object.entries(before).every(
+            ([noteId, x]) =>
+              Math.abs((after[noteId] ?? Number.NaN) - x) < TOLERANCE_PX,
+          )
         )
       })
       .toBe(true)
