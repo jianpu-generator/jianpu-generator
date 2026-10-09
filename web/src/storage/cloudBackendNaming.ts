@@ -92,3 +92,17 @@ export async function withNameCollisionRetry(
     return retryName
   }
 }
+
+/** A fresh name for a queued `CreateFile`/`RenameFile`/`RestoreFile` whose
+ * `rejectedName` the server reported as taken, when no `FileStoreState` is
+ * at hand (the outbox delivers long after the edit). Increments a trailing
+ * ` N` before the extension, so a second collision yields ` 3`, not ` 2 2`. */
+export function suggestNameAfterCollision(rejectedName: string): string {
+  const dot = rejectedName.lastIndexOf('.')
+  const stem = dot > 0 ? rejectedName.slice(0, dot) : rejectedName
+  const ext = dot > 0 ? rejectedName.slice(dot) : '.jianpu'
+  const numbered = /^(.*) (\d+)$/.exec(stem)
+  return numbered
+    ? `${numbered[1]} ${Number(numbered[2]) + 1}${ext}`
+    : `${stem} 2${ext}`
+}
