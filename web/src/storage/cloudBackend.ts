@@ -12,18 +12,9 @@ import {
   restoreFile as pureRestoreFile,
   updateActiveContent as pureUpdateActiveContent,
 } from '../fileStore'
-import {
-  callWorker,
-  createWorkerClient,
-  NetworkFailure,
-  WorkerRequestError,
-} from '../syncedShare/workerClient'
+import { callWorker, createWorkerClient } from '../syncedShare/workerClient'
 import { ensureWasmInit } from '../wasmInit'
-import {
-  addedName,
-  withNameCollisionRetry,
-  withRenamedKey,
-} from './cloudBackendNaming'
+import { addedName } from './cloudBackendNaming'
 import {
   createCloudOutboxLooper,
   outboxLaneError,
@@ -33,8 +24,9 @@ import type {
   CloudBackend,
   CloudBackendConfig,
   CloudBackendError,
+  LocalRename,
 } from './cloudBackendTypes'
-import type { OutboxLooper } from './outbox/outboxLooper'
+import type { OutboxLooper, OutboxSnapshot } from './outbox/outboxLooper'
 import type { SaveStatus } from './types'
 
 export type {
@@ -66,10 +58,13 @@ export type {
  *
  * Requests go through the worker's generated client (`workerClient.ts` --
  * paths, bodies and the `ApiError` failure union all come from the Rust
- * handlers). The `name_taken` retry (`withNameCollisionRetry` and friends)
- * and the public types live in `cloudBackendNaming.ts` and
- * `cloudBackendTypes.ts` -- split out of this file to stay under this
- * repo's 400-line cap.
+ * handlers). Every write (content or structural) is applied to local state
+ * at once and queued in the outbox (`outbox/`), which delivers it in the
+ * background. A `name_taken` answer is resolved by the outbox rewriting the
+ * queued name; this backend then reports the local rename through
+ * `onLocalRename`. Naming helpers and the public types live in
+ * `cloudBackendNaming.ts` and `cloudBackendTypes.ts` -- split out of this
+ * file to stay under this repo's 400-line cap.
  */
 export interface CloudBackendDependencies {
   looper?: OutboxLooper
@@ -83,10 +78,7 @@ export function createCloudBackend(
   const identityToken = config.token
   const client = createWorkerClient(config.workerHost)
 
-  // Status of the last structural operation; content saves report through
-  // the outbox (see `status()` and `lastError()` below).
-  let operationStatus: SaveStatus = 'idle'
-  let operationError: CloudBackendError | null = null
+  const renameListeners = new Set<(change: LocalRename) => void>()
   // `FileStoreState.fileIds` is one flat map keyed by display name, shared
   // across `userFiles` and `bin` -- sound for every *pure* transform in
   // `fileStore.ts` (which never lets the same name occupy both buckets at
@@ -102,8 +94,7 @@ export function createCloudBackend(
   // (always operating on a *known-active* name) and `restoreFile` (always
   // operating on a *known-trashed* name) never resolve the wrong row's id
   // out of a name that happens to collide across buckets. Kept in sync
-  // alongside `revisionByFileId` after every successful structural op,
-  // for the same reason that map is.
+  // alongside every structural op, for the same reason.
   const activeIdByName = new Map<string, string>()
   const trashedIdByName = new Map<string, string>()
 
@@ -120,10 +111,10 @@ export function createCloudBackend(
     return trashedIdByName.get(name) ?? fileIdForName(state, name)
   }
 
-  /** The local name of the trashed file `fileId`, for a `RestoreFile` message. */
+  /** The current local name of `fileId`, for a `RestoreFile` message. */
   function trashedNameOf(fileId: string): string {
-    for (const [name, id] of trashedIdByName) if (id === fileId) return name
     for (const [name, id] of activeIdByName) if (id === fileId) return name
+    for (const [name, id] of trashedIdByName) if (id === fileId) return name
     return ''
   }
 
@@ -138,59 +129,38 @@ export function createCloudBackend(
   let ready: Promise<void> | null = null
   /** Initializes wasm and starts the looper, once. */
   function whenReady(): Promise<void> {
-    ready ??= ensureWasm().then(() => looper.start())
+    ready ??= ensureWasm().then(async () => {
+      await looper.start()
+      looper.subscribe(reconcileLocalNames)
+    })
     return ready
   }
 
-  /** Classifies a thrown error into the `CloudBackendError`/`SaveStatus`
-   * pair it should surface. Returns the pair rather than mutating `status`
-   * directly, same reasoning as the deleted GitHub backend's
-   * `classifyError`. */
-  function classifyError(error: unknown): {
-    status: SaveStatus
-    error: CloudBackendError
-  } {
-    if (error instanceof NetworkFailure) {
-      return { status: 'offline', error: { kind: 'network' } }
-    }
-    if (error instanceof WorkerRequestError) {
-      switch (error.apiError?.code) {
-        case 'revision_conflict':
-          return {
-            status: 'error',
-            error: {
-              kind: 'conflict',
-              currentRevision: error.apiError.currentRevision,
-            },
-          }
-        case 'unauthorized':
-          return { status: 'error', error: { kind: 'auth' } }
+  /** The name the last queued `CreateFile`/`RenameFile` of each lane asks
+   * for. When the outbox rewrote one after a `name_taken` answer, it differs
+   * from the local name, which is then renamed to match. */
+  function reconcileLocalNames({ queue }: OutboxSnapshot): void {
+    for (const lane of queue.lanes) {
+      const wanted = lane.messages
+        .map(({ message }) =>
+          message.tag === 'create-file'
+            ? message.val.name
+            : message.tag === 'rename-file'
+              ? message.val.to
+              : undefined,
+        )
+        .findLast((name) => name !== undefined)
+      const current = [...activeIdByName].find(
+        ([, id]) => id === lane.fileId,
+      )?.[0]
+      if (wanted === undefined || current === undefined || wanted === current) {
+        continue
       }
-    }
-    return {
-      status: 'error',
-      error: {
-        kind: 'unknown',
-        message: error instanceof Error ? error.message : String(error),
-      },
-    }
-  }
-
-  /** Runs a structural operation's API call(s), translating a failure into
-   * the same status/error tracking `saveContent` uses, and resetting to
-   * `'idle'`/`null` on success -- mirrors the deleted GitHub backend's
-   * `runOp`. */
-  async function runOp<T>(operation: () => Promise<T>): Promise<T> {
-    try {
-      const result = await operation()
-      operationStatus = 'idle'
-      operationError = null
-      return result
-    } catch (error) {
-      const classified = classifyError(error)
-      operationStatus = classified.status
-      operationError = classified.error
-      throw error
+      activeIdByName.delete(current)
+      activeIdByName.set(wanted, lane.fileId)
+      for (const listener of renameListeners) {
+        listener({ fileId: lane.fileId, from: current, to: wanted })
+      }
     }
   }
 
@@ -224,8 +194,8 @@ export function createCloudBackend(
     }
   }
 
-  /** Persists the file `nextState` added relative to `state` (create,
-   * import, duplicate), renaming it if the server reports a name collision. */
+  /** Queues the creation of the file `nextState` added relative to `state`
+   * (create, import, duplicate); the file already exists locally. */
   async function createRemoteFile(
     state: FileStoreState,
     nextState: FileStoreState,
@@ -233,22 +203,13 @@ export function createCloudBackend(
     const name = addedName(state, nextState)
     if (!name) return nextState
     const id = fileIdForName(nextState, name)
-    const content = nextState.userFiles[name] ?? ''
-    const finalName = await runOp(() =>
-      withNameCollisionRetry(name, state, (attemptName) =>
-        callWorker(
-          client.POST('/files', {
-            body: { identityToken, id, name: attemptName, content },
-          }),
-        ),
-      ),
-    )
+    activeIdByName.set(name, id)
     await whenReady()
-    await looper.recordRevision(id, 0n)
-    activeIdByName.set(finalName, id)
-    return finalName === name
-      ? nextState
-      : withRenamedKey(nextState, name, finalName)
+    await looper.enqueue(id, {
+      tag: 'create-file',
+      val: { name, content: nextState.userFiles[name] ?? '' },
+    })
+    return nextState
   }
 
   return {
@@ -280,8 +241,6 @@ export function createCloudBackend(
       // mine", which reloads via this method without going through
       // `runOp`/`saveContentImpl`) no longer applies -- same reasoning as
       // the deleted GitHub backend's `load()`.
-      operationStatus = 'idle'
-      operationError = null
       return { active: DEMO_FILE_NAMES[0] ?? '', userFiles, bin, fileIds }
     },
 
@@ -301,21 +260,11 @@ export function createCloudBackend(
       const newName = addedName(state, nextState)
       if (!newName) return nextState
       const id = activeFileId(state, from)
-      const finalName = await runOp(() =>
-        withNameCollisionRetry(newName, state, (attemptName) =>
-          callWorker(
-            client.POST('/files/{id}/rename', {
-              params: { path: { id } },
-              body: { identityToken, name: attemptName },
-            }),
-          ),
-        ),
-      )
       activeIdByName.delete(from)
-      activeIdByName.set(finalName, id)
-      return finalName === newName
-        ? nextState
-        : withRenamedKey(nextState, newName, finalName)
+      activeIdByName.set(newName, id)
+      await whenReady()
+      await looper.enqueue(id, { tag: 'rename-file', val: { to: newName } })
+      return nextState
     },
 
     async deleteFile(
@@ -325,16 +274,10 @@ export function createCloudBackend(
       const nextState = pureDeleteFile(state, name)
       if (nextState === state) return nextState
       const id = activeFileId(state, name)
-      await runOp(() =>
-        callWorker(
-          client.POST('/files/{id}/delete', {
-            params: { path: { id } },
-            body: { identityToken },
-          }),
-        ),
-      )
       activeIdByName.delete(name)
       trashedIdByName.set(name, id)
+      await whenReady()
+      await looper.enqueue(id, { tag: 'trash-file' })
       return nextState
     },
 
@@ -346,21 +289,11 @@ export function createCloudBackend(
       const newName = addedName(state, nextState)
       if (!newName) return nextState
       const id = trashedFileId(state, name)
-      const finalName = await runOp(() =>
-        withNameCollisionRetry(newName, state, (attemptName) =>
-          callWorker(
-            client.POST('/files/{id}/restore', {
-              params: { path: { id } },
-              body: { identityToken, name: attemptName },
-            }),
-          ),
-        ),
-      )
       trashedIdByName.delete(name)
-      activeIdByName.set(finalName, id)
-      return finalName === newName
-        ? nextState
-        : withRenamedKey(nextState, newName, finalName)
+      activeIdByName.set(newName, id)
+      await whenReady()
+      await looper.enqueue(id, { tag: 'restore-file' })
+      return nextState
     },
 
     updateActiveContent: (
@@ -372,11 +305,15 @@ export function createCloudBackend(
 
     outbox: () => looper,
 
-    status: (): SaveStatus =>
-      outboxSaveStatus(looper.snapshot()) ?? operationStatus,
+    status: (): SaveStatus => outboxSaveStatus(looper.snapshot()) ?? 'idle',
 
     lastError: (): CloudBackendError | null =>
-      outboxLaneError(looper.snapshot()) ?? operationError,
+      outboxLaneError(looper.snapshot()),
+
+    onLocalRename(listener: (change: LocalRename) => void): () => void {
+      renameListeners.add(listener)
+      return () => renameListeners.delete(listener)
+    },
 
     async forceOverwrite(state: FileStoreState): Promise<void> {
       const id = fileIdForName(state, state.active)

@@ -61,7 +61,7 @@ describe('createCloudBackend: createFile()', () => {
       }),
     )
 
-    const backend = createTestBackend().backend
+    const { backend, looper } = createTestBackend()
     const state: FileStoreState = {
       active: DEMO_FILE_NAMES[0] ?? '',
       userFiles: {},
@@ -69,6 +69,7 @@ describe('createCloudBackend: createFile()', () => {
       fileIds: {},
     }
     const nextState = await backend.createFile(state)
+    await looper.whenIdle()
 
     const { url, body } = await lastCall()
     expect(url).toBe('http://localhost:8787/files')
