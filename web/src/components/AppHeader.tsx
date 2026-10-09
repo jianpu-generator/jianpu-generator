@@ -85,6 +85,7 @@ interface AppHeaderProps {
   onDelete: (name: string) => void
   onOpenStorageSettings: () => void
   saveStatus: DisplaySaveStatus
+  saveLabel: string | null
   autosaveDeadline: number | null
   creatingFile?: boolean
   deletingFileName?: string | null
@@ -149,6 +150,7 @@ export function AppHeader({
   onDelete,
   onOpenStorageSettings,
   saveStatus,
+  saveLabel,
   autosaveDeadline,
   creatingFile,
   deletingFileName,
@@ -262,6 +264,7 @@ export function AppHeader({
             onDelete={onDelete}
             onOpenStorageSettings={onOpenStorageSettings}
             saveStatus={saveStatus}
+            saveLabel={saveLabel}
             autosaveDeadline={autosaveDeadline}
             creating={creatingFile}
             deletingName={deletingFileName}

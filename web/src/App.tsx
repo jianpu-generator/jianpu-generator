@@ -26,6 +26,7 @@ export default function App() {
     backend,
     isLoadingCloud,
     saveStatus,
+    saveLabel,
     autosaveDeadline,
     preference,
     switchBackend,
@@ -209,6 +210,7 @@ export default function App() {
         onDelete={handleDelete}
         onOpenStorageSettings={() => setStorageSettingsOpen(true)}
         saveStatus={saveStatus}
+        saveLabel={saveLabel}
         autosaveDeadline={autosaveDeadline}
         creatingFile={creatingFile}
         deletingFileName={deletingFileName}

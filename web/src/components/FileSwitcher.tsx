@@ -41,6 +41,7 @@ export interface FileSwitcherProps {
   onDelete: (name: string) => void
   onOpenStorageSettings: () => void
   saveStatus: DisplaySaveStatus
+  saveLabel: string | null
   /** `Date.now()`-comparable deadline for the pending autosave, used to
    * render a countdown while `saveStatus === 'unsaved'`. */
   autosaveDeadline: number | null
@@ -91,6 +92,7 @@ export function FileSwitcher({
   onDelete,
   onOpenStorageSettings,
   saveStatus,
+  saveLabel,
   autosaveDeadline,
   creating = false,
   deletingName = null,
@@ -126,6 +128,7 @@ export function FileSwitcher({
     <div className="file-tab-bar">
       <SaveStatusBadge
         status={saveStatus}
+        label={saveLabel}
         autosaveDeadline={autosaveDeadline}
       />
       <div className="export-menu">
