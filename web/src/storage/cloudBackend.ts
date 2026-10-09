@@ -28,6 +28,7 @@ import type {
   LocalRename,
 } from './cloudBackendTypes'
 import type { BaseSnapshots } from './outbox/baseSnapshots'
+import { type ConflictFlow, createConflictFlow } from './outbox/conflictFlow'
 import type { OutboxLooper, OutboxSnapshot } from './outbox/outboxLooper'
 import type { SaveStatus } from './types'
 
@@ -127,11 +128,30 @@ export function createCloudBackend(
   )
   const ensureWasm = dependencies.ensureWasm ?? ensureWasmInit
   let ready: Promise<void> | null = null
+  async function fetchServerFile(fileId: string) {
+    const response = await callWorker(
+      client.POST('/files/list', { body: { identityToken } }),
+    )
+    const file = response.files.find(({ id }) => id === fileId)
+    return file && { revision: file.revision, content: file.content }
+  }
+
+  const noticeListeners = new Set<(message: string) => void>()
+  let conflictFlow: ConflictFlow | null = null
+
   /** Initializes wasm and starts the looper, once. */
   function whenReady(): Promise<void> {
     ready ??= ensureWasm().then(async () => {
       await looper.start()
       looper.subscribe(reconcileLocalNames)
+      conflictFlow = createConflictFlow({
+        looper,
+        bases,
+        fetchServerFile,
+        onNotice: (message) => {
+          for (const listener of noticeListeners) listener(message)
+        },
+      })
     })
     return ready
   }
@@ -304,12 +324,13 @@ export function createCloudBackend(
 
     saveContent,
 
-    async fetchServerFile(fileId: string) {
-      const response = await callWorker(
-        client.POST('/files/list', { body: { identityToken } }),
-      )
-      const file = response.files.find(({ id }) => id === fileId)
-      return file && { revision: file.revision, content: file.content }
+    fetchServerFile,
+
+    conflicts: () => conflictFlow,
+
+    onNotice(listener: (message: string) => void): () => void {
+      noticeListeners.add(listener)
+      return () => noticeListeners.delete(listener)
     },
 
     outbox: () => looper,

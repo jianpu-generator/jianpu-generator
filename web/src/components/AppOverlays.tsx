@@ -6,6 +6,7 @@ import type {
   StorageBackendPreference,
   StorageBackendTarget,
 } from '../hooks/useStorageBackend'
+import { withRenamedKey } from '../storage/cloudBackendNaming'
 import type { StorageBackend } from '../storage/types'
 import { BinModal } from './BinModal'
 import { DownloadRenameModal } from './DownloadRenameModal'
@@ -102,6 +103,9 @@ export function AppOverlays({
         store={store}
         onServerContent={(fileId, content) =>
           setStore((previous) => withServerContent(previous, fileId, content))
+        }
+        onLocalRename={({ from, to }) =>
+          setStore((previous) => withRenamedKey(previous, from, to))
         }
       />
       <DownloadRenameModal

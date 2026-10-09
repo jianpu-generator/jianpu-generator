@@ -32,7 +32,7 @@ export async function checkFocusRevision(
   )
 }
 
-export function focusRevisionDependencies(
+function focusRevisionDependencies(
   backend: CloudBackend,
   onServerContent: (fileId: string, content: string) => void,
 ): FocusRevisionDependencies {

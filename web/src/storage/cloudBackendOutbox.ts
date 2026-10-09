@@ -86,9 +86,7 @@ export interface CloudOutbox {
 
 /** The production looper: IndexedDB store, leader-tab lock, real timers.
  * The looper and the base snapshots share one store. */
-export function createCloudOutboxLooper(
-  config: CloudOutboxConfig,
-): CloudOutbox {
+function createCloudOutboxLooper(config: CloudOutboxConfig): CloudOutbox {
   const store: OutboxStore = createIndexedDbOutboxStore()
   const bases = createBaseSnapshots(store)
   const { client, identityToken, restoreName } = config

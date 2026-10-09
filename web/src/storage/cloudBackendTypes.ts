@@ -1,5 +1,6 @@
 import type { FileStoreState } from '../fileStore'
 import type { BaseSnapshots } from './outbox/baseSnapshots'
+import type { ConflictFlow } from './outbox/conflictFlow'
 import type { OutboxLooper } from './outbox/outboxLooper'
 import type { StorageBackend } from './types'
 
@@ -57,6 +58,12 @@ export interface CloudBackend extends StorageBackend {
   outbox(): OutboxLooper
   /** The last text the server is known to have, per file. */
   bases(): BaseSnapshots
+  /** Settles `NeedsMerge` lanes; null until the first `load()`/save has
+   * started the outbox. */
+  conflicts(): ConflictFlow | null
+  /** Subscribes to one-line notices such as "Merged with changes from
+   * another device". */
+  onNotice(listener: (message: string) => void): () => void
   /** The server's current revision and content of `fileId`, or `undefined`
    * when the server does not list it. */
   fetchServerFile(fileId: string): Promise<ServerFile | undefined>

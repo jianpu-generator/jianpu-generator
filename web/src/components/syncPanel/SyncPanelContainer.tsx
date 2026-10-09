@@ -1,7 +1,8 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useState } from 'react'
 import type { FileStoreState } from '../../fileStore'
-import type { CloudBackend } from '../../storage/cloudBackendTypes'
+import { useFocusRevisionCheck } from '../../hooks/useFocusRevisionCheck'
+import type { CloudBackend, LocalRename } from '../../storage/cloudBackendTypes'
 import type { OutboxSnapshot } from '../../storage/outbox/outboxLooper'
 import type { StorageBackend } from '../../storage/types'
 import { buildDiagnostics, copyDiagnostics } from './copyDiagnostics'
@@ -17,6 +18,8 @@ export interface SyncPanelContainerProps {
   store: FileStoreState
   /** Puts the server's text into the open store, replacing the local one. */
   onServerContent: (fileId: string, content: string) => void
+  /** Applies a rename the outbox made after a name collision. */
+  onLocalRename: (change: LocalRename) => void
   onReviewAndMerge?: (fileId: string) => void
   onKeepBoth?: (fileId: string) => void
 }
@@ -43,6 +46,22 @@ function CloudSyncPanel(
   const { backend, store } = props
   const snapshot = useOutboxSnapshot(backend)
   const [discardingFileId, setDiscardingFileId] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  useEffect(
+    () => backend.onLocalRename(props.onLocalRename),
+    [backend, props.onLocalRename],
+  )
+  useEffect(() => backend.onNotice(setNotice), [backend])
+  useEffect(() => {
+    if (notice === null) return
+    const timer = setTimeout(() => setNotice(null), 6_000)
+    return () => clearTimeout(timer)
+  }, [notice])
+  useFocusRevisionCheck({
+    backend,
+    activeFileId: store.fileIds[store.active],
+    onServerContent: props.onServerContent,
+  })
   const lanes = toLaneViews(snapshot, (fileId) => nameOfFile(store, fileId))
 
   const download = (fileId: string) => {
@@ -59,6 +78,15 @@ function CloudSyncPanel(
 
   return (
     <>
+      {notice !== null && (
+        <div
+          role="status"
+          className="sync-panel__notice"
+          data-testid="sync-notice"
+        >
+          {notice}
+        </div>
+      )}
       <Dialog.Root open={props.open} onOpenChange={props.onOpenChange}>
         <Dialog.Portal>
           <Dialog.Overlay className="sync-panel__overlay" />

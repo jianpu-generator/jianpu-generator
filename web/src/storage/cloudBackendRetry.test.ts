@@ -40,6 +40,20 @@ describe('createCloudBackend: forceOverwrite()', () => {
         ],
       }),
     )
+    // The conflict flow then fetches the server's file for its own merge.
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, {
+        files: [
+          {
+            id: 'id-a',
+            name: 'a.jianpu',
+            content: 'theirs',
+            revision: 9,
+            trashedAt: null,
+          },
+        ],
+      }),
+    )
     await backend.saveContent(state)
     await looper.whenIdle()
     expect(backend.lastError()).toEqual({
