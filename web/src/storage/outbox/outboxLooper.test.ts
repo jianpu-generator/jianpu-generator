@@ -7,7 +7,7 @@ import {
   setWasmRoot,
 } from '../../jianpuWasm'
 import { createMemoryOutboxStore } from './memoryOutboxStore'
-import { createOutboxLooper } from './outboxLooper'
+import { createOutboxLooper, type OutboxLooperDeps } from './outboxLooper'
 import type { Scheduler } from './outboxScheduler'
 import type { OutboxStore } from './outboxStore'
 
@@ -36,6 +36,7 @@ function makeHarness(
   options: {
     store?: OutboxStore
     send?: (request: SendRequest) => Promise<SendResult>
+    hooks?: Pick<OutboxLooperDeps, 'onAcknowledged' | 'onDiscarded'>
   } = {},
 ) {
   let time = 1_000_000
@@ -55,6 +56,7 @@ function makeHarness(
     dispose: () => undefined,
   }
   const looper = createOutboxLooper({
+    ...options.hooks,
     store,
     sendMessage: send,
     createScheduler: (wake) => {
@@ -219,5 +221,79 @@ describe('outbox looper', () => {
     await harness.looper.whenIdle()
     expect(seen).toContain(true)
     expect(seen.at(-1)).toBe(false)
+  })
+
+  it('calls onAcknowledged with the request and revision after an ok send', async () => {
+    const acknowledged: Array<{ text: string; revision: bigint }> = []
+    const harness = makeHarness({
+      hooks: {
+        onAcknowledged: (request, revision) => {
+          const { message } = request
+          if (message.tag === 'save-content') {
+            acknowledged.push({ text: message.val.content, revision })
+          }
+        },
+      },
+    })
+    await harness.looper.start()
+    await harness.looper.enqueue('file-a', save('hello'))
+    await harness.looper.whenIdle()
+    expect(acknowledged).toEqual([{ text: 'hello', revision: 1n }])
+  })
+
+  it('does not call onAcknowledged for a failed send', async () => {
+    const onAcknowledged = vi.fn()
+    const harness = makeHarness({
+      hooks: { onAcknowledged },
+      send: async () => ({ tag: 'transient', val: { reason: 'offline' } }),
+    })
+    await harness.looper.start()
+    await harness.looper.enqueue('file-a', save('hello'))
+    await harness.looper.whenIdle()
+    expect(onAcknowledged).not.toHaveBeenCalled()
+  })
+
+  it('keeps draining when a hook throws', async () => {
+    const harness = makeHarness({
+      hooks: {
+        onAcknowledged: async () => {
+          throw new Error('boom')
+        },
+      },
+    })
+    await harness.looper.start()
+    await harness.looper.enqueue('file-a', save('a'))
+    await harness.looper.enqueue('file-b', save('b'))
+    await harness.looper.whenIdle()
+    expect(harness.sent.map((request) => request.fileId).sort()).toEqual([
+      'file-a',
+      'file-b',
+    ])
+    expect(harness.looper.snapshot().summary.hasUnsynced).toBe(false)
+  })
+
+  it('calls onDiscarded after a discard has been persisted', async () => {
+    let lanesWhenDiscarded: string[] = []
+    const store = createMemoryOutboxStore()
+    const harness = makeHarness({
+      store,
+      send: async () => ({
+        tag: 'permanent',
+        val: { status: 400, reason: 'bad' },
+      }),
+      hooks: {
+        onDiscarded: async () => {
+          lanesWhenDiscarded = (await store.loadAll())
+            .filter((record) => JSON.parse(record.value)?.messages?.length > 0)
+            .map((record) => record.key)
+        },
+      },
+    })
+    await harness.looper.start()
+    await harness.looper.enqueue('file-a', save('x'))
+    await harness.looper.whenIdle()
+    await harness.looper.resolve('file-a', { tag: 'discard' })
+    expect(lanesWhenDiscarded).toEqual([])
+    expect(harness.looper.snapshot().summary.hasUnsynced).toBe(false)
   })
 })

@@ -214,3 +214,55 @@ describe('createCloudBackend: saveContent()', () => {
     expect(backend.lastError()).toEqual({ kind: 'network' })
   })
 })
+
+describe('createCloudBackend: base snapshots', () => {
+  const listing = (content: string) => async () =>
+    jsonResponse(200, {
+      files: [
+        {
+          id: 'id-a',
+          name: 'a.jianpu',
+          content,
+          revision: 1,
+          trashedAt: null,
+        },
+      ],
+    })
+
+  it('records each listed file text as its base on load', async () => {
+    fetchMock.mockImplementation(listing('1 2 3'))
+    const { backend } = createTestBackend()
+    await backend.load()
+    expect(await backend.bases().readBase('id-a')).toBe('1 2 3')
+  })
+
+  it('keeps the existing base of a file with unsent messages', async () => {
+    const { backend, bases, looper } = createTestBackend()
+    await bases.recordBase('id-a', 'old base')
+    // The save never completes, so it stays unsent while the listing arrives.
+    fetchMock.mockImplementation((request) =>
+      request.url.endsWith('/files/list')
+        ? listing('server text')()
+        : new Promise<Response>(() => undefined),
+    )
+    await looper.start()
+    await looper.enqueue('id-a', {
+      tag: 'save-content',
+      val: { content: 'local edit' },
+    })
+    await backend.load()
+    expect(await bases.readBase('id-a')).toBe('old base')
+  })
+
+  it('records the acknowledged text as the base', async () => {
+    const { bases, looper } = createTestBackend()
+    fetchMock.mockImplementation(async () => jsonResponse(200, { revision: 2 }))
+    await looper.start()
+    await looper.enqueue('id-a', {
+      tag: 'save-content',
+      val: { content: 'saved text' },
+    })
+    await looper.whenIdle()
+    expect(await bases.readBase('id-a')).toBe('saved text')
+  })
+})

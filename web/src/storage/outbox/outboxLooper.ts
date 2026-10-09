@@ -37,6 +37,11 @@ export interface OutboxLooperDeps {
   runAsLeader(task: (signal: AbortSignal) => Promise<void>): () => void
   now(): number
   random(): number
+  /** Called after a successful send has been applied and persisted. A thrown
+   * error is ignored so it never breaks the drain loop. */
+  onAcknowledged?(request: SendRequest, revision: bigint): void | Promise<void>
+  /** Called after a discard resolution has been persisted. Errors are ignored. */
+  onDiscarded?(fileId: string): void | Promise<void>
 }
 
 export interface OutboxLooper {
@@ -131,6 +136,14 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
     scheduler.wakeAt(next === undefined ? null : Number(next))
   }
 
+  const runHook = async (hook: () => void | Promise<void>): Promise<void> => {
+    try {
+      await hook()
+    } catch {
+      // A failing hook must never break the drain loop.
+    }
+  }
+
   const drainOnce = async (signal: AbortSignal): Promise<void> => {
     while (!signal.aborted && !halted) {
       const begun = jianpuWasm().outboxBeginSend(queue, nowMs())
@@ -150,6 +163,9 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
       )
       await persist()
       notify()
+      if (result.tag === 'ok') {
+        await runHook(() => deps.onAcknowledged?.(request, result.val.revision))
+      }
     }
     wakeAtNextDue()
   }
@@ -230,8 +246,12 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
           nowMs(),
         ),
       ),
-    resolve: (fileId, resolution) =>
-      mutate(() => jianpuWasm().outboxResolve(queue, fileId, resolution)),
+    resolve: async (fileId, resolution) => {
+      await mutate(() => jianpuWasm().outboxResolve(queue, fileId, resolution))
+      if (resolution.tag === 'discard') {
+        await runHook(() => deps.onDiscarded?.(fileId))
+      }
+    },
     resolveSignedIn: () =>
       mutate(() => jianpuWasm().outboxResolveSignedIn(queue)),
     recordRevision: (fileId, revision) =>

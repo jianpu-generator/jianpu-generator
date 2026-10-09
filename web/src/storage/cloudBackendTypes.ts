@@ -1,4 +1,5 @@
 import type { FileStoreState } from '../fileStore'
+import type { BaseSnapshots } from './outbox/baseSnapshots'
 import type { OutboxLooper } from './outbox/outboxLooper'
 import type { StorageBackend } from './types'
 
@@ -43,4 +44,6 @@ export interface CloudBackend extends StorageBackend {
   forceOverwrite(state: FileStoreState): Promise<void>
   /** The outbox that carries this backend's content saves. */
   outbox(): OutboxLooper
+  /** The last text the server is known to have, per file. */
+  bases(): BaseSnapshots
 }
