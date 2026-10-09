@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { DEMO_FILE_NAMES, type FileStoreState } from '../fileStore'
+import type { FileStoreState } from '../fileStore'
 import {
   apiErrorResponse,
-  callAt,
   createTestBackend,
-  emptyResponse,
   fetchMock,
   jsonResponse,
   lastCall,
@@ -106,116 +104,5 @@ describe('createCloudBackend: delivery retry', () => {
     await looper.whenIdle()
 
     expect(maxConcurrent).toBe(1)
-  })
-})
-
-describe('createCloudBackend: name-collision retry (create/rename/restore)', () => {
-  it('retries createFile once with a freshly recomputed name after a 409 name_taken response', async () => {
-    fetchMock
-      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
-      .mockResolvedValueOnce(
-        jsonResponse(200, {
-          id: 'new-id',
-          name: 'untitled 2.jianpu',
-          content: '',
-          revision: 0,
-          trashedAt: null,
-        }),
-      )
-
-    const backend = createTestBackend().backend
-    const state: FileStoreState = {
-      active: DEMO_FILE_NAMES[0] ?? '',
-      userFiles: {},
-      bin: {},
-      fileIds: {},
-    }
-    const nextState = await backend.createFile(state)
-
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    const firstBody = (await callAt(0)).body
-    const secondBody = (await callAt(1)).body
-    expect(firstBody.name).toBe('untitled.jianpu')
-    expect(secondBody.name).toBe('untitled 2.jianpu')
-    expect(secondBody.id).toBe(firstBody.id)
-
-    expect(nextState.active).toBe('untitled 2.jianpu')
-    expect(nextState.userFiles).toHaveProperty('untitled 2.jianpu')
-    expect(nextState.userFiles).not.toHaveProperty('untitled.jianpu')
-    expect(backend.status()).toBe('idle')
-    expect(backend.lastError()).toBeNull()
-  })
-
-  it('retries renameFile once, transparently, on a single name_taken collision', async () => {
-    fetchMock
-      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
-      .mockResolvedValueOnce(emptyResponse(204))
-
-    const backend = createTestBackend().backend
-    const state: FileStoreState = {
-      active: 'a.jianpu',
-      userFiles: { 'a.jianpu': 'content' },
-      bin: {},
-      fileIds: { 'a.jianpu': 'id-a' },
-    }
-    const nextState = await backend.renameFile(state, 'a.jianpu', 'b.jianpu')
-
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    const firstBody = (await callAt(0)).body
-    const secondBody = (await callAt(1)).body
-    expect(firstBody.name).toBe('b.jianpu')
-    expect(secondBody.name).toBe('b 2.jianpu')
-    expect((await callAt(0)).url).toBe(
-      'http://localhost:8787/files/id-a/rename',
-    )
-
-    expect(nextState.active).toBe('b 2.jianpu')
-  })
-
-  it('degrades to an unknown error after a second consecutive name_taken collision', async () => {
-    fetchMock
-      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
-      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
-
-    const backend = createTestBackend().backend
-    const state: FileStoreState = {
-      active: DEMO_FILE_NAMES[0] ?? '',
-      userFiles: {},
-      bin: {},
-      fileIds: {},
-    }
-
-    await expect(backend.createFile(state)).rejects.toThrow()
-
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(backend.status()).toBe('error')
-    expect(backend.lastError()).toMatchObject({ kind: 'unknown' })
-  })
-
-  it('retries restoreFile once on a name_taken collision against an active file', async () => {
-    fetchMock
-      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
-      .mockResolvedValueOnce(emptyResponse(204))
-
-    const backend = createTestBackend().backend
-    const state: FileStoreState = {
-      active: 'original.jianpu',
-      userFiles: { 'original.jianpu': 'active content' },
-      bin: { 'binned.jianpu': 'binned content' },
-      fileIds: { 'original.jianpu': 'id-active', 'binned.jianpu': 'id-binned' },
-    }
-    const nextState = await backend.restoreFile(state, 'binned.jianpu')
-
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect((await callAt(0)).url).toBe(
-      'http://localhost:8787/files/id-binned/restore',
-    )
-    const firstBody = (await callAt(0)).body
-    const secondBody = (await callAt(1)).body
-    expect(firstBody.name).toBe('binned.jianpu')
-    expect(secondBody.name).toBe('binned 2.jianpu')
-
-    expect(nextState.userFiles).toHaveProperty('binned 2.jianpu')
-    expect(nextState.bin).not.toHaveProperty('binned.jianpu')
   })
 })

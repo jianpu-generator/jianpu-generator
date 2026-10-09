@@ -29,6 +29,14 @@ export type CloudBackendError =
   | { kind: 'network' }
   | { kind: 'unknown'; message: string }
 
+/** A local file renamed because the outbox had to pick another name after
+ * the server reported the requested one as taken. */
+export interface LocalRename {
+  fileId: string
+  from: string
+  to: string
+}
+
 export interface CloudBackend extends StorageBackend {
   readonly kind: 'cloud'
   /** Detail behind the most recent `'error'`/`'offline'` status, if any. */
@@ -41,6 +49,9 @@ export interface CloudBackend extends StorageBackend {
    * race now succeeds and re-pushes the caller's in-memory edit.
    */
   forceOverwrite(state: FileStoreState): Promise<void>
+  /** Subscribes to renames the outbox made after a `name_taken` answer; the
+   * caller applies them to its file state (see `withRenamedKey`). */
+  onLocalRename(listener: (change: LocalRename) => void): () => void
   /** The outbox that carries this backend's content saves. */
   outbox(): OutboxLooper
 }
