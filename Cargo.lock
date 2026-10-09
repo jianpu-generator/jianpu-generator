@@ -1370,6 +1370,7 @@ name = "jianpu-wasm"
 version = "0.1.0"
 dependencies = [
  "brotli",
+ "cloud-outbox",
  "itertools 0.13.0",
  "jianpu-generator",
  "serde",

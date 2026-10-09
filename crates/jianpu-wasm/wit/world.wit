@@ -1226,4 +1226,211 @@ world jianpu-wasm {
 
     // Phase 3, group 7 of PLAN-wit-bindgen-migration.md.
     export resolve-selection-range: func(note-spans: list<note-span>, lyric-spans: list<lyric-span>, anchor: clickable-element-id, current: clickable-element-id) -> resolve-selection-range-response;
+
+    // ==================== cloud-outbox (crates/cloud-outbox/src/types.rs) ====================
+    //
+    // Mirrors the Rust types field-for-field. `#[serde(tag = "kind")]` enums
+    // become variants (unit variants are payload-less cases). Rust u64/i64 map
+    // to WIT u64/s64, which jco surfaces to TypeScript as `bigint`.
+
+    record file-revision {
+        file-id: string,
+        revision: s64,
+    }
+
+    record create-file-message {
+        name: string,
+        content: string,
+    }
+
+    record save-content-message {
+        content: string,
+    }
+
+    record rename-file-message {
+        to: string,
+    }
+
+    variant message {
+        create-file(create-file-message),
+        save-content(save-content-message),
+        rename-file(rename-file-message),
+        trash-file,
+        restore-file,
+    }
+
+    record transient-reason {
+        reason: string,
+    }
+
+    record revision-conflict-details {
+        current-revision: s64,
+    }
+
+    record name-taken-details {
+        suggested-name: string,
+    }
+
+    record permanent-details {
+        status: u16,
+        reason: string,
+    }
+
+    variant attempt-outcome {
+        transient(transient-reason),
+        unauthorized,
+        revision-conflict(revision-conflict-details),
+        name-taken(name-taken-details),
+        permanent(permanent-details),
+    }
+
+    record attempt {
+        at-ms: u64,
+        outcome: attempt-outcome,
+    }
+
+    record queued-message {
+        message-id: string,
+        created-at-ms: u64,
+        message: message,
+        attempts: list<attempt>,
+    }
+
+    record waiting-details {
+        retry-at-ms: u64,
+    }
+
+    record needs-merge-details {
+        current-revision: s64,
+    }
+
+    record failed-details {
+        reason: string,
+    }
+
+    variant lane-status {
+        idle,
+        draining,
+        waiting(waiting-details),
+        needs-sign-in,
+        needs-merge(needs-merge-details),
+        failed(failed-details),
+    }
+
+    record lane {
+        file-id: string,
+        status: lane-status,
+        in-flight: option<string>,
+        messages: list<queued-message>,
+    }
+
+    record queue {
+        lanes: list<lane>,
+        revisions: list<file-revision>,
+    }
+
+    record send-request {
+        file-id: string,
+        message-id: string,
+        message: message,
+        expected-revision: s64,
+    }
+
+    record begin-send {
+        queue: queue,
+        request: option<send-request>,
+    }
+
+    record send-ok-details {
+        revision: s64,
+    }
+
+    variant send-result {
+        ok(send-ok-details),
+        transient(transient-reason),
+        unauthorized,
+        conflict(revision-conflict-details),
+        name-taken(name-taken-details),
+        permanent(permanent-details),
+    }
+
+    record merged-and-save-details {
+        content: string,
+        server-revision: s64,
+    }
+
+    variant resolution {
+        retry,
+        discard,
+        merged-and-save(merged-and-save-details),
+    }
+
+    record stored-record {
+        key: string,
+        value: string,
+    }
+
+    record unsupported-version-details {
+        found: u32,
+    }
+
+    record corrupt-details {
+        key: string,
+    }
+
+    variant decode-error {
+        unsupported-version(unsupported-version-details),
+        corrupt(corrupt-details),
+    }
+
+    record merge-clean-details {
+        text: string,
+    }
+
+    record merge-conflicted-details {
+        text: string,
+        has-markers: bool,
+    }
+
+    variant merge-outcome {
+        clean(merge-clean-details),
+        conflicted(merge-conflicted-details),
+    }
+
+    enum lane-reason {
+        syncing,
+        waiting-to-retry,
+        possibly-stuck,
+        needs-sign-in,
+        needs-merge,
+        failed,
+    }
+
+    record lane-summary {
+        file-id: string,
+        reason: lane-reason,
+        pending-messages: u32,
+        retry-in-ms: option<u64>,
+        attempts: list<attempt>,
+        failure-reason: option<string>,
+    }
+
+    record queue-summary {
+        lanes: list<lane-summary>,
+        total-pending: u32,
+        lanes-needing-attention: u32,
+        has-unsynced: bool,
+    }
+
+    export outbox-enqueue: func(queue: queue, file-id: string, message: message, message-id: string, now-ms: u64) -> queue;
+    export outbox-begin-send: func(queue: queue, now-ms: u64) -> begin-send;
+    export outbox-next-wake-ms: func(queue: queue) -> option<u64>;
+    export outbox-on-result: func(queue: queue, file-id: string, message-id: string, send-result: send-result, now-ms: u64, jitter-unit: f64) -> queue;
+    export outbox-resolve: func(queue: queue, file-id: string, resolution: resolution) -> queue;
+    export outbox-resolve-signed-in: func(queue: queue) -> queue;
+    export outbox-record-revision: func(queue: queue, file-id: string, revision: s64) -> queue;
+    export outbox-encode-queue: func(queue: queue) -> list<stored-record>;
+    export outbox-decode-queue: func(records: list<stored-record>) -> result<queue, decode-error>;
+    export outbox-summarize: func(queue: queue, now-ms: u64) -> queue-summary;
+    export merge-three-way: func(base: string, mine: string, theirs: string) -> merge-outcome;
 }
