@@ -67,6 +67,7 @@ export interface FileSwitcherProps {
   binNames: string[]
   /** Opens the Bin modal, which lists `binNames` and handles restoring. */
   onOpenBin: () => void
+  onOpenSyncPanel?: () => void
   /** See `ShareModalProps.canSync`. */
   canSync: boolean
   isSynced: boolean
@@ -103,6 +104,7 @@ export function FileSwitcher({
   onImportFile,
   binNames,
   onOpenBin,
+  onOpenSyncPanel,
   canSync,
   isSynced,
   syncedShareLink,
@@ -129,6 +131,7 @@ export function FileSwitcher({
       <SaveStatusBadge
         status={saveStatus}
         label={saveLabel}
+        onOpen={onOpenSyncPanel}
         autosaveDeadline={autosaveDeadline}
       />
       <div className="export-menu">

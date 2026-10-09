@@ -93,6 +93,7 @@ interface AppHeaderProps {
   renamingFileName?: string | null
   isLoadingCloud?: boolean
   onOpenBin: () => void
+  onOpenSyncPanel?: () => void
   hasDocuments: boolean
   rendering: boolean
   audioGenerating?: boolean
@@ -158,6 +159,7 @@ export function AppHeader({
   renamingFileName,
   isLoadingCloud,
   onOpenBin,
+  onOpenSyncPanel,
   hasDocuments,
   rendering,
   audioGenerating,
@@ -275,6 +277,7 @@ export function AppHeader({
             onImportFile={onImportFile}
             binNames={sortedBinNames(store)}
             onOpenBin={onOpenBin}
+            onOpenSyncPanel={onOpenSyncPanel}
             canSync={syncedShare.canSync}
             isSynced={syncedShare.isSynced}
             syncedShareLink={syncedShare.syncedShareLink}

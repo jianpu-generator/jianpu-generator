@@ -132,6 +132,8 @@ export default function App() {
     setStorageSettingsOpen,
     binOpen,
     setBinOpen,
+    syncPanelOpen,
+    setSyncPanelOpen,
     handlePartDeclarationChange,
     handleShiftPartOctave,
     parsedMetadata,
@@ -218,6 +220,9 @@ export default function App() {
         renamingFileName={renamingFileName}
         isLoadingCloud={isLoadingCloud}
         onOpenBin={() => setBinOpen(true)}
+        onOpenSyncPanel={
+          backend.kind === 'cloud' ? () => setSyncPanelOpen(true) : undefined
+        }
         hasDocuments={documents.length > 0}
         rendering={rendering}
         audioGenerating={audioGenerating}
@@ -263,6 +268,8 @@ export default function App() {
         selectedMeasureRange={selectedMeasureRange}
         binOpen={binOpen}
         setBinOpen={setBinOpen}
+        syncPanelOpen={syncPanelOpen}
+        setSyncPanelOpen={setSyncPanelOpen}
         onRestore={handleRestore}
         restoringFileName={restoringFileName}
         pendingDownload={pendingDownload}

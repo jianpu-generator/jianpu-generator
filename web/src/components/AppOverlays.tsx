@@ -11,6 +11,8 @@ import { BinModal } from './BinModal'
 import { DownloadRenameModal } from './DownloadRenameModal'
 import { ErrorModal } from './ErrorModal'
 import { StorageSettingsModal } from './StorageSettingsModal'
+import { SyncPanelContainer } from './syncPanel/SyncPanelContainer'
+import { withServerContent } from './syncPanel/withServerContent'
 
 interface AppOverlaysProps {
   fileOpError: FileOpError | null
@@ -29,6 +31,8 @@ interface AppOverlaysProps {
   selectedMeasureRange: { start: number; end: number } | null
   binOpen: boolean
   setBinOpen: (open: boolean) => void
+  syncPanelOpen: boolean
+  setSyncPanelOpen: (open: boolean) => void
   onRestore: (name: string) => void
   restoringFileName?: string | null
   pendingDownload: PendingDownload | null
@@ -54,6 +58,8 @@ export function AppOverlays({
   selectedMeasureRange,
   binOpen,
   setBinOpen,
+  syncPanelOpen,
+  setSyncPanelOpen,
   onRestore,
   restoringFileName,
   pendingDownload,
@@ -88,6 +94,15 @@ export function AppOverlays({
         binNames={sortedBinNames(store)}
         onRestore={onRestore}
         restoringName={restoringFileName}
+      />
+      <SyncPanelContainer
+        open={syncPanelOpen}
+        onOpenChange={setSyncPanelOpen}
+        backend={backend}
+        store={store}
+        onServerContent={(fileId, content) =>
+          setStore((previous) => withServerContent(previous, fileId, content))
+        }
       />
       <DownloadRenameModal
         pending={pendingDownload}

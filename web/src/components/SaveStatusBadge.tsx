@@ -31,10 +31,13 @@ export function SaveStatusBadge({
   status,
   autosaveDeadline,
   label: outboxLabel = null,
+  onOpen,
 }: {
   status: DisplaySaveStatus
   /** Outbox-derived text; wins over the per-status default. */
   label?: string | null
+  /** When set, the badge is a button that opens the sync panel. */
+  onOpen?: () => void
   autosaveDeadline: number | null
 }) {
   const remainingSeconds = useCountdownSeconds(
@@ -47,11 +50,18 @@ export function SaveStatusBadge({
         : 'Unsaved'
       : (outboxLabel ?? STATUS_LABEL[status])
   if (!label) return null
-  return (
-    <span
-      className={`file-tab-bar-save-status file-tab-bar-save-status--${status}`}
+  const className = `file-tab-bar-save-status file-tab-bar-save-status--${status}`
+  return onOpen ? (
+    <button
+      type="button"
+      className={className}
       data-testid="save-status-badge"
+      onClick={onOpen}
     >
+      {label}
+    </button>
+  ) : (
+    <span className={className} data-testid="save-status-badge">
       {label}
     </span>
   )
