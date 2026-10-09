@@ -57,4 +57,12 @@ export interface CloudBackend extends StorageBackend {
   outbox(): OutboxLooper
   /** The last text the server is known to have, per file. */
   bases(): BaseSnapshots
+  /** The server's current revision and content of `fileId`, or `undefined`
+   * when the server does not list it. */
+  fetchServerFile(fileId: string): Promise<ServerFile | undefined>
+}
+
+export interface ServerFile {
+  revision: number
+  content: string
 }

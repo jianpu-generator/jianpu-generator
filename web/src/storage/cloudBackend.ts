@@ -304,6 +304,14 @@ export function createCloudBackend(
 
     saveContent,
 
+    async fetchServerFile(fileId: string) {
+      const response = await callWorker(
+        client.POST('/files/list', { body: { identityToken } }),
+      )
+      const file = response.files.find(({ id }) => id === fileId)
+      return file && { revision: file.revision, content: file.content }
+    },
+
     outbox: () => looper,
     bases: () => bases,
 
