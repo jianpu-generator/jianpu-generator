@@ -18,16 +18,23 @@ import {
   NetworkFailure,
   WorkerRequestError,
 } from '../syncedShare/workerClient'
+import { ensureWasmInit } from '../wasmInit'
 import {
   addedName,
   withNameCollisionRetry,
   withRenamedKey,
 } from './cloudBackendNaming'
+import {
+  createCloudOutboxLooper,
+  outboxLaneError,
+  outboxSaveStatus,
+} from './cloudBackendOutbox'
 import type {
   CloudBackend,
   CloudBackendConfig,
   CloudBackendError,
 } from './cloudBackendTypes'
+import type { OutboxLooper } from './outbox/outboxLooper'
 import type { SaveStatus } from './types'
 
 export type {
@@ -64,15 +71,22 @@ export type {
  * `cloudBackendTypes.ts` -- split out of this file to stay under this
  * repo's 400-line cap.
  */
-export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
+export interface CloudBackendDependencies {
+  looper?: OutboxLooper
+  ensureWasm?: () => Promise<void>
+}
+
+export function createCloudBackend(
+  config: CloudBackendConfig,
+  dependencies: CloudBackendDependencies = {},
+): CloudBackend {
   const identityToken = config.token
   const client = createWorkerClient(config.workerHost)
 
-  let status: SaveStatus = 'idle'
-  let lastError: CloudBackendError | null = null
-  let inFlightSave: Promise<void> | null = null
-  let pendingRetryState: FileStoreState | null = null
-  const revisionByFileId = new Map<string, number>()
+  // Status of the last structural operation; content saves report through
+  // the outbox (see `status()` and `lastError()` below).
+  let operationStatus: SaveStatus = 'idle'
+  let operationError: CloudBackendError | null = null
   // `FileStoreState.fileIds` is one flat map keyed by display name, shared
   // across `userFiles` and `bin` -- sound for every *pure* transform in
   // `fileStore.ts` (which never lets the same name occupy both buckets at
@@ -106,14 +120,26 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
     return trashedIdByName.get(name) ?? fileIdForName(state, name)
   }
 
-  if (typeof window !== 'undefined') {
-    window.addEventListener('online', () => {
-      if (status === 'offline' && pendingRetryState) {
-        const retryState = pendingRetryState
-        pendingRetryState = null
-        void saveContent(retryState)
-      }
+  /** The local name of the trashed file `fileId`, for a `RestoreFile` message. */
+  function trashedNameOf(fileId: string): string {
+    for (const [name, id] of trashedIdByName) if (id === fileId) return name
+    for (const [name, id] of activeIdByName) if (id === fileId) return name
+    return ''
+  }
+
+  const looper =
+    dependencies.looper ??
+    createCloudOutboxLooper({
+      client,
+      identityToken,
+      restoreName: trashedNameOf,
     })
+  const ensureWasm = dependencies.ensureWasm ?? ensureWasmInit
+  let ready: Promise<void> | null = null
+  /** Initializes wasm and starts the looper, once. */
+  function whenReady(): Promise<void> {
+    ready ??= ensureWasm().then(() => looper.start())
+    return ready
   }
 
   /** Classifies a thrown error into the `CloudBackendError`/`SaveStatus`
@@ -157,70 +183,45 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
   async function runOp<T>(operation: () => Promise<T>): Promise<T> {
     try {
       const result = await operation()
-      status = 'idle'
-      lastError = null
+      operationStatus = 'idle'
+      operationError = null
       return result
     } catch (error) {
       const classified = classifyError(error)
-      status = classified.status
-      lastError = classified.error
+      operationStatus = classified.status
+      operationError = classified.error
       throw error
     }
   }
 
-  async function saveContentImpl(state: FileStoreState): Promise<void> {
+  /** Queues the active file's content in the outbox and returns once it is
+   * persisted locally -- delivery happens in the background. */
+  async function saveContent(state: FileStoreState): Promise<void> {
     if (isReadOnlyFile(state.active)) return
-    const id = fileIdForName(state, state.active)
-    const expectedRevision = revisionByFileId.get(id) ?? 0
-    status = 'saving'
-    try {
-      const response = await callWorker(
-        client.POST('/files/{id}/content', {
-          params: { path: { id } },
-          body: {
-            identityToken,
-            content: fileContent(state, state.active),
-            expectedRevision,
-          },
-        }),
-      )
-      revisionByFileId.set(id, response.revision)
-      status = 'idle'
-      lastError = null
-      pendingRetryState = null
-    } catch (error) {
-      if (
-        error instanceof WorkerRequestError &&
-        error.apiError?.code === 'revision_conflict'
-      ) {
-        // Deliberately does not rethrow, unlike every other failure here --
-        // see `CloudBackend.forceOverwrite`'s doc comment. The revision map
-        // is left untouched so `forceOverwrite` can realign it to
-        // `currentRevision` before retrying.
-        status = 'error'
-        lastError = {
-          kind: 'conflict',
-          currentRevision: error.apiError.currentRevision,
-        }
-        return
-      }
-      const classified = classifyError(error)
-      status = classified.status
-      lastError = classified.error
-      if (classified.status === 'offline') pendingRetryState = state
-      throw error
-    }
+    await whenReady()
+    await looper.enqueue(fileIdForName(state, state.active), {
+      tag: 'save-content',
+      val: { content: fileContent(state, state.active) },
+    })
   }
 
-  /** Serializes autosave calls: only one file is ever actively edited at a
-   * time, so a single in-flight promise (rather than a per-id map) is
-   * enough to guarantee the next save waits for the previous one -- same
-   * shape as the deleted GitHub backend's `saveContent`. */
-  function saveContent(state: FileStoreState): Promise<void> {
-    const previous = inFlightSave ?? Promise.resolve()
-    const next = previous.catch(() => {}).then(() => saveContentImpl(state))
-    inFlightSave = next.catch(() => {})
-    return next
+  /** Tells the outbox each file's server revision, except for files with
+   * unsent messages: their recorded revision is what conflict detection
+   * compares against. */
+  async function recordServerRevisions(
+    files: ReadonlyArray<{ id: string; revision: number }>,
+  ): Promise<void> {
+    const pending = new Set(
+      looper
+        .snapshot()
+        .queue.lanes.filter((lane) => lane.messages.length > 0)
+        .map((lane) => lane.fileId),
+    )
+    for (const file of files) {
+      if (!pending.has(file.id)) {
+        await looper.recordRevision(file.id, BigInt(file.revision))
+      }
+    }
   }
 
   /** Persists the file `nextState` added relative to `state` (create,
@@ -242,7 +243,8 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
         ),
       ),
     )
-    revisionByFileId.set(id, 0)
+    await whenReady()
+    await looper.recordRevision(id, 0n)
     activeIdByName.set(finalName, id)
     return finalName === name
       ? nextState
@@ -253,6 +255,7 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
     kind: 'cloud',
 
     async load(): Promise<FileStoreState> {
+      await whenReady()
       const response = await callWorker(
         client.POST('/files/list', { body: { identityToken } }),
       )
@@ -263,7 +266,6 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
       trashedIdByName.clear()
       for (const file of response.files) {
         fileIds[file.name] = file.id
-        revisionByFileId.set(file.id, file.revision)
         if (file.trashedAt === null) {
           userFiles[file.name] = file.content
           activeIdByName.set(file.name, file.id)
@@ -272,13 +274,14 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
           trashedIdByName.set(file.name, file.id)
         }
       }
+      await recordServerRevisions(response.files)
       // A successful listing proves the backend is reachable and current,
       // so any stale error/conflict from a previous save (e.g. "discard
       // mine", which reloads via this method without going through
       // `runOp`/`saveContentImpl`) no longer applies -- same reasoning as
       // the deleted GitHub backend's `load()`.
-      status = 'idle'
-      lastError = null
+      operationStatus = 'idle'
+      operationError = null
       return { active: DEMO_FILE_NAMES[0] ?? '', userFiles, bin, fileIds }
     },
 
@@ -367,14 +370,25 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
 
     saveContent,
 
-    status: (): SaveStatus => status,
+    outbox: () => looper,
 
-    lastError: (): CloudBackendError | null => lastError,
+    status: (): SaveStatus =>
+      outboxSaveStatus(looper.snapshot()) ?? operationStatus,
+
+    lastError: (): CloudBackendError | null =>
+      outboxLaneError(looper.snapshot()) ?? operationError,
 
     async forceOverwrite(state: FileStoreState): Promise<void> {
-      if (lastError?.kind === 'conflict') {
-        const id = fileIdForName(state, state.active)
-        revisionByFileId.set(id, lastError.currentRevision)
+      const id = fileIdForName(state, state.active)
+      const conflict = looper
+        .snapshot()
+        .queue.lanes.find(
+          (lane) => lane.fileId === id && lane.status.tag === 'needs-merge',
+        )
+      if (conflict?.status.tag === 'needs-merge') {
+        await looper.recordRevision(id, conflict.status.val.currentRevision)
+        await looper.resolve(id, { tag: 'retry' })
+        return
       }
       return saveContent(state)
     },

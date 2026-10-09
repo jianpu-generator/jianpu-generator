@@ -1,4 +1,5 @@
 import type { FileStoreState } from '../fileStore'
+import type { OutboxLooper } from './outbox/outboxLooper'
 import type { StorageBackend } from './types'
 
 export interface CloudBackendConfig {
@@ -40,4 +41,6 @@ export interface CloudBackend extends StorageBackend {
    * race now succeeds and re-pushes the caller's in-memory edit.
    */
   forceOverwrite(state: FileStoreState): Promise<void>
+  /** The outbox that carries this backend's content saves. */
+  outbox(): OutboxLooper
 }
