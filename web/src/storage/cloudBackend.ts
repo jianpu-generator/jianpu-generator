@@ -16,9 +16,10 @@ import { callWorker, createWorkerClient } from '../syncedShare/workerClient'
 import { ensureWasmInit } from '../wasmInit'
 import { addedName } from './cloudBackendNaming'
 import {
-  createCloudOutboxLooper,
+  createCloudOutbox,
   outboxLaneError,
   outboxSaveStatus,
+  recordListedBases,
 } from './cloudBackendOutbox'
 import type {
   CloudBackend,
@@ -26,6 +27,7 @@ import type {
   CloudBackendError,
   LocalRename,
 } from './cloudBackendTypes'
+import type { BaseSnapshots } from './outbox/baseSnapshots'
 import type { OutboxLooper, OutboxSnapshot } from './outbox/outboxLooper'
 import type { SaveStatus } from './types'
 
@@ -68,6 +70,7 @@ export type {
  */
 export interface CloudBackendDependencies {
   looper?: OutboxLooper
+  bases?: BaseSnapshots
   ensureWasm?: () => Promise<void>
 }
 
@@ -118,13 +121,10 @@ export function createCloudBackend(
     return ''
   }
 
-  const looper =
-    dependencies.looper ??
-    createCloudOutboxLooper({
-      client,
-      identityToken,
-      restoreName: trashedNameOf,
-    })
+  const { looper, bases } = createCloudOutbox(
+    { client, identityToken, restoreName: trashedNameOf },
+    dependencies,
+  )
   const ensureWasm = dependencies.ensureWasm ?? ensureWasmInit
   let ready: Promise<void> | null = null
   /** Initializes wasm and starts the looper, once. */
@@ -236,6 +236,7 @@ export function createCloudBackend(
         }
       }
       await recordServerRevisions(response.files)
+      await recordListedBases(looper, bases, response.files)
       // A successful listing proves the backend is reachable and current,
       // so any stale error/conflict from a previous save (e.g. "discard
       // mine", which reloads via this method without going through
@@ -304,6 +305,7 @@ export function createCloudBackend(
     saveContent,
 
     outbox: () => looper,
+    bases: () => bases,
 
     status: (): SaveStatus => outboxSaveStatus(looper.snapshot()) ?? 'idle',
 

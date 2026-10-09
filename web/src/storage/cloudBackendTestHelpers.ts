@@ -8,6 +8,8 @@ import {
   createWorkerClient,
 } from '../syncedShare/workerClient'
 import { createCloudBackend } from './cloudBackend'
+import { baseSnapshotHooks } from './cloudBackendOutbox'
+import { createBaseSnapshots } from './outbox/baseSnapshots'
 import { createMemoryOutboxStore } from './outbox/memoryOutboxStore'
 import { createOutboxLooper } from './outbox/outboxLooper'
 import { sendMessage } from './outbox/sendMessage'
@@ -83,8 +85,11 @@ export function createTestBackend() {
   let time = 1_000_000
   let wake: () => void = () => undefined
   const client = createWorkerClient(config.workerHost)
+  const store = createMemoryOutboxStore()
+  const bases = createBaseSnapshots(store)
   const looper = createOutboxLooper({
-    store: createMemoryOutboxStore(),
+    ...baseSnapshotHooks(bases),
+    store,
     sendMessage: (request) =>
       sendMessage(request, {
         client,
@@ -119,11 +124,14 @@ export function createTestBackend() {
   })
   const backend = createCloudBackend(config, {
     looper,
+    bases,
     ensureWasm: installRealWasm,
   })
   return {
     backend,
     looper,
+    bases,
+    store,
     wake: () => wake(),
     advance: (ms: number) => {
       time += ms
