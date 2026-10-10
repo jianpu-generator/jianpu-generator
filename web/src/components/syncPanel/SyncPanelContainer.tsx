@@ -3,8 +3,11 @@ import { useEffect, useState } from 'react'
 import type { FileStoreState } from '../../fileStore'
 import { useFocusRevisionCheck } from '../../hooks/useFocusRevisionCheck'
 import type { CloudBackend, LocalRename } from '../../storage/cloudBackendTypes'
+import type { ConflictDetails } from '../../storage/outbox/conflictFlow'
+import { keepBoth } from '../../storage/outbox/keepBoth'
 import type { OutboxSnapshot } from '../../storage/outbox/outboxLooper'
 import type { StorageBackend } from '../../storage/types'
+import { MergeEditorContainer } from '../mergeEditor/MergeEditorContainer'
 import { buildDiagnostics, copyDiagnostics } from './copyDiagnostics'
 import { DiscardConfirmDialog } from './DiscardConfirmDialog'
 import { downloadLocalCopy } from './downloadLocalCopy'
@@ -20,8 +23,8 @@ export interface SyncPanelContainerProps {
   onServerContent: (fileId: string, content: string) => void
   /** Applies a rename the outbox made after a name collision. */
   onLocalRename: (change: LocalRename) => void
-  onReviewAndMerge?: (fileId: string) => void
-  onKeepBoth?: (fileId: string) => void
+  /** Replaces the whole open store, e.g. after keeping both versions. */
+  replaceStore: (next: FileStoreState) => void
 }
 
 function nameOfFile(store: FileStoreState, fileId: string): string {
@@ -46,6 +49,7 @@ function CloudSyncPanel(
   const { backend, store } = props
   const snapshot = useOutboxSnapshot(backend)
   const [discardingFileId, setDiscardingFileId] = useState<string | null>(null)
+  const [mergingFileId, setMergingFileId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   useEffect(
     () => backend.onLocalRename(props.onLocalRename),
@@ -62,6 +66,15 @@ function CloudSyncPanel(
     activeFileId: store.fileIds[store.active],
     onServerContent: props.onServerContent,
   })
+  const conflictOf = (fileId: string | null): ConflictDetails | null =>
+    backend
+      .conflicts()
+      ?.conflicts()
+      .find((candidate) => candidate.fileId === fileId) ?? null
+  const keepBothVersions = async (fileId: string) => {
+    const today = new Date().toISOString().slice(0, 10)
+    props.replaceStore(await keepBoth({ backend, state: store, fileId, today }))
+  }
   const lanes = toLaneViews(snapshot, (fileId) => nameOfFile(store, fileId))
 
   const download = (fileId: string) => {
@@ -101,8 +114,8 @@ function CloudSyncPanel(
               onRetryNow={(fileId) =>
                 void backend.outbox().resolve(fileId, { tag: 'retry' })
               }
-              onReviewAndMerge={(fileId) => props.onReviewAndMerge?.(fileId)}
-              onKeepBoth={(fileId) => props.onKeepBoth?.(fileId)}
+              onReviewAndMerge={setMergingFileId}
+              onKeepBoth={(fileId) => void keepBothVersions(fileId)}
               onDiscard={setDiscardingFileId}
               onDownloadCopy={download}
               onCopyDiagnostics={() =>
@@ -115,6 +128,14 @@ function CloudSyncPanel(
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+      <MergeEditorContainer
+        conflict={conflictOf(mergingFileId)}
+        fileName={nameOfFile(store, mergingFileId ?? '')}
+        looper={backend.outbox()}
+        onKeepBoth={keepBothVersions}
+        onDiscard={setDiscardingFileId}
+        onClose={() => setMergingFileId(null)}
+      />
       <DiscardConfirmDialog
         open={discardingFileId !== null}
         fileName={nameOfFile(store, discardingFileId ?? '')}

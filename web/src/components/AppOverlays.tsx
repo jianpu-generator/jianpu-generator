@@ -104,6 +104,7 @@ export function AppOverlays({
         onServerContent={(fileId, content) =>
           setStore((previous) => withServerContent(previous, fileId, content))
         }
+        replaceStore={setStore}
         onLocalRename={({ from, to }) =>
           setStore((previous) => withRenamedKey(previous, from, to))
         }
