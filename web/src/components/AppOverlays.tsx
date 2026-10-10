@@ -67,6 +67,13 @@ export function AppOverlays({
   onConfirmDownload,
   onCancelDownload,
 }: AppOverlaysProps) {
+  /** A store that already matches the server is not a user edit, so it must
+   * not arm an autosave (which would show "Unsaved" and re-send it). */
+  const applySyncedStore = (next: FileStoreState) => {
+    setStore(next)
+    refreshSaveStatus(next)
+  }
+
   return (
     <>
       <ErrorModal
@@ -102,9 +109,9 @@ export function AppOverlays({
         backend={backend}
         store={store}
         onServerContent={(fileId, content) =>
-          setStore((previous) => withServerContent(previous, fileId, content))
+          applySyncedStore(withServerContent(store, fileId, content))
         }
-        replaceStore={setStore}
+        replaceStore={applySyncedStore}
         onLocalRename={({ from, to }) =>
           setStore((previous) => withRenamedKey(previous, from, to))
         }
