@@ -99,3 +99,34 @@
   z-index: 1100;
   font-size: 0.8rem;
 }
+
+/* The confirmation opens over the sync panel, so it must stack above it. */
+.discard-confirm__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1002;
+}
+
+.discard-confirm {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+  z-index: 1003;
+  min-width: 320px;
+  max-width: 90vw;
+  padding: 12px 16px;
+}
+
+.discard-confirm__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
