@@ -85,9 +85,20 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
   let drainRequested = false
   const listeners = new Set<(snapshot: OutboxSnapshot) => void>()
 
+  /** Until the stored queue has been read (which needs the wasm component),
+   * there is nothing to summarise, and asking wasm would throw. */
+  let loaded = false
+
   const snapshot = (): OutboxSnapshot => ({
     queue,
-    summary: jianpuWasm().outboxSummarize(queue, nowMs()),
+    summary: loaded
+      ? jianpuWasm().outboxSummarize(queue, nowMs())
+      : {
+          lanes: [],
+          totalPending: 0,
+          lanesNeedingAttention: 0,
+          hasUnsynced: false,
+        },
     halted,
   })
 
@@ -213,6 +224,7 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
       if (started) return
       started = true
       await load()
+      loaded = true
       notify()
       stopLeading = runAsLeader(async (signal) => {
         // The previous leader may have changed the stored queue since we loaded.

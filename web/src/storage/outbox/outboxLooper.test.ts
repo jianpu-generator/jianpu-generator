@@ -86,6 +86,11 @@ function makeHarness(
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 describe('outbox looper', () => {
+  it('has an empty snapshot before it has started, without touching wasm', () => {
+    const harness = makeHarness()
+    expect(harness.looper.snapshot().summary.hasUnsynced).toBe(false)
+  })
+
   it('persists an enqueued message before sending it', async () => {
     let storedWhenSent: string[] = []
     const store = createMemoryOutboxStore()
