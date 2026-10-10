@@ -8,12 +8,17 @@ export function broadcastChanges(
 ): OutboxChangeChannel | undefined {
   if (typeof BroadcastChannel === 'undefined') return undefined
   const name = `jianpu-outbox:${account}`
+  // Channels of the same name in one tab hear each other, so every message
+  // carries its sender and a tab ignores its own.
+  const tabId = crypto.randomUUID()
   const sender = new BroadcastChannel(name)
   return {
-    announce: () => sender.postMessage('changed'),
+    announce: () => sender.postMessage(tabId),
     listen: (onChange) => {
       const receiver = new BroadcastChannel(name)
-      receiver.onmessage = onChange
+      receiver.onmessage = (event) => {
+        if (event.data !== tabId) onChange()
+      }
       return () => receiver.close()
     },
   }

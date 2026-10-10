@@ -194,42 +194,6 @@ export async function restoreCloudFile(
   )
 }
 
-/** Convenience: seeds a file and immediately trashes it, for scenarios that
- * need a file to load straight into the bin with no prior UI delete step. */
-export async function seedTrashedCloudFile(
-  login: string,
-  name: string,
-  content: string = DEFAULT_CLOUD_FILE_CONTENT,
-): Promise<PublicFile> {
-  const file = await seedCloudFile(login, name, content)
-  await trashCloudFile(login, file.id)
-  return file
-}
-
-/** Overwrites a file's content directly against the real worker, gated on
- * `expectedRevision` (the same optimistic-concurrency CAS every real save
- * goes through -- see `crate::files::classify_content_write`). Used to
- * simulate "the remote content changed since the browser last saw it" for
- * the conflict-resolution scenarios' "discard mine" path. */
-export async function updateCloudFileContent(
-  login: string,
-  id: string,
-  content: string,
-  expectedRevision: number,
-): Promise<{ revision: number }> {
-  return await expectOk(
-    'POST /files/{id}/content',
-    worker.POST('/files/{id}/content', {
-      params: { path: { id } },
-      body: {
-        identityToken: syncedShareIdentityTokenFor(login),
-        content,
-        expectedRevision,
-      },
-    }),
-  )
-}
-
 /** Fetches a share the way an anonymous viewer would. */
 export async function fetchSyncedDoc(
   shareId: string,
