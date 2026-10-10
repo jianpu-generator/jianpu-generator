@@ -42,6 +42,13 @@ export interface OutboxLooperDeps {
   onAcknowledged?(request: SendRequest, revision: bigint): void | Promise<void>
   /** Called after a discard resolution has been persisted. Errors are ignored. */
   onDiscarded?(fileId: string): void | Promise<void>
+  /** Tells the other tabs of this account that the stored queue changed. */
+  changes?: OutboxChangeChannel
+}
+
+export interface OutboxChangeChannel {
+  announce(): void
+  listen(onChange: () => void): () => void
 }
 
 export interface OutboxLooper {
@@ -79,6 +86,7 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
   let started = false
   let isLeader = false
   let stopLeading: (() => void) | null = null
+  let stopListening: (() => void) | null = null
   let persisted = new Map<string, string>()
   let persistChain: Promise<void> = Promise.resolve()
   let drainPromise: Promise<void> | null = null
@@ -212,8 +220,23 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
         'The outbox could not be read, so it will not accept new messages',
       )
     }
+    // Another tab may have queued messages since this one last read the
+    // store; build on what is stored so neither tab's messages are lost.
+    if (!isLeader && loaded) await load()
+    if (halted) throw new Error('The outbox could not be read')
     queue = change()
     await persist()
+    notify()
+    deps.changes?.announce()
+    void requestDrain().catch(() => undefined)
+  }
+
+  /** A follower tab changed the stored queue: pick it up and deliver it. */
+  const adoptExternalChange = async (): Promise<void> => {
+    if (!isLeader) return
+    await drainPromise
+    await persistChain
+    await load()
     notify()
     void requestDrain().catch(() => undefined)
   }
@@ -229,6 +252,10 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
       if (!started) return
       loaded = true
       notify()
+      stopListening =
+        deps.changes?.listen(() => {
+          void adoptExternalChange().catch(() => undefined)
+        }) ?? null
       stopLeading = runAsLeader(async (signal) => {
         // The previous leader may have changed the stored queue since we loaded.
         await load()
@@ -248,6 +275,8 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
       started = false
       stopLeading?.()
       stopLeading = null
+      stopListening?.()
+      stopListening = null
       isLeader = false
       scheduler?.dispose()
       scheduler = null
