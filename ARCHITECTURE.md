@@ -713,3 +713,98 @@ away from the wasm build both times:
 | **Account sign-in connection** | The single, dedicated, minimally-scoped "sign in with GitHub" OAuth connection (`web/src/storage/accountAuth.ts`/`accountAuthPopup.ts`/`accountAuthCallback.ts` client-side, `src/oauth.rs`'s `POST /auth/github/callback` Worker-side) used to verify identity for **both** cloud file storage and Synced Share ownership — one unified account, not the two independent connections (a broad-scope storage connection plus a separate sharing-only one) this used to be split into. `accountAuth.ts`'s persisted `localStorage` key literal, `jianpu:synced-share-github-auth:v1`, is unchanged from before that unification (a mechanical file/hook rename only) so already-signed-in users' tokens keep resolving. See "Account sign-in" above. |
 | **owner_login / "Shared by @login"** | `protocol::SyncedDoc::owner_login`: the owning user's cached `user_identities.login`, selected by `queries/get_share_view.sql` alongside the shared file and passed through `share::to_public_doc` — the one field from `user_identities` deliberately exposed on the anonymous `GET /shares/{share_id}` response, rendered by `web/`'s `SyncedShareBanner` as "Shared by @login". `null` when the owner has no cached login. |
 | **share** | A `shares` row: a pointer from a `share_id` (the `#synced=` link) to one cloud `files` row, not a copy of its content. A viewer reads the file's saved content directly, so the owner's autosave is the only write path and a link can only ever show its own file. At most one per file (`shares.file_id` is unique), so re-sharing reproduces the same link; stopping sets `ended_at` rather than deleting, and a binned file reads as ended until restored. Only cloud files can be shared this way. |
+
+## Cloud outbox (`crates/cloud-outbox`)
+
+The outbox is the pure, I/O-free state machine that decides what a signed-in
+user's cloud file edits do next: which message to send, when to retry, when to
+stop and ask the user. It is compiled to wasm and exposed through the
+`outbox-*` functions of `crates/jianpu-wasm/wit/world.wit` (guest side:
+`crates/jianpu-wasm/src/component/guest_outbox.rs`, conversions in
+`outbox_conversion.rs`). Every function takes a `Queue` and returns a new one;
+nothing is mutated in place and the crate never reads a clock, a random number
+or the network (`now_ms` and `jitter_unit` are passed in).
+
+### Modules and entry functions
+
+| Module | Entry |
+|--------|-------|
+| `enqueue` | `enqueue(queue: Queue, file_id: &str, message: Message, message_id: &str, now_ms: u64) -> Queue` |
+| `scheduling` | `begin_send(queue: Queue, now_ms: u64) -> BeginSend` (`BeginSend { queue, request: Option<SendRequest> }`); `next_wake_ms(queue: &Queue) -> Option<u64>` |
+| `transitions` | `on_result(queue: Queue, file_id: &str, message_id: &str, result: SendResult, now_ms: u64, jitter_unit: f64) -> Queue`; `resolve(queue: Queue, file_id: &str, resolution: Resolution) -> Queue`; `resolve_signed_in(queue: Queue) -> Queue`; `record_revision(queue: Queue, file_id: &str, revision: i64) -> Queue` |
+| `backoff` | `backoff_ms(consecutive_failures: u32, jitter_unit: f64) -> u64` |
+| `codec` | `encode_queue(queue: &Queue) -> Vec<StoredRecord>`; `decode_queue(records: &[StoredRecord]) -> Result<Queue, DecodeError>` |
+| `summary` | `summarize(queue: &Queue, now_ms: u64) -> QueueSummary` |
+| `merge` | `merge_three_way(base: &str, mine: &str, theirs: &str, accepts: impl Fn(&str) -> bool) -> MergeOutcome` |
+
+The WIT exports are `outbox-enqueue`, `outbox-begin-send`,
+`outbox-next-wake-ms`, `outbox-on-result` (its result parameter is named
+`send-result`), `outbox-resolve`, `outbox-resolve-signed-in`,
+`outbox-record-revision`, `outbox-encode-queue`, `outbox-decode-queue` and
+`outbox-summarize`. `merge_three_way` has no `outbox-*` WIT export.
+
+### Key types (`src/types.rs`)
+
+All derive `Debug, Clone, PartialEq, Serialize, Deserialize`; structs use
+camelCase, enums are tagged with `kind`.
+
+- `Queue { lanes: Vec<Lane>, revisions: Vec<FileRevision> }`, with
+  `FileRevision { file_id, revision }` recording the last server revision known
+  per file.
+- `Lane { file_id, status: LaneStatus, in_flight: Option<String>, messages: Vec<QueuedMessage> }`.
+  The head message is index 0.
+- `QueuedMessage { message_id, created_at_ms, message: Message, attempts: Vec<Attempt> }`.
+- `Message`: `CreateFile { name, content }`, `SaveContent { content }`,
+  `RenameFile { to }`, `TrashFile`, `RestoreFile`. The file id lives on the lane.
+- `Attempt { at_ms, outcome: AttemptOutcome }`; `AttemptOutcome`: `Transient`,
+  `Unauthorized`, `RevisionConflict`, `NameTaken`, `Permanent`.
+- `LaneStatus`: `Idle`, `Draining`, `Waiting { retry_at_ms }`, `NeedsSignIn`,
+  `NeedsMerge { current_revision }`, `Failed { reason }`.
+- `SendRequest { file_id, message_id, message, expected_revision }`
+  (`expected_revision` is 0 when no revision is recorded).
+- `SendResult`: `Ok { revision }`, `Transient`, `Unauthorized`,
+  `Conflict { current_revision }`, `NameTaken`, `Permanent`. This is what the
+  shell reports back after performing a `SendRequest`.
+- `Resolution`: `Retry`, `Discard`, `MergedAndSave { content, server_revision }`.
+- `StoredRecord { key, value }` and `DecodeError` (`UnsupportedVersion`,
+  `Corrupt`); the persisted layout is `meta:version`, `meta:revisions` and one
+  `lane:<file_id>` record each, versioned by `QUEUE_SCHEMA_VERSION`.
+- `MergeOutcome`: `Clean { text }` or `Conflicted { text, has_markers }`.
+- `QueueSummary { lanes, total_pending, lanes_needing_attention, has_unsynced }`
+  of `LaneSummary { file_id, reason: LaneReason, pending_messages, retry_in_ms, attempts, failure_reason }`;
+  `LaneReason` is `Syncing`, `WaitingToRetry`, `PossiblyStuck`, `NeedsSignIn`,
+  `NeedsMerge`, `Failed`. A lane is `PossiblyStuck` after
+  `POSSIBLY_STUCK_AFTER` failed attempts.
+
+### TypeScript shell (`web/src/storage/outbox/`)
+
+The shell only does I/O, timers and rendering; every decision is a wasm call.
+
+- Existing: `outboxStore.ts` (persists `StoredRecord`s), `memoryOutboxStore.ts`
+  (in-memory store), `outboxLock.ts` (single-tab lock), `outboxScheduler.ts`
+  (timer driven by `next_wake_ms`).
+- `sendMessage.ts` (performs a `SendRequest` over HTTP and maps the
+  response to a `SendResult`), `outboxLooper.ts` (the Looper; runs on the
+  leader tab only), `baseSnapshots.ts` (Base snapshot storage under
+  `base:<fileId>`), `conflictFlow.ts` (drives `NeedsMerge` through
+  `merge_three_way`: a clean merge is saved at once, a conflicting one is kept
+  for the merge editor) and `keepBoth.ts` (saves the local text as a
+  `(conflicted copy <date>)` file, then discards the original lane).
+- `web/src/storage/cloudBackend.ts` enqueues every remote update; structural
+  operations apply locally at once and queue `create-file`, `rename-file`,
+  `trash-file` or `restore-file`.
+- UI: `web/src/components/syncPanel/` (reads `QueueSummary`; hosts Retry now,
+  Discard, Download my copy, Copy diagnostics) and
+  `web/src/components/mergeEditor/` (`MergeEditorContainer` offers Save,
+  Keep both and Discard).
+
+### Glossary additions (outbox)
+
+| Term | Definition |
+|------|-----------|
+| **Outbox** | The persisted `Queue` of not-yet-acknowledged cloud edits plus the pure functions in `crates/cloud-outbox` that advance it. |
+| **Lane** | The per-file ordered queue of messages (`Lane`) with its own `LaneStatus`. Lanes drain independently, so one halted file never blocks another. |
+| **Message** | One queued cloud operation (`Message`) with a `message_id` and its recorded attempts (`QueuedMessage`). A `SaveContent` coalesces into a directly preceding, not in-flight `SaveContent`. |
+| **Looper** | The TS loop (`outboxLooper.ts`) that repeatedly calls `begin_send`, performs the request, and feeds the `SendResult` to `on_result`, sleeping until `next_wake_ms`. |
+| **Halt** | A lane stopping instead of retrying: `NeedsSignIn`, `NeedsMerge` or `Failed`. It stays halted until a `Resolution` (or `resolve_signed_in`) moves it back to `Draining`. |
+| **Base snapshot** | The last content known to match the server for a file (kept by `baseSnapshots.ts`); the `base` input of `merge_three_way` when a revision conflict needs merging. |

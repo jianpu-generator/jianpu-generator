@@ -6,11 +6,14 @@ import type {
   StorageBackendPreference,
   StorageBackendTarget,
 } from '../hooks/useStorageBackend'
+import { withRenamedKey } from '../storage/cloudBackendNaming'
 import type { StorageBackend } from '../storage/types'
 import { BinModal } from './BinModal'
 import { DownloadRenameModal } from './DownloadRenameModal'
 import { ErrorModal } from './ErrorModal'
 import { StorageSettingsModal } from './StorageSettingsModal'
+import { SyncPanelContainer } from './syncPanel/SyncPanelContainer'
+import { withServerContent } from './syncPanel/withServerContent'
 
 interface AppOverlaysProps {
   fileOpError: FileOpError | null
@@ -29,6 +32,9 @@ interface AppOverlaysProps {
   selectedMeasureRange: { start: number; end: number } | null
   binOpen: boolean
   setBinOpen: (open: boolean) => void
+  syncPanelOpen: boolean
+  hasUnsavedEdits: boolean
+  setSyncPanelOpen: (open: boolean) => void
   onRestore: (name: string) => void
   restoringFileName?: string | null
   pendingDownload: PendingDownload | null
@@ -54,12 +60,22 @@ export function AppOverlays({
   selectedMeasureRange,
   binOpen,
   setBinOpen,
+  syncPanelOpen,
+  hasUnsavedEdits,
+  setSyncPanelOpen,
   onRestore,
   restoringFileName,
   pendingDownload,
   onConfirmDownload,
   onCancelDownload,
 }: AppOverlaysProps) {
+  /** A store that already matches the server is not a user edit, so it must
+   * not arm an autosave (which would show "Unsaved" and re-send it). */
+  const applySyncedStore = (next: FileStoreState) => {
+    setStore(next)
+    refreshSaveStatus(next)
+  }
+
   return (
     <>
       <ErrorModal
@@ -88,6 +104,20 @@ export function AppOverlays({
         binNames={sortedBinNames(store)}
         onRestore={onRestore}
         restoringName={restoringFileName}
+      />
+      <SyncPanelContainer
+        open={syncPanelOpen}
+        onOpenChange={setSyncPanelOpen}
+        backend={backend}
+        store={store}
+        onServerContent={(fileId, content) =>
+          applySyncedStore(withServerContent(store, fileId, content))
+        }
+        replaceStore={applySyncedStore}
+        hasUnsavedEdits={hasUnsavedEdits}
+        onLocalRename={({ from, to }) =>
+          setStore((previous) => withRenamedKey(previous, from, to))
+        }
       />
       <DownloadRenameModal
         pending={pendingDownload}

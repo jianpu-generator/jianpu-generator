@@ -12,22 +12,26 @@ import {
   restoreFile as pureRestoreFile,
   updateActiveContent as pureUpdateActiveContent,
 } from '../fileStore'
+import { callWorker, createWorkerClient } from '../syncedShare/workerClient'
+import { ensureWasmInit } from '../wasmInit'
+import { addedName } from './cloudBackendNaming'
 import {
-  callWorker,
-  createWorkerClient,
-  NetworkFailure,
-  WorkerRequestError,
-} from '../syncedShare/workerClient'
-import {
-  addedName,
-  withNameCollisionRetry,
-  withRenamedKey,
-} from './cloudBackendNaming'
+  applyPendingStructure,
+  createCloudOutbox,
+  outboxLaneError,
+  outboxSaveStatus,
+  pendingContentByFileId,
+  recordListedBases,
+} from './cloudBackendOutbox'
 import type {
   CloudBackend,
   CloudBackendConfig,
   CloudBackendError,
+  LocalRename,
 } from './cloudBackendTypes'
+import type { BaseSnapshots } from './outbox/baseSnapshots'
+import { type ConflictFlow, createConflictFlow } from './outbox/conflictFlow'
+import type { OutboxLooper, OutboxSnapshot } from './outbox/outboxLooper'
 import type { SaveStatus } from './types'
 
 export type {
@@ -59,20 +63,28 @@ export type {
  *
  * Requests go through the worker's generated client (`workerClient.ts` --
  * paths, bodies and the `ApiError` failure union all come from the Rust
- * handlers). The `name_taken` retry (`withNameCollisionRetry` and friends)
- * and the public types live in `cloudBackendNaming.ts` and
- * `cloudBackendTypes.ts` -- split out of this file to stay under this
- * repo's 400-line cap.
+ * handlers). Every write (content or structural) is applied to local state
+ * at once and queued in the outbox (`outbox/`), which delivers it in the
+ * background. A `name_taken` answer is resolved by the outbox rewriting the
+ * queued name; this backend then reports the local rename through
+ * `onLocalRename`. Naming helpers and the public types live in
+ * `cloudBackendNaming.ts` and `cloudBackendTypes.ts` -- split out of this
+ * file to stay under this repo's 400-line cap.
  */
-export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
+export interface CloudBackendDependencies {
+  looper?: OutboxLooper
+  bases?: BaseSnapshots
+  ensureWasm?: () => Promise<void>
+}
+
+export function createCloudBackend(
+  config: CloudBackendConfig,
+  dependencies: CloudBackendDependencies = {},
+): CloudBackend {
   const identityToken = config.token
   const client = createWorkerClient(config.workerHost)
 
-  let status: SaveStatus = 'idle'
-  let lastError: CloudBackendError | null = null
-  let inFlightSave: Promise<void> | null = null
-  let pendingRetryState: FileStoreState | null = null
-  const revisionByFileId = new Map<string, number>()
+  const renameListeners = new Set<(change: LocalRename) => void>()
   // `FileStoreState.fileIds` is one flat map keyed by display name, shared
   // across `userFiles` and `bin` -- sound for every *pure* transform in
   // `fileStore.ts` (which never lets the same name occupy both buckets at
@@ -88,8 +100,7 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
   // (always operating on a *known-active* name) and `restoreFile` (always
   // operating on a *known-trashed* name) never resolve the wrong row's id
   // out of a name that happens to collide across buckets. Kept in sync
-  // alongside `revisionByFileId` after every successful structural op,
-  // for the same reason that map is.
+  // alongside every structural op, for the same reason.
   const activeIdByName = new Map<string, string>()
   const trashedIdByName = new Map<string, string>()
 
@@ -106,125 +117,121 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
     return trashedIdByName.get(name) ?? fileIdForName(state, name)
   }
 
-  if (typeof window !== 'undefined') {
-    window.addEventListener('online', () => {
-      if (status === 'offline' && pendingRetryState) {
-        const retryState = pendingRetryState
-        pendingRetryState = null
-        void saveContent(retryState)
+  /** The current local name of `fileId`, for a `RestoreFile` message. */
+  function trashedNameOf(fileId: string): string {
+    for (const [name, id] of activeIdByName) if (id === fileId) return name
+    for (const [name, id] of trashedIdByName) if (id === fileId) return name
+    return ''
+  }
+
+  const { looper, bases } = createCloudOutbox(
+    {
+      client,
+      identityToken,
+      account: config.account,
+      restoreName: trashedNameOf,
+    },
+    dependencies,
+  )
+  const ensureWasm = dependencies.ensureWasm ?? ensureWasmInit
+  let ready: Promise<void> | null = null
+  async function fetchServerFile(fileId: string) {
+    const response = await callWorker(
+      client.POST('/files/list', { body: { identityToken } }),
+    )
+    const file = response.files.find(({ id }) => id === fileId)
+    return file && { revision: file.revision, content: file.content }
+  }
+
+  const noticeListeners = new Set<(message: string) => void>()
+  let conflictFlow: ConflictFlow | null = null
+  let startGeneration = 0
+  let stopReconciling: (() => void) | null = null
+
+  /** Initializes wasm and starts the looper, once. */
+  function whenReady(): Promise<void> {
+    if (ready) return ready
+    const generation = startGeneration
+    ready = ensureWasm().then(async () => {
+      // Disposed while wasm was loading: do not take the lock.
+      if (generation !== startGeneration) return
+      await looper.start()
+      // A backend only exists with a valid sign-in, so lanes that stopped
+      // for sign-in can go again.
+      if (!looper.snapshot().halted) await looper.resolveSignedIn()
+      stopReconciling = looper.subscribe(reconcileLocalNames)
+      conflictFlow = createConflictFlow({
+        looper,
+        bases,
+        fetchServerFile,
+        onNotice: (message) => {
+          for (const listener of noticeListeners) listener(message)
+        },
+      })
+    })
+    return ready
+  }
+
+  /** The name the last queued `CreateFile`/`RenameFile` of each lane asks
+   * for. When the outbox rewrote one after a `name_taken` answer, it differs
+   * from the local name, which is then renamed to match. */
+  function reconcileLocalNames({ queue }: OutboxSnapshot): void {
+    for (const lane of queue.lanes) {
+      const wanted = lane.messages
+        .map(({ message }) =>
+          message.tag === 'create-file'
+            ? message.val.name
+            : message.tag === 'rename-file'
+              ? message.val.to
+              : undefined,
+        )
+        .findLast((name) => name !== undefined)
+      const current = [...activeIdByName].find(
+        ([, id]) => id === lane.fileId,
+      )?.[0]
+      if (wanted === undefined || current === undefined || wanted === current) {
+        continue
       }
+      activeIdByName.delete(current)
+      activeIdByName.set(wanted, lane.fileId)
+      for (const listener of renameListeners) {
+        listener({ fileId: lane.fileId, from: current, to: wanted })
+      }
+    }
+  }
+
+  /** Queues the active file's content in the outbox and returns once it is
+   * persisted locally -- delivery happens in the background. */
+  async function saveContent(state: FileStoreState): Promise<void> {
+    if (isReadOnlyFile(state.active)) return
+    await whenReady()
+    await looper.enqueue(fileIdForName(state, state.active), {
+      tag: 'save-content',
+      val: { content: fileContent(state, state.active) },
     })
   }
 
-  /** Classifies a thrown error into the `CloudBackendError`/`SaveStatus`
-   * pair it should surface. Returns the pair rather than mutating `status`
-   * directly, same reasoning as the deleted GitHub backend's
-   * `classifyError`. */
-  function classifyError(error: unknown): {
-    status: SaveStatus
-    error: CloudBackendError
-  } {
-    if (error instanceof NetworkFailure) {
-      return { status: 'offline', error: { kind: 'network' } }
-    }
-    if (error instanceof WorkerRequestError) {
-      switch (error.apiError?.code) {
-        case 'revision_conflict':
-          return {
-            status: 'error',
-            error: {
-              kind: 'conflict',
-              currentRevision: error.apiError.currentRevision,
-            },
-          }
-        case 'unauthorized':
-          return { status: 'error', error: { kind: 'auth' } }
+  /** Tells the outbox each file's server revision, except for files with
+   * unsent messages: their recorded revision is what conflict detection
+   * compares against. */
+  async function recordServerRevisions(
+    files: ReadonlyArray<{ id: string; revision: number }>,
+  ): Promise<void> {
+    const pending = new Set(
+      looper
+        .snapshot()
+        .queue.lanes.filter((lane) => lane.messages.length > 0)
+        .map((lane) => lane.fileId),
+    )
+    for (const file of files) {
+      if (!pending.has(file.id)) {
+        await looper.recordRevision(file.id, BigInt(file.revision))
       }
     }
-    return {
-      status: 'error',
-      error: {
-        kind: 'unknown',
-        message: error instanceof Error ? error.message : String(error),
-      },
-    }
   }
 
-  /** Runs a structural operation's API call(s), translating a failure into
-   * the same status/error tracking `saveContent` uses, and resetting to
-   * `'idle'`/`null` on success -- mirrors the deleted GitHub backend's
-   * `runOp`. */
-  async function runOp<T>(operation: () => Promise<T>): Promise<T> {
-    try {
-      const result = await operation()
-      status = 'idle'
-      lastError = null
-      return result
-    } catch (error) {
-      const classified = classifyError(error)
-      status = classified.status
-      lastError = classified.error
-      throw error
-    }
-  }
-
-  async function saveContentImpl(state: FileStoreState): Promise<void> {
-    if (isReadOnlyFile(state.active)) return
-    const id = fileIdForName(state, state.active)
-    const expectedRevision = revisionByFileId.get(id) ?? 0
-    status = 'saving'
-    try {
-      const response = await callWorker(
-        client.POST('/files/{id}/content', {
-          params: { path: { id } },
-          body: {
-            identityToken,
-            content: fileContent(state, state.active),
-            expectedRevision,
-          },
-        }),
-      )
-      revisionByFileId.set(id, response.revision)
-      status = 'idle'
-      lastError = null
-      pendingRetryState = null
-    } catch (error) {
-      if (
-        error instanceof WorkerRequestError &&
-        error.apiError?.code === 'revision_conflict'
-      ) {
-        // Deliberately does not rethrow, unlike every other failure here --
-        // see `CloudBackend.forceOverwrite`'s doc comment. The revision map
-        // is left untouched so `forceOverwrite` can realign it to
-        // `currentRevision` before retrying.
-        status = 'error'
-        lastError = {
-          kind: 'conflict',
-          currentRevision: error.apiError.currentRevision,
-        }
-        return
-      }
-      const classified = classifyError(error)
-      status = classified.status
-      lastError = classified.error
-      if (classified.status === 'offline') pendingRetryState = state
-      throw error
-    }
-  }
-
-  /** Serializes autosave calls: only one file is ever actively edited at a
-   * time, so a single in-flight promise (rather than a per-id map) is
-   * enough to guarantee the next save waits for the previous one -- same
-   * shape as the deleted GitHub backend's `saveContent`. */
-  function saveContent(state: FileStoreState): Promise<void> {
-    const previous = inFlightSave ?? Promise.resolve()
-    const next = previous.catch(() => {}).then(() => saveContentImpl(state))
-    inFlightSave = next.catch(() => {})
-    return next
-  }
-
-  /** Persists the file `nextState` added relative to `state` (create,
-   * import, duplicate), renaming it if the server reports a name collision. */
+  /** Queues the creation of the file `nextState` added relative to `state`
+   * (create, import, duplicate); the file already exists locally. */
   async function createRemoteFile(
     state: FileStoreState,
     nextState: FileStoreState,
@@ -232,27 +239,20 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
     const name = addedName(state, nextState)
     if (!name) return nextState
     const id = fileIdForName(nextState, name)
-    const content = nextState.userFiles[name] ?? ''
-    const finalName = await runOp(() =>
-      withNameCollisionRetry(name, state, (attemptName) =>
-        callWorker(
-          client.POST('/files', {
-            body: { identityToken, id, name: attemptName, content },
-          }),
-        ),
-      ),
-    )
-    revisionByFileId.set(id, 0)
-    activeIdByName.set(finalName, id)
-    return finalName === name
-      ? nextState
-      : withRenamedKey(nextState, name, finalName)
+    activeIdByName.set(name, id)
+    await whenReady()
+    await looper.enqueue(id, {
+      tag: 'create-file',
+      val: { name, content: nextState.userFiles[name] ?? '' },
+    })
+    return nextState
   }
 
   return {
     kind: 'cloud',
 
     async load(): Promise<FileStoreState> {
+      await whenReady()
       const response = await callWorker(
         client.POST('/files/list', { body: { identityToken } }),
       )
@@ -261,9 +261,11 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
       const fileIds: Record<string, string> = {}
       activeIdByName.clear()
       trashedIdByName.clear()
-      for (const file of response.files) {
+      const listed = looper.snapshot().halted
+        ? response.files
+        : applyPendingStructure(response.files, looper.snapshot())
+      for (const file of listed) {
         fileIds[file.name] = file.id
-        revisionByFileId.set(file.id, file.revision)
         if (file.trashedAt === null) {
           userFiles[file.name] = file.content
           activeIdByName.set(file.name, file.id)
@@ -272,13 +274,20 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
           trashedIdByName.set(file.name, file.id)
         }
       }
+      // An unreadable outbox must not stop the files from loading.
+      if (!looper.snapshot().halted) {
+        await recordServerRevisions(response.files)
+        await recordListedBases(looper, bases, response.files)
+      }
+      for (const [id, content] of pendingContentByFileId(looper.snapshot())) {
+        const name = [...activeIdByName].find(([, value]) => value === id)?.[0]
+        if (name !== undefined) userFiles[name] = content
+      }
       // A successful listing proves the backend is reachable and current,
       // so any stale error/conflict from a previous save (e.g. "discard
       // mine", which reloads via this method without going through
       // `runOp`/`saveContentImpl`) no longer applies -- same reasoning as
       // the deleted GitHub backend's `load()`.
-      status = 'idle'
-      lastError = null
       return { active: DEMO_FILE_NAMES[0] ?? '', userFiles, bin, fileIds }
     },
 
@@ -298,21 +307,11 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
       const newName = addedName(state, nextState)
       if (!newName) return nextState
       const id = activeFileId(state, from)
-      const finalName = await runOp(() =>
-        withNameCollisionRetry(newName, state, (attemptName) =>
-          callWorker(
-            client.POST('/files/{id}/rename', {
-              params: { path: { id } },
-              body: { identityToken, name: attemptName },
-            }),
-          ),
-        ),
-      )
       activeIdByName.delete(from)
-      activeIdByName.set(finalName, id)
-      return finalName === newName
-        ? nextState
-        : withRenamedKey(nextState, newName, finalName)
+      activeIdByName.set(newName, id)
+      await whenReady()
+      await looper.enqueue(id, { tag: 'rename-file', val: { to: newName } })
+      return nextState
     },
 
     async deleteFile(
@@ -322,16 +321,10 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
       const nextState = pureDeleteFile(state, name)
       if (nextState === state) return nextState
       const id = activeFileId(state, name)
-      await runOp(() =>
-        callWorker(
-          client.POST('/files/{id}/delete', {
-            params: { path: { id } },
-            body: { identityToken },
-          }),
-        ),
-      )
       activeIdByName.delete(name)
       trashedIdByName.set(name, id)
+      await whenReady()
+      await looper.enqueue(id, { tag: 'trash-file' })
       return nextState
     },
 
@@ -343,21 +336,11 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
       const newName = addedName(state, nextState)
       if (!newName) return nextState
       const id = trashedFileId(state, name)
-      const finalName = await runOp(() =>
-        withNameCollisionRetry(newName, state, (attemptName) =>
-          callWorker(
-            client.POST('/files/{id}/restore', {
-              params: { path: { id } },
-              body: { identityToken, name: attemptName },
-            }),
-          ),
-        ),
-      )
       trashedIdByName.delete(name)
-      activeIdByName.set(finalName, id)
-      return finalName === newName
-        ? nextState
-        : withRenamedKey(nextState, newName, finalName)
+      activeIdByName.set(newName, id)
+      await whenReady()
+      await looper.enqueue(id, { tag: 'restore-file' })
+      return nextState
     },
 
     updateActiveContent: (
@@ -367,14 +350,48 @@ export function createCloudBackend(config: CloudBackendConfig): CloudBackend {
 
     saveContent,
 
-    status: (): SaveStatus => status,
+    fetchServerFile,
 
-    lastError: (): CloudBackendError | null => lastError,
+    conflicts: () => conflictFlow,
+
+    onNotice(listener: (message: string) => void): () => void {
+      noticeListeners.add(listener)
+      return () => noticeListeners.delete(listener)
+    },
+
+    outbox: () => looper,
+    dispose() {
+      stopReconciling?.()
+      stopReconciling = null
+      conflictFlow?.stop()
+      conflictFlow = null
+      startGeneration += 1
+      looper.stop()
+      ready = null
+    },
+    bases: () => bases,
+
+    status: (): SaveStatus => outboxSaveStatus(looper.snapshot()) ?? 'idle',
+
+    lastError: (): CloudBackendError | null =>
+      outboxLaneError(looper.snapshot()),
+
+    onLocalRename(listener: (change: LocalRename) => void): () => void {
+      renameListeners.add(listener)
+      return () => renameListeners.delete(listener)
+    },
 
     async forceOverwrite(state: FileStoreState): Promise<void> {
-      if (lastError?.kind === 'conflict') {
-        const id = fileIdForName(state, state.active)
-        revisionByFileId.set(id, lastError.currentRevision)
+      const id = fileIdForName(state, state.active)
+      const conflict = looper
+        .snapshot()
+        .queue.lanes.find(
+          (lane) => lane.fileId === id && lane.status.tag === 'needs-merge',
+        )
+      if (conflict?.status.tag === 'needs-merge') {
+        await looper.recordRevision(id, conflict.status.val.currentRevision)
+        await looper.resolve(id, { tag: 'retry' })
+        return
       }
       return saveContent(state)
     },

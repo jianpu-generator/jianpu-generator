@@ -9,12 +9,19 @@ import {
 } from '../fileStore'
 import { useAccountAuth } from '../storage/accountAuth'
 import { createCloudBackend } from '../storage/cloudBackend'
+import type { CloudBackend } from '../storage/cloudBackendTypes'
 import {
   deserializeStoreSync,
   localBackend,
   readInitialStoreSync,
 } from '../storage/localBackend'
 import type { SaveStatus, StorageBackend } from '../storage/types'
+import {
+  hasUnsyncedWork,
+  outboxSaveBadge,
+  shouldWarnBeforeUnload,
+} from './outboxSaveBadge'
+import { useCloudOutbox } from './useCloudOutbox'
 import { useCloudStoreLoader } from './useCloudStoreLoader'
 
 /**
@@ -62,7 +69,7 @@ export type StorageBackendTarget = { kind: 'local' } | { kind: 'cloud' }
  * itself, since it describes debounce state (owned here, see
  * `AUTOSAVE_DEBOUNCE_MS`) rather than backend/network state.
  */
-export type DisplaySaveStatus = SaveStatus | 'unsaved'
+export type DisplaySaveStatus = SaveStatus | 'unsaved' | 'waiting' | 'attention'
 
 export interface UseStorageBackendResult {
   store: FileStoreState
@@ -77,6 +84,9 @@ export interface UseStorageBackendResult {
    * flashing an empty file list. */
   isLoadingCloud: boolean
   saveStatus: DisplaySaveStatus
+  /** Badge text derived from the cloud outbox queue, or `null` for the local
+   * backend (whose text comes from `saveStatus` alone). */
+  saveLabel: string | null
   /** `Date.now()`-comparable timestamp at which the pending debounced
    * autosave will fire, or `null` when no save is pending. Lets the UI show
    * a countdown alongside the `'unsaved'` status. Cleared the moment the
@@ -161,24 +171,6 @@ export function shouldScheduleAutosave(
 }
 
 /**
- * Decides whether the `beforeunload` handler should warn about unsaved
- * changes. Pure for the same testability reason as `shouldScheduleAutosave`.
- * True in two disjoint windows: `isPending` (a debounced save is armed but
- * hasn't fired yet) and `saveStatus === 'saving'` (it fired — via the debounce
- * timer, `flush()`, or `forceSave()` — but the underlying network call
- * hasn't resolved). Never true for `localBackend`, which has no debounce and
- * no in-flight network call to lose.
- */
-export function shouldWarnBeforeUnload(
-  backendKind: StorageBackend['kind'],
-  isPending: boolean,
-  saveStatus: SaveStatus,
-): boolean {
-  if (backendKind !== 'cloud') return false
-  return isPending || saveStatus === 'saving'
-}
-
-/**
  * Maps a `StorageBackend.status()` reading to the `SaveStatus` shown in the
  * UI: `'idle'` alone doesn't tell the user whether the store is idle because
  * it was just persisted or because nothing has happened yet, so both
@@ -229,10 +221,11 @@ export function useStorageBackend(): UseStorageBackendResult {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [autosaveDeadline, setAutosaveDeadline] = useState<number | null>(null)
 
-  const backend = useMemo<StorageBackend>(() => {
+  const backend = useMemo<StorageBackend | CloudBackend>(() => {
     if (preference.backend === 'cloud' && accountAuth) {
       return createCloudBackend({
         token: accountAuth.token,
+        account: accountAuth.login,
         workerHost: import.meta.env.VITE_SYNCED_SHARE_HOST ?? '',
       })
     }
@@ -250,6 +243,8 @@ export function useStorageBackend(): UseStorageBackendResult {
   useEffect(() => {
     setSaveStatus(backend.status())
   }, [backend])
+
+  const outboxSnapshot = useCloudOutbox(backend)
 
   const store =
     backend.kind === 'cloud' ? (cloudStore ?? EMPTY_STORE) : localStore
@@ -326,7 +321,7 @@ export function useStorageBackend(): UseStorageBackendResult {
         shouldWarnBeforeUnload(
           backend.kind,
           debouncedSave.isPending(),
-          saveStatus,
+          outboxSnapshot !== null && hasUnsyncedWork(outboxSnapshot),
         )
       ) {
         event.preventDefault()
@@ -334,7 +329,7 @@ export function useStorageBackend(): UseStorageBackendResult {
     }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
-  }, [backend, debouncedSave, saveStatus])
+  }, [backend, debouncedSave, outboxSnapshot])
 
   const forceSave = useCallback(() => {
     debouncedSave.cancel()
@@ -374,12 +369,16 @@ export function useStorageBackend(): UseStorageBackendResult {
     [backend, debouncedSave, setPreference, setLocalStore],
   )
 
+  const outboxBadge = outboxSnapshot ? outboxSaveBadge(outboxSnapshot) : null
+  const baseStatus: DisplaySaveStatus = outboxBadge?.status ?? saveStatus
+
   return {
     store,
     setStore,
     backend,
     isLoadingCloud,
-    saveStatus: autosaveDeadline !== null ? 'unsaved' : saveStatus,
+    saveStatus: autosaveDeadline !== null ? 'unsaved' : baseStatus,
+    saveLabel: autosaveDeadline !== null ? null : (outboxBadge?.label ?? null),
     autosaveDeadline,
     preference,
     switchBackend,

@@ -29,7 +29,8 @@ Prefer Radix UI primitives over DIY implementations for interactive controls (sl
 `localStorage`/`sessionStorage` in the web app is only for:
 - **transient relays** (e.g. the GitHub sign-in popup's PKCE verifier and auth-result handoff),
 - **local files** (the `local` storage backend's file store),
-- **per-device preferences** (e.g. storage backend choice, part toggles, the sign-in token).
+- **per-device preferences** (e.g. storage backend choice, part toggles, the sign-in token),
+- **the cloud outbox**: unsynced edits awaiting delivery to the database, held in IndexedDB on this device only until the server acknowledges them. It is never read as a source of truth for state that must agree across devices, and entries are deleted on acknowledgement.
 
 Anything else, especially state that must agree across devices (e.g. whether a file is shared, which share belongs to which file), lives in the database and is derived from it, never mirrored into browser storage.
 
