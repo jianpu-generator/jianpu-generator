@@ -181,3 +181,55 @@ export function pendingContentByFileId(
   }
   return pending
 }
+
+interface ListedFile {
+  id: string
+  name: string
+  content: string
+  revision: number
+  trashedAt?: number | null
+}
+
+/**
+ * The server's listing with every unsent create, rename, trash and restore
+ * applied on top, in the order they were made. Without this a reload would
+ * drop a file that was created offline and undo renames and deletions that
+ * are still waiting to be sent.
+ */
+export function applyPendingStructure<File extends ListedFile>(
+  files: File[],
+  snapshot: OutboxSnapshot,
+): File[] {
+  const byId = new Map(files.map((file) => [file.id, file]))
+  for (const lane of snapshot.queue.lanes) {
+    for (const { message } of lane.messages) {
+      const existing = byId.get(lane.fileId)
+      switch (message.tag) {
+        case 'create-file':
+          if (!existing) {
+            byId.set(lane.fileId, {
+              id: lane.fileId,
+              name: message.val.name,
+              content: message.val.content,
+              revision: 0,
+              trashedAt: null,
+            } as File)
+          }
+          break
+        case 'rename-file':
+          if (existing)
+            byId.set(lane.fileId, { ...existing, name: message.val.to })
+          break
+        case 'trash-file':
+          if (existing) byId.set(lane.fileId, { ...existing, trashedAt: 1 })
+          break
+        case 'restore-file':
+          if (existing) byId.set(lane.fileId, { ...existing, trashedAt: null })
+          break
+        case 'save-content':
+          break
+      }
+    }
+  }
+  return [...byId.values()]
+}

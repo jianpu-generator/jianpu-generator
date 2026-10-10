@@ -16,6 +16,7 @@ import { callWorker, createWorkerClient } from '../syncedShare/workerClient'
 import { ensureWasmInit } from '../wasmInit'
 import { addedName } from './cloudBackendNaming'
 import {
+  applyPendingStructure,
   createCloudOutbox,
   outboxLaneError,
   outboxSaveStatus,
@@ -260,7 +261,10 @@ export function createCloudBackend(
       const fileIds: Record<string, string> = {}
       activeIdByName.clear()
       trashedIdByName.clear()
-      for (const file of response.files) {
+      const listed = looper.snapshot().halted
+        ? response.files
+        : applyPendingStructure(response.files, looper.snapshot())
+      for (const file of listed) {
         fileIds[file.name] = file.id
         if (file.trashedAt === null) {
           userFiles[file.name] = file.content
