@@ -15,13 +15,13 @@ import {
   localBackend,
   readInitialStoreSync,
 } from '../storage/localBackend'
-import type { OutboxSnapshot } from '../storage/outbox/outboxLooper'
 import type { SaveStatus, StorageBackend } from '../storage/types'
 import {
   hasUnsyncedWork,
   outboxSaveBadge,
   shouldWarnBeforeUnload,
 } from './outboxSaveBadge'
+import { useCloudOutbox } from './useCloudOutbox'
 import { useCloudStoreLoader } from './useCloudStoreLoader'
 
 /**
@@ -243,18 +243,7 @@ export function useStorageBackend(): UseStorageBackendResult {
     setSaveStatus(backend.status())
   }, [backend])
 
-  const [outboxSnapshot, setOutboxSnapshot] = useState<OutboxSnapshot | null>(
-    null,
-  )
-  useEffect(() => {
-    if (backend.kind !== 'cloud') {
-      setOutboxSnapshot(null)
-      return
-    }
-    const looper = (backend as CloudBackend).outbox()
-    setOutboxSnapshot(looper.snapshot())
-    return looper.subscribe(setOutboxSnapshot)
-  }, [backend])
+  const outboxSnapshot = useCloudOutbox(backend)
 
   const store =
     backend.kind === 'cloud' ? (cloudStore ?? EMPTY_STORE) : localStore

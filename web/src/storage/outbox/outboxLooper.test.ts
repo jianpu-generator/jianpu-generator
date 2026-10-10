@@ -91,6 +91,16 @@ describe('outbox looper', () => {
     expect(harness.looper.snapshot().summary.hasUnsynced).toBe(false)
   })
 
+  it('delivers again after being stopped and started', async () => {
+    const harness = makeHarness()
+    await harness.looper.start()
+    harness.looper.stop()
+    await harness.looper.start()
+    await harness.looper.enqueue('file-a', save('hello'))
+    await harness.looper.whenIdle()
+    expect(harness.sent).toHaveLength(1)
+  })
+
   it('persists an enqueued message before sending it', async () => {
     let storedWhenSent: string[] = []
     const store = createMemoryOutboxStore()

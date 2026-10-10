@@ -56,6 +56,9 @@ export interface CloudBackend extends StorageBackend {
   onLocalRename(listener: (change: LocalRename) => void): () => void
   /** The outbox that carries this backend's content saves. */
   outbox(): OutboxLooper
+  /** Releases the leader lock and timers. The backend starts again by itself
+   * the next time it is used, so a React effect cleanup may call this. */
+  dispose(): void
   /** The last text the server is known to have, per file. */
   bases(): BaseSnapshots
   /** Settles `NeedsMerge` lanes; null until the first `load()`/save has

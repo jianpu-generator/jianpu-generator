@@ -138,12 +138,13 @@ export function createCloudBackend(
 
   const noticeListeners = new Set<(message: string) => void>()
   let conflictFlow: ConflictFlow | null = null
+  let stopReconciling: (() => void) | null = null
 
   /** Initializes wasm and starts the looper, once. */
   function whenReady(): Promise<void> {
     ready ??= ensureWasm().then(async () => {
       await looper.start()
-      looper.subscribe(reconcileLocalNames)
+      stopReconciling = looper.subscribe(reconcileLocalNames)
       conflictFlow = createConflictFlow({
         looper,
         bases,
@@ -334,6 +335,14 @@ export function createCloudBackend(
     },
 
     outbox: () => looper,
+    dispose() {
+      stopReconciling?.()
+      stopReconciling = null
+      conflictFlow?.stop()
+      conflictFlow = null
+      looper.stop()
+      ready = null
+    },
     bases: () => bases,
 
     status: (): SaveStatus => outboxSaveStatus(looper.snapshot()) ?? 'idle',

@@ -144,7 +144,7 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
 
   const wakeAtNextDue = () => {
     const next = jianpuWasm().outboxNextWakeMs(queue)
-    scheduler.wakeAt(next === undefined ? null : Number(next))
+    scheduler?.wakeAt(next === undefined ? null : Number(next))
   }
 
   const runHook = async (hook: () => void | Promise<void>): Promise<void> => {
@@ -203,9 +203,8 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
     return drainPromise
   }
 
-  const scheduler = deps.createScheduler(() => {
-    void requestDrain().catch(() => undefined)
-  })
+  /** Exists only while started: stopping disposes it, starting rebuilds it. */
+  let scheduler: Scheduler | null = null
 
   const mutate = async (change: () => Queue): Promise<void> => {
     if (halted) {
@@ -223,7 +222,11 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
     async start() {
       if (started) return
       started = true
+      scheduler = deps.createScheduler(() => {
+        void requestDrain().catch(() => undefined)
+      })
       await load()
+      if (!started) return
       loaded = true
       notify()
       stopLeading = runAsLeader(async (signal) => {
@@ -246,7 +249,8 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
       stopLeading?.()
       stopLeading = null
       isLeader = false
-      scheduler.dispose()
+      scheduler?.dispose()
+      scheduler = null
     },
     enqueue: (fileId, message) =>
       mutate(() =>
