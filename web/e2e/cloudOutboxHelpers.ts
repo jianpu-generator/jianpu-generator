@@ -6,7 +6,7 @@ import { type WorkerSchemas, workerRouteGlob } from './cloudFileHelpers'
 // no step registrations, so any `.steps.ts` file can import them.
 
 /** What a matching content-save request should suffer. */
-export type ContentSaveFault =
+type ContentSaveFault =
   /** The request never reaches the server (a network failure). */
   | { kind: 'abort' }
   /** The server answers with `status` without applying the save. */

@@ -1,6 +1,6 @@
 import type { OutboxSnapshot } from '../storage/outbox/outboxLooper'
 
-export type OutboxBadgeStatus = 'saved' | 'saving' | 'waiting' | 'attention'
+type OutboxBadgeStatus = 'saved' | 'saving' | 'waiting' | 'attention'
 
 export interface OutboxBadge {
   status: OutboxBadgeStatus
