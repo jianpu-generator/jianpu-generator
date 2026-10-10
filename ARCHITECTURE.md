@@ -783,13 +783,20 @@ The shell only does I/O, timers and rendering; every decision is a wasm call.
 - Existing: `outboxStore.ts` (persists `StoredRecord`s), `memoryOutboxStore.ts`
   (in-memory store), `outboxLock.ts` (single-tab lock), `outboxScheduler.ts`
   (timer driven by `next_wake_ms`).
-- Planned: `sendMessage.ts` (performs a `SendRequest` over HTTP and maps the
-  response to a `SendResult`), `outboxLooper.ts` (the Looper),
-  `baseSnapshots.ts` (Base snapshot storage), `conflictFlow.ts` (drives
-  `NeedsMerge` through `merge_three_way` and `Resolution`), `keepBoth.ts`
-  (resolves a `NameTaken` or conflict by keeping both copies).
-- Presentational components: `web/src/components/syncPanel/` (reads
-  `QueueSummary`) and `web/src/components/mergeEditor/`.
+- `sendMessage.ts` (performs a `SendRequest` over HTTP and maps the
+  response to a `SendResult`), `outboxLooper.ts` (the Looper; runs on the
+  leader tab only), `baseSnapshots.ts` (Base snapshot storage under
+  `base:<fileId>`), `conflictFlow.ts` (drives `NeedsMerge` through
+  `merge_three_way`: a clean merge is saved at once, a conflicting one is kept
+  for the merge editor) and `keepBoth.ts` (saves the local text as a
+  `(conflicted copy <date>)` file, then discards the original lane).
+- `web/src/storage/cloudBackend.ts` enqueues every remote update; structural
+  operations apply locally at once and queue `create-file`, `rename-file`,
+  `trash-file` or `restore-file`.
+- UI: `web/src/components/syncPanel/` (reads `QueueSummary`; hosts Retry now,
+  Discard, Download my copy, Copy diagnostics) and
+  `web/src/components/mergeEditor/` (`MergeEditorContainer` offers Save,
+  Keep both and Discard).
 
 ### Glossary additions (outbox)
 
@@ -798,6 +805,6 @@ The shell only does I/O, timers and rendering; every decision is a wasm call.
 | **Outbox** | The persisted `Queue` of not-yet-acknowledged cloud edits plus the pure functions in `crates/cloud-outbox` that advance it. |
 | **Lane** | The per-file ordered queue of messages (`Lane`) with its own `LaneStatus`. Lanes drain independently, so one halted file never blocks another. |
 | **Message** | One queued cloud operation (`Message`) with a `message_id` and its recorded attempts (`QueuedMessage`). A `SaveContent` coalesces into a directly preceding, not in-flight `SaveContent`. |
-| **Looper** | The planned TS loop (`outboxLooper.ts`) that repeatedly calls `begin_send`, performs the request, and feeds the `SendResult` to `on_result`, sleeping until `next_wake_ms`. |
+| **Looper** | The TS loop (`outboxLooper.ts`) that repeatedly calls `begin_send`, performs the request, and feeds the `SendResult` to `on_result`, sleeping until `next_wake_ms`. |
 | **Halt** | A lane stopping instead of retrying: `NeedsSignIn`, `NeedsMerge` or `Failed`. It stays halted until a `Resolution` (or `resolve_signed_in`) moves it back to `Draining`. |
-| **Base snapshot** | The last content known to match the server for a file (kept by planned `baseSnapshots.ts`); the `base` input of `merge_three_way` when a revision conflict needs merging. |
+| **Base snapshot** | The last content known to match the server for a file (kept by `baseSnapshots.ts`); the `base` input of `merge_three_way` when a revision conflict needs merging. |
