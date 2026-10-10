@@ -23,6 +23,8 @@ import type { SaveStatus } from './types'
 export interface CloudOutboxConfig {
   client: ReturnType<typeof createWorkerClient>
   identityToken: string
+  /** Signed-in account; scopes the on-device outbox. */
+  account: string
   /** The file's current local name, for a `RestoreFile` message. */
   restoreName(fileId: string): string
 }
@@ -87,7 +89,7 @@ export interface CloudOutbox {
 /** The production looper: IndexedDB store, leader-tab lock, real timers.
  * The looper and the base snapshots share one store. */
 function createCloudOutboxLooper(config: CloudOutboxConfig): CloudOutbox {
-  const store: OutboxStore = createIndexedDbOutboxStore()
+  const store: OutboxStore = createIndexedDbOutboxStore(config.account)
   const bases = createBaseSnapshots(store)
   const { client, identityToken, restoreName } = config
   const fetchServerContent = async (fileId: string): Promise<string> => {

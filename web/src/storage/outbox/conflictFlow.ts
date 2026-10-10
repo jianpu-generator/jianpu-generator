@@ -81,6 +81,10 @@ export function createConflictFlow(deps: ConflictFlowDeps): ConflictFlow {
         ? undefined
         : jianpuWasm().mergeThreeWay(base, mine, theirs)
     if (outcome?.tag === 'clean') {
+      // The user kept typing while the server copy was fetched: merge again.
+      if (headSaveContent(looper.snapshot(), fileId) !== mine) {
+        return settle(fileId)
+      }
       await looper.resolve(fileId, {
         tag: 'merged-and-save',
         val: { content: outcome.val.text, serverRevision },

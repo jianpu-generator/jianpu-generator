@@ -31,12 +31,18 @@ export function assertStoredRecord(record: StoredRecord): void {
   }
 }
 
-export function createIndexedDbOutboxStore(): OutboxStore {
-  const databasePromise = openDB<OutboxSchema>(DATABASE_NAME, 1, {
-    upgrade(database) {
-      database.createObjectStore(OBJECT_STORE_NAME)
+/** One database per account, so edits queued by one account are never sent
+ * with another account's token. */
+export function createIndexedDbOutboxStore(account: string): OutboxStore {
+  const databasePromise = openDB<OutboxSchema>(
+    `${DATABASE_NAME}:${account}`,
+    1,
+    {
+      upgrade(database) {
+        database.createObjectStore(OBJECT_STORE_NAME)
+      },
     },
-  })
+  )
 
   return {
     async loadAll() {

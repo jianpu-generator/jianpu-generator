@@ -44,7 +44,11 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock)
 })
 
-const config = { token: 'test-token', workerHost: 'localhost:8787' }
+const config = {
+  token: 'test-token',
+  account: 'test-account',
+  workerHost: 'localhost:8787',
+}
 
 export interface RecordedCall {
   url: string

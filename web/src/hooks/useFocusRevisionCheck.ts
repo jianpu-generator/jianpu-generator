@@ -1,10 +1,12 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import type { CloudBackend, ServerFile } from '../storage/cloudBackendTypes'
 
 export interface FocusRevisionDependencies {
   fetchServerFile(fileId: string): Promise<ServerFile | undefined>
   recordedRevision(fileId: string): bigint | undefined
   hasPendingMessages(fileId: string): boolean
+  /** Typed text that has not reached the outbox yet (an armed autosave). */
+  hasUnsavedEdits(): boolean
   applyServerFile(
     fileId: string,
     revision: number,
@@ -18,13 +20,15 @@ export async function checkFocusRevision(
   dependencies: FocusRevisionDependencies,
   fileId: string,
 ): Promise<void> {
-  if (dependencies.hasPendingMessages(fileId)) return
+  if (dependencies.hasUnsavedEdits() || dependencies.hasPendingMessages(fileId))
+    return
   const serverFile = await dependencies.fetchServerFile(fileId)
   if (!serverFile) return
   const recorded = dependencies.recordedRevision(fileId)
   if (recorded !== undefined && BigInt(serverFile.revision) <= recorded) return
   // Messages may have been queued while the fetch was in flight.
-  if (dependencies.hasPendingMessages(fileId)) return
+  if (dependencies.hasUnsavedEdits() || dependencies.hasPendingMessages(fileId))
+    return
   await dependencies.applyServerFile(
     fileId,
     serverFile.revision,
@@ -35,8 +39,10 @@ export async function checkFocusRevision(
 function focusRevisionDependencies(
   backend: CloudBackend,
   onServerContent: (fileId: string, content: string) => void,
+  hasUnsavedEdits: () => boolean,
 ): FocusRevisionDependencies {
   return {
+    hasUnsavedEdits,
     fetchServerFile: (fileId) => backend.fetchServerFile(fileId),
     recordedRevision: (fileId) =>
       backend
@@ -62,11 +68,18 @@ export function useFocusRevisionCheck(options: {
   backend: CloudBackend | undefined
   activeFileId: string | undefined
   onServerContent: (fileId: string, content: string) => void
+  hasUnsavedEdits: boolean
 }): void {
   const { backend, activeFileId, onServerContent } = options
+  const unsavedRef = useRef(options.hasUnsavedEdits)
+  unsavedRef.current = options.hasUnsavedEdits
   useEffect(() => {
     if (!backend || !activeFileId) return
-    const dependencies = focusRevisionDependencies(backend, onServerContent)
+    const dependencies = focusRevisionDependencies(
+      backend,
+      onServerContent,
+      () => unsavedRef.current,
+    )
     const check = () => {
       if (document.visibilityState === 'hidden') return
       checkFocusRevision(dependencies, activeFileId).catch(() => undefined)

@@ -153,6 +153,15 @@ async function classifyRequestError(
           val: { suggestedName: suggestNameAfterCollision(name) },
         }
   }
+  // A trash or restore the server already applied (its answer was lost) is
+  // gone or back already, so the retry finds nothing to act on.
+  if (
+    status === 404 &&
+    (request.message.tag === 'trash-file' ||
+      request.message.tag === 'restore-file')
+  ) {
+    return { tag: 'ok', val: { revision: request.expectedRevision } }
+  }
   if (status >= 500 || status === 429) {
     return transient(`status ${status}`)
   }

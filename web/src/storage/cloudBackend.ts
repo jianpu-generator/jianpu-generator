@@ -124,7 +124,12 @@ export function createCloudBackend(
   }
 
   const { looper, bases } = createCloudOutbox(
-    { client, identityToken, restoreName: trashedNameOf },
+    {
+      client,
+      identityToken,
+      account: config.account,
+      restoreName: trashedNameOf,
+    },
     dependencies,
   )
   const ensureWasm = dependencies.ensureWasm ?? ensureWasmInit
@@ -150,6 +155,9 @@ export function createCloudBackend(
       // Disposed while wasm was loading: do not take the lock.
       if (generation !== startGeneration) return
       await looper.start()
+      // A backend only exists with a valid sign-in, so lanes that stopped
+      // for sign-in can go again.
+      if (!looper.snapshot().halted) await looper.resolveSignedIn()
       stopReconciling = looper.subscribe(reconcileLocalNames)
       conflictFlow = createConflictFlow({
         looper,
@@ -262,8 +270,11 @@ export function createCloudBackend(
           trashedIdByName.set(file.name, file.id)
         }
       }
-      await recordServerRevisions(response.files)
-      await recordListedBases(looper, bases, response.files)
+      // An unreadable outbox must not stop the files from loading.
+      if (!looper.snapshot().halted) {
+        await recordServerRevisions(response.files)
+        await recordListedBases(looper, bases, response.files)
+      }
       for (const [id, content] of pendingContentByFileId(looper.snapshot())) {
         const name = [...activeIdByName].find(([, value]) => value === id)?.[0]
         if (name !== undefined) userFiles[name] = content

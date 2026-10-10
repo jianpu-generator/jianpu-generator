@@ -269,6 +269,7 @@ export default function App() {
         binOpen={binOpen}
         setBinOpen={setBinOpen}
         syncPanelOpen={syncPanelOpen}
+        hasUnsavedEdits={autosaveDeadline !== null}
         setSyncPanelOpen={setSyncPanelOpen}
         onRestore={handleRestore}
         restoringFileName={restoringFileName}

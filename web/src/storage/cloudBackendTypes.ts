@@ -11,6 +11,8 @@ export interface CloudBackendConfig {
    * `/files/*` request body (never as a header/query param — matches this
    * worker's `FileShareRequest` convention). */
   token: string
+  /** The signed-in account's login, which scopes the on-device outbox. */
+  account: string
   /** Bare host (no scheme), same shape as `useSyncedShareOwner.ts`'s
    * `VITE_SYNCED_SHARE_HOST` — turned into an origin via
    * `syncedShareWorkerOrigin`. */

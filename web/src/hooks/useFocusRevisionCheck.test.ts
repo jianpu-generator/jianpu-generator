@@ -11,6 +11,7 @@ function makeDependencies(
     fetchServerFile: vi.fn(async () => ({ revision: 5, content: 'server' })),
     recordedRevision: () => 3n,
     hasPendingMessages: () => false,
+    hasUnsavedEdits: () => false,
     applyServerFile: vi.fn(async () => undefined),
     ...overrides,
   }
@@ -21,6 +22,12 @@ describe('checkFocusRevision', () => {
     const dependencies = makeDependencies()
     await checkFocusRevision(dependencies, 'f')
     expect(dependencies.applyServerFile).toHaveBeenCalledWith('f', 5, 'server')
+  })
+
+  it('does nothing while typed text is still waiting to be saved', async () => {
+    const dependencies = makeDependencies({ hasUnsavedEdits: () => true })
+    await checkFocusRevision(dependencies, 'f')
+    expect(dependencies.applyServerFile).not.toHaveBeenCalled()
   })
 
   it('does nothing when messages are pending', async () => {

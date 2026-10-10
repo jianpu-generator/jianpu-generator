@@ -225,6 +225,7 @@ export function useStorageBackend(): UseStorageBackendResult {
     if (preference.backend === 'cloud' && accountAuth) {
       return createCloudBackend({
         token: accountAuth.token,
+        account: accountAuth.login,
         workerHost: import.meta.env.VITE_SYNCED_SHARE_HOST ?? '',
       })
     }

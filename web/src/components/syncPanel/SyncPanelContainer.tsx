@@ -25,6 +25,8 @@ export interface SyncPanelContainerProps {
   onLocalRename: (change: LocalRename) => void
   /** Replaces the whole open store, e.g. after keeping both versions. */
   replaceStore: (next: FileStoreState) => void
+  /** An autosave is armed: typed text has not reached the outbox yet. */
+  hasUnsavedEdits: boolean
 }
 
 function nameOfFile(store: FileStoreState, fileId: string): string {
@@ -65,6 +67,7 @@ function CloudSyncPanel(
     backend,
     activeFileId: store.fileIds[store.active],
     onServerContent: props.onServerContent,
+    hasUnsavedEdits: props.hasUnsavedEdits,
   })
   const conflictOf = (fileId: string | null): ConflictDetails | null =>
     backend

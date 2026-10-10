@@ -33,6 +33,7 @@ interface AppOverlaysProps {
   binOpen: boolean
   setBinOpen: (open: boolean) => void
   syncPanelOpen: boolean
+  hasUnsavedEdits: boolean
   setSyncPanelOpen: (open: boolean) => void
   onRestore: (name: string) => void
   restoringFileName?: string | null
@@ -60,6 +61,7 @@ export function AppOverlays({
   binOpen,
   setBinOpen,
   syncPanelOpen,
+  hasUnsavedEdits,
   setSyncPanelOpen,
   onRestore,
   restoringFileName,
@@ -112,6 +114,7 @@ export function AppOverlays({
           applySyncedStore(withServerContent(store, fileId, content))
         }
         replaceStore={applySyncedStore}
+        hasUnsavedEdits={hasUnsavedEdits}
         onLocalRename={({ from, to }) =>
           setStore((previous) => withRenamedKey(previous, from, to))
         }

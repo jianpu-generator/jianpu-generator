@@ -4,7 +4,10 @@ import { createMemoryOutboxStore } from './memoryOutboxStore'
 import { createIndexedDbOutboxStore, type OutboxStore } from './outboxStore'
 
 const factories: Array<{ name: string; create: () => OutboxStore }> = [
-  { name: 'indexeddb', create: createIndexedDbOutboxStore },
+  {
+    name: 'indexeddb',
+    create: () => createIndexedDbOutboxStore('test-account'),
+  },
   { name: 'memory', create: createMemoryOutboxStore },
 ]
 
