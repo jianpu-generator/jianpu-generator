@@ -19,6 +19,7 @@ import {
   createCloudOutbox,
   outboxLaneError,
   outboxSaveStatus,
+  pendingContentByFileId,
   recordListedBases,
 } from './cloudBackendOutbox'
 import type {
@@ -263,6 +264,10 @@ export function createCloudBackend(
       }
       await recordServerRevisions(response.files)
       await recordListedBases(looper, bases, response.files)
+      for (const [id, content] of pendingContentByFileId(looper.snapshot())) {
+        const name = [...activeIdByName].find(([, value]) => value === id)?.[0]
+        if (name !== undefined) userFiles[name] = content
+      }
       // A successful listing proves the backend is reachable and current,
       // so any stale error/conflict from a previous save (e.g. "discard
       // mine", which reloads via this method without going through

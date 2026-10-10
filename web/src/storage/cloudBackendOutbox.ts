@@ -160,3 +160,22 @@ export function outboxLaneError(
   )
   return waiting ? { kind: 'network' } : null
 }
+
+/**
+ * The text of the newest unsent save of each file, keyed by file id. A fresh
+ * listing returns the server's text, which is older than these edits, so they
+ * are laid over it to keep what the user typed.
+ */
+export function pendingContentByFileId(
+  snapshot: OutboxSnapshot,
+): Map<string, string> {
+  const pending = new Map<string, string>()
+  for (const lane of snapshot.queue.lanes) {
+    const saves = lane.messages.flatMap(({ message }) =>
+      message.tag === 'save-content' ? [message.val.content] : [],
+    )
+    const newest = saves.at(-1)
+    if (newest !== undefined) pending.set(lane.fileId, newest)
+  }
+  return pending
+}
