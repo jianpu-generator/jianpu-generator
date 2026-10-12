@@ -320,7 +320,9 @@ export function useStorageBackend(): UseStorageBackendResult {
       if (
         shouldWarnBeforeUnload(
           backend.kind,
-          debouncedSave.isPending(),
+          // `saving` covers the instant between handing an edit to the outbox
+          // and the outbox recording it.
+          debouncedSave.isPending() || saveStatus === 'saving',
           outboxSnapshot !== null && hasUnsyncedWork(outboxSnapshot),
         )
       ) {
@@ -329,7 +331,7 @@ export function useStorageBackend(): UseStorageBackendResult {
     }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
-  }, [backend, debouncedSave, outboxSnapshot])
+  }, [backend, debouncedSave, outboxSnapshot, saveStatus])
 
   const forceSave = useCallback(() => {
     debouncedSave.cancel()

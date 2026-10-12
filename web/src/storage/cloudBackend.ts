@@ -253,6 +253,10 @@ export function createCloudBackend(
 
     async load(): Promise<FileStoreState> {
       await whenReady()
+      // Taken before the listing request: a message delivered while the
+      // listing is in flight leaves the queue, yet the listing may still carry
+      // the older text, so the edit must be laid over it from this snapshot.
+      const pendingSnapshot = looper.snapshot()
       const response = await callWorker(
         client.POST('/files/list', { body: { identityToken } }),
       )
@@ -261,9 +265,9 @@ export function createCloudBackend(
       const fileIds: Record<string, string> = {}
       activeIdByName.clear()
       trashedIdByName.clear()
-      const listed = looper.snapshot().halted
+      const listed = pendingSnapshot.halted
         ? response.files
-        : applyPendingStructure(response.files, looper.snapshot())
+        : applyPendingStructure(response.files, pendingSnapshot)
       for (const file of listed) {
         fileIds[file.name] = file.id
         if (file.trashedAt === null) {
@@ -279,15 +283,10 @@ export function createCloudBackend(
         await recordServerRevisions(response.files)
         await recordListedBases(looper, bases, response.files)
       }
-      for (const [id, content] of pendingContentByFileId(looper.snapshot())) {
+      for (const [id, content] of pendingContentByFileId(pendingSnapshot)) {
         const name = [...activeIdByName].find(([, value]) => value === id)?.[0]
         if (name !== undefined) userFiles[name] = content
       }
-      // A successful listing proves the backend is reachable and current,
-      // so any stale error/conflict from a previous save (e.g. "discard
-      // mine", which reloads via this method without going through
-      // `runOp`/`saveContentImpl`) no longer applies -- same reasoning as
-      // the deleted GitHub backend's `load()`.
       return { active: DEMO_FILE_NAMES[0] ?? '', userFiles, bin, fileIds }
     },
 
