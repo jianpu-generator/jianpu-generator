@@ -1,5 +1,18 @@
+import { readFileSync } from 'node:fs'
 import { beforeEach, vi } from 'vitest'
-import type { ApiError } from '../syncedShare/workerClient'
+import { instantiate } from '../../../crates/jianpu-wasm/pkg-component/jianpu_wasm.js'
+import { setWasmRoot } from '../jianpuWasm'
+import {
+  type ApiError,
+  callWorker,
+  createWorkerClient,
+} from '../syncedShare/workerClient'
+import { createCloudBackend } from './cloudBackend'
+import { baseSnapshotHooks } from './cloudBackendOutbox'
+import { createBaseSnapshots } from './outbox/baseSnapshots'
+import { createMemoryOutboxStore } from './outbox/memoryOutboxStore'
+import { createOutboxLooper } from './outbox/outboxLooper'
+import { sendMessage } from './outbox/sendMessage'
 
 /** Shared `fetch` mock + response/request helpers for `cloudBackend.test.ts`
  * and `cloudBackendRetry.test.ts` -- split out so each test file stays
@@ -31,7 +44,11 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock)
 })
 
-export const config = { token: 'test-token', workerHost: 'localhost:8787' }
+const config = {
+  token: 'test-token',
+  account: 'test-account',
+  workerHost: 'localhost:8787',
+}
 
 export interface RecordedCall {
   url: string
@@ -52,4 +69,76 @@ export async function callAt(index: number): Promise<RecordedCall> {
 
 export function lastCall(): Promise<RecordedCall> {
   return callAt(-1)
+}
+
+async function installRealWasm(): Promise<void> {
+  const bytes = readFileSync(
+    new URL(
+      '../../../crates/jianpu-wasm/pkg-component/jianpu_wasm.core.wasm',
+      import.meta.url,
+    ),
+  )
+  const module = await WebAssembly.compile(bytes)
+  setWasmRoot(await instantiate(() => module, {}))
+}
+
+/** A cloud backend whose outbox runs on the real wasm decisions, an
+ * in-memory store, a single (always-leader) tab and a manual clock: call
+ * `wake()` after `advance()` to run what has become due. */
+export function createTestBackend() {
+  let time = 1_000_000
+  let wake: () => void = () => undefined
+  const client = createWorkerClient(config.workerHost)
+  const store = createMemoryOutboxStore()
+  const bases = createBaseSnapshots(store)
+  const looper = createOutboxLooper({
+    ...baseSnapshotHooks(bases),
+    store,
+    sendMessage: (request) =>
+      sendMessage(request, {
+        client,
+        identityToken: config.token,
+        fetchServerContent: async (fileId) => {
+          const response = await callWorker(
+            client.POST('/files/list', {
+              body: { identityToken: config.token },
+            }),
+          )
+          return (
+            response.files.find((file) => file.id === fileId)?.content ?? ''
+          )
+        },
+        restoreName: () => 'restored.jianpu',
+      }),
+    createScheduler: (onWake) => {
+      wake = onWake
+      return {
+        wakeAt: () => undefined,
+        wakeNow: onWake,
+        dispose: () => undefined,
+      }
+    },
+    runAsLeader: (task) => {
+      const controller = new AbortController()
+      void task(controller.signal)
+      return () => controller.abort()
+    },
+    now: () => time,
+    random: () => 0,
+  })
+  const backend = createCloudBackend(config, {
+    looper,
+    bases,
+    ensureWasm: installRealWasm,
+  })
+  return {
+    backend,
+    looper,
+    bases,
+    store,
+    wake: () => wake(),
+    advance: (ms: number) => {
+      time += ms
+    },
+  }
 }

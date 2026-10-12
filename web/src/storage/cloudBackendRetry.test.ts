@@ -1,11 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
-import { DEMO_FILE_NAMES, type FileStoreState } from '../fileStore'
-import { createCloudBackend } from './cloudBackend'
+import { describe, expect, it } from 'vitest'
+import type { FileStoreState } from '../fileStore'
 import {
   apiErrorResponse,
-  callAt,
-  config,
-  emptyResponse,
+  createTestBackend,
   fetchMock,
   jsonResponse,
   lastCall,
@@ -17,8 +14,8 @@ import {
 // saveContent coverage.
 
 describe('createCloudBackend: forceOverwrite()', () => {
-  it('realigns the tracked revision to the conflict-reported one, then retries the save', async () => {
-    const backend = createCloudBackend(config)
+  it('realigns the recorded revision to the conflict-reported one, then retries the save', async () => {
+    const { backend, looper } = createTestBackend()
     const state: FileStoreState = {
       active: 'a.jianpu',
       userFiles: { 'a.jianpu': 'mine' },
@@ -29,7 +26,36 @@ describe('createCloudBackend: forceOverwrite()', () => {
     fetchMock.mockResolvedValueOnce(
       apiErrorResponse(409, { code: 'revision_conflict', currentRevision: 9 }),
     )
+    // The conflict makes the sender compare against the server's text.
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, {
+        files: [
+          {
+            id: 'id-a',
+            name: 'a.jianpu',
+            content: 'theirs',
+            revision: 9,
+            trashedAt: null,
+          },
+        ],
+      }),
+    )
+    // The conflict flow then fetches the server's file for its own merge.
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, {
+        files: [
+          {
+            id: 'id-a',
+            name: 'a.jianpu',
+            content: 'theirs',
+            revision: 9,
+            trashedAt: null,
+          },
+        ],
+      }),
+    )
     await backend.saveContent(state)
+    await looper.whenIdle()
     expect(backend.lastError()).toEqual({
       kind: 'conflict',
       currentRevision: 9,
@@ -37,6 +63,7 @@ describe('createCloudBackend: forceOverwrite()', () => {
 
     fetchMock.mockResolvedValueOnce(jsonResponse(200, { revision: 10 }))
     await backend.forceOverwrite(state)
+    await looper.whenIdle()
 
     expect((await lastCall()).body).toMatchObject({ expectedRevision: 9 })
     expect(backend.status()).toBe('idle')
@@ -44,11 +71,34 @@ describe('createCloudBackend: forceOverwrite()', () => {
   })
 })
 
-describe('createCloudBackend: single-flight save serialization', () => {
-  it('never runs two saveContent network calls concurrently', async () => {
+describe('createCloudBackend: delivery retry', () => {
+  it('keeps an offline save queued and delivers it once the retry is due', async () => {
+    const { backend, looper, wake, advance } = createTestBackend()
+    const state: FileStoreState = {
+      active: 'a.jianpu',
+      userFiles: { 'a.jianpu': 'A' },
+      bin: {},
+      fileIds: { 'a.jianpu': 'id-a' },
+    }
+
+    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    await backend.saveContent(state)
+    await looper.whenIdle()
+    expect(backend.status()).toBe('offline')
+    expect(backend.lastError()).toEqual({ kind: 'network' })
+
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { revision: 1 }))
+    advance(120_000)
+    wake()
+    await looper.whenIdle()
+
+    expect(backend.status()).toBe('idle')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('never runs two content deliveries concurrently', async () => {
     let active = 0
     let maxConcurrent = 0
-
     fetchMock.mockImplementation(async () => {
       active++
       maxConcurrent = Math.max(maxConcurrent, active)
@@ -56,8 +106,7 @@ describe('createCloudBackend: single-flight save serialization', () => {
       active--
       return jsonResponse(200, { revision: 1 })
     })
-
-    const backend = createCloudBackend(config)
+    const { backend, looper } = createTestBackend()
     const state: FileStoreState = {
       active: 'a.jianpu',
       userFiles: { 'a.jianpu': 'A' },
@@ -66,155 +115,8 @@ describe('createCloudBackend: single-flight save serialization', () => {
     }
 
     await Promise.all([backend.saveContent(state), backend.saveContent(state)])
+    await looper.whenIdle()
 
     expect(maxConcurrent).toBe(1)
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-  })
-})
-
-describe('createCloudBackend: offline retry-on-reconnect', () => {
-  it('replays the pending save once the browser comes back online', async () => {
-    const listeners: Record<string, () => void> = {}
-    vi.stubGlobal('window', {
-      addEventListener: (event: string, callback: () => void) => {
-        listeners[event] = callback
-      },
-      removeEventListener: () => {},
-    })
-
-    const backend = createCloudBackend(config)
-    const state: FileStoreState = {
-      active: 'a.jianpu',
-      userFiles: { 'a.jianpu': 'new content' },
-      bin: {},
-      fileIds: { 'a.jianpu': 'id-a' },
-    }
-
-    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
-    await expect(backend.saveContent(state)).rejects.toThrow('Failed to fetch')
-    expect(backend.status()).toBe('offline')
-    expect(backend.lastError()).toEqual({ kind: 'network' })
-
-    fetchMock.mockResolvedValueOnce(jsonResponse(200, { revision: 1 }))
-    listeners.online?.()
-    await vi.waitFor(() => expect(backend.status()).toBe('idle'))
-
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect((await lastCall()).body).toMatchObject({
-      content: 'new content',
-    })
-
-    vi.unstubAllGlobals()
-  })
-})
-
-describe('createCloudBackend: name-collision retry (create/rename/restore)', () => {
-  it('retries createFile once with a freshly recomputed name after a 409 name_taken response', async () => {
-    fetchMock
-      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
-      .mockResolvedValueOnce(
-        jsonResponse(200, {
-          id: 'new-id',
-          name: 'untitled 2.jianpu',
-          content: '',
-          revision: 0,
-          trashedAt: null,
-        }),
-      )
-
-    const backend = createCloudBackend(config)
-    const state: FileStoreState = {
-      active: DEMO_FILE_NAMES[0] ?? '',
-      userFiles: {},
-      bin: {},
-      fileIds: {},
-    }
-    const nextState = await backend.createFile(state)
-
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    const firstBody = (await callAt(0)).body
-    const secondBody = (await callAt(1)).body
-    expect(firstBody.name).toBe('untitled.jianpu')
-    expect(secondBody.name).toBe('untitled 2.jianpu')
-    expect(secondBody.id).toBe(firstBody.id)
-
-    expect(nextState.active).toBe('untitled 2.jianpu')
-    expect(nextState.userFiles).toHaveProperty('untitled 2.jianpu')
-    expect(nextState.userFiles).not.toHaveProperty('untitled.jianpu')
-    expect(backend.status()).toBe('idle')
-    expect(backend.lastError()).toBeNull()
-  })
-
-  it('retries renameFile once, transparently, on a single name_taken collision', async () => {
-    fetchMock
-      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
-      .mockResolvedValueOnce(emptyResponse(204))
-
-    const backend = createCloudBackend(config)
-    const state: FileStoreState = {
-      active: 'a.jianpu',
-      userFiles: { 'a.jianpu': 'content' },
-      bin: {},
-      fileIds: { 'a.jianpu': 'id-a' },
-    }
-    const nextState = await backend.renameFile(state, 'a.jianpu', 'b.jianpu')
-
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    const firstBody = (await callAt(0)).body
-    const secondBody = (await callAt(1)).body
-    expect(firstBody.name).toBe('b.jianpu')
-    expect(secondBody.name).toBe('b 2.jianpu')
-    expect((await callAt(0)).url).toBe(
-      'http://localhost:8787/files/id-a/rename',
-    )
-
-    expect(nextState.active).toBe('b 2.jianpu')
-  })
-
-  it('degrades to an unknown error after a second consecutive name_taken collision', async () => {
-    fetchMock
-      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
-      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
-
-    const backend = createCloudBackend(config)
-    const state: FileStoreState = {
-      active: DEMO_FILE_NAMES[0] ?? '',
-      userFiles: {},
-      bin: {},
-      fileIds: {},
-    }
-
-    await expect(backend.createFile(state)).rejects.toThrow()
-
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(backend.status()).toBe('error')
-    expect(backend.lastError()).toMatchObject({ kind: 'unknown' })
-  })
-
-  it('retries restoreFile once on a name_taken collision against an active file', async () => {
-    fetchMock
-      .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
-      .mockResolvedValueOnce(emptyResponse(204))
-
-    const backend = createCloudBackend(config)
-    const state: FileStoreState = {
-      active: 'original.jianpu',
-      userFiles: { 'original.jianpu': 'active content' },
-      bin: { 'binned.jianpu': 'binned content' },
-      fileIds: { 'original.jianpu': 'id-active', 'binned.jianpu': 'id-binned' },
-    }
-    const nextState = await backend.restoreFile(state, 'binned.jianpu')
-
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect((await callAt(0)).url).toBe(
-      'http://localhost:8787/files/id-binned/restore',
-    )
-    const firstBody = (await callAt(0)).body
-    const secondBody = (await callAt(1)).body
-    expect(firstBody.name).toBe('binned.jianpu')
-    expect(secondBody.name).toBe('binned 2.jianpu')
-
-    expect(nextState.userFiles).toHaveProperty('binned 2.jianpu')
-    expect(nextState.bin).not.toHaveProperty('binned.jianpu')
   })
 })

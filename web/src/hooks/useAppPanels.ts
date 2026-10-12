@@ -19,6 +19,7 @@ export function useAppPanels(
   const [editMetadataOpen, setEditMetadataOpen] = useState(false)
   const [storageSettingsOpen, setStorageSettingsOpen] = useState(false)
   const [binOpen, setBinOpen] = useState(false)
+  const [syncPanelOpen, setSyncPanelOpen] = useState(false)
 
   const handlePartDeclarationChange = useCallback(
     (abbreviation: string, settings: PartSettings) => {
@@ -56,6 +57,8 @@ export function useAppPanels(
     setStorageSettingsOpen,
     binOpen,
     setBinOpen,
+    syncPanelOpen,
+    setSyncPanelOpen,
     handlePartDeclarationChange,
     handleShiftPartOctave,
     parsedMetadata,

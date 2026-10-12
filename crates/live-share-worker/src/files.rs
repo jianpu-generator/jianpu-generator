@@ -113,3 +113,18 @@ pub fn classify_content_write(
         },
     }
 }
+
+/// Decides what a unique-constraint violation on `POST /files` means.
+/// `existing` is the row with the requested id *scoped to the caller*
+/// (`queries/get_file_by_id.sql`), so a row owned by someone else is `None`.
+/// A repeated create of the same id and name by the same owner is an
+/// idempotent retry and returns the existing file; anything else is a name
+/// collision (`None`).
+pub fn idempotent_create_match(
+    existing: Option<&StoredFile>,
+    requested_name: &str,
+) -> Option<PublicFile> {
+    existing
+        .filter(|file| file.name == requested_name)
+        .map(to_public_file)
+}

@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  shouldScheduleAutosave,
-  shouldWarnBeforeUnload,
-} from './useStorageBackend'
+import { shouldWarnBeforeUnload } from './outboxSaveBadge'
+import { shouldScheduleAutosave } from './useStorageBackend'
 
 describe('shouldScheduleAutosave', () => {
   it('never schedules a save for the local backend', () => {
@@ -56,23 +54,19 @@ describe('shouldScheduleAutosave', () => {
 })
 
 describe('shouldWarnBeforeUnload', () => {
-  it('never warns for the local backend, even mid-save', () => {
-    expect(shouldWarnBeforeUnload('local', true, 'saving')).toBe(false)
+  it('never warns for the local backend', () => {
+    expect(shouldWarnBeforeUnload('local', true, true)).toBe(false)
   })
 
-  it('does not warn on the cloud backend when idle with nothing pending', () => {
-    expect(shouldWarnBeforeUnload('cloud', false, 'idle')).toBe(false)
-  })
-
-  it('does not warn on the cloud backend once a save has landed', () => {
-    expect(shouldWarnBeforeUnload('cloud', false, 'saved')).toBe(false)
+  it('does not warn on the cloud backend when nothing is pending or unsynced', () => {
+    expect(shouldWarnBeforeUnload('cloud', false, false)).toBe(false)
   })
 
   it('warns on the cloud backend while a debounced save is still armed', () => {
-    expect(shouldWarnBeforeUnload('cloud', true, 'idle')).toBe(true)
+    expect(shouldWarnBeforeUnload('cloud', true, false)).toBe(true)
   })
 
-  it('warns on the cloud backend while a save request is in flight', () => {
-    expect(shouldWarnBeforeUnload('cloud', false, 'saving')).toBe(true)
+  it('warns on the cloud backend while the outbox has unsynced work', () => {
+    expect(shouldWarnBeforeUnload('cloud', false, true)).toBe(true)
   })
 })

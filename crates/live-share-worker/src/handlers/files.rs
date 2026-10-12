@@ -32,7 +32,8 @@ pub(super) async fn list_files(
 
 /// `POST /files` -- creates a new file row (new file / duplicate / import).
 /// See `crate::protocol::CreateFileRequest`'s doc comment for the response
-/// shapes.
+/// shapes. Idempotent: repeating a create with the same id, owner and name
+/// returns the existing file instead of `NameTaken`.
 pub(super) async fn create_file(
     ctx: RouteContext<()>,
     _path: NoPathParams,
@@ -54,7 +55,12 @@ pub(super) async fn create_file(
     };
     match db::insert_file(&d1, &created).await {
         Ok(()) => Ok(Json(files::to_public_file(&created))),
-        Err(error) if is_unique_constraint_violation(&error) => Err(ApiError::NameTaken),
+        Err(error) if is_unique_constraint_violation(&error) => {
+            let existing = db::get_file_by_id(&d1, &created.id, &created.owner_user_id).await?;
+            files::idempotent_create_match(existing.as_ref(), &created.name)
+                .map(Json)
+                .ok_or(ApiError::NameTaken)
+        }
         Err(error) => Err(error.into()),
     }
 }

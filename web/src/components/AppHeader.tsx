@@ -85,6 +85,7 @@ interface AppHeaderProps {
   onDelete: (name: string) => void
   onOpenStorageSettings: () => void
   saveStatus: DisplaySaveStatus
+  saveLabel: string | null
   autosaveDeadline: number | null
   creatingFile?: boolean
   deletingFileName?: string | null
@@ -92,6 +93,7 @@ interface AppHeaderProps {
   renamingFileName?: string | null
   isLoadingCloud?: boolean
   onOpenBin: () => void
+  onOpenSyncPanel?: () => void
   hasDocuments: boolean
   rendering: boolean
   audioGenerating?: boolean
@@ -149,6 +151,7 @@ export function AppHeader({
   onDelete,
   onOpenStorageSettings,
   saveStatus,
+  saveLabel,
   autosaveDeadline,
   creatingFile,
   deletingFileName,
@@ -156,6 +159,7 @@ export function AppHeader({
   renamingFileName,
   isLoadingCloud,
   onOpenBin,
+  onOpenSyncPanel,
   hasDocuments,
   rendering,
   audioGenerating,
@@ -262,6 +266,7 @@ export function AppHeader({
             onDelete={onDelete}
             onOpenStorageSettings={onOpenStorageSettings}
             saveStatus={saveStatus}
+            saveLabel={saveLabel}
             autosaveDeadline={autosaveDeadline}
             creating={creatingFile}
             deletingName={deletingFileName}
@@ -272,6 +277,7 @@ export function AppHeader({
             onImportFile={onImportFile}
             binNames={sortedBinNames(store)}
             onOpenBin={onOpenBin}
+            onOpenSyncPanel={onOpenSyncPanel}
             canSync={syncedShare.canSync}
             isSynced={syncedShare.isSynced}
             syncedShareLink={syncedShare.syncedShareLink}

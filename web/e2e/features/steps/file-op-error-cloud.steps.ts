@@ -1,7 +1,6 @@
 import { expect } from '@playwright/test'
 import { workerRouteGlob } from '../../cloudFileHelpers'
 import {
-  fileSwitcherTrigger,
   fileTabByExactName,
   openFileActions,
   openFileList,
@@ -9,7 +8,6 @@ import {
 import { gotoCloudApp } from './cloud-account-helpers'
 import { Given, Then, When } from './fixtures'
 
-let activeTabBeforeCreate: string | null = null
 const newButton = ({ page }: { page: import('@playwright/test').Page }) =>
   page.locator('.export-menu-item').first()
 
@@ -46,10 +44,6 @@ When(
   },
 )
 
-Given('I remember the currently active tab name', async ({ page }) => {
-  activeTabBeforeCreate = await fileSwitcherTrigger(page).textContent()
-})
-
 When(
   'I click the {string} button to create a file that will fail',
   async ({ page }, label: string) => {
@@ -58,23 +52,6 @@ When(
     await newButton({ page }).click()
   },
 )
-
-Then(
-  'the error modal is shown with message {string} containing {string}',
-  async ({ page }, title: string, detail: string) => {
-    const errorModal = page.getByTestId('error-modal')
-    await expect(errorModal).toBeVisible()
-    await expect(errorModal).toContainText(title)
-    await expect(page.getByTestId('error-modal-message')).toContainText(detail)
-  },
-)
-
-When('I close the error modal', async ({ page }) => {
-  // Close the error modal before interacting with anything underneath it --
-  // it's a real overlay that blocks pointer events on the rest of the page.
-  await page.getByTestId('error-modal').getByRole('button').click()
-  await expect(page.getByTestId('error-modal')).toHaveCount(0)
-})
 
 Then(
   'the new-file button spinner clears and its label resets to {string}',
@@ -91,37 +68,12 @@ Then(
   },
 )
 
-Then('no {string} tab exists', async ({ page }, name: string) => {
-  // `setStore` is never called on failure, so no phantom file/tab appears
-  // and the active tab is unchanged.
-  await openFileList(page)
-  await expect(fileTabByExactName(page, name)).toHaveCount(0)
+Then('no error modal is shown', async ({ page }) => {
+  await expect(page.getByTestId('error-modal')).toHaveCount(0)
 })
 
-Then(
-  'the active tab is unchanged from before the failed create',
-  async ({ page }) => {
-    await expect(fileSwitcherTrigger(page)).toHaveText(
-      activeTabBeforeCreate ?? '',
-    )
-  },
-)
-
-When(
-  'I retry the {string} button in the file actions menu',
-  async ({ page }, label: string) => {
-    expect(label).toBe('New')
-    // The one-shot 500 route has already fired and now falls through to
-    // the real worker, so retrying "New" should succeed normally --
-    // proving the user can actually recover from the failure.
-    await openFileActions(page)
-    await newButton({ page }).click()
-  },
-)
-
-Then(
-  'the retried create succeeds and the active tab becomes {string}',
-  async ({ page }, name: string) => {
-    await expect(fileSwitcherTrigger(page)).toContainText(name)
-  },
-)
+Then('an {string} tab exists', async ({ page }, name: string) => {
+  // The create is applied locally at once and delivered by the outbox later.
+  await openFileList(page)
+  await expect(fileTabByExactName(page, name)).toHaveCount(1)
+})

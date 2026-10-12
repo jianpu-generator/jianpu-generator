@@ -1,4 +1,7 @@
 import type { FileStoreState } from '../fileStore'
+import type { BaseSnapshots } from './outbox/baseSnapshots'
+import type { ConflictFlow } from './outbox/conflictFlow'
+import type { OutboxLooper } from './outbox/outboxLooper'
 import type { StorageBackend } from './types'
 
 export interface CloudBackendConfig {
@@ -8,6 +11,8 @@ export interface CloudBackendConfig {
    * `/files/*` request body (never as a header/query param — matches this
    * worker's `FileShareRequest` convention). */
   token: string
+  /** The signed-in account's login, which scopes the on-device outbox. */
+  account: string
   /** Bare host (no scheme), same shape as `useSyncedShareOwner.ts`'s
    * `VITE_SYNCED_SHARE_HOST` — turned into an origin via
    * `syncedShareWorkerOrigin`. */
@@ -28,6 +33,14 @@ export type CloudBackendError =
   | { kind: 'network' }
   | { kind: 'unknown'; message: string }
 
+/** A local file renamed because the outbox had to pick another name after
+ * the server reported the requested one as taken. */
+export interface LocalRename {
+  fileId: string
+  from: string
+  to: string
+}
+
 export interface CloudBackend extends StorageBackend {
   readonly kind: 'cloud'
   /** Detail behind the most recent `'error'`/`'offline'` status, if any. */
@@ -40,4 +53,28 @@ export interface CloudBackend extends StorageBackend {
    * race now succeeds and re-pushes the caller's in-memory edit.
    */
   forceOverwrite(state: FileStoreState): Promise<void>
+  /** Subscribes to renames the outbox made after a `name_taken` answer; the
+   * caller applies them to its file state (see `withRenamedKey`). */
+  onLocalRename(listener: (change: LocalRename) => void): () => void
+  /** The outbox that carries this backend's content saves. */
+  outbox(): OutboxLooper
+  /** Releases the leader lock and timers. The backend starts again by itself
+   * the next time it is used, so a React effect cleanup may call this. */
+  dispose(): void
+  /** The last text the server is known to have, per file. */
+  bases(): BaseSnapshots
+  /** Settles `NeedsMerge` lanes; null until the first `load()`/save has
+   * started the outbox. */
+  conflicts(): ConflictFlow | null
+  /** Subscribes to one-line notices such as "Merged with changes from
+   * another device". */
+  onNotice(listener: (message: string) => void): () => void
+  /** The server's current revision and content of `fileId`, or `undefined`
+   * when the server does not list it. */
+  fetchServerFile(fileId: string): Promise<ServerFile | undefined>
+}
+
+export interface ServerFile {
+  revision: number
+  content: string
 }
