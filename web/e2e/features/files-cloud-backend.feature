@@ -53,7 +53,7 @@ Feature: File operations on the cloud (D1) storage backend
     And I select the "auto" tab to test autosave
     And I append " 5" to the editor to trigger an autosave
     Then no content request has been sent yet for the debounced edit
-    And the autosave status badge shows "Unsaved"
+    And the autosave status badge shows "Unsaved (autosaving in"
     When I fast-forward the clock past the autosave debounce interval to trigger it
     Then the content save lands for "auto.jianpu" containing "1 2 3 4 5"
     And the autosave status badge shows "Saved"
