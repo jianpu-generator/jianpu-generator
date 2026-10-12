@@ -265,6 +265,9 @@ export function useStorageBackend(): UseStorageBackendResult {
   )
 
   const pendingSaveRef = useRef<Promise<void> | null>(null)
+  /** Saves handed to the backend that it has not yet accepted (for cloud: not
+   * yet recorded in the outbox). */
+  const handingOverRef = useRef(0)
   const lastContentRef = useRef<ContentSnapshot | null>(null)
   const runSave = useCallback(
     (state: FileStoreState) => {
@@ -274,6 +277,7 @@ export function useStorageBackend(): UseStorageBackendResult {
       lastContentRef.current = activeContentSnapshot(state)
       setAutosaveDeadline(null)
       setSaveStatus('saving')
+      handingOverRef.current += 1
       const promise = backend
         .saveContent(state)
         .then(() => {
@@ -281,6 +285,9 @@ export function useStorageBackend(): UseStorageBackendResult {
         })
         .catch(() => {
           setSaveStatus(backend.status())
+        })
+        .finally(() => {
+          handingOverRef.current -= 1
         })
       pendingSaveRef.current = promise
     },
@@ -320,9 +327,7 @@ export function useStorageBackend(): UseStorageBackendResult {
       if (
         shouldWarnBeforeUnload(
           backend.kind,
-          // `saving` covers the instant between handing an edit to the outbox
-          // and the outbox recording it.
-          debouncedSave.isPending() || saveStatus === 'saving',
+          debouncedSave.isPending() || handingOverRef.current > 0,
           outboxSnapshot !== null && hasUnsyncedWork(outboxSnapshot),
         )
       ) {
@@ -331,7 +336,7 @@ export function useStorageBackend(): UseStorageBackendResult {
     }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
-  }, [backend, debouncedSave, outboxSnapshot, saveStatus])
+  }, [backend, debouncedSave, outboxSnapshot])
 
   const forceSave = useCallback(() => {
     debouncedSave.cancel()
