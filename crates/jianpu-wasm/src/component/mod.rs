@@ -64,6 +64,7 @@ mod guest_selection_and_render;
 
 mod diagnostics_conversion;
 mod highlight_conversion;
+mod history_conversion;
 mod metadata_and_selection_conversion;
 mod metadata_fields_conversion;
 mod outbox_conversion;
@@ -93,3 +94,5 @@ export!(Component);
 
 #[cfg(test)]
 mod tests_outbox;
+#[cfg(test)]
+mod tests_outbox_history;

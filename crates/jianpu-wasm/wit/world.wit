@@ -1422,6 +1422,72 @@ world jianpu-wasm {
         has-unsynced: bool,
     }
 
+    // ---- outbox history (crates/cloud-outbox/src/history.rs) ----
+
+    enum message-kind {
+        create,
+        edit,
+        rename,
+        trash,
+        restore,
+    }
+
+    enum history-status {
+        pending,
+        retrying,
+        needs-merge,
+        needs-sign-in,
+        failed,
+        sent,
+    }
+
+    variant status-filter {
+        any,
+        only(history-status),
+        problem,
+    }
+
+    enum attempts-filter {
+        any,
+        untried,
+        two-or-more,
+    }
+
+    record history-filter {
+        query: string,
+        status: status-filter,
+        kind: option<message-kind>,
+        file-id: option<string>,
+        max-age-ms: option<u64>,
+        min-size-bytes: option<u32>,
+        attempts: attempts-filter,
+    }
+
+    record file-name {
+        file-id: string,
+        name: string,
+    }
+
+    record history-row {
+        message-id: string,
+        file-id: string,
+        file-name: string,
+        kind: message-kind,
+        status: history-status,
+        size-bytes: u32,
+        at-ms: u64,
+        attempts: list<attempt>,
+        retry-in-ms: option<u64>,
+        revision: option<s64>,
+        payload-json: string,
+        payload-matches-query: bool,
+    }
+
+    record history-write {
+        put: option<stored-record>,
+        deletes: list<string>,
+    }
+
     export outbox-enqueue: func(queue: queue, file-id: string, message: message, message-id: string, now-ms: u64) -> queue;
     export outbox-begin-send: func(queue: queue, now-ms: u64) -> begin-send;
     export outbox-next-wake-ms: func(queue: queue) -> option<u64>;
@@ -1432,5 +1498,7 @@ world jianpu-wasm {
     export outbox-encode-queue: func(queue: queue) -> list<stored-record>;
     export outbox-decode-queue: func(records: list<stored-record>) -> result<queue, decode-error>;
     export outbox-summarize: func(queue: queue, now-ms: u64) -> queue-summary;
+    export outbox-record-sent: func(queue-before: queue, existing: list<stored-record>, file-id: string, message-id: string, revision: s64, now-ms: u64) -> history-write;
+    export outbox-history-rows: func(queue: queue, sent-records: list<stored-record>, file-names: list<file-name>, filter: history-filter, now-ms: u64) -> list<history-row>;
     export merge-three-way: func(base: string, mine: string, theirs: string) -> merge-outcome;
 }

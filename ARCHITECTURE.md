@@ -735,13 +735,16 @@ or the network (`now_ms` and `jitter_unit` are passed in).
 | `backoff` | `backoff_ms(consecutive_failures: u32, jitter_unit: f64) -> u64` |
 | `codec` | `encode_queue(queue: &Queue) -> Vec<StoredRecord>`; `decode_queue(records: &[StoredRecord]) -> Result<Queue, DecodeError>` |
 | `summary` | `summarize(queue: &Queue, now_ms: u64) -> QueueSummary` |
+| `history` | `record_sent(queue_before: &Queue, existing: &[StoredRecord], file_id: &str, message_id: &str, revision: i64, now_ms: u64) -> HistoryWrite`; `rows(queue: &Queue, sent_records: &[StoredRecord], file_names: &[FileName], filter: &HistoryFilter, now_ms: u64) -> Vec<HistoryRow>`; `expired_keys(records: &[StoredRecord], now_ms: u64) -> Vec<String>` |
 | `merge` | `merge_three_way(base: &str, mine: &str, theirs: &str, accepts: impl Fn(&str) -> bool) -> MergeOutcome` |
 
 The WIT exports are `outbox-enqueue`, `outbox-begin-send`,
 `outbox-next-wake-ms`, `outbox-on-result` (its result parameter is named
 `send-result`), `outbox-resolve`, `outbox-resolve-signed-in`,
-`outbox-record-revision`, `outbox-encode-queue`, `outbox-decode-queue` and
-`outbox-summarize`. `merge_three_way` has no `outbox-*` WIT export.
+`outbox-record-revision`, `outbox-encode-queue`, `outbox-decode-queue`,
+`outbox-summarize`, `outbox-record-sent` and `outbox-history-rows`
+(conversions in `history_conversion.rs`). `merge_three_way` has no `outbox-*`
+WIT export.
 
 ### Key types (`src/types.rs`)
 
@@ -770,6 +773,14 @@ camelCase, enums are tagged with `kind`.
   `Corrupt`); the persisted layout is `meta:version`, `meta:revisions` and one
   `lane:<file_id>` record each, versioned by `QUEUE_SCHEMA_VERSION`.
 - `MergeOutcome`: `Clean { text }` or `Conflicted { text, has_markers }`.
+- History (`src/history.rs`): `SentEntry` (a delivered message, stored under
+  `sent:<sent_at_ms>:<message_id>`, outside the queue codec), `HistoryWrite
+  { put, deletes }`, `HistoryFilter` (query, `StatusFilter`, `MessageKind`,
+  file, max age, min size, `AttemptsFilter`), `FileName`, and `HistoryRow`
+  (one queued or delivered message with its `HistoryStatus`, size, attempts,
+  pretty-printed payload JSON and `payload_matches_query`). Retention keeps
+  sent records for `RETENTION_MS` (7 days), at most `MAX_SENT_ENTRIES` (200)
+  and `MAX_SENT_BYTES` (5 MB), always keeping the newest.
 - `QueueSummary { lanes, total_pending, lanes_needing_attention, has_unsynced }`
   of `LaneSummary { file_id, reason: LaneReason, pending_messages, retry_in_ms, attempts, failure_reason }`;
   `LaneReason` is `Syncing`, `WaitingToRetry`, `PossiblyStuck`, `NeedsSignIn`,
@@ -790,11 +801,19 @@ The shell only does I/O, timers and rendering; every decision is a wasm call.
   `merge_three_way`: a clean merge is saved at once, a conflicting one is kept
   for the merge editor) and `keepBoth.ts` (saves the local text as a
   `(conflicted copy <date>)` file, then discards the original lane).
+- The Looper calls `outbox-record-sent` just before a successful result is
+  applied, writes the returned record and expired-key deletes to the store,
+  and serves `historyRows(fileNames, filter)` from the cached `sent:` records
+  (`refreshHistory()` re-reads them, e.g. for a follower tab).
 - `web/src/storage/cloudBackend.ts` enqueues every remote update; structural
   operations apply locally at once and queue `create-file`, `rename-file`,
   `trash-file` or `restore-file`.
 - UI: `web/src/components/syncPanel/` (reads `QueueSummary`; hosts Retry now,
-  Discard, Download my copy, Copy diagnostics) and
+  Discard, Download my copy, Copy diagnostics, View history),
+  `web/src/components/outboxHistory/` (the full-screen history dialog:
+  `OutboxHistoryDialog` reads `historyRows`, `OutboxHistoryView` renders the
+  filter controls and table, `historyFilterState.ts` maps the controls to a
+  `HistoryFilter`; matching, sorting and retention stay in Rust) and
   `web/src/components/mergeEditor/` (`MergeEditorContainer` offers Save,
   Keep both and Discard).
 
@@ -805,6 +824,7 @@ The shell only does I/O, timers and rendering; every decision is a wasm call.
 | **Outbox** | The persisted `Queue` of not-yet-acknowledged cloud edits plus the pure functions in `crates/cloud-outbox` that advance it. |
 | **Lane** | The per-file ordered queue of messages (`Lane`) with its own `LaneStatus`. Lanes drain independently, so one halted file never blocks another. |
 | **Message** | One queued cloud operation (`Message`) with a `message_id` and its recorded attempts (`QueuedMessage`). A `SaveContent` coalesces into a directly preceding, not in-flight `SaveContent`. |
+| **History** | Every message the outbox knows about, newest first: those still queued plus the delivered ones kept under `sent:` keys until retention prunes them. Shown in the outbox history dialog. |
 | **Looper** | The TS loop (`outboxLooper.ts`) that repeatedly calls `begin_send`, performs the request, and feeds the `SendResult` to `on_result`, sleeping until `next_wake_ms`. |
 | **Halt** | A lane stopping instead of retrying: `NeedsSignIn`, `NeedsMerge` or `Failed`. It stays halted until a `Resolution` (or `resolve_signed_in`) moves it back to `Draining`. |
 | **Base snapshot** | The last content known to match the server for a file (kept by `baseSnapshots.ts`); the `base` input of `merge_three_way` when a revision conflict needs merging. |
