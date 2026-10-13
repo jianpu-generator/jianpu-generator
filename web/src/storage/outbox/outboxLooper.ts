@@ -1,5 +1,8 @@
 import {
   type DecodeError,
+  type FileName,
+  type HistoryFilter,
+  type HistoryRow,
   jianpuWasm,
   type Message,
   type Queue,
@@ -15,6 +18,9 @@ import type { OutboxStore } from './outboxStore'
 /** Only these keys belong to the queue codec; anything else in the store
  * (e.g. `base:<fileId>` snapshots) is left alone when persisting. */
 const CODEC_KEY_PREFIXES = ['lane:', 'meta:']
+/** Delivered messages kept for the history view; written by the looper but
+ * not part of the queue codec. */
+const SENT_KEY_PREFIX = 'sent:'
 
 function isCodecKey(key: string): boolean {
   return CODEC_KEY_PREFIXES.some((prefix) => key.startsWith(prefix))
@@ -60,6 +66,11 @@ export interface OutboxLooper {
   recordRevision(fileId: string, revision: bigint): Promise<void>
   subscribe(listener: (snapshot: OutboxSnapshot) => void): () => void
   snapshot(): OutboxSnapshot
+  /** Queued and delivered messages that pass the filter, newest first. The
+   * delivered ones are those last read from the store; `refreshHistory`
+   * re-reads them (e.g. after another tab delivered something). */
+  historyRows(fileNames: FileName[], filter: HistoryFilter): HistoryRow[]
+  refreshHistory(): Promise<void>
   /** Resolves once the current drain (if any) has finished and persisted. */
   whenIdle(): Promise<void>
 }
@@ -88,6 +99,7 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
   let stopLeading: (() => void) | null = null
   let stopListening: (() => void) | null = null
   let persisted = new Map<string, string>()
+  let sentRecords: StoredRecord[] = []
   let persistChain: Promise<void> = Promise.resolve()
   let drainPromise: Promise<void> | null = null
   let drainRequested = false
@@ -138,6 +150,9 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
 
   const load = async (): Promise<void> => {
     const records: StoredRecord[] = await store.loadAll()
+    sentRecords = records.filter((record) =>
+      record.key.startsWith(SENT_KEY_PREFIX),
+    )
     const owned = records.filter((record) => isCodecKey(record.key))
     try {
       queue = jianpuWasm().outboxDecodeQueue(owned)
@@ -148,6 +163,32 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
       if (!decodeError) throw error
       halted = decodeError
     }
+  }
+
+  /** Keeps the delivered message for the history view and prunes old ones.
+   * Written before the queue drops the message: a crash in between resends
+   * the message and rewrites the same record. */
+  const recordSent = async (
+    queueBefore: Queue,
+    request: SendRequest,
+    revision: bigint,
+  ): Promise<void> => {
+    const write = jianpuWasm().outboxRecordSent(
+      queueBefore,
+      sentRecords,
+      request.fileId,
+      request.messageId,
+      revision,
+      nowMs(),
+    )
+    const puts = write.put ? [write.put] : []
+    if (puts.length === 0 && write.deletes.length === 0) return
+    await store.apply({ puts, deletes: write.deletes })
+    const deleted = new Set(write.deletes)
+    sentRecords = [
+      ...sentRecords.filter((record) => !deleted.has(record.key)),
+      ...puts.filter((put) => !deleted.has(put.key)),
+    ]
   }
 
   const wakeAtNextDue = () => {
@@ -172,6 +213,9 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
       const { request } = begun
       if (!request) break
       const result = await sendMessage(request)
+      if (result.tag === 'ok') {
+        await runHook(() => recordSent(queue, request, result.val.revision))
+      }
       queue = jianpuWasm().outboxOnResult(
         queue,
         request.fileId,
@@ -231,9 +275,19 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
     void requestDrain().catch(() => undefined)
   }
 
+  const refreshSent = async (): Promise<void> => {
+    sentRecords = (await store.loadAll()).filter((record) =>
+      record.key.startsWith(SENT_KEY_PREFIX),
+    )
+  }
+
   /** A follower tab changed the stored queue: pick it up and deliver it. */
   const adoptExternalChange = async (): Promise<void> => {
-    if (!isLeader) return
+    if (!isLeader) {
+      await refreshSent()
+      notify()
+      return
+    }
     await drainPromise
     await persistChain
     await load()
@@ -307,6 +361,20 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
       return () => listeners.delete(listener)
     },
     snapshot,
+    historyRows: (fileNames, filter) =>
+      loaded
+        ? jianpuWasm().outboxHistoryRows(
+            queue,
+            sentRecords,
+            fileNames,
+            filter,
+            nowMs(),
+          )
+        : [],
+    async refreshHistory() {
+      await refreshSent()
+      notify()
+    },
     async whenIdle() {
       await drainPromise
       await persistChain

@@ -1,5 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FileStoreState } from '../../fileStore'
 import { useFocusRevisionCheck } from '../../hooks/useFocusRevisionCheck'
 import type { CloudBackend, LocalRename } from '../../storage/cloudBackendTypes'
@@ -8,6 +8,7 @@ import { keepBoth } from '../../storage/outbox/keepBoth'
 import type { OutboxSnapshot } from '../../storage/outbox/outboxLooper'
 import type { StorageBackend } from '../../storage/types'
 import { MergeEditorContainer } from '../mergeEditor/MergeEditorContainer'
+import { OutboxHistoryDialog } from '../outboxHistory/OutboxHistoryDialog'
 import { buildDiagnostics, copyDiagnostics } from './copyDiagnostics'
 import { DiscardConfirmDialog } from './DiscardConfirmDialog'
 import { downloadLocalCopy } from './downloadLocalCopy'
@@ -52,7 +53,13 @@ function CloudSyncPanel(
   const snapshot = useOutboxSnapshot(backend)
   const [discardingFileId, setDiscardingFileId] = useState<string | null>(null)
   const [mergingFileId, setMergingFileId] = useState<string | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const historyFiles = useMemo(
+    () =>
+      Object.entries(store.fileIds).map(([name, fileId]) => ({ fileId, name })),
+    [store.fileIds],
+  )
   useEffect(
     () => backend.onLocalRename(props.onLocalRename),
     [backend, props.onLocalRename],
@@ -124,6 +131,7 @@ function CloudSyncPanel(
               onCopyDiagnostics={() =>
                 void copyDiagnostics(buildDiagnostics(lanes))
               }
+              onViewHistory={() => setHistoryOpen(true)}
             />
             <Dialog.Close asChild>
               <button type="button">Close</button>
@@ -131,6 +139,12 @@ function CloudSyncPanel(
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+      <OutboxHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        looper={backend.outbox()}
+        files={historyFiles}
+      />
       <MergeEditorContainer
         conflict={conflictOf(mergingFileId)}
         fileName={nameOfFile(store, mergingFileId ?? '')}

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { instantiate } from '../../../../crates/jianpu-wasm/pkg-component/jianpu_wasm.js'
 import {
+  type HistoryFilter,
   type SendRequest,
   type SendResult,
   setWasmRoot,
@@ -310,5 +311,79 @@ describe('outbox looper', () => {
     await harness.looper.resolve('file-a', { tag: 'discard' })
     expect(lanesWhenDiscarded).toEqual([])
     expect(harness.looper.snapshot().summary.hasUnsynced).toBe(false)
+  })
+})
+
+const everything: HistoryFilter = {
+  query: '',
+  status: { tag: 'any' },
+  attempts: 'any',
+}
+
+describe('outbox history', () => {
+  it('keeps a delivered message, with its payload, after it leaves the queue', async () => {
+    const harness = makeHarness()
+    await harness.looper.start()
+    await harness.looper.enqueue('file-a', save('1 2 3'))
+    await harness.looper.whenIdle()
+    const [row] = harness.looper.historyRows([], everything)
+    expect(row?.status).toBe('sent')
+    expect(row?.revision).toBe(1n)
+    expect(JSON.parse(row?.payloadJson ?? '{}').content).toBe('1 2 3')
+    expect(harness.looper.snapshot().summary.hasUnsynced).toBe(false)
+  })
+
+  it('lists a message that is still waiting to be sent', async () => {
+    const harness = makeHarness({
+      send: async () => ({ tag: 'transient', val: { reason: 'offline' } }),
+    })
+    await harness.looper.start()
+    await harness.looper.enqueue('file-a', save('queued'))
+    await harness.looper.whenIdle()
+    const [row] = harness.looper.historyRows([], everything)
+    expect(row?.status).toBe('retrying')
+    expect(row?.attempts).toHaveLength(1)
+  })
+
+  it('keeps delivered messages across a restart', async () => {
+    const store = createMemoryOutboxStore()
+    const first = makeHarness({ store })
+    await first.looper.start()
+    await first.looper.enqueue('file-a', save('kept'))
+    await first.looper.whenIdle()
+    first.looper.stop()
+
+    const restarted = makeHarness({ store })
+    await restarted.looper.start()
+    expect(restarted.looper.historyRows([], everything)).toHaveLength(1)
+  })
+
+  it('prunes delivered messages past the retention window', async () => {
+    const store = createMemoryOutboxStore()
+    const harness = makeHarness({ store })
+    await harness.looper.start()
+    await harness.looper.enqueue('file-a', save('old'))
+    await harness.looper.whenIdle()
+    harness.advance(8 * 24 * 60 * 60 * 1000)
+    await harness.looper.enqueue('file-a', save('new'))
+    await harness.looper.whenIdle()
+    const kept = harness.looper
+      .historyRows([], everything)
+      .map((row) => JSON.parse(row.payloadJson).content)
+    expect(kept).toEqual(['new'])
+    expect(
+      (await store.loadAll()).filter((r) => r.key.startsWith('sent:')),
+    ).toHaveLength(1)
+  })
+
+  it('does not treat history records as part of the queue', async () => {
+    const harness = makeHarness()
+    await harness.looper.start()
+    await harness.looper.enqueue('file-a', save('x'))
+    await harness.looper.whenIdle()
+    harness.looper.stop()
+    const restarted = makeHarness({ store: harness.store })
+    await restarted.looper.start()
+    expect(restarted.looper.snapshot().halted).toBeNull()
   })
 })

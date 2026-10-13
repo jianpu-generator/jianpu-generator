@@ -100,6 +100,9 @@ export function SyncPanel(props: SyncPanelProps): ReactElement {
       <ul className="sync-panel">
         {props.lanes.map((lane) => renderLane(lane, props))}
       </ul>
+      <button type="button" onClick={() => props.onViewHistory()}>
+        View history
+      </button>
       <button type="button" onClick={() => props.onCopyDiagnostics()}>
         Copy diagnostics
       </button>

@@ -56,7 +56,7 @@ function sizeLabel(message: Message): string {
   return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`
 }
 
-function outcomeLabel(outcome: Attempt['outcome']): string {
+export function outcomeLabel(outcome: Attempt['outcome']): string {
   switch (outcome.tag) {
     case 'transient':
       return `Network problem: ${outcome.val.reason}`

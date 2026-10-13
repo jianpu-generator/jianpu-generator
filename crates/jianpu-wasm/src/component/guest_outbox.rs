@@ -3,7 +3,7 @@
 //! conversion, plus the one parser-backed `accepts` closure for the merge.
 #![allow(clippy::needless_pass_by_value)]
 use super::*;
-use cloud_outbox::{codec, enqueue, merge, scheduling, summary, transitions};
+use cloud_outbox::{codec, enqueue, history, merge, scheduling, summary, transitions};
 
 pub(super) fn outbox_enqueue(
     queue: Queue,
@@ -74,6 +74,47 @@ pub(super) fn outbox_decode_queue(records: Vec<StoredRecord>) -> Result<Queue, D
 
 pub(super) fn outbox_summarize(queue: Queue, now_ms: u64) -> QueueSummary {
     summary::summarize(&queue.into(), now_ms).into()
+}
+
+pub(super) fn outbox_record_sent(
+    queue_before: Queue,
+    existing: Vec<StoredRecord>,
+    file_id: String,
+    message_id: String,
+    revision: i64,
+    now_ms: u64,
+) -> HistoryWrite {
+    let existing: Vec<_> = existing.into_iter().map(Into::into).collect();
+    history::record_sent(
+        &queue_before.into(),
+        &existing,
+        &file_id,
+        &message_id,
+        revision,
+        now_ms,
+    )
+    .into()
+}
+
+pub(super) fn outbox_history_rows(
+    queue: Queue,
+    sent_records: Vec<StoredRecord>,
+    file_names: Vec<FileName>,
+    filter: HistoryFilter,
+    now_ms: u64,
+) -> Vec<HistoryRow> {
+    let sent_records: Vec<_> = sent_records.into_iter().map(Into::into).collect();
+    let file_names: Vec<_> = file_names.into_iter().map(Into::into).collect();
+    history::rows(
+        &queue.into(),
+        &sent_records,
+        &file_names,
+        &filter.into(),
+        now_ms,
+    )
+    .into_iter()
+    .map(Into::into)
+    .collect()
 }
 
 pub(super) fn merge_three_way(base: String, mine: String, theirs: String) -> MergeOutcome {

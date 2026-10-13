@@ -37,6 +37,7 @@ function makeProps(lanes: LaneView[]): SyncPanelProps {
     onDiscard: vi.fn(),
     onDownloadCopy: vi.fn(),
     onCopyDiagnostics: vi.fn(),
+    onViewHistory: vi.fn(),
   }
 }
 

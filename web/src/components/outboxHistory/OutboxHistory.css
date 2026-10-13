@@ -1,0 +1,224 @@
+.outbox-history__dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1010;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  background: var(--surface);
+  color: var(--text);
+  overflow: auto;
+}
+
+.outbox-history__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.outbox-history__header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.outbox-history {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.outbox-history__search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.outbox-history__search input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.outbox-history__filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px 10px;
+}
+
+.outbox-history__field {
+  display: grid;
+  gap: 2px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.outbox-history__field select {
+  min-width: 0;
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.outbox-history__count,
+.outbox-history__footnote {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.outbox-history__table-wrap {
+  overflow-x: auto;
+  background: var(--editor-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.outbox-history__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.outbox-history__table th {
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+
+.outbox-history__table td {
+  padding: 5px 10px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+
+.outbox-history__row {
+  cursor: pointer;
+}
+
+.outbox-history__row:hover td {
+  background: var(--surface);
+}
+
+.outbox-history__number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.outbox-history__time {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.outbox-history__file {
+  overflow-wrap: anywhere;
+}
+
+.outbox-history__actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.outbox-history__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.outbox-history__small-button {
+  font-size: 0.75rem;
+  padding: 1px 8px;
+}
+
+.outbox-history__pill {
+  padding: 1px 8px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--accent-selected-bg);
+  color: var(--accent-selected-text);
+}
+
+.outbox-history__pill--sent {
+  background: #e1f3e9;
+  color: #1d7a4a;
+}
+
+.outbox-history__pill--retrying {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.outbox-history__pill--needs-merge,
+.outbox-history__pill--needs-sign-in,
+.outbox-history__pill--failed {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.outbox-history__detail td {
+  background: var(--editor-bg);
+}
+
+.outbox-history__attempt {
+  margin-bottom: 4px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.outbox-history__payload-head {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
+.outbox-history__payload {
+  margin: 0;
+  padding: 8px 10px;
+  max-height: 220px;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.outbox-history mark {
+  background: var(--warning-bg);
+  color: inherit;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px var(--warning);
+}
+
+.outbox-history__empty {
+  color: var(--muted);
+}
+
+.outbox-history__visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}

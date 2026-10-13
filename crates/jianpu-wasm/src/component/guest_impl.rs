@@ -5,6 +5,16 @@
 //! file is just the trait wiring.
 use super::*;
 
+/// Trait methods whose body is just a call to the free function of the same
+/// name and arguments.
+macro_rules! forward_to_free_functions {
+    ($($name:ident($($arg:ident: $ty:ty),*) -> $ret:ty;)*) => {
+        $(fn $name($($arg: $ty),*) -> $ret {
+            $name($($arg),*)
+        })*
+    };
+}
+
 impl Guest for Component {
     fn greet(name: String) -> String {
         greet(name)
@@ -340,57 +350,19 @@ impl Guest for Component {
         resolve_selection_range(note_spans, lyric_spans, anchor, current)
     }
 
-    fn outbox_enqueue(
-        queue: Queue,
-        file_id: String,
-        message: Message,
-        message_id: String,
-        now_ms: u64,
-    ) -> Queue {
-        outbox_enqueue(queue, file_id, message, message_id, now_ms)
-    }
-
-    fn outbox_begin_send(queue: Queue, now_ms: u64) -> BeginSend {
-        outbox_begin_send(queue, now_ms)
-    }
-
-    fn outbox_next_wake_ms(queue: Queue) -> Option<u64> {
-        outbox_next_wake_ms(queue)
-    }
-
-    fn outbox_on_result(
-        queue: Queue,
-        file_id: String,
-        message_id: String,
-        send_result: SendResult,
-        now_ms: u64,
-        jitter_unit: f64,
-    ) -> Queue {
-        outbox_on_result(queue, file_id, message_id, send_result, now_ms, jitter_unit)
-    }
-
-    fn outbox_resolve(queue: Queue, file_id: String, resolution: Resolution) -> Queue {
-        outbox_resolve(queue, file_id, resolution)
-    }
-
-    fn outbox_resolve_signed_in(queue: Queue) -> Queue {
-        outbox_resolve_signed_in(queue)
-    }
-
-    fn outbox_record_revision(queue: Queue, file_id: String, revision: i64) -> Queue {
-        outbox_record_revision(queue, file_id, revision)
-    }
-
-    fn outbox_encode_queue(queue: Queue) -> Vec<StoredRecord> {
-        outbox_encode_queue(queue)
-    }
-
-    fn outbox_decode_queue(records: Vec<StoredRecord>) -> Result<Queue, DecodeError> {
-        outbox_decode_queue(records)
-    }
-
-    fn outbox_summarize(queue: Queue, now_ms: u64) -> QueueSummary {
-        outbox_summarize(queue, now_ms)
+    forward_to_free_functions! {
+        outbox_enqueue(queue: Queue, file_id: String, message: Message, message_id: String, now_ms: u64) -> Queue;
+        outbox_begin_send(queue: Queue, now_ms: u64) -> BeginSend;
+        outbox_next_wake_ms(queue: Queue) -> Option<u64>;
+        outbox_on_result(queue: Queue, file_id: String, message_id: String, send_result: SendResult, now_ms: u64, jitter_unit: f64) -> Queue;
+        outbox_resolve(queue: Queue, file_id: String, resolution: Resolution) -> Queue;
+        outbox_resolve_signed_in(queue: Queue) -> Queue;
+        outbox_record_revision(queue: Queue, file_id: String, revision: i64) -> Queue;
+        outbox_encode_queue(queue: Queue) -> Vec<StoredRecord>;
+        outbox_decode_queue(records: Vec<StoredRecord>) -> Result<Queue, DecodeError>;
+        outbox_summarize(queue: Queue, now_ms: u64) -> QueueSummary;
+        outbox_record_sent(queue_before: Queue, existing: Vec<StoredRecord>, file_id: String, message_id: String, revision: i64, now_ms: u64) -> HistoryWrite;
+        outbox_history_rows(queue: Queue, sent_records: Vec<StoredRecord>, file_names: Vec<FileName>, filter: HistoryFilter, now_ms: u64) -> Vec<HistoryRow>;
     }
 
     fn merge_three_way(base: String, mine: String, theirs: String) -> MergeOutcome {
