@@ -94,18 +94,16 @@ function renderLane(lane: LaneView, props: SyncPanelProps): ReactElement {
   )
 }
 
-export function SyncPanel(props: SyncPanelProps): ReactElement {
+/** The files that are not settled yet, each with the way out of its state.
+ * Renders nothing once every file is synced. */
+export function SyncPanel(props: SyncPanelProps): ReactElement | null {
+  if (props.lanes.length === 0) return null
   return (
-    <div>
+    <section className="sync-panel__section" data-testid="sync-panel">
+      <h3 className="sync-panel__title">Sync status</h3>
       <ul className="sync-panel">
         {props.lanes.map((lane) => renderLane(lane, props))}
       </ul>
-      <button type="button" onClick={() => props.onViewHistory()}>
-        View history
-      </button>
-      <button type="button" onClick={() => props.onCopyDiagnostics()}>
-        Copy diagnostics
-      </button>
-    </div>
+    </section>
   )
 }

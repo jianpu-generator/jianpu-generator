@@ -1,7 +1,8 @@
 .outbox-history__dialog {
   position: fixed;
   inset: 0;
-  z-index: 1010;
+  /* Below the merge and discard dialogs, which open on top of it. */
+  z-index: 999;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -221,4 +222,29 @@
   height: 1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
+}
+
+.outbox-history__header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.outbox-history__dialog button:not(.outbox-history__toggle) {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e0;
+  background: #f5f5f5;
+  color: inherit;
+  cursor: pointer;
+}
+
+.outbox-history__dialog button:not(.outbox-history__toggle):hover {
+  background: #ebebeb;
+}
+
+.outbox-history__dialog .outbox-history__small-button {
+  font-size: 11px;
+  padding: 1px 8px;
 }

@@ -36,8 +36,6 @@ function makeProps(lanes: LaneView[]): SyncPanelProps {
     onKeepBoth: vi.fn(),
     onDiscard: vi.fn(),
     onDownloadCopy: vi.fn(),
-    onCopyDiagnostics: vi.fn(),
-    onViewHistory: vi.fn(),
   }
 }
 
@@ -116,10 +114,8 @@ describe('SyncPanel', () => {
     expect(props.onDownloadCopy).toHaveBeenCalledWith('f-needs-merge')
   })
 
-  it('fires copy diagnostics', () => {
-    const props = makeProps([])
-    findButtons(SyncPanel(props)).get('Copy diagnostics')?.()
-    expect(props.onCopyDiagnostics).toHaveBeenCalledOnce()
+  it('renders nothing when every file is synced', () => {
+    expect(SyncPanel(makeProps([]))).toBeNull()
   })
 
   it('offers no retry while syncing', () => {
