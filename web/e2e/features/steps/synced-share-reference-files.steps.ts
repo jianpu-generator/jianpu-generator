@@ -113,7 +113,7 @@ Then(
   async () => {
     const link = sharedState.originalSyncedLink
     if (!link) throw new Error('originalSyncedLink was not captured yet')
-    const shareId = /#synced=([0-9A-Za-z_-]{11})/.exec(link)?.[1]
+    const shareId = new URL(link).searchParams.get('s')?.slice(0, 11)
     if (!shareId) throw new Error(`not a synced share link: ${link}`)
     const doc = await fetchSyncedDoc(shareId)
     expect(doc.filename).toBe('')

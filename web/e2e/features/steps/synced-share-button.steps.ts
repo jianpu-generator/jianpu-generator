@@ -224,21 +224,29 @@ Then(
       throw new Error('syncedShareLink was not captured yet')
     if (!state.ownerFileName)
       throw new Error('ownerFileName was not seeded yet')
-    expect(state.syncedShareLink).toContain(
-      `--${state.ownerFileName.replace(/\.jianpu$/, '')}`,
+    const payload = new URL(state.syncedShareLink).searchParams.get('s')
+    expect(payload).toContain(
+      `--${state.ownerFileName.replace(/\.jianpu$/, '').replace(/\s+/g, '-')}`,
     )
   },
 )
 
-Then("the viewer's page URL has no query string", async () => {
+Then("the viewer's page URL has no ?file= param", async () => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
-  expect(new URL(state.viewerPage.url()).search).toEqual('')
+  expect(new URL(state.viewerPage.url()).searchParams.has('file')).toBe(false)
 })
 
-Then('the copied sync link matches the synced URL hash format', async () => {
+Then("the viewer's page URL has no ?s= param", async () => {
+  if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
+  expect(new URL(state.viewerPage.url()).searchParams.has('s')).toBe(false)
+})
+
+Then('the copied sync link matches the synced URL format', async () => {
   if (!state.syncedShareLink)
     throw new Error('syncedShareLink was not captured yet')
-  expect(state.syncedShareLink).toMatch(/#synced=[0-9A-Za-z_-]{11}(--.+)?$/)
+  const url = new URL(state.syncedShareLink)
+  expect(url.hash).toBe('')
+  expect(url.searchParams.get('s')).toMatch(/^[0-9A-Za-z_-]{11}(--\S+)?$/)
 })
 
 Then('the share modal shows the stop-sync button', async ({ page }) => {

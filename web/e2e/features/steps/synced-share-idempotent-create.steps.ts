@@ -331,9 +331,10 @@ Then('the share modal still shows the stop-sync button', async ({ page }) => {
  * link, it just makes this cosmetic copy stale"), so "unchanged after the
  * rename" means the id, not the whole URL string. */
 function syncedShareId(link: string): string {
-  const match = /#synced=([0-9A-Za-z_-]{11})/.exec(link)
-  if (!match?.[1]) throw new Error(`not a synced share link: ${link}`)
-  return match[1]
+  const shareId = new URL(link).searchParams.get('s')?.slice(0, 11)
+  if (!shareId || !/^[0-9A-Za-z_-]{11}$/.test(shareId))
+    throw new Error(`not a synced share link: ${link}`)
+  return shareId
 }
 
 Then('the synced link is unchanged after the rename', async ({ page }) => {

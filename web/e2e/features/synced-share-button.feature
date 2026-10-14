@@ -36,14 +36,14 @@ Feature: Synced share button
     When the owner loads the app and clicks "Sync"
     Then the synced link is copied
     When a viewer opens the copied sync link in a new page
-    Then the viewer's page URL has no query string
+    Then the viewer's page URL has no ?file= param
 
-  Scenario: Sync button copies a #synced= link, then the modal offers copy/stop
+  Scenario: Sync button copies a ?s= link, then the modal offers copy/stop
     Given the owner is signed in with GitHub as "e2e-test-user"
     And the file store is seeded with the synced score
     When the owner loads the app and clicks "Sync"
     Then the synced link is copied
-    And the copied sync link matches the synced URL hash format
+    And the copied sync link matches the synced URL format
     And the share modal shows the stop-sync button
     When the owner clicks the copy-synced-link button
     Then the synced link is copied
@@ -88,7 +88,7 @@ Feature: Synced share button
     And the viewer reloads the page
     Then the viewer's preview contains "Edited Synced Score"
 
-  Scenario: A viewer importing the synced score clears the #synced= hash and focuses the imported file
+  Scenario: A viewer importing the synced score clears the ?s= param and focuses the imported file
     Given the owner is signed in with GitHub as "e2e-test-user"
     And the file store is seeded with the synced score
     When the owner loads the app and clicks "Sync"
@@ -97,6 +97,7 @@ Feature: Synced share button
     And the viewer clicks "Import to my scores"
     Then the viewer's shared preview banner is gone
     And the viewer's page URL has no hash
+    And the viewer's page URL has no ?s= param
     And the viewer's file switcher shows the synced filename
 
   Scenario: Click-and-click selecting across measures in a synced viewer updates the play range, even without a mounted editor to round-trip the selection through

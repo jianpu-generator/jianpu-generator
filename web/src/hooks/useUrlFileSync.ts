@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
 import { selectFile } from '../fileStore'
-import { parseSyncedShareFromHash } from '../syncedShareUrl'
+import { parseSyncedShare } from '../syncedShareUrl'
 import { readFileNameFromUrl, writeFileNameToUrl } from '../urlFileParam'
 
 /**
@@ -19,7 +19,7 @@ import { readFileNameFromUrl, writeFileNameToUrl } from '../urlFileParam'
  * active file, never a stale default it would otherwise briefly (or, if the
  * URL's file turns out not to exist, permanently) overwrite the URL with.
  *
- * Skipped entirely while a `#synced=` link is open: a viewer's `store.active`
+ * Skipped entirely while a synced-share link (`?s=`) is open: a viewer's `store.active`
  * is just whatever local file happened to be selected before/independent of
  * the synced share, and it must not leak into the address bar as `?file=`.
  */
@@ -32,7 +32,7 @@ export function useUrlFileSync(
 ): void {
   const initialUrlFileAppliedRef = useRef(false)
   const [initialSelectionReady, setInitialSelectionReady] = useState(false)
-  const isSyncedShareViewer = parseSyncedShareFromHash() !== null
+  const isSyncedShareViewer = parseSyncedShare() !== null
 
   useEffect(() => {
     if (
