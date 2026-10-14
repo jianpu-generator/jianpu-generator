@@ -3,11 +3,7 @@ import type { FileStoreState } from '../fileStore'
 import type { SharePayload } from '../shareUrl'
 import type { StorageBackend } from '../storage/types'
 import { callWorker, createWorkerClient } from '../syncedShare/workerClient'
-import {
-  clearSyncedShareHash,
-  parseSyncedShareFromHash,
-  stripShareQueryParam,
-} from '../syncedShareUrl'
+import { clearSyncedShare, parseSyncedShare } from '../syncedShareUrl'
 import { useImportToStorage } from './useImportToStorage'
 
 export type SyncedShareViewerStatus =
@@ -23,7 +19,7 @@ interface FileOpError {
 }
 
 /**
- * Parses a `#synced=` URL hash (if present) on mount and fetches the
+ * Parses a `?s=` synced-share link (or a legacy `#synced=` hash, if present) on mount and fetches the
  * share's current doc once — the shared cloud file's last saved content,
  * read by the worker straight from its `files` row. Produces the same `{filename,
  * content}` shape `useSharedPreview` does, so it plugs into the identical
@@ -63,7 +59,7 @@ export function useSyncedShareViewer(
         syncedShareViewerPreview.filename,
         syncedShareViewerPreview.content,
       )
-      clearSyncedShareHash()
+      clearSyncedShare()
       setSyncedShareViewerPreview(null)
     } catch {
       // handled by importToStorage via setFileOpError
@@ -71,12 +67,11 @@ export function useSyncedShareViewer(
   }, [syncedShareViewerPreview, importToStorage])
 
   useEffect(() => {
-    const parsed = parseSyncedShareFromHash()
+    const parsed = parseSyncedShare()
     if (!parsed) return
     const host = import.meta.env.VITE_SYNCED_SHARE_HOST
     if (!host) return
 
-    stripShareQueryParam()
     setEditorCollapsed(true)
 
     let cancelled = false

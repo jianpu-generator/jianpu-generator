@@ -1,7 +1,9 @@
 import shareIdFormat from './generated/live-share-worker/shareIdFormat.json'
 import { SHARE_QUERY_PARAM } from './shareQueryParam'
 
-const SYNCED_HASH_PREFIX = '#synced='
+// Legacy link format (`/#synced=<payload>`), still parsed so links shared
+// before the move to `?s=` keep working. Never generated any more.
+const LEGACY_SYNCED_HASH_PREFIX = '#synced='
 
 const FILENAME_EXTENSION = '.jianpu'
 
@@ -23,7 +25,8 @@ export interface SyncedSharePayload {
    * something a human can recognize (in chat, browser history, etc). Never
    * authoritative — the share's stored doc is the source of truth, so a
    * rename after sharing doesn't invalidate the link, it just makes this
-   * cosmetic copy stale. */
+   * cosmetic copy stale. Whitespace in it was replaced by `-` when the link
+   * was built. */
   filename?: string
 }
 
@@ -35,48 +38,42 @@ export function buildSyncedShareUrl(
   const bareName = filename?.endsWith(FILENAME_EXTENSION)
     ? filename.slice(0, -FILENAME_EXTENSION.length)
     : filename
-  const namePart = bareName ? `${FILENAME_SEPARATOR}${bareName}` : ''
-  const payload = `${shareId}${namePart}`
-  base.searchParams.set(SHARE_QUERY_PARAM, payload)
-  return `${base.href}${SYNCED_HASH_PREFIX}${payload}`
+  // Whitespace becomes `-` so a chat app (e.g. WhatsApp) doesn't end the
+  // auto-linked URL at the first space.
+  const dashedName = bareName?.trim().replace(/\s+/g, '-')
+  const namePart = dashedName ? `${FILENAME_SEPARATOR}${dashedName}` : ''
+  base.searchParams.set(SHARE_QUERY_PARAM, `${shareId}${namePart}`)
+  return base.href
 }
 
-export function parseSyncedShareFromHash(
-  hash: string = window.location.hash,
-): SyncedSharePayload | null {
-  if (!hash.startsWith(SYNCED_HASH_PREFIX)) return null
-  const body = hash.slice(SYNCED_HASH_PREFIX.length)
-  const shareId = body.slice(0, SHARE_ID_LENGTH)
+function parsePayload(payload: string): SyncedSharePayload | null {
+  const shareId = payload.slice(0, SHARE_ID_LENGTH)
   if (!SHARE_ID_PATTERN.test(shareId)) return null
-  const rest = body.slice(SHARE_ID_LENGTH)
+  const rest = payload.slice(SHARE_ID_LENGTH)
   if (rest === '') return { shareId }
   if (!rest.startsWith(FILENAME_SEPARATOR)) return null
   const filename = `${rest.slice(FILENAME_SEPARATOR.length)}${FILENAME_EXTENSION}`
   return { shareId, filename }
 }
 
-export function clearSyncedShareHash(): void {
+/** Reads a synced-share link: the `?s=` query param, falling back to the
+ * legacy `#synced=` hash. */
+export function parseSyncedShare(
+  search: string = window.location.search,
+  hash: string = window.location.hash,
+): SyncedSharePayload | null {
+  const queryPayload = new URLSearchParams(search).get(SHARE_QUERY_PARAM)
+  if (queryPayload !== null) return parsePayload(queryPayload)
+  if (!hash.startsWith(LEGACY_SYNCED_HASH_PREFIX)) return null
+  return parsePayload(hash.slice(LEGACY_SYNCED_HASH_PREFIX.length))
+}
+
+/** Drops the synced-share reference (`?s=` and the legacy `#synced=` hash)
+ * from the address bar, keeping any other query params such as `?file=`. */
+export function clearSyncedShare(): void {
   const url = new URL(window.location.href)
   url.hash = ''
   url.searchParams.delete(SHARE_QUERY_PARAM)
   const search = url.searchParams.toString()
   history.replaceState(null, '', `${url.pathname}${search ? `?${search}` : ''}`)
-}
-
-/** Removes the `?s=` param (added purely for a link-preview crawler's
- * pre-JS request, see `shareQueryParam.ts`) from the address bar once
- * client JS has parsed it, leaving the `#synced=` hash untouched -- unlike
- * `clearSyncedShareHash`, the viewer is still using the hash for its
- * session. Keeps the URL a viewer sees tidy without affecting anything the
- * server already handled. */
-export function stripShareQueryParam(): void {
-  const url = new URL(window.location.href)
-  if (!url.searchParams.has(SHARE_QUERY_PARAM)) return
-  url.searchParams.delete(SHARE_QUERY_PARAM)
-  const search = url.searchParams.toString()
-  history.replaceState(
-    null,
-    '',
-    `${url.pathname}${search ? `?${search}` : ''}${url.hash}`,
-  )
 }
