@@ -108,9 +108,56 @@ fn a_delivery_is_recorded_with_its_payload_and_failed_tries() -> TestResult {
     let row = rows.first().ok_or("no row")?;
     expect!(row.status, HistoryStatus::Sent)?;
     expect!(row.revision, Some(9))?;
-    expect!(row.attempts.len(), 2)?;
+    expect!(row.attempts.len(), 3)?;
+    expect!(
+        row.attempts.last().map(|attempt| attempt.outcome.clone()),
+        Some(AttemptOutcome::Succeeded)
+    )?;
     expect!(row.at_ms, 500)?;
     expect!(row.file_name.as_str(), "Ode to Joy.jianpu")
+}
+
+#[test]
+fn a_delivery_on_the_first_try_logs_exactly_one_succeeded_attempt() -> TestResult {
+    let queue = queue_of(vec![lane(
+        "f1",
+        LaneStatus::Draining,
+        vec![queued("m1", 100, save("1 2 3"), 0)],
+    )]);
+    let record = record_sent(&queue, &[], "f1", "m1", 9, 500)
+        .put
+        .ok_or("no record")?;
+    let rows = rows(
+        &queue_of(vec![]),
+        &[record],
+        &names(),
+        &HistoryFilter::everything(),
+        600,
+    );
+    let row = rows.first().ok_or("no row")?;
+    expect!(
+        row.attempts.clone(),
+        vec![Attempt {
+            at_ms: 500,
+            outcome: AttemptOutcome::Succeeded
+        }]
+    )
+}
+
+#[test]
+fn a_stored_record_whose_log_does_not_end_in_succeeded_is_hidden() -> TestResult {
+    let legacy = StoredRecord {
+        key: format!("sent:{:020}:old", 500),
+        value: r#"{"messageId":"old","fileId":"f1","createdAtMs":100,"sentAtMs":500,"revision":3,"message":{"kind":"saveContent","content":"1 2 3"},"attempts":[]}"#.into(),
+    };
+    let rows = rows(
+        &queue_of(vec![]),
+        &[legacy],
+        &names(),
+        &HistoryFilter::everything(),
+        600,
+    );
+    expect!(rows.len(), 0)
 }
 
 #[test]
