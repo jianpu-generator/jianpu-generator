@@ -130,3 +130,35 @@
   justify-content: flex-end;
   margin-top: 12px;
 }
+
+.sync-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sync-panel__title {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Match the app's standard button look (see `buttonStyle` in
+   storageSettingsModalStyles.ts) instead of the browser default. */
+.sync-panel__dialog button,
+.sync-panel__actions button,
+.discard-confirm button {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e0;
+  background: #f5f5f5;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sync-panel__dialog button:hover,
+.sync-panel__actions button:hover,
+.discard-confirm button:hover {
+  background: #ebebeb;
+}

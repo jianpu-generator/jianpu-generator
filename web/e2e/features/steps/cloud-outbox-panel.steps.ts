@@ -18,7 +18,11 @@ let pendingDownload: Promise<Download> | undefined
 
 When('I open the sync panel', async ({ page }) => {
   await saveStatusBadge(page).click()
-  await expect(syncPanel(page)).toBeVisible()
+  await expect(page.getByTestId('outbox-history')).toBeVisible()
+})
+
+Then('the sync panel is not shown', async ({ page }) => {
+  await expect(syncPanel(page)).toBeHidden()
 })
 
 When('I click {string} in the sync panel', async ({ page }, label: string) => {

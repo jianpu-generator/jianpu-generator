@@ -2,6 +2,8 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { type ReactElement, useEffect, useMemo, useState } from 'react'
 import type { FileName } from '../../jianpuWasm'
 import type { OutboxLooper } from '../../storage/outbox/outboxLooper'
+import { SyncPanel } from '../syncPanel/SyncPanel'
+import type { SyncPanelProps } from '../syncPanel/syncPanelTypes'
 import {
   EMPTY_FILTER_STATE,
   type HistoryFilterState,
@@ -14,6 +16,9 @@ export interface OutboxHistoryDialogProps {
   onOpenChange(open: boolean): void
   looper: OutboxLooper
   files: FileName[]
+  /** The unsettled files and their actions, shown above the history. */
+  syncPanel: SyncPanelProps
+  onCopyDiagnostics(): void
 }
 
 export function OutboxHistoryDialog(
@@ -47,11 +52,17 @@ export function OutboxHistoryDialog(
           aria-describedby={undefined}
         >
           <header className="outbox-history__header">
-            <Dialog.Title>Outbox history</Dialog.Title>
-            <Dialog.Close asChild>
-              <button type="button">Close</button>
-            </Dialog.Close>
+            <Dialog.Title>Sync status and history</Dialog.Title>
+            <div className="outbox-history__header-actions">
+              <button type="button" onClick={props.onCopyDiagnostics}>
+                Copy diagnostics
+              </button>
+              <Dialog.Close asChild>
+                <button type="button">Close</button>
+              </Dialog.Close>
+            </div>
           </header>
+          <SyncPanel {...props.syncPanel} />
           <OutboxHistoryView
             rows={rows}
             totalCount={totalCount}

@@ -810,10 +810,12 @@ The shell only does I/O, timers and rendering; every decision is a wasm call.
 - `web/src/storage/cloudBackend.ts` enqueues every remote update; structural
   operations apply locally at once and queue `create-file`, `rename-file`,
   `trash-file` or `restore-file`.
-- UI: `web/src/components/syncPanel/` (reads `QueueSummary`; hosts Retry now,
-  Discard, Download my copy, Copy diagnostics, View history),
-  `web/src/components/outboxHistory/` (the full-screen history dialog:
-  `OutboxHistoryDialog` reads `historyRows`, `OutboxHistoryView` renders the
+- UI: `web/src/components/syncPanel/` (reads `QueueSummary`; `SyncPanel` is
+  the "Sync status" section listing unsettled files with Retry now, Review
+  and merge, Keep both, Discard and Download my copy),
+  `web/src/components/outboxHistory/` (the one full-screen dialog opened from
+  the save badge: `OutboxHistoryDialog` hosts `SyncPanel` above the history
+  and the Copy diagnostics button, reads `historyRows`, `OutboxHistoryView` renders the
   filter controls and table, `historyFilterState.ts` maps the controls to a
   `HistoryFilter`; matching, sorting and retention stay in Rust) and
   `web/src/components/mergeEditor/` (`MergeEditorContainer` offers Save,

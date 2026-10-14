@@ -1,4 +1,3 @@
-import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useMemo, useState } from 'react'
 import type { FileStoreState } from '../../fileStore'
 import { useFocusRevisionCheck } from '../../hooks/useFocusRevisionCheck'
@@ -13,7 +12,6 @@ import { buildDiagnostics, copyDiagnostics } from './copyDiagnostics'
 import { DiscardConfirmDialog } from './DiscardConfirmDialog'
 import { downloadLocalCopy } from './downloadLocalCopy'
 import { toLaneViews } from './laneViewMapping'
-import { SyncPanel } from './SyncPanel'
 
 export interface SyncPanelContainerProps {
   open: boolean
@@ -53,7 +51,6 @@ function CloudSyncPanel(
   const snapshot = useOutboxSnapshot(backend)
   const [discardingFileId, setDiscardingFileId] = useState<string | null>(null)
   const [mergingFileId, setMergingFileId] = useState<string | null>(null)
-  const [historyOpen, setHistoryOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const historyFiles = useMemo(
     () =>
@@ -110,40 +107,21 @@ function CloudSyncPanel(
           {notice}
         </div>
       )}
-      <Dialog.Root open={props.open} onOpenChange={props.onOpenChange}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="sync-panel__overlay" />
-          <Dialog.Content
-            className="sync-panel__dialog"
-            data-testid="sync-panel"
-            aria-describedby={undefined}
-          >
-            <Dialog.Title>Sync status</Dialog.Title>
-            <SyncPanel
-              lanes={lanes}
-              onRetryNow={(fileId) =>
-                void backend.outbox().resolve(fileId, { tag: 'retry' })
-              }
-              onReviewAndMerge={setMergingFileId}
-              onKeepBoth={(fileId) => void keepBothVersions(fileId)}
-              onDiscard={setDiscardingFileId}
-              onDownloadCopy={download}
-              onCopyDiagnostics={() =>
-                void copyDiagnostics(buildDiagnostics(lanes))
-              }
-              onViewHistory={() => setHistoryOpen(true)}
-            />
-            <Dialog.Close asChild>
-              <button type="button">Close</button>
-            </Dialog.Close>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
       <OutboxHistoryDialog
-        open={historyOpen}
-        onOpenChange={setHistoryOpen}
+        open={props.open}
+        onOpenChange={props.onOpenChange}
         looper={backend.outbox()}
         files={historyFiles}
+        onCopyDiagnostics={() => void copyDiagnostics(buildDiagnostics(lanes))}
+        syncPanel={{
+          lanes,
+          onRetryNow: (fileId) =>
+            void backend.outbox().resolve(fileId, { tag: 'retry' }),
+          onReviewAndMerge: setMergingFileId,
+          onKeepBoth: (fileId) => void keepBothVersions(fileId),
+          onDiscard: setDiscardingFileId,
+          onDownloadCopy: download,
+        }}
       />
       <MergeEditorContainer
         conflict={conflictOf(mergingFileId)}

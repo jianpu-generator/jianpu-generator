@@ -218,7 +218,7 @@ Then(
 Then(
   'a file whose name starts with {string} is listed in the file switcher',
   async ({ page }, prefix: string) => {
-    const panel = page.getByTestId('sync-panel')
+    const panel = page.getByTestId('outbox-history')
     if (await panel.isVisible()) {
       await panel.getByRole('button', { name: 'Close', exact: true }).click()
       await expect(panel).toBeHidden()

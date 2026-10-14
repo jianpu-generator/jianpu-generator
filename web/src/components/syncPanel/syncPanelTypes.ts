@@ -35,6 +35,4 @@ export interface SyncPanelProps {
   onKeepBoth(fileId: string): void
   onDiscard(fileId: string): void
   onDownloadCopy(fileId: string): void
-  onCopyDiagnostics(): void
-  onViewHistory(): void
 }
