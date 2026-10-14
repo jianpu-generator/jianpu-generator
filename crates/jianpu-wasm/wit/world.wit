@@ -1277,6 +1277,7 @@ world jianpu-wasm {
     }
 
     variant attempt-outcome {
+        succeeded,
         transient(transient-reason),
         unauthorized,
         revision-conflict(revision-conflict-details),

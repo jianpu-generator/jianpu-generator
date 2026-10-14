@@ -60,6 +60,9 @@ pub struct Attempt {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum AttemptOutcome {
+    /// The try that delivered the message: the last entry of a sent
+    /// message's log.
+    Succeeded,
     Transient {
         reason: String,
     },

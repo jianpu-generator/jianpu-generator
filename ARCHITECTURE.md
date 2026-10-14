@@ -759,8 +759,10 @@ camelCase, enums are tagged with `kind`.
 - `QueuedMessage { message_id, created_at_ms, message: Message, attempts: Vec<Attempt> }`.
 - `Message`: `CreateFile { name, content }`, `SaveContent { content }`,
   `RenameFile { to }`, `TrashFile`, `RestoreFile`. The file id lives on the lane.
-- `Attempt { at_ms, outcome: AttemptOutcome }`; `AttemptOutcome`: `Transient`,
-  `Unauthorized`, `RevisionConflict`, `NameTaken`, `Permanent`.
+- `Attempt { at_ms, outcome: AttemptOutcome }`; `AttemptOutcome`: `Succeeded`,
+  `Transient`, `Unauthorized`, `RevisionConflict`, `NameTaken`, `Permanent`.
+  A delivered message's log (kept in its `sent:` record) ends in `Succeeded`;
+  that is what makes a history row "Sent".
 - `LaneStatus`: `Idle`, `Draining`, `Waiting { retry_at_ms }`, `NeedsSignIn`,
   `NeedsMerge { current_revision }`, `Failed { reason }`.
 - `SendRequest { file_id, message_id, message, expected_revision }`

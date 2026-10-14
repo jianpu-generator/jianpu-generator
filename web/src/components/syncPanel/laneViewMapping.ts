@@ -58,6 +58,8 @@ function sizeLabel(message: Message): string {
 
 export function outcomeLabel(outcome: Attempt['outcome']): string {
   switch (outcome.tag) {
+    case 'succeeded':
+      return 'Sent'
     case 'transient':
       return `Network problem: ${outcome.val.reason}`
     case 'unauthorized':

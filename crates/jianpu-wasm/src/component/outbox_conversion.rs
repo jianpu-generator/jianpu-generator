@@ -38,6 +38,7 @@ impl From<Message> for co::Message {
 impl From<co::AttemptOutcome> for AttemptOutcome {
     fn from(outcome: co::AttemptOutcome) -> Self {
         match outcome {
+            co::AttemptOutcome::Succeeded => AttemptOutcome::Succeeded,
             co::AttemptOutcome::Transient { reason } => {
                 AttemptOutcome::Transient(TransientReason { reason })
             }
@@ -58,6 +59,7 @@ impl From<co::AttemptOutcome> for AttemptOutcome {
 impl From<AttemptOutcome> for co::AttemptOutcome {
     fn from(outcome: AttemptOutcome) -> Self {
         match outcome {
+            AttemptOutcome::Succeeded => co::AttemptOutcome::Succeeded,
             AttemptOutcome::Transient(TransientReason { reason }) => {
                 co::AttemptOutcome::Transient { reason }
             }

@@ -1,7 +1,9 @@
 //! The outbox history: messages already delivered (kept for a while, then
 //! pruned) merged with the messages still queued, filtered for display.
 
-use crate::types::{Attempt, Lane, LaneStatus, Message, Queue, QueuedMessage, StoredRecord};
+use crate::types::{
+    Attempt, AttemptOutcome, Lane, LaneStatus, Message, Queue, QueuedMessage, StoredRecord,
+};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +22,7 @@ pub struct SentEntry {
     pub sent_at_ms: u64,
     pub revision: i64,
     pub message: Message,
-    /// The failed tries before the one that succeeded.
+    /// Every try, ending with the one that succeeded.
     pub attempts: Vec<Attempt>,
 }
 
@@ -164,7 +166,15 @@ pub fn record_sent(
             sent_at_ms: now_ms,
             revision,
             message: queued.message.clone(),
-            attempts: queued.attempts.clone(),
+            attempts: queued
+                .attempts
+                .iter()
+                .cloned()
+                .chain(std::iter::once(Attempt {
+                    at_ms: now_ms,
+                    outcome: AttemptOutcome::Succeeded,
+                }))
+                .collect(),
         };
         serde_json::to_string(&entry)
             .ok()
@@ -275,6 +285,14 @@ fn sent_rows(records: &[StoredRecord]) -> Vec<RawRow> {
         .iter()
         .filter(|record| record.key.starts_with(SENT_KEY_PREFIX))
         .filter_map(|record| serde_json::from_str::<SentEntry>(&record.value).ok())
+        // Records from before the log ended in `Succeeded` are hidden;
+        // retention deletes them by age.
+        .filter(|entry| {
+            entry
+                .attempts
+                .last()
+                .is_some_and(|attempt| attempt.outcome == AttemptOutcome::Succeeded)
+        })
         .map(|entry| RawRow {
             message_id: entry.message_id,
             file_id: entry.file_id,
