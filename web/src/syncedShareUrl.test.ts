@@ -118,4 +118,18 @@ describe('buildSyncedShareUrl', () => {
       filename: '彌勒淨土鄉.jianpu',
     })
   })
+
+  it('keeps non-ASCII characters readable instead of percent-encoding them', () => {
+    expect(buildSyncedShareUrl(SAMPLE_SHARE_ID, '彌勒淨土鄉.jianpu')).toBe(
+      `https://example.test/?s=${SAMPLE_SHARE_ID}--彌勒淨土鄉`,
+    )
+  })
+
+  it('still escapes characters that would break the query string', () => {
+    const { parsed } = buildAndParse('a&b#c+d%e.jianpu')
+    expect(parsed).toEqual({
+      shareId: SAMPLE_SHARE_ID,
+      filename: 'a&b#c+d%e.jianpu',
+    })
+  })
 })

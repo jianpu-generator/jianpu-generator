@@ -42,8 +42,15 @@ export function buildSyncedShareUrl(
   // auto-linked URL at the first space.
   const dashedName = bareName?.trim().replace(/\s+/g, '-')
   const namePart = dashedName ? `${FILENAME_SEPARATOR}${dashedName}` : ''
-  base.searchParams.set(SHARE_QUERY_PARAM, `${shareId}${namePart}`)
-  return base.href
+  // Built by hand rather than via `searchParams.set`, which would
+  // percent-encode every non-ASCII character and make the filename unreadable
+  // in a chat app whose link preview fails. Only the characters that would
+  // break the query string are escaped.
+  const payload = `${shareId}${namePart}`.replace(
+    /[%&#+]/g,
+    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
+  )
+  return `${base.origin}${base.pathname}?${SHARE_QUERY_PARAM}=${payload}`
 }
 
 function parsePayload(payload: string): SyncedSharePayload | null {
