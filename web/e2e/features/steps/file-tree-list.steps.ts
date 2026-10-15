@@ -1,0 +1,189 @@
+import { expect, type Page } from '@playwright/test'
+import { fileSwitcherTrigger, openFileList } from '../../fileSwitcherHelpers'
+import { Given, Then, When } from './fixtures'
+
+const SOURCE = [
+  '# metadata',
+  'title = "Tree Test"',
+  '',
+  '# parts',
+  'Melody [M] = notes',
+  '',
+  '# score',
+  '(bpm=120 key=C4 time=4/4)',
+  '1 2 3 4',
+].join('\n')
+
+interface TreeSeed {
+  files: string[]
+  folders: string[]
+  active: string
+}
+
+const seeds = new WeakMap<Page, TreeSeed>()
+
+async function applySeed(page: Page, seed: TreeSeed) {
+  await page.addInitScript(
+    ({ src, files, folders, active }) => {
+      // Only seed on the first load so a reload keeps what the app saved.
+      if (localStorage.getItem('jianpu:files:v1')) return
+      localStorage.setItem(
+        'jianpu:files:v1',
+        JSON.stringify({
+          active,
+          userFiles: Object.fromEntries(files.map((name) => [name, src])),
+          bin: {},
+          fileIds: Object.fromEntries(
+            files.map((name) => [name, crypto.randomUUID()]),
+          ),
+          folders,
+        }),
+      )
+    },
+    { src: SOURCE, ...seed },
+  )
+}
+
+Given(
+  'the file tree is seeded with files {string}, {string} and {string} and an empty folder {string} with {string} active',
+  async (
+    { page },
+    a: string,
+    b: string,
+    c: string,
+    folder: string,
+    active: string,
+  ) => {
+    seeds.set(page, {
+      files: [a, b, c],
+      folders: [folder],
+      active,
+    })
+  },
+)
+
+Given(
+  'the file tree active file is {string}',
+  async ({ page }, active: string) => {
+    const seed = seeds.get(page)
+    if (!seed) throw new Error('file tree seed missing')
+    seeds.set(page, { ...seed, active })
+  },
+)
+
+When('the file tree app loads', async ({ page }) => {
+  const seed = seeds.get(page)
+  if (!seed) throw new Error('file tree seed missing')
+  await applySeed(page, seed)
+  await page.goto('/')
+  await page.waitForSelector('.preview-page', { timeout: 15_000 })
+})
+
+When('I reload the file tree app', async ({ page }) => {
+  await page.reload()
+  await page.waitForSelector('.preview-page', { timeout: 15_000 })
+})
+
+When('I open the file tree list', async ({ page }) => {
+  await openFileList(page)
+})
+
+function folderRow(page: Page, name: string) {
+  return page.getByRole('button', { name, exact: true })
+}
+
+function fileRow(page: Page, name: string) {
+  return page.locator('.file-tab-name', {
+    hasText: new RegExp(`^${name}$`),
+  })
+}
+
+When(
+  'I click the file tree folder {string}',
+  async ({ page }, name: string) => {
+    await folderRow(page, name).click()
+  },
+)
+
+When('I click the file tree file {string}', async ({ page }, name: string) => {
+  await fileRow(page, name).click()
+})
+
+When(
+  'I click the file tree demo file {string}',
+  async ({ page }, name: string) => {
+    await fileRow(page, name).click()
+  },
+)
+
+Then(
+  'the file tree shows the folder {string} with a count of {int}',
+  async ({ page }, name: string, count: number) => {
+    await expect(folderRow(page, name)).toBeVisible()
+    await expect(folderRow(page, name).locator('.file-tree-count')).toHaveText(
+      String(count),
+    )
+  },
+)
+
+Then(
+  'the file tree shows the file {string}',
+  async ({ page }, name: string) => {
+    await expect(fileRow(page, name)).toBeVisible()
+  },
+)
+
+Then(
+  'the file tree does not show the file {string}',
+  async ({ page }, name: string) => {
+    await expect(fileRow(page, name)).toHaveCount(0)
+  },
+)
+
+Then(
+  'the file tree does not show the demo file {string}',
+  async ({ page }, name: string) => {
+    await expect(fileRow(page, name)).toHaveCount(0)
+  },
+)
+
+Then(
+  'the file tree highlights the file {string}',
+  async ({ page }, name: string) => {
+    await expect(
+      page.locator('.file-tab--active .file-tab-name', {
+        hasText: new RegExp(`^${name}$`),
+      }),
+    ).toBeVisible()
+  },
+)
+
+Then('the file tree shows the empty folder hint', async ({ page }) => {
+  await expect(page.locator('.file-tree-empty-hint')).toHaveText('Empty folder')
+})
+
+Then('the file tree shows the Demo row last', async ({ page }) => {
+  const lastRow = page.locator('ul.file-tabs[aria-label="Files"] > li').last()
+  await expect(lastRow.getByRole('button', { name: 'Demo' })).toBeVisible()
+  await expect(lastRow).toHaveClass(/file-tree-demo-row/)
+})
+
+Then(
+  'the file switcher toolbar button shows the folder prefix {string} and the file name {string}',
+  async ({ page }, prefix: string, name: string) => {
+    const trigger = fileSwitcherTrigger(page)
+    await expect(trigger.locator('.file-switcher-folder-prefix')).toHaveText(
+      prefix,
+    )
+    await expect(trigger).toHaveText(`${prefix} ${name}`)
+  },
+)
+
+Then(
+  'the file switcher toolbar button shows no folder prefix and the file name {string}',
+  async ({ page }, name: string) => {
+    const trigger = fileSwitcherTrigger(page)
+    await expect(trigger.locator('.file-switcher-folder-prefix')).toHaveCount(0)
+    await expect(trigger).toHaveText(name)
+  },
+)

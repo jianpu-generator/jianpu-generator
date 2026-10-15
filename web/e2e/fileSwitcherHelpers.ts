@@ -100,7 +100,7 @@ export async function typeAtEditorEnd(page: Page, text: string) {
 
 /** The file-switcher ("<filename> ▾") trigger button in the header — its
  * text is the currently active file's name, whether that's a user file or
- * one of the read-only demo files (which live in the nested "Demo" submenu
+ * one of the read-only demo files (which live under the read-only `Demo/` row
  * of this same dropdown). */
 export function fileSwitcherTrigger(page: Page) {
   return page
@@ -124,9 +124,9 @@ export async function openFileList(page: Page) {
   await trigger.click()
 }
 
-/** Opens the file-switcher dropdown and expands its nested "Demo" submenu
+/** Opens the file-switcher dropdown and expands its `Demo/` row
  * (the read-only `demo/*.jianpu` file list). Idempotent — a no-op if the
- * submenu is already expanded. */
+ * row is already expanded. */
 export async function openDemoFileList(page: Page) {
   await openFileList(page)
   const disclosure = demoDisclosure(page)
@@ -134,7 +134,7 @@ export async function openDemoFileList(page: Page) {
   await disclosure.click()
 }
 
-/** Expands the "Demo" submenu and selects the fragment named `name` (e.g.
+/** Expands the "Demo/` row and selects the fragment named `name` (e.g.
  * `02-durations.jianpu`), closing the file-switcher dropdown. */
 export async function selectDemoFile(page: Page, name: string) {
   await openDemoFileList(page)

@@ -8,12 +8,16 @@ export function FileTabName({
   onSelect,
   onRename,
   renaming = false,
+  label,
 }: {
   name: string
   active: boolean
   onSelect: (name: string) => void
   onRename: (from: string, to: string) => void
   renaming?: boolean
+  /** Text shown for the row; defaults to the extension-less `name`. A tree
+   * row passes just the file's own name, not its folder path. */
+  label?: string
 }) {
   const readOnly = isReadOnlyFile(name)
   const [draft, setDraft] = useState(displayFileName(name))
@@ -79,7 +83,7 @@ export function FileTabName({
       }}
       disabled={renaming}
     >
-      <SpinnerLabel pending={renaming} label={displayFileName(name)} />
+      <SpinnerLabel pending={renaming} label={label ?? displayFileName(name)} />
     </button>
   )
 }

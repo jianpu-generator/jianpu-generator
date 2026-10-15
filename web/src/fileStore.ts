@@ -7,10 +7,12 @@ import {
   operationContext as wasmOperationContext,
 } from './fileStoreWasm'
 import type {
+  FileActiveLabel,
   FileOperationContext,
   FileStoreFailure,
   FileStoreResponse,
   FileTreeRow,
+  FileTreeViewRow,
   PathChange,
   FileStoreState as WasmFileStoreState,
 } from './jianpuWasm'
@@ -245,6 +247,26 @@ export function deleteFolder(
 export function fileTreeRows(state: FileStoreState): FileTreeRow[] {
   const response = jianpuWasm().fileStoreTree(toWasmState(state))
   return response.tag === 'ok' ? response.val : []
+}
+
+/** The visible rows of the file list (collapsed folders hidden, the active
+ * file's ancestors forced open, the read-only `Demo/` row last), computed in
+ * Rust from the raw `expanded` set. Empty if the paths conflict. */
+export function fileTreeView(
+  state: FileStoreState,
+  expanded: string[],
+): FileTreeViewRow[] {
+  const response = jianpuWasm().fileStoreTreeView(
+    toWasmState(state),
+    expanded,
+    DEMO_FILE_NAMES,
+  )
+  return response.tag === 'ok' ? response.val : []
+}
+
+/** The active file split into its folder names and own name (computed in Rust). */
+export function activeFileLabel(active: string): FileActiveLabel {
+  return jianpuWasm().fileStoreActiveLabel(active, DEMO_FILE_NAMES)
 }
 
 function mergeAddedRemoved(

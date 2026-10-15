@@ -106,6 +106,56 @@ pub(super) fn file_store_tree(state: FileStoreState) -> FileTreeResponse {
     }
 }
 
+pub(super) fn file_store_tree_view(
+    state: FileStoreState,
+    expanded: Vec<String>,
+    demo_file_names: Vec<String>,
+) -> FileTreeViewResponse {
+    let active = state.active.clone();
+    let state: tree::FileStoreState = state.into();
+    match state.tree() {
+        Ok(file_tree) => FileTreeViewResponse::Ok(
+            file_tree
+                .view_rows(&tree::TreeViewInput {
+                    active: &active,
+                    expanded: &expanded,
+                    demo_file_names: &demo_file_names,
+                })
+                .into_iter()
+                .map(|row| FileTreeViewRow {
+                    key: row.key,
+                    name: row.name,
+                    depth: u32::try_from(row.depth).unwrap_or(u32::MAX),
+                    kind: match row.kind {
+                        tree::TreeViewRowKind::Folder => FileTreeViewRowKind::Folder,
+                        tree::TreeViewRowKind::File => FileTreeViewRowKind::File,
+                        tree::TreeViewRowKind::DemoFolder => FileTreeViewRowKind::DemoFolder,
+                        tree::TreeViewRowKind::DemoFile => FileTreeViewRowKind::DemoFile,
+                        tree::TreeViewRowKind::EmptyFolderHint => {
+                            FileTreeViewRowKind::EmptyFolderHint
+                        }
+                    },
+                    expanded: row.expanded,
+                    file_count: u32::try_from(row.file_count).unwrap_or(u32::MAX),
+                    is_active: row.is_active,
+                })
+                .collect(),
+        ),
+        Err(error) => FileTreeViewResponse::Err(error.to_string()),
+    }
+}
+
+pub(super) fn file_store_active_label(
+    active: String,
+    demo_file_names: Vec<String>,
+) -> FileActiveLabel {
+    let label = tree::active_label(&active, &demo_file_names);
+    FileActiveLabel {
+        folder_names: label.folder_names,
+        file_name: label.file_name,
+    }
+}
+
 fn parse(raw: &str) -> Result<tree::TreePath, tree::FileStoreError> {
     Ok(tree::TreePath::parse(raw)?)
 }

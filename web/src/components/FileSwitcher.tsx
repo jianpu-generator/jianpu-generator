@@ -1,7 +1,6 @@
 import {
   ArchiveIcon,
   ChevronDownIcon,
-  ChevronRightIcon,
   CopyIcon,
   DotsHorizontalIcon,
   GearIcon,
@@ -10,18 +9,19 @@ import {
   PlusIcon,
   TrashIcon,
 } from '@radix-ui/react-icons'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
-  DEMO_FILE_NAMES,
   displayFileName,
   type FileStoreState,
   fileContent,
   isReadOnlyFile,
   sortedUserFileNames,
 } from '../fileStore'
+import { useExpandedFolders } from '../hooks/useExpandedFolders'
+import { useFileTreeView } from '../hooks/useFileTreeView'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
-import { FileTabName } from './FileTabName'
+import { FileTreeList } from './FileTreeList'
 import { ImportButton } from './ImportButton'
 import { ResponsiveMenu } from './ResponsiveMenu'
 import { SaveStatusBadge } from './SaveStatusBadge'
@@ -118,10 +118,8 @@ export function FileSwitcher({
   const showEmptyHint = !isLoadingCloud && names.length === 0
 
   const [filesOpen, setFilesOpen] = useState(false)
-  const [demoOpen, setDemoOpen] = useState(false)
-  useEffect(() => {
-    if (!filesOpen) setDemoOpen(false)
-  }, [filesOpen])
+  const { expanded, toggle: toggleFolder } = useExpandedFolders()
+  const { rows, activeLabel } = useFileTreeView(store, expanded, triggerLabel)
 
   const [actionsOpen, setActionsOpen] = useState(false)
   const [shareModalOpen, setShareModalOpen] = useState(false)
@@ -138,7 +136,14 @@ export function FileSwitcher({
         <ResponsiveMenu.Root open={filesOpen} onOpenChange={setFilesOpen}>
           <ResponsiveMenu.Trigger asChild>
             <button type="button" className="preview-export-btn">
-              {displayFileName(triggerLabel)}
+              {activeLabel.folderNames.length > 0 ? (
+                <>
+                  <span className="file-switcher-folder-prefix">
+                    {`${activeLabel.folderNames.join(' / ')} /`}
+                  </span>{' '}
+                </>
+              ) : null}
+              {displayFileName(activeLabel.fileName)}
               {isLoadingCloud ? (
                 <span className="file-tab-bar-spinner" aria-hidden="true" />
               ) : (
@@ -162,72 +167,16 @@ export function FileSwitcher({
                 No files yet — click New to create one.
               </p>
             ) : null}
-            <ul className="file-tabs" aria-label="Files">
-              {names.map((name) => {
-                const active = name === store.active
-
-                return (
-                  <li
-                    key={name}
-                    className={`file-tab${active ? ' file-tab--active' : ''}`}
-                  >
-                    <FileTabName
-                      name={name}
-                      active={active}
-                      onSelect={(selected) => {
-                        onSelect(selected)
-                        setFilesOpen(false)
-                      }}
-                      onRename={onRename}
-                      renaming={renamingName === name}
-                    />
-                  </li>
-                )
-              })}
-            </ul>
-            <div className="file-tab-bar-demo-section">
-              <button
-                type="button"
-                className="file-tab-bar-demo-toggle"
-                aria-haspopup="menu"
-                aria-expanded={demoOpen}
-                onClick={() => setDemoOpen((prev) => !prev)}
-              >
-                {demoOpen ? (
-                  <ChevronDownIcon aria-hidden="true" />
-                ) : (
-                  <ChevronRightIcon aria-hidden="true" />
-                )}
-                Demo
-              </button>
-              {demoOpen ? (
-                <ul
-                  className="file-tabs file-tab-bar-demo-list"
-                  aria-label="Demo files"
-                >
-                  {DEMO_FILE_NAMES.map((name) => {
-                    const active = name === store.active
-
-                    return (
-                      <li
-                        key={name}
-                        className={`file-tab${active ? ' file-tab--active' : ''}`}
-                      >
-                        <FileTabName
-                          name={name}
-                          active={active}
-                          onSelect={(selected) => {
-                            onSelect(selected)
-                            setFilesOpen(false)
-                          }}
-                          onRename={onRename}
-                        />
-                      </li>
-                    )
-                  })}
-                </ul>
-              ) : null}
-            </div>
+            <FileTreeList
+              rows={rows}
+              renamingName={renamingName}
+              onToggleFolder={toggleFolder}
+              onSelect={(selected) => {
+                onSelect(selected)
+                setFilesOpen(false)
+              }}
+              onRename={onRename}
+            />
           </ResponsiveMenu.Content>
         </ResponsiveMenu.Root>
       </div>

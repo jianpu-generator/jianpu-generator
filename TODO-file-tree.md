@@ -17,13 +17,13 @@ Model is tentative: file name is a slash-separated path (`Hymns/Advent/O Come.ji
 - [x] Derive folder tree from the flat file map; explicit empty folders (`folders` list)
 - [x] Sorting: folders first, then files, alphabetical
 - [x] Unique-name logic scoped to a folder
-- [ ] Rename/move file (keeps `fileId`)
-- [ ] Rename/move folder as one all-or-nothing batch (collision check)
-- [ ] Delete folder to bin, bin entries remember their path
-- [ ] Restore to original path, recreating the folder if gone
-- [ ] Duplicate stays in the same folder
-- [ ] Local persistence: optional `folders` field, no version bump
-- [ ] Update `ARCHITECTURE.md` (key types, glossary: folder, path)
+- [x] Rename/move file (keeps `fileId`)
+- [x] Rename/move folder as one all-or-nothing batch (collision check)
+- [x] Delete folder to bin, bin entries remember their path
+- [x] Restore to original path, recreating the folder if gone
+- [x] Duplicate stays in the same folder
+- [x] Local persistence: optional `folders` field, no version bump
+- [x] Update `ARCHITECTURE.md` (key types, glossary: folder, path)
 
 ## Phase 2: local UI (matches the real app's look)
 

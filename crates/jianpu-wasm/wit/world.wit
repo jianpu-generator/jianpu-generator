@@ -1577,6 +1577,38 @@ world jianpu-wasm {
         is-folder: bool,
     }
 
+    enum file-tree-view-row-kind {
+        folder,
+        file,
+        demo-folder,
+        demo-file,
+        empty-folder-hint,
+    }
+
+    // A visible row of the file list. `key` is the folder path, file path,
+    // bare demo file name, or (demo folder) the expansion key `Demo/`; the
+    // ancestors of the active file are already `expanded`.
+    record file-tree-view-row {
+        key: string,
+        name: string,
+        depth: u32,
+        kind: file-tree-view-row-kind,
+        expanded: bool,
+        file-count: u32,
+        is-active: bool,
+    }
+
+    variant file-tree-view-response {
+        ok(list<file-tree-view-row>),
+        err(string),
+    }
+
+    // The active file split for the toolbar button.
+    record file-active-label {
+        folder-names: list<string>,
+        file-name: string,
+    }
+
     variant file-tree-response {
         ok(list<file-tree-row>),
         err(string),
@@ -1591,4 +1623,6 @@ world jianpu-wasm {
     export file-store-move-folder: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> folder-move-response;
     export file-store-delete-folder: func(state: file-store-state, folder: string, context: file-operation-context) -> file-store-response;
     export file-store-tree: func(state: file-store-state) -> file-tree-response;
+    export file-store-tree-view: func(state: file-store-state, expanded: list<string>, demo-file-names: list<string>) -> file-tree-view-response;
+    export file-store-active-label: func(active: string, demo-file-names: list<string>) -> file-active-label;
 }

@@ -8,6 +8,7 @@ mod path;
 mod store_state;
 mod tree;
 mod unique_name;
+mod view;
 
 pub use file_ops::{create_file, delete_file, duplicate_file, rename_file, restore_file};
 pub use folder_ops::{delete_folder, move_folder, FolderMoveOutcome, PathChange, PathKind};
@@ -15,6 +16,9 @@ pub use path::{PathError, TreePath, MAX_PATH_BYTES};
 pub use store_state::{DemoFile, FileOperationContext, FileStoreError, FileStoreState};
 pub use tree::{FileNode, FileTree, FileTreeError, FolderContents, FolderNode, TreeRow};
 pub use unique_name::unique_path;
+pub use view::{
+    active_label, ActiveLabel, TreeViewInput, TreeViewRow, TreeViewRowKind, DEMO_EXPANSION_KEY,
+};
 
 #[cfg(test)]
 mod file_ops_tests;
@@ -26,3 +30,5 @@ mod path_tests;
 mod tree_tests;
 #[cfg(test)]
 mod unique_name_tests;
+#[cfg(test)]
+mod view_tests;
