@@ -86,6 +86,21 @@ impl TreePath {
             .map(|(parent, _)| Self(parent.to_string()))
     }
 
+    /// True when `self` lies strictly inside `folder` (at any depth).
+    pub(crate) fn is_within(&self, folder: &Self) -> bool {
+        self.0
+            .strip_prefix(folder.as_str())
+            .is_some_and(|rest| rest.starts_with(SEPARATOR))
+    }
+
+    /// `self` with its leading `from` prefix replaced by `to`; `self` must be
+    /// `from` or lie inside it. Fails if the result is not a valid path
+    /// (typically too long).
+    pub(crate) fn rebased(&self, from: &Self, to: &Self) -> Result<Self, PathError> {
+        let rest = self.0.strip_prefix(from.as_str()).unwrap_or("");
+        Self::parse(&format!("{}{rest}", to.0))
+    }
+
     /// Every proper ancestor folder, outermost first.
     pub fn ancestors(&self) -> Vec<Self> {
         let mut ancestors: Vec<Self> = std::iter::successors(self.parent(), Self::parent).collect();

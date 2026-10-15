@@ -1502,4 +1502,93 @@ world jianpu-wasm {
     export outbox-record-sent: func(queue-before: queue, existing: list<stored-record>, file-id: string, message-id: string, revision: s64, now-ms: u64) -> history-write;
     export outbox-history-rows: func(queue: queue, sent-records: list<stored-record>, file-names: list<file-name>, filter: history-filter, now-ms: u64) -> list<history-row>;
     export merge-three-way: func(base: string, mine: string, theirs: string) -> merge-outcome;
+
+    // File tree store (`jianpu_generator::file_tree`). The TS `FileStoreState`
+    // maps (`Record<string, string>`) cross as ordered key/value lists.
+    record string-entry {
+        key: string,
+        value: string,
+    }
+
+    record file-store-state {
+        active: string,
+        user-files: list<string-entry>,
+        bin: list<string-entry>,
+        file-ids: list<string-entry>,
+        folders: list<string>,
+    }
+
+    record demo-file {
+        path: string,
+        content: string,
+    }
+
+    record file-operation-context {
+        demo-files: list<demo-file>,
+        new-file-id: string,
+    }
+
+    enum file-store-error-kind {
+        invalid-path,
+        not-found,
+        collision,
+        ancestor-is-file,
+        move-into-itself,
+        demo-file-read-only,
+    }
+
+    record file-store-failure {
+        kind: file-store-error-kind,
+        message: string,
+    }
+
+    variant file-store-response {
+        ok(file-store-state),
+        err(file-store-failure),
+    }
+
+    enum path-kind {
+        file,
+        explicit-folder,
+    }
+
+    record path-change {
+        kind: path-kind,
+        old-path: string,
+        new-path: string,
+    }
+
+    record folder-move-success {
+        state: file-store-state,
+        changes: list<path-change>,
+    }
+
+    variant folder-move-response {
+        ok(folder-move-success),
+        err(file-store-failure),
+    }
+
+    // One visible row of the file tree, depth-first (folders before files
+    // within a folder, each alphabetical); `depth` is 0 at the top level.
+    record file-tree-row {
+        path: string,
+        name: string,
+        depth: u32,
+        is-folder: bool,
+    }
+
+    variant file-tree-response {
+        ok(list<file-tree-row>),
+        err(string),
+    }
+
+    // `folder` is `none` for the top level.
+    export file-store-create-file: func(state: file-store-state, folder: option<string>, content: string, context: file-operation-context) -> file-store-response;
+    export file-store-duplicate-file: func(state: file-store-state, source: string, context: file-operation-context) -> file-store-response;
+    export file-store-rename-file: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> file-store-response;
+    export file-store-delete-file: func(state: file-store-state, path: string, context: file-operation-context) -> file-store-response;
+    export file-store-restore-file: func(state: file-store-state, bin-key: string, context: file-operation-context) -> file-store-response;
+    export file-store-move-folder: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> folder-move-response;
+    export file-store-delete-folder: func(state: file-store-state, folder: string, context: file-operation-context) -> file-store-response;
+    export file-store-tree: func(state: file-store-state) -> file-tree-response;
 }

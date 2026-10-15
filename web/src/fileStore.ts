@@ -1,5 +1,20 @@
 import NEW_FILE_TEMPLATE from '../../new_file_template.jianpu?raw'
 import { DEMO_FILE_NAMES, DEMO_FILES } from './defaultSource'
+import {
+  fromWasmState,
+  storeResult,
+  toWasmState,
+  operationContext as wasmOperationContext,
+} from './fileStoreWasm'
+import type {
+  FileOperationContext,
+  FileStoreFailure,
+  FileStoreResponse,
+  FileTreeRow,
+  PathChange,
+  FileStoreState as WasmFileStoreState,
+} from './jianpuWasm'
+import { jianpuWasm } from './jianpuWasm'
 
 export { DEMO_FILE_NAMES }
 
@@ -33,6 +48,10 @@ export interface FileStoreState {
   bin: Record<string, string>
   /** Stable ID per file name (active and binned); survives renames. */
   fileIds: Record<string, string>
+  /** Explicitly created (possibly empty) folders. Optional so stores saved
+   * before folders existed still load; folders that merely hold files are
+   * implied by the file paths and need no entry. */
+  folders?: string[]
 }
 
 export function fileIdForName(state: FileStoreState, name: string): string {
@@ -116,104 +135,116 @@ export function selectFile(
   return { ...state, active: name }
 }
 
-export function createFile(state: FileStoreState): FileStoreState {
-  const taken = reservedNames(state)
-  const name = uniqueName('untitled.jianpu', taken)
-  return {
-    ...state,
-    active: name,
-    userFiles: { ...state.userFiles, [name]: NEW_FILE_TEMPLATE },
-    fileIds: { ...state.fileIds, [name]: generateFileId() },
-  }
+function operationContext(): FileOperationContext {
+  return wasmOperationContext(DEMO_FILES, generateFileId())
 }
 
+/** Runs a Rust store operation; a rejected operation (collision, missing
+ * file, invalid path, ...) leaves the state untouched, returning the very
+ * same object so callers can detect "nothing happened" with `===`. */
+function applyOrKeep(
+  state: FileStoreState,
+  run: (
+    wasmState: WasmFileStoreState,
+    context: FileOperationContext,
+  ) => FileStoreResponse,
+): FileStoreState {
+  const result = storeResult(run(toWasmState(state), operationContext()))
+  return result.ok ? result.state : state
+}
+
+/** New file in `folder` (top level when omitted), made unique there. */
+export function createFile(
+  state: FileStoreState,
+  folder?: string,
+): FileStoreState {
+  return applyOrKeep(state, (wasmState, context) =>
+    jianpuWasm().fileStoreCreateFile(
+      wasmState,
+      folder,
+      NEW_FILE_TEMPLATE,
+      context,
+    ),
+  )
+}
+
+/** Copies the active file next to itself, in the same folder. */
 export function duplicateFile(state: FileStoreState): FileStoreState {
-  const source = state.active
-  const taken = reservedNames(state)
-  const name = uniqueName(source, taken)
-  const content = fileContent(state, source)
-  return {
-    ...state,
-    active: name,
-    userFiles: { ...state.userFiles, [name]: content },
-    fileIds: { ...state.fileIds, [name]: generateFileId() },
-  }
+  return applyOrKeep(state, (wasmState, context) =>
+    jianpuWasm().fileStoreDuplicateFile(wasmState, state.active, context),
+  )
 }
 
+/** Renames and/or moves a file (`to` may include folders); keeps its id. */
 export function renameFile(
   state: FileStoreState,
   from: string,
   toRaw: string,
 ): FileStoreState {
-  if (isDemoFile(from)) return state
-  const to = sanitizeFileName(toRaw)
-  if (to === from) return state
-  if (!activeFileNames(state).includes(from) || isDemoFile(to)) return state
-  if (reservedNames(state).has(to) && to !== from) return state
-
-  const { [from]: content, ...rest } = state.userFiles
-  if (content === undefined) return state
-
-  const { [from]: fileId, ...restIds } = state.fileIds
-  return {
-    ...state,
-    active: state.active === from ? to : state.active,
-    userFiles: { ...rest, [to]: content },
-    fileIds: { ...restIds, [to]: fileId ?? generateFileId() },
-  }
+  return applyOrKeep(state, (wasmState, context) =>
+    jianpuWasm().fileStoreRenameFile(wasmState, from, toRaw, context),
+  )
 }
 
 export function deleteFile(
   state: FileStoreState,
   name: string,
 ): FileStoreState {
-  if (isDemoFile(name)) return state
-  const content = state.userFiles[name]
-  if (content === undefined) return state
-
-  const { [name]: _, ...rest } = state.userFiles
-  const remaining = sortedUserFileNames({ ...state, userFiles: rest })
-  const nextActive =
-    state.active === name
-      ? (remaining[0] ?? DEMO_FILE_NAMES[0] ?? '')
-      : state.active
-
-  return {
-    ...state,
-    active: nextActive,
-    userFiles: rest,
-    bin: { ...state.bin, [name]: content },
-  }
+  return applyOrKeep(state, (wasmState, context) =>
+    jianpuWasm().fileStoreDeleteFile(wasmState, name, context),
+  )
 }
 
 export function restoreFile(
   state: FileStoreState,
   name: string,
 ): FileStoreState {
-  const content = state.bin[name]
-  if (content === undefined) return state
+  return applyOrKeep(state, (wasmState, context) =>
+    jianpuWasm().fileStoreRestoreFile(wasmState, name, context),
+  )
+}
 
-  const activeNames = new Set(activeFileNames(state))
-  const restoreName = activeNames.has(name)
-    ? uniqueName(name, activeNames)
-    : name
+export type FolderMoveResult =
+  | { ok: true; state: FileStoreState; changes: PathChange[] }
+  | { ok: false; failure: FileStoreFailure }
 
-  const { [name]: _, ...restBin } = state.bin
-  const fileIds =
-    restoreName === name
-      ? state.fileIds
-      : {
-          ...state.fileIds,
-          [restoreName]: state.fileIds[name] ?? generateFileId(),
-        }
+/** Renames/moves a folder as one all-or-nothing batch (see Rust
+ * `file_tree::move_folder` for the collision rules). */
+export function moveFolder(
+  state: FileStoreState,
+  from: string,
+  to: string,
+): FolderMoveResult {
+  const response = jianpuWasm().fileStoreMoveFolder(
+    toWasmState(state),
+    from,
+    to,
+    operationContext(),
+  )
+  return response.tag === 'ok'
+    ? {
+        ok: true,
+        state: fromWasmState(response.val.state),
+        changes: response.val.changes,
+      }
+    : { ok: false, failure: response.val }
+}
 
-  return {
-    ...state,
-    active: restoreName,
-    userFiles: { ...state.userFiles, [restoreName]: content },
-    bin: restBin,
-    fileIds,
-  }
+/** Moves every file in the folder to the bin (each under its full path). */
+export function deleteFolder(
+  state: FileStoreState,
+  folder: string,
+): FileStoreState {
+  return applyOrKeep(state, (wasmState, context) =>
+    jianpuWasm().fileStoreDeleteFolder(wasmState, folder, context),
+  )
+}
+
+/** The user's files and folders as display rows, depth-first, folders
+ * before files, sorted (computed in Rust). Empty if the paths conflict. */
+export function fileTreeRows(state: FileStoreState): FileTreeRow[] {
+  const response = jianpuWasm().fileStoreTree(toWasmState(state))
+  return response.tag === 'ok' ? response.val : []
 }
 
 function mergeAddedRemoved(
@@ -266,7 +297,11 @@ export function mergeBackendResult(
     return undefined
   }
 
+  const foldersChanged =
+    JSON.stringify(next.folders ?? []) !== JSON.stringify(base.folders ?? [])
+  const folders = foldersChanged ? next.folders : prev.folders
   return {
+    ...(folders && folders.length > 0 ? { folders } : {}),
     active: next.active !== base.active ? next.active : prev.active,
     userFiles: mergeAddedRemoved(
       prev.userFiles,

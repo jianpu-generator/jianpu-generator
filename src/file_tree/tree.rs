@@ -105,6 +105,46 @@ impl FileTree {
     }
 }
 
+/// One line of the tree in display order (see [`FileTree::rows`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TreeRow {
+    pub path: TreePath,
+    pub name: String,
+    /// 0 at the top level.
+    pub depth: usize,
+    pub is_folder: bool,
+}
+
+impl FileTree {
+    /// The tree flattened depth-first for rendering: within a folder, its
+    /// subfolders (each followed by its own contents) come before its files.
+    pub fn rows(&self) -> Vec<TreeRow> {
+        rows_of(&self.root, 0)
+    }
+}
+
+fn rows_of(contents: &FolderContents, depth: usize) -> Vec<TreeRow> {
+    contents
+        .folders
+        .iter()
+        .flat_map(|folder| {
+            std::iter::once(TreeRow {
+                path: folder.path.clone(),
+                name: folder.name.clone(),
+                depth,
+                is_folder: true,
+            })
+            .chain(rows_of(&folder.contents, depth + 1))
+        })
+        .chain(contents.files.iter().map(|file| TreeRow {
+            path: file.path.clone(),
+            name: file.name.clone(),
+            depth,
+            is_folder: false,
+        }))
+        .collect()
+}
+
 fn collect_paths(contents: &FolderContents) -> Vec<TreePath> {
     contents
         .files

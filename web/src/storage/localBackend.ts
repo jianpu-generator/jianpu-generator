@@ -12,6 +12,7 @@ import {
   deserializeFileStore,
   readInitialFileStore,
 } from '../fileStorePersistence'
+import { ensureWasmInit } from '../wasmInit'
 import type { SaveStatus, StorageBackend } from './types'
 
 /**
@@ -36,6 +37,11 @@ export function deserializeStoreSync(raw: string): FileStoreState {
   return deserializeFileStore(raw)
 }
 
+/** The store operations run in Rust (wasm), so wait for the component first. */
+function afterWasm<T>(run: () => T): Promise<T> {
+  return ensureWasmInit().then(run)
+}
+
 /**
  * Thin async adapter over `fileStore.ts`'s pure, synchronous functions.
  * `saveContent` is a no-op: `useLocalStorage` (used by `useStorageBackend`)
@@ -47,18 +53,18 @@ export const localBackend: StorageBackend = {
 
   load: () => Promise.resolve(readInitialStoreSync()),
 
-  createFile: (state) => Promise.resolve(createFile(state)),
+  createFile: (state) => afterWasm(() => createFile(state)),
 
-  duplicateFile: (state) => Promise.resolve(duplicateFile(state)),
+  duplicateFile: (state) => afterWasm(() => duplicateFile(state)),
 
   importFile: (state, filename, content) =>
     Promise.resolve(importSharedFile(state, filename, content)),
 
-  renameFile: (state, from, to) => Promise.resolve(renameFile(state, from, to)),
+  renameFile: (state, from, to) => afterWasm(() => renameFile(state, from, to)),
 
-  deleteFile: (state, name) => Promise.resolve(deleteFile(state, name)),
+  deleteFile: (state, name) => afterWasm(() => deleteFile(state, name)),
 
-  restoreFile: (state, name) => Promise.resolve(restoreFile(state, name)),
+  restoreFile: (state, name) => afterWasm(() => restoreFile(state, name)),
 
   updateActiveContent: (state, content) => updateActiveContent(state, content),
 

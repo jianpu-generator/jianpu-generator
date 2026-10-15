@@ -174,3 +174,32 @@ fn tree_unique_path_considers_folders_and_extra_taken() {
         path("b/x.jianpu")
     );
 }
+
+#[test]
+fn rows_are_depth_first_with_folders_before_files() {
+    let files = [path("b.jianpu"), path("A/z.jianpu"), path("A/B/y.jianpu")];
+    let tree = FileTree::build(&files, &[path("Empty")]).unwrap();
+    let rows: Vec<String> = tree
+        .rows()
+        .iter()
+        .map(|row| {
+            format!(
+                "{}{}{}",
+                "  ".repeat(row.depth),
+                row.name,
+                if row.is_folder { "/" } else { "" }
+            )
+        })
+        .collect();
+    assert_eq!(
+        rows,
+        vec![
+            "A/",
+            "  B/",
+            "    y.jianpu",
+            "  z.jianpu",
+            "Empty/",
+            "b.jianpu"
+        ]
+    );
+}

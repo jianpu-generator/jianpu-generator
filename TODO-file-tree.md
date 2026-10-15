@@ -13,10 +13,10 @@ Model is tentative: file name is a slash-separated path (`Hymns/Advent/O Come.ji
 
 ## Phase 1: model (pure functions, tests in separate files)
 
-- [ ] Path rules: no empty segments, no `.`/`..`, a path can't be both file and folder
-- [ ] Derive folder tree from the flat file map; explicit empty folders (`folders` list)
-- [ ] Sorting: folders first, then files, alphabetical
-- [ ] Unique-name logic scoped to a folder
+- [x] Path rules: no empty segments, no `.`/`..`, a path can't be both file and folder
+- [x] Derive folder tree from the flat file map; explicit empty folders (`folders` list)
+- [x] Sorting: folders first, then files, alphabetical
+- [x] Unique-name logic scoped to a folder
 - [ ] Rename/move file (keeps `fileId`)
 - [ ] Rename/move folder as one all-or-nothing batch (collision check)
 - [ ] Delete folder to bin, bin entries remember their path

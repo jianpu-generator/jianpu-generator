@@ -351,6 +351,14 @@ impl Guest for Component {
     }
 
     forward_to_free_functions! {
+        file_store_create_file(state: FileStoreState, folder: Option<String>, content: String, context: FileOperationContext) -> FileStoreResponse;
+        file_store_duplicate_file(state: FileStoreState, source: String, context: FileOperationContext) -> FileStoreResponse;
+        file_store_rename_file(state: FileStoreState, from_path: String, to_path: String, context: FileOperationContext) -> FileStoreResponse;
+        file_store_delete_file(state: FileStoreState, path: String, context: FileOperationContext) -> FileStoreResponse;
+        file_store_restore_file(state: FileStoreState, bin_key: String, context: FileOperationContext) -> FileStoreResponse;
+        file_store_move_folder(state: FileStoreState, from_path: String, to_path: String, context: FileOperationContext) -> FolderMoveResponse;
+        file_store_delete_folder(state: FileStoreState, folder: String, context: FileOperationContext) -> FileStoreResponse;
+        file_store_tree(state: FileStoreState) -> FileTreeResponse;
         outbox_enqueue(queue: Queue, file_id: String, message: Message, message_id: String, now_ms: u64) -> Queue;
         outbox_begin_send(queue: Queue, now_ms: u64) -> BeginSend;
         outbox_next_wake_ms(queue: Queue) -> Option<u64>;

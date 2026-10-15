@@ -86,21 +86,12 @@ export function createCloudBackend(
 
   const renameListeners = new Set<(change: LocalRename) => void>()
   // `FileStoreState.fileIds` is one flat map keyed by display name, shared
-  // across `userFiles` and `bin` -- sound for every *pure* transform in
-  // `fileStore.ts` (which never lets the same name occupy both buckets at
-  // once, see `reservedNames`), but this backend's own `load()` response can
-  // -- in principle -- list an active and a trashed row under the same
-  // name (the real D1 schema's `idx_files_owner_name` unique index makes
-  // that impossible for a genuine, unmodified server response, but nothing
-  // in this client trusts that invariant blindly, and this project's own
-  // e2e coverage deliberately manufactures exactly that response shape to
-  // exercise `fileStore.ts`'s `restoreFile` collision-avoidance -- see
-  // `files-cloud-backend.steps.ts`'s restore-collision `Given`). Tracking
-  // each bucket's ids separately here means `renameFile`/`deleteFile`
-  // (always operating on a *known-active* name) and `restoreFile` (always
-  // operating on a *known-trashed* name) never resolve the wrong row's id
-  // out of a name that happens to collide across buckets. Kept in sync
-  // alongside every structural op, for the same reason.
+  // across `userFiles` and `bin`. A `load()` response can in principle list
+  // an active and a trashed row under the same name (e2e deliberately
+  // manufactures that to exercise `restoreFile`'s collision-avoidance), so
+  // each bucket's ids are tracked separately here: `renameFile`/`deleteFile`
+  // (known-active names) and `restoreFile` (known-trashed names) never
+  // resolve the wrong row. Kept in sync alongside every structural op.
   const activeIdByName = new Map<string, string>()
   const trashedIdByName = new Map<string, string>()
 
@@ -290,18 +281,25 @@ export function createCloudBackend(
       return { active: DEMO_FILE_NAMES[0] ?? '', userFiles, bin, fileIds }
     },
 
-    createFile: (state) => createRemoteFile(state, pureCreateFile(state)),
+    async createFile(state: FileStoreState): Promise<FileStoreState> {
+      await ensureWasm()
+      return createRemoteFile(state, pureCreateFile(state))
+    },
 
     importFile: (state, filename, content) =>
       createRemoteFile(state, pureImportSharedFile(state, filename, content)),
 
-    duplicateFile: (state) => createRemoteFile(state, pureDuplicateFile(state)),
+    async duplicateFile(state: FileStoreState): Promise<FileStoreState> {
+      await ensureWasm()
+      return createRemoteFile(state, pureDuplicateFile(state))
+    },
 
     async renameFile(
       state: FileStoreState,
       from: string,
       to: string,
     ): Promise<FileStoreState> {
+      await ensureWasm()
       const nextState = pureRenameFile(state, from, to)
       const newName = addedName(state, nextState)
       if (!newName) return nextState
@@ -317,6 +315,7 @@ export function createCloudBackend(
       state: FileStoreState,
       name: string,
     ): Promise<FileStoreState> {
+      await ensureWasm()
       const nextState = pureDeleteFile(state, name)
       if (nextState === state) return nextState
       const id = activeFileId(state, name)
@@ -331,6 +330,7 @@ export function createCloudBackend(
       state: FileStoreState,
       name: string,
     ): Promise<FileStoreState> {
+      await ensureWasm()
       const nextState = pureRestoreFile(state, name)
       const newName = addedName(state, nextState)
       if (!newName) return nextState
