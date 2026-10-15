@@ -6,9 +6,11 @@ import { DEMO_FILE_NAMES, DEMO_FILES } from './defaultSource'
 import type { FileStoreState } from './fileStore'
 import { operationContext, toWasmState } from './fileStoreWasm'
 import type {
+  BinEntry,
   FileActiveLabel,
   FileTreeRow,
   FileTreeViewRow,
+  FolderDeleteSummary,
   MoveTarget,
 } from './jianpuWasm'
 import { jianpuWasm } from './jianpuWasm'
@@ -71,4 +73,45 @@ export function renameError(
 /** The active file split into its folder names and own name (computed in Rust). */
 export function activeFileLabel(active: string): FileActiveLabel {
   return jianpuWasm().fileStoreActiveLabel(active, DEMO_FILE_NAMES)
+}
+
+/** The folder holding `path` (a file or a folder), `undefined` at the top
+ * level. Rust splits the path; this reuses the active-file label for it. */
+export function parentFolder(path: string): string | undefined {
+  return activeFileLabel(path).folderPath
+}
+
+/** Why renaming/moving the folder `from` to `to` would be rejected, as a
+ * message from Rust; `undefined` when it would succeed. */
+export function folderMoveError(
+  state: FileStoreState,
+  from: string,
+  to: string,
+): string | undefined {
+  return jianpuWasm().fileStoreFolderMoveError(
+    toWasmState(state),
+    from,
+    to,
+    operationContext(DEMO_FILES, ''),
+  )
+}
+
+/** What the "Delete folder" confirmation says (file count and sentence), from
+ * Rust; `undefined` when the folder does not exist. */
+export function folderDeleteSummary(
+  state: FileStoreState,
+  folder: string,
+): FolderDeleteSummary | undefined {
+  return jianpuWasm().fileStoreFolderDeleteSummary(toWasmState(state), folder)
+}
+
+/** The bin as sorted entries: leaf name plus the folder it was deleted from. */
+export function binEntries(state: FileStoreState): BinEntry[] {
+  return jianpuWasm().fileStoreBinEntries(toWasmState(state))
+}
+
+/** `folder` and every folder above it, outermost first: what the file list
+ * must expand to show a folder that was just created or moved. */
+export function foldersToReveal(folder: string): string[] {
+  return jianpuWasm().fileStoreFoldersToReveal(folder)
 }

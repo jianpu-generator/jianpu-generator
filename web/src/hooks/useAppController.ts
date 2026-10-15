@@ -54,6 +54,8 @@ export function useAppController() {
     handleDuplicate,
     handleRename,
     handleDelete,
+    handleMoveFolder,
+    handleDeleteFolder,
     handleRestore,
   } = useFileOperations(store, setStore, backend)
 
@@ -281,6 +283,8 @@ export function useAppController() {
     handleDuplicate,
     handleRename,
     handleDelete,
+    handleMoveFolder,
+    handleDeleteFolder,
     handleRestore,
     sharedPreview,
     syncedShareViewerActive,

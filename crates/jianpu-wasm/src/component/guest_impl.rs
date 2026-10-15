@@ -355,6 +355,10 @@ impl Guest for Component {
         file_store_move_targets(state: FileStoreState, excluded_folder: Option<String>) -> Vec<MoveTarget>;
         file_store_move_destination(source_path: String, folder: Option<String>) -> Option<String>;
         file_store_rename_error(state: FileStoreState, from_path: String, to_path: String, context: FileOperationContext) -> Option<String>;
+        file_store_folder_move_error(state: FileStoreState, from_path: String, to_path: String, context: FileOperationContext) -> Option<String>;
+        file_store_folder_delete_summary(state: FileStoreState, folder: String) -> Option<FolderDeleteSummary>;
+        file_store_bin_entries(state: FileStoreState) -> Vec<BinEntry>;
+        file_store_folders_to_reveal(path: String) -> Vec<String>;
         file_store_create_file(state: FileStoreState, folder: Option<String>, content: String, context: FileOperationContext) -> FileStoreResponse;
         file_store_duplicate_file(state: FileStoreState, source: String, context: FileOperationContext) -> FileStoreResponse;
         file_store_rename_file(state: FileStoreState, from_path: String, to_path: String, context: FileOperationContext) -> FileStoreResponse;

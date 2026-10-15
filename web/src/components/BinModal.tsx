@@ -2,11 +2,13 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { CounterClockwiseClockIcon } from '@radix-ui/react-icons'
 import { useEffect } from 'react'
 import { displayFileName } from '../fileStore'
+import type { BinEntry } from '../jianpuWasm'
 
 export interface BinModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  binNames: string[]
+  /** Binned files with their original locations, from Rust (`binEntries`). */
+  entries: BinEntry[]
   onRestore: (name: string) => void
   restoringName?: string | null
 }
@@ -65,13 +67,13 @@ function RestoreIcon({ pending }: { pending: boolean }) {
 export function BinModal({
   open,
   onOpenChange,
-  binNames,
+  entries,
   onRestore,
   restoringName = null,
 }: BinModalProps) {
   useEffect(() => {
-    if (open && binNames.length === 0) onOpenChange(false)
-  }, [open, binNames.length, onOpenChange])
+    if (open && entries.length === 0) onOpenChange(false)
+  }, [open, entries.length, onOpenChange])
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -100,20 +102,23 @@ export function BinModal({
           </div>
           <div style={bodyStyle}>
             <div className="file-tab-bar-bin-items" role="menu">
-              {binNames.map((name) => (
-                <div key={name} className="file-tab-bar-bin-item">
+              {entries.map((entry) => (
+                <div key={entry.key} className="file-tab-bar-bin-item">
                   <span className="file-tab-bar-bin-name">
-                    {displayFileName(name)}
+                    {displayFileName(entry.name)}
+                  </span>
+                  <span className="file-tab-bar-bin-where">
+                    {entry.location}
                   </span>
                   <button
                     type="button"
                     role="menuitem"
                     className="file-tab-bar-restore"
-                    aria-label={`Restore ${name}`}
-                    onClick={() => onRestore(name)}
-                    disabled={restoringName === name}
+                    aria-label={`Restore ${entry.key}`}
+                    onClick={() => onRestore(entry.key)}
+                    disabled={restoringName === entry.key}
                   >
-                    <RestoreIcon pending={restoringName === name} />
+                    <RestoreIcon pending={restoringName === entry.key} />
                   </button>
                 </div>
               ))}

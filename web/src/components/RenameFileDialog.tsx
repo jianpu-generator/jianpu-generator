@@ -6,29 +6,33 @@ import './FileDialogs.css'
 export interface RenameFileDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Full path of the file being renamed. */
+  /** Full path of the file or folder being renamed. */
   path: string
+  /** A folder is shown with its whole path as is; a file without `.jianpu`. */
+  kind?: 'file' | 'folder'
   onRename: (from: string, to: string) => void
   /** Rust's reason a rename/move would be rejected, if it would. */
   renameError: (from: string, to: string) => string | undefined
 }
 
-/** Renames (and, when the name contains `/`, moves) the open file. The input
+/** Renames (and, when the name contains `/`, moves) a file or folder. The input
  * holds the whole path, so the folders can be edited too; Rust explains why a
  * path is rejected, live, instead of the rename silently doing nothing. */
 export function RenameFileDialog({
   open,
   onOpenChange,
   path,
+  kind = 'file',
   onRename,
   renameError,
 }: RenameFileDialogProps) {
-  const [draft, setDraft] = useState(displayFileName(path))
+  const initial = kind === 'folder' ? path : displayFileName(path)
+  const [draft, setDraft] = useState(initial)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (open) setDraft(displayFileName(path))
-  }, [open, path])
+    if (open) setDraft(initial)
+  }, [open, initial])
 
   const trimmed = draft.trim()
   // Rust is only asked while open: the component is mounted before the
@@ -39,7 +43,7 @@ export function RenameFileDialog({
   const confirm = () => {
     if (!canConfirm) return
     onOpenChange(false)
-    if (trimmed !== displayFileName(path)) onRename(path, trimmed)
+    if (trimmed !== initial) onRename(path, trimmed)
   }
 
   return (
@@ -56,7 +60,9 @@ export function RenameFileDialog({
           }}
         >
           <div className="file-dialog-header">
-            <Dialog.Title className="file-dialog-title">Rename</Dialog.Title>
+            <Dialog.Title className="file-dialog-title">
+              {kind === 'folder' ? 'Rename folder' : 'Rename'}
+            </Dialog.Title>
             <Dialog.Close className="file-dialog-close" aria-label="Close">
               ×
             </Dialog.Close>
@@ -69,13 +75,15 @@ export function RenameFileDialog({
           >
             <div className="file-dialog-body">
               <p className="file-dialog-hint">
-                Use / to put the file in a folder.
+                {kind === 'folder'
+                  ? 'Use / to move the folder into another folder.'
+                  : 'Use / to put the file in a folder.'}
               </p>
               <input
                 ref={inputRef}
                 type="text"
                 className="file-dialog-input"
-                aria-label="File path"
+                aria-label={kind === 'folder' ? 'Folder path' : 'File path'}
                 aria-invalid={error !== undefined}
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}

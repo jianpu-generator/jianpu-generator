@@ -113,6 +113,22 @@
   color: #fff;
 }
 
+.file-dialog-button--danger {
+  border-color: #b00020;
+  background: #b00020;
+  color: #fff;
+}
+
+.file-dialog-warn-box {
+  margin: 0;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #f59e0b;
+  border-radius: 4px;
+  background: #fffbeb;
+  color: #78350f;
+  overflow-wrap: anywhere;
+}
+
 .file-dialog-button:disabled {
   opacity: 0.5;
   cursor: default;

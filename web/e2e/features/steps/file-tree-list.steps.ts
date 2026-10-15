@@ -17,14 +17,16 @@ const SOURCE = [
 interface TreeSeed {
   files: string[]
   folders: string[]
+  bin?: string[]
   active: string
 }
 
 const seeds = new WeakMap<Page, TreeSeed>()
 
 async function applySeed(page: Page, seed: TreeSeed) {
+  const bin = seed.bin ?? []
   await page.addInitScript(
-    ({ src, files, folders, active }) => {
+    ({ src, files, folders, active, bin }) => {
       // Only seed on the first load so a reload keeps what the app saved.
       if (localStorage.getItem('jianpu:files:v1')) return
       localStorage.setItem(
@@ -32,15 +34,21 @@ async function applySeed(page: Page, seed: TreeSeed) {
         JSON.stringify({
           active,
           userFiles: Object.fromEntries(files.map((name) => [name, src])),
-          bin: {},
+          bin: Object.fromEntries(bin.map((name) => [name, src])),
           fileIds: Object.fromEntries(
-            files.map((name) => [name, crypto.randomUUID()]),
+            [...files, ...bin].map((name) => [name, crypto.randomUUID()]),
           ),
           folders,
         }),
       )
     },
-    { src: SOURCE, ...seed },
+    {
+      src: SOURCE,
+      files: seed.files,
+      folders: seed.folders,
+      active: seed.active,
+      bin,
+    },
   )
 }
 
@@ -77,6 +85,15 @@ Given(
     const seed = seeds.get(page)
     if (!seed) throw new Error('file tree seed missing')
     seeds.set(page, { ...seed, files: [...seed.files, path] })
+  },
+)
+
+Given(
+  'the file tree bin also holds {string}',
+  async ({ page }, path: string) => {
+    const seed = seeds.get(page)
+    if (!seed) throw new Error('file tree seed missing')
+    seeds.set(page, { ...seed, bin: [...(seed.bin ?? []), path] })
   },
 )
 

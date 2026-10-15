@@ -96,6 +96,26 @@ export function useFileOperations(
     [runFileOp, backend],
   )
 
+  const handleMoveFolder = useCallback(
+    (from: string, to: string) =>
+      runFileOp(
+        'Could not move folder',
+        (pending) => setRenamingFileName(pending ? from : null),
+        (base) => backend.moveFolder(base, from, to),
+      ),
+    [runFileOp, backend],
+  )
+
+  const handleDeleteFolder = useCallback(
+    (folder: string) =>
+      runFileOp(
+        'Could not delete folder',
+        (pending) => setDeletingFileName(pending ? folder : null),
+        (base) => backend.deleteFolder(base, folder),
+      ),
+    [runFileOp, backend],
+  )
+
   const handleRestore = useCallback(
     (name: string) =>
       runFileOp(
@@ -120,6 +140,8 @@ export function useFileOperations(
     handleDuplicate,
     handleRename,
     handleDelete,
+    handleMoveFolder,
+    handleDeleteFolder,
     handleRestore,
   }
 }

@@ -64,6 +64,41 @@ pub(super) fn file_store_rename_error(
     tree::rename_error(&state.into(), &from_path, &to_path, &context.into())
 }
 
+pub(super) fn file_store_folder_move_error(
+    state: FileStoreState,
+    from_path: String,
+    to_path: String,
+    context: FileOperationContext,
+) -> Option<String> {
+    tree::folder_move_error(&state.into(), &from_path, &to_path, &context.into())
+}
+
+pub(super) fn file_store_folder_delete_summary(
+    state: FileStoreState,
+    folder: String,
+) -> Option<FolderDeleteSummary> {
+    let folder = tree::TreePath::parse(&folder).ok()?;
+    tree::folder_delete_summary(&state.into(), &folder).map(|summary| FolderDeleteSummary {
+        file_count: u32::try_from(summary.file_count).unwrap_or(u32::MAX),
+        message: summary.message,
+    })
+}
+
+pub(super) fn file_store_folders_to_reveal(path: String) -> Vec<String> {
+    tree::folders_to_reveal(&path)
+}
+
+pub(super) fn file_store_bin_entries(state: FileStoreState) -> Vec<BinEntry> {
+    tree::bin_entries(&state.into())
+        .into_iter()
+        .map(|entry| BinEntry {
+            key: entry.key,
+            name: entry.name,
+            location: entry.location,
+        })
+        .collect()
+}
+
 pub(super) fn file_store_duplicate_file(
     state: FileStoreState,
     source: String,

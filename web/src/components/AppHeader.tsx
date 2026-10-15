@@ -84,6 +84,8 @@ interface AppHeaderProps {
   onDuplicate: () => void
   onRename: (from: string, to: string) => void
   onDelete: (name: string) => void
+  onMoveFolder: (from: string, to: string) => void
+  onDeleteFolder: (folder: string) => void
   onOpenStorageSettings: () => void
   saveStatus: DisplaySaveStatus
   saveLabel: string | null
@@ -122,7 +124,7 @@ interface AppHeaderProps {
   onExportSplitMp3?: () => void
   partsCount?: number
   importing?: boolean
-  onImportFile?: (file: File) => void
+  onImportFile?: (file: File, folder?: string) => void
   syncedShare: SyncedShareHeaderProps
   /** The header account chip's only action -- see `App.tsx`'s
    * `handleAccountSignOut`. Everything else `ProfileControl` needs comes
@@ -152,6 +154,8 @@ export function AppHeader({
   onDuplicate,
   onRename,
   onDelete,
+  onMoveFolder,
+  onDeleteFolder,
   onOpenStorageSettings,
   saveStatus,
   saveLabel,
@@ -269,6 +273,8 @@ export function AppHeader({
             onDuplicate={onDuplicate}
             onRename={onRename}
             onDelete={onDelete}
+            onMoveFolder={onMoveFolder}
+            onDeleteFolder={onDeleteFolder}
             onOpenStorageSettings={onOpenStorageSettings}
             saveStatus={saveStatus}
             saveLabel={saveLabel}

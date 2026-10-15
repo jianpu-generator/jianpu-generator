@@ -15,6 +15,7 @@ import {
 } from '../fileStore'
 import { callWorker, createWorkerClient } from '../syncedShare/workerClient'
 import { ensureWasmInit } from '../wasmInit'
+import { createFolderOperations } from './cloudBackendFolders'
 import { addedName } from './cloudBackendNaming'
 import {
   applyPendingStructure,
@@ -49,18 +50,6 @@ export type {
  * transform, performs the corresponding HTTP call, and returns the
  * transform's resulting `FileStoreState` (reconciled by the caller via
  * `mergeBackendResult`, unchanged).
- *
- * Design notes, contrasted with the deleted GitHub backend:
- * - No sha-refetch-before-write: `revisionByFileId` tracks each file's last
- *   known `revision` (populated by `load()`, advanced after every
- *   successful content save), sent as `expectedRevision` on the next save --
- *   the server's atomic `UPDATE ... WHERE revision = ?` is the actual CAS
- *   guard (see `crate::files::classify_content_write`).
- * - Rename/delete/restore are each a single atomic server-side `UPDATE`,
- *   not two sequential calls -- no "left at both paths" window to recover
- *   from.
- * - A file's id is the real, durable D1 row id straight from the server
- *   (`load()`'s response) -- no more localStorage name -> UUID shim.
  *
  * Requests go through the worker's generated client (`workerClient.ts` --
  * paths, bodies and the `ApiError` failure union all come from the Rust
@@ -127,6 +116,14 @@ export function createCloudBackend(
   )
   const ensureWasm = dependencies.ensureWasm ?? ensureWasmInit
   let ready: Promise<void> | null = null
+  const folderOperations = createFolderOperations({
+    ensureWasm,
+    whenReady: () => whenReady(),
+    looper,
+    activeFileId,
+    activeIdByName,
+    trashedIdByName,
+  })
   async function fetchServerFile(fileId: string) {
     const response = await callWorker(
       client.POST('/files/list', { body: { identityToken } }),
@@ -327,6 +324,8 @@ export function createCloudBackend(
       await looper.enqueue(id, { tag: 'trash-file' })
       return nextState
     },
+
+    ...folderOperations,
 
     async restoreFile(
       state: FileStoreState,

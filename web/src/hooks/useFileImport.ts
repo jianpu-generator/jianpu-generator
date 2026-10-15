@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { type FileStoreState, mergeBackendResult } from '../fileStore'
+import { moveDestination } from '../fileStoreQueries'
 import type { StorageBackend } from '../storage/types'
 import type { FileOpError } from './useFileOperations'
 
@@ -19,13 +20,15 @@ export function useFileImport(
   const [importingFile, setImportingFile] = useState(false)
 
   const handleImportFile = useCallback(
-    async (file: File) => {
+    async (file: File, folder?: string) => {
       const base = store
       setImportingFile(true)
       try {
         const importedSource = await importFromFile(file)
         const derivedName = file.name.replace(/\.(svg|pdf)$/i, '')
-        const next = await backend.importFile(base, derivedName, importedSource)
+        // Rust puts the name inside the folder (the top level when omitted).
+        const name = moveDestination(derivedName, folder) ?? derivedName
+        const next = await backend.importFile(base, name, importedSource)
         setStore((prev) => mergeBackendResult(prev, base, next))
       } catch (error) {
         setFileOpError({

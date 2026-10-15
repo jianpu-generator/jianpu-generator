@@ -39,6 +39,17 @@ export interface StorageBackend {
     to: string,
   ): Promise<FileStoreState>
   deleteFile(state: FileStoreState, name: string): Promise<FileStoreState>
+  /** Renames/moves a whole folder; resolves to the same state when Rust
+   * rejects it (collision, invalid path). The cloud backend renames each
+   * file on its own, not as one batch, until Phase 3. */
+  moveFolder(
+    state: FileStoreState,
+    from: string,
+    to: string,
+  ): Promise<FileStoreState>
+  /** Moves every file in the folder to the bin; the cloud backend trashes
+   * each file on its own, not as one batch, until Phase 3. */
+  deleteFolder(state: FileStoreState, folder: string): Promise<FileStoreState>
   restoreFile(state: FileStoreState, name: string): Promise<FileStoreState>
   updateActiveContent(state: FileStoreState, content: string): FileStoreState
   saveContent(state: FileStoreState): Promise<void>

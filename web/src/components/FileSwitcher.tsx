@@ -14,21 +14,21 @@ import {
 import { useState } from 'react'
 import {
   displayFileName,
-  type FileStoreState,
   fileContent,
   isReadOnlyFile,
   sortedUserFileNames,
 } from '../fileStore'
 import {
   fileMoveTargets,
+  foldersToReveal,
   moveDestination,
   renameError,
 } from '../fileStoreQueries'
 import { useExpandedFolders } from '../hooks/useExpandedFolders'
 import { useFileTreeView } from '../hooks/useFileTreeView'
-import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
-import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
+import type { FileSwitcherProps } from './FileSwitcherProps'
 import { FileTreeList } from './FileTreeList'
+import { type FolderDialogState, FolderDialogs } from './FolderDialogs'
 import { ImportButton } from './ImportButton'
 import { MoveToDialog } from './MoveToDialog'
 import { RenameFileDialog } from './RenameFileDialog'
@@ -36,64 +36,6 @@ import { ResponsiveMenu } from './ResponsiveMenu'
 import { SaveStatusBadge } from './SaveStatusBadge'
 import { ShareModal } from './ShareModal'
 import { SpinnerLabel } from './SpinnerLabel'
-
-export interface FileSwitcherProps {
-  store: FileStoreState
-  /** Label shown on the trigger button — the currently active file's name,
-   * whether it's a user file or one of the read-only demo files (which live
-   * in the "Demo" submenu nested inside this same dropdown). */
-  triggerLabel: string
-  onSelect: (name: string) => void
-  onCreate: (folder?: string) => void
-  /** Resolves to the resulting store, `undefined` if it failed. */
-  onCreateFolder: (parent?: string) => Promise<FileStoreState | undefined>
-  onDuplicate: () => void
-  onRename: (from: string, to: string) => void
-  onDelete: (name: string) => void
-  onOpenStorageSettings: () => void
-  saveStatus: DisplaySaveStatus
-  saveLabel: string | null
-  /** `Date.now()`-comparable deadline for the pending autosave, used to
-   * render a countdown while `saveStatus === 'unsaved'`. */
-  autosaveDeadline: number | null
-  /** Whether a `createFile` call is in flight — disables "New" and shows a
-   * spinner on it. */
-  creating?: boolean
-  creatingFolder?: boolean
-  /** Name of the file currently being deleted, if any — disables and spins
-   * the Delete menu item rather than the whole tab bar. */
-  deletingName?: string | null
-  /** Whether a `duplicateFile` call is in flight — disables "Duplicate" and
-   * shows a spinner on it. */
-  duplicating?: boolean
-  /** Name of the file currently being renamed, if any — disables and spins
-   * just that file's tab name rather than the whole tab bar. */
-  renamingName?: string | null
-  /** Whether the cloud backend is still fetching its file list — shows a
-   * spinner on the trigger and a loading hint instead of the demo hint. */
-  isLoadingCloud?: boolean
-  importing?: boolean
-  onImportFile?: (file: File) => void
-  /** Names of files currently in the trash — used for the "Bin (N)" menu
-   * item's count and to decide whether it renders at all. */
-  binNames: string[]
-  /** Opens the Bin modal, which lists `binNames` and handles restoring. */
-  onOpenBin: () => void
-  onOpenSyncPanel?: () => void
-  /** See `ShareModalProps.canSync`. */
-  canSync: boolean
-  isSynced: boolean
-  syncedShareLink: string | null
-  /** Whether the dedicated Synced Share GitHub sign-in connection is
-   * present -- see `useSyncedShareOwner.ts`. */
-  isGithubConnected: boolean
-  /** Cached GitHub username for the "Synced as @username" identity row;
-   * `null` until connected. */
-  githubLogin: string | null
-  onStartSync: () => Promise<string | null>
-  onStopSync: () => void
-  onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
-}
 
 export function FileSwitcher({
   store,
@@ -104,6 +46,8 @@ export function FileSwitcher({
   onDuplicate,
   onRename,
   onDelete,
+  onMoveFolder,
+  onDeleteFolder,
   onOpenStorageSettings,
   saveStatus,
   saveLabel,
@@ -145,6 +89,14 @@ export function FileSwitcher({
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
+  const [folderDialog, setFolderDialog] = useState<FolderDialogState | null>(
+    null,
+  )
+  const folderAction =
+    (kind: 'rename' | 'move' | 'delete') => (folder: string) => {
+      setFilesOpen(false)
+      setFolderDialog({ kind, folder })
+    }
 
   return (
     <div className="file-tab-bar">
@@ -199,6 +151,32 @@ export function FileSwitcher({
               }}
               onRename={onRename}
               renameError={listRenameError}
+              creating={creating}
+              creatingFolder={creatingFolder}
+              importing={importing}
+              folderActions={{
+                onNewFileHere: async (folder) => {
+                  await onCreate(folder)
+                  setFilesOpen(false)
+                },
+                onNewFolderHere: async (folder) => {
+                  const next = await onCreateFolder(folder)
+                  const known = new Set(store.folders)
+                  // Open the folder and the one Rust just named inside it.
+                  expandFolders(
+                    (next?.folders ?? [])
+                      .filter((created) => !known.has(created))
+                      .flatMap(foldersToReveal),
+                  )
+                },
+                onImportHere: (folder, file) => {
+                  onImportFile?.(file, folder)
+                  setFilesOpen(false)
+                },
+                onRename: folderAction('rename'),
+                onMove: folderAction('move'),
+                onDelete: folderAction('delete'),
+              }}
             />
           </ResponsiveMenu.Content>
         </ResponsiveMenu.Root>
@@ -380,6 +358,14 @@ export function FileSwitcher({
         destination={(folder) => moveDestination(store.active, folder)}
         moveError={(to) => renameError(store, store.active, to)}
         onMove={onRename}
+      />
+      <FolderDialogs
+        store={store}
+        dialog={folderDialog}
+        onClose={() => setFolderDialog(null)}
+        onMoveFolder={onMoveFolder}
+        onDeleteFolder={onDeleteFolder}
+        expandFolders={expandFolders}
       />
       <ShareModal
         open={shareModalOpen}

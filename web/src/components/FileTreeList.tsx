@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { displayFileName } from '../fileStore'
 import type { FileTreeViewRow } from '../jianpuWasm'
 import { FileTabName } from './FileTabName'
+import { type FolderActions, FolderRowMenu } from './FolderRowMenu'
 
 function FolderGlyph() {
   return (
@@ -28,6 +29,11 @@ export interface FileTreeListProps {
   onRename: (from: string, to: string) => void
   /** Rust's reason a rename/move would be rejected, if it would. */
   renameError: (from: string, to: string) => string | undefined
+  /** The folder rows' `···` menu; the read-only `Demo/` row has none. */
+  folderActions: FolderActions
+  creating: boolean
+  creatingFolder: boolean
+  importing: boolean
 }
 
 export function FileTreeList({
@@ -37,6 +43,10 @@ export function FileTreeList({
   onSelect,
   onRename,
   renameError,
+  folderActions,
+  creating,
+  creatingFolder,
+  importing,
 }: FileTreeListProps) {
   return (
     <ul className="file-tabs" aria-label="Files">
@@ -48,7 +58,7 @@ export function FileTreeList({
             return (
               <li
                 key={`${row.kind}:${row.key}`}
-                className={`file-tree-row${row.kind === 'demo-folder' ? ' file-tree-demo-row' : ''}`}
+                className={`file-tree-row file-tree-folder-row${row.kind === 'demo-folder' ? ' file-tree-demo-row' : ''}`}
                 style={rowStyle}
               >
                 <button
@@ -68,6 +78,16 @@ export function FileTreeList({
                     {row.fileCount}
                   </span>
                 </button>
+                {row.kind === 'folder' ? (
+                  <FolderRowMenu
+                    folder={row.key}
+                    name={row.name}
+                    actions={folderActions}
+                    creating={creating}
+                    creatingFolder={creatingFolder}
+                    importing={importing}
+                  />
+                ) : null}
               </li>
             )
           case 'empty-folder-hint':

@@ -4,6 +4,8 @@ import { useRef } from 'react'
 interface ImportButtonProps {
   disabled?: boolean
   importing?: boolean
+  /** Menu item text; "Import here" on a folder row. */
+  label?: string
   onImportFile: (file: File) => void
 }
 
@@ -16,6 +18,7 @@ interface ImportButtonProps {
 export function ImportButton({
   disabled = false,
   importing = false,
+  label = 'Import',
   onImportFile,
 }: ImportButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -30,7 +33,7 @@ export function ImportButton({
         onClick={() => inputRef.current?.click()}
       >
         <UploadIcon aria-hidden="true" />
-        {importing ? 'Importing…' : 'Import'}
+        {importing ? 'Importing…' : label}
       </button>
       <input
         ref={inputRef}

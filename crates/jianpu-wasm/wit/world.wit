@@ -1623,6 +1623,19 @@ world jianpu-wasm {
         depth: u32,
     }
 
+    // One binned file: `key` is what to hand to `file-store-restore-file`, `name` its own name, `location` the folder it was deleted from (none = top level).
+    record bin-entry {
+        key: string,
+        name: string,
+        location: option<string>,
+    }
+
+    // What the "Delete folder" confirmation shows.
+    record folder-delete-summary {
+        file-count: u32,
+        message: string,
+    }
+
     // `folder` is `none` for the top level.
     export file-store-create-folder: func(state: file-store-state, parent: option<string>, context: file-operation-context) -> file-store-response;
     // Top level plus every folder; `excluded-folder` and its descendants are left out.
@@ -1631,6 +1644,14 @@ world jianpu-wasm {
     export file-store-move-destination: func(source-path: string, folder: option<string>) -> option<string>;
     // The reason renaming/moving a file to `to-path` would be rejected, if it would.
     export file-store-rename-error: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> option<string>;
+    // The reason renaming/moving the folder `from-path` to `to-path` would be rejected, if it would.
+    export file-store-folder-move-error: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> option<string>;
+    // The confirmation text for deleting a folder; none if it does not exist.
+    export file-store-folder-delete-summary: func(state: file-store-state, folder: string) -> option<folder-delete-summary>;
+    // The folder and every folder above it, outermost first (what to expand to show it).
+    export file-store-folders-to-reveal: func(path: string) -> list<string>;
+    // The bin as a sorted list of leaf names and original locations.
+    export file-store-bin-entries: func(state: file-store-state) -> list<bin-entry>;
     export file-store-create-file: func(state: file-store-state, folder: option<string>, content: string, context: file-operation-context) -> file-store-response;
     export file-store-duplicate-file: func(state: file-store-state, source: string, context: file-operation-context) -> file-store-response;
     export file-store-rename-file: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> file-store-response;

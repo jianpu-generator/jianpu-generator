@@ -2,9 +2,11 @@ import {
   createFile,
   createFolder,
   deleteFile,
+  deleteFolder,
   duplicateFile,
   type FileStoreState,
   importSharedFile,
+  moveFolder,
   renameFile,
   restoreFile,
   updateActiveContent,
@@ -66,6 +68,14 @@ export const localBackend: StorageBackend = {
   renameFile: (state, from, to) => afterWasm(() => renameFile(state, from, to)),
 
   deleteFile: (state, name) => afterWasm(() => deleteFile(state, name)),
+
+  moveFolder: (state, from, to) =>
+    afterWasm(() => {
+      const result = moveFolder(state, from, to)
+      return result.ok ? result.state : state
+    }),
+
+  deleteFolder: (state, folder) => afterWasm(() => deleteFolder(state, folder)),
 
   restoreFile: (state, name) => afterWasm(() => restoreFile(state, name)),
 
