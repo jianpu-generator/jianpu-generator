@@ -22,7 +22,11 @@ export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline'
 export interface StorageBackend {
   readonly kind: 'local' | 'cloud'
   load(): Promise<FileStoreState>
-  createFile(state: FileStoreState): Promise<FileStoreState>
+  /** New file in `folder` (top level when omitted). */
+  createFile(state: FileStoreState, folder?: string): Promise<FileStoreState>
+  /** New empty folder inside `parent` (top level when omitted). The cloud
+   * backend keeps it local-only until Phase 3 (gone after a reload). */
+  createFolder(state: FileStoreState, parent?: string): Promise<FileStoreState>
   duplicateFile(state: FileStoreState): Promise<FileStoreState>
   importFile(
     state: FileStoreState,

@@ -26,6 +26,8 @@ export interface FileTreeListProps {
   onToggleFolder: (key: string) => void
   onSelect: (name: string) => void
   onRename: (from: string, to: string) => void
+  /** Rust's reason a rename/move would be rejected, if it would. */
+  renameError: (from: string, to: string) => string | undefined
 }
 
 export function FileTreeList({
@@ -34,6 +36,7 @@ export function FileTreeList({
   onToggleFolder,
   onSelect,
   onRename,
+  renameError,
 }: FileTreeListProps) {
   return (
     <ul className="file-tabs" aria-label="Files">
@@ -91,6 +94,7 @@ export function FileTreeList({
                   active={row.isActive}
                   onSelect={onSelect}
                   onRename={onRename}
+                  renameError={renameError}
                   renaming={renamingName === row.key}
                 />
               </li>

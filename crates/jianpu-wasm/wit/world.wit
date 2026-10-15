@@ -1607,6 +1607,8 @@ world jianpu-wasm {
     record file-active-label {
         folder-names: list<string>,
         file-name: string,
+        // The folder holding the file (new items go next to it); none at the top level and for demo files.
+        folder-path: option<string>,
     }
 
     variant file-tree-response {
@@ -1614,7 +1616,21 @@ world jianpu-wasm {
         err(string),
     }
 
+    // One choice in the "Move to" folder picker; `path` is empty for the top level.
+    record move-target {
+        path: string,
+        name: string,
+        depth: u32,
+    }
+
     // `folder` is `none` for the top level.
+    export file-store-create-folder: func(state: file-store-state, parent: option<string>, context: file-operation-context) -> file-store-response;
+    // Top level plus every folder; `excluded-folder` and its descendants are left out.
+    export file-store-move-targets: func(state: file-store-state, excluded-folder: option<string>) -> list<move-target>;
+    // Where `source-path` lands when moved into `folder` (`none` = top level); `none` if invalid.
+    export file-store-move-destination: func(source-path: string, folder: option<string>) -> option<string>;
+    // The reason renaming/moving a file to `to-path` would be rejected, if it would.
+    export file-store-rename-error: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> option<string>;
     export file-store-create-file: func(state: file-store-state, folder: option<string>, content: string, context: file-operation-context) -> file-store-response;
     export file-store-duplicate-file: func(state: file-store-state, source: string, context: file-operation-context) -> file-store-response;
     export file-store-rename-file: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> file-store-response;

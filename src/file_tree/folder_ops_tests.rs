@@ -233,3 +233,33 @@ fn deleting_a_missing_folder_is_not_found() {
         Err(FileStoreError::NotFound { .. })
     ));
 }
+
+#[test]
+fn create_folder_adds_an_explicit_folder_and_leaves_the_active_file() {
+    let state = store(&["Hymns/a.jianpu"], &[], &[]);
+    let next = create_folder(&state, Some(&path("Hymns")), &context()).unwrap();
+    assert_eq!(next.folders, vec![path("Hymns/New folder")]);
+    assert_eq!(next.active, state.active);
+}
+
+#[test]
+fn create_folder_is_unique_among_files_and_folders_of_the_same_parent() {
+    let state = store(
+        &["New folder 3/a.jianpu", "Hymns/New folder.jianpu"],
+        &["New folder", "New folder 2"],
+        &[],
+    );
+    let top = create_folder(&state, None, &context()).unwrap();
+    assert!(top.folders.contains(&path("New folder 4")));
+    let nested = create_folder(&state, Some(&path("Hymns")), &context()).unwrap();
+    assert!(nested.folders.contains(&path("Hymns/New folder")));
+}
+
+#[test]
+fn create_folder_inside_a_file_fails() {
+    let state = store(&["a.jianpu"], &[], &[]);
+    assert!(matches!(
+        create_folder(&state, Some(&path("a.jianpu")), &context()),
+        Err(FileStoreError::AncestorIsFile { .. })
+    ));
+}

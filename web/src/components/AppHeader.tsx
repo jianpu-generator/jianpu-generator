@@ -79,7 +79,8 @@ interface AppHeaderProps {
   playFromCurrentMeasureShortcutLabel: string
   store: FileStoreState
   onSelect: (name: string) => void
-  onCreate: () => void
+  onCreate: (folder?: string) => void
+  onCreateFolder: (parent?: string) => Promise<FileStoreState | undefined>
   onDuplicate: () => void
   onRename: (from: string, to: string) => void
   onDelete: (name: string) => void
@@ -88,6 +89,7 @@ interface AppHeaderProps {
   saveLabel: string | null
   autosaveDeadline: number | null
   creatingFile?: boolean
+  creatingFolder?: boolean
   deletingFileName?: string | null
   duplicatingFile?: boolean
   renamingFileName?: string | null
@@ -146,6 +148,7 @@ export function AppHeader({
   store,
   onSelect,
   onCreate,
+  onCreateFolder,
   onDuplicate,
   onRename,
   onDelete,
@@ -154,6 +157,7 @@ export function AppHeader({
   saveLabel,
   autosaveDeadline,
   creatingFile,
+  creatingFolder,
   deletingFileName,
   duplicatingFile,
   renamingFileName,
@@ -261,6 +265,7 @@ export function AppHeader({
             triggerLabel={store.active}
             onSelect={onSelect}
             onCreate={onCreate}
+            onCreateFolder={onCreateFolder}
             onDuplicate={onDuplicate}
             onRename={onRename}
             onDelete={onDelete}
@@ -269,6 +274,7 @@ export function AppHeader({
             saveLabel={saveLabel}
             autosaveDeadline={autosaveDeadline}
             creating={creatingFile}
+            creatingFolder={creatingFolder}
             deletingName={deletingFileName}
             duplicating={duplicatingFile}
             renamingName={renamingFileName}

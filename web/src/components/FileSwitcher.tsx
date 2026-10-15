@@ -3,8 +3,10 @@ import {
   ChevronDownIcon,
   CopyIcon,
   DotsHorizontalIcon,
+  FilePlusIcon,
   GearIcon,
   Link2Icon,
+  MoveIcon,
   Pencil1Icon,
   PlusIcon,
   TrashIcon,
@@ -17,12 +19,19 @@ import {
   isReadOnlyFile,
   sortedUserFileNames,
 } from '../fileStore'
+import {
+  fileMoveTargets,
+  moveDestination,
+  renameError,
+} from '../fileStoreQueries'
 import { useExpandedFolders } from '../hooks/useExpandedFolders'
 import { useFileTreeView } from '../hooks/useFileTreeView'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
 import { FileTreeList } from './FileTreeList'
 import { ImportButton } from './ImportButton'
+import { MoveToDialog } from './MoveToDialog'
+import { RenameFileDialog } from './RenameFileDialog'
 import { ResponsiveMenu } from './ResponsiveMenu'
 import { SaveStatusBadge } from './SaveStatusBadge'
 import { ShareModal } from './ShareModal'
@@ -35,7 +44,9 @@ export interface FileSwitcherProps {
    * in the "Demo" submenu nested inside this same dropdown). */
   triggerLabel: string
   onSelect: (name: string) => void
-  onCreate: () => void
+  onCreate: (folder?: string) => void
+  /** Resolves to the resulting store, `undefined` if it failed. */
+  onCreateFolder: (parent?: string) => Promise<FileStoreState | undefined>
   onDuplicate: () => void
   onRename: (from: string, to: string) => void
   onDelete: (name: string) => void
@@ -48,6 +59,7 @@ export interface FileSwitcherProps {
   /** Whether a `createFile` call is in flight — disables "New" and shows a
    * spinner on it. */
   creating?: boolean
+  creatingFolder?: boolean
   /** Name of the file currently being deleted, if any — disables and spins
    * the Delete menu item rather than the whole tab bar. */
   deletingName?: string | null
@@ -88,6 +100,7 @@ export function FileSwitcher({
   triggerLabel,
   onSelect,
   onCreate,
+  onCreateFolder,
   onDuplicate,
   onRename,
   onDelete,
@@ -96,6 +109,7 @@ export function FileSwitcher({
   saveLabel,
   autosaveDeadline,
   creating = false,
+  creatingFolder = false,
   deletingName = null,
   duplicating = false,
   renamingName = null,
@@ -118,11 +132,19 @@ export function FileSwitcher({
   const showEmptyHint = !isLoadingCloud && names.length === 0
 
   const [filesOpen, setFilesOpen] = useState(false)
-  const { expanded, toggle: toggleFolder } = useExpandedFolders()
+  const {
+    expanded,
+    toggle: toggleFolder,
+    expand: expandFolders,
+  } = useExpandedFolders()
   const { rows, activeLabel } = useFileTreeView(store, expanded, triggerLabel)
 
+  const listRenameError = (from: string, to: string) =>
+    renameError(store, from, to)
   const [actionsOpen, setActionsOpen] = useState(false)
   const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [renameOpen, setRenameOpen] = useState(false)
+  const [moveOpen, setMoveOpen] = useState(false)
 
   return (
     <div className="file-tab-bar">
@@ -176,6 +198,7 @@ export function FileSwitcher({
                 setFilesOpen(false)
               }}
               onRename={onRename}
+              renameError={listRenameError}
             />
           </ResponsiveMenu.Content>
         </ResponsiveMenu.Root>
@@ -203,12 +226,28 @@ export function FileSwitcher({
               className="export-menu-item"
               disabled={creating}
               onClick={async () => {
-                await onCreate()
+                await onCreate(activeLabel.folderPath)
                 setActionsOpen(false)
               }}
             >
               <PlusIcon aria-hidden="true" />
               <SpinnerLabel pending={creating} label="New" />
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="export-menu-item"
+              disabled={creatingFolder}
+              onClick={async () => {
+                const next = await onCreateFolder(activeLabel.folderPath)
+                const known = new Set(store.folders)
+                // Open the folder Rust just named.
+                expandFolders(next?.folders?.filter((f) => !known.has(f)) ?? [])
+                setActionsOpen(false)
+              }}
+            >
+              <FilePlusIcon aria-hidden="true" />
+              <SpinnerLabel pending={creatingFolder} label="New folder" />
             </button>
             <button
               type="button"
@@ -230,15 +269,9 @@ export function FileSwitcher({
               disabled={
                 isReadOnlyFile(store.active) || renamingName === store.active
               }
-              onClick={async () => {
-                const next = window.prompt(
-                  'Rename file',
-                  displayFileName(store.active),
-                )
-                const trimmed = next?.trim()
-                if (!trimmed || trimmed === store.active) return
-                await onRename(store.active, trimmed)
+              onClick={() => {
                 setActionsOpen(false)
+                setRenameOpen(true)
               }}
             >
               <Pencil1Icon aria-hidden="true" />
@@ -246,6 +279,19 @@ export function FileSwitcher({
                 pending={renamingName === store.active}
                 label="Rename"
               />
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="export-menu-item"
+              disabled={isReadOnlyFile(store.active)}
+              onClick={() => {
+                setActionsOpen(false)
+                setMoveOpen(true)
+              }}
+            >
+              <MoveIcon aria-hidden="true" />
+              Move to…
             </button>
             <button
               type="button"
@@ -318,6 +364,23 @@ export function FileSwitcher({
           </ResponsiveMenu.Content>
         </ResponsiveMenu.Root>
       </div>
+      <RenameFileDialog
+        open={renameOpen}
+        onOpenChange={setRenameOpen}
+        path={store.active}
+        onRename={onRename}
+        renameError={listRenameError}
+      />
+      <MoveToDialog
+        open={moveOpen}
+        onOpenChange={setMoveOpen}
+        path={store.active}
+        currentFolder={activeLabel.folderPath}
+        targets={moveOpen ? fileMoveTargets(store) : []}
+        destination={(folder) => moveDestination(store.active, folder)}
+        moveError={(to) => renameError(store, store.active, to)}
+        onMove={onRename}
+      />
       <ShareModal
         open={shareModalOpen}
         onOpenChange={setShareModalOpen}

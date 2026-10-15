@@ -7,6 +7,7 @@ export function FileTabName({
   active,
   onSelect,
   onRename,
+  renameError,
   renaming = false,
   label,
 }: {
@@ -14,6 +15,8 @@ export function FileTabName({
   active: boolean
   onSelect: (name: string) => void
   onRename: (from: string, to: string) => void
+  /** Rust's reason renaming `from` to `to` would be rejected, if it would. */
+  renameError?: (from: string, to: string) => string | undefined
   renaming?: boolean
   /** Text shown for the row; defaults to the extension-less `name`. A tree
    * row passes just the file's own name, not its folder path. */
@@ -40,33 +43,43 @@ export function FileTabName({
   }, [editing])
 
   if (active && editing && !readOnly) {
+    const trimmed = draft.trim()
+    const error = trimmed ? renameError?.(name, trimmed) : undefined
     return (
-      <input
-        ref={inputRef}
-        type="text"
-        className="file-tab-name"
-        value={draft}
-        aria-current="true"
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => {
-          const trimmed = draft.trim()
-          if (trimmed && trimmed !== displayFileName(name)) {
-            onRename(name, trimmed)
-          } else {
-            setDraft(displayFileName(name))
-          }
-          setEditing(false)
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.currentTarget.blur()
-          } else if (e.key === 'Escape') {
-            setDraft(displayFileName(name))
+      <div className="file-tab-rename">
+        <input
+          ref={inputRef}
+          type="text"
+          className="file-tab-name"
+          value={draft}
+          aria-current="true"
+          aria-invalid={error !== undefined}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => {
+            if (!error && trimmed && trimmed !== displayFileName(name)) {
+              onRename(name, trimmed)
+            } else {
+              setDraft(displayFileName(name))
+            }
             setEditing(false)
-            e.currentTarget.blur()
-          }
-        }}
-      />
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              // A rejected name stays open so its message can be read.
+              if (!error) e.currentTarget.blur()
+            } else if (e.key === 'Escape') {
+              setDraft(displayFileName(name))
+              setEditing(false)
+              e.currentTarget.blur()
+            }
+          }}
+        />
+        {error ? (
+          <p className="file-tab-rename-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
     )
   }
 

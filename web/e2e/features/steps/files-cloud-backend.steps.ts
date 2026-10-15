@@ -19,7 +19,7 @@ import { Then, When } from './fixtures'
 const newButton = ({ page }: { page: import('@playwright/test').Page }) =>
   page.locator('.export-menu-item').first()
 const duplicateButton = ({ page }: { page: import('@playwright/test').Page }) =>
-  page.locator('.export-menu-item').nth(1)
+  page.getByRole('menuitem', { name: 'Duplicate' })
 
 When('the app loads the cloud backend with no files', async ({ page }) => {
   await gotoCloudApp(page)

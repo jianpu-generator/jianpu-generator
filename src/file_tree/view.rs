@@ -52,6 +52,9 @@ pub struct TreeViewRow {
 pub struct ActiveLabel {
     pub folder_names: Vec<String>,
     pub file_name: String,
+    /// Full path of the folder holding the file, where new files and folders
+    /// go "next to" it; `None` at the top level and for read-only demo files.
+    pub folder_path: Option<String>,
 }
 
 impl FileTree {
@@ -171,6 +174,7 @@ pub fn active_label(active: &str, demo_file_names: &[String]) -> ActiveLabel {
         return ActiveLabel {
             folder_names: vec![DEMO_FOLDER_NAME.to_string()],
             file_name: active.to_string(),
+            folder_path: None,
         };
     }
     match TreePath::parse(active) {
@@ -181,10 +185,12 @@ pub fn active_label(active: &str, demo_file_names: &[String]) -> ActiveLabel {
                 .map(|ancestor| ancestor.name().to_string())
                 .collect(),
             file_name: path.name().to_string(),
+            folder_path: path.parent().map(|parent| parent.as_str().to_string()),
         },
         Err(_) => ActiveLabel {
             folder_names: vec![],
             file_name: active.to_string(),
+            folder_path: None,
         },
     }
 }

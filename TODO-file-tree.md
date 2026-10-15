@@ -27,19 +27,19 @@ Model is tentative: file name is a slash-separated path (`Hymns/Advent/O Come.ji
 
 ## Phase 2: local UI (matches the real app's look)
 
-- [ ] File list becomes a tree in the existing monospace dropdown; widen it
-- [ ] Toolbar button shows the folder path as a muted prefix
-- [ ] Active file's ancestors always expanded; expanded state remembered
-- [ ] Demo becomes a read-only `Demo/` row, last and separated
+- [x] File list becomes a tree in the existing monospace dropdown; widen it
+- [x] Toolbar button shows the folder path as a muted prefix
+- [x] Active file's ancestors always expanded; expanded state remembered
+- [x] Demo becomes a read-only `Demo/` row, last and separated
 - [ ] `···` menu: add "New folder" and "Move to…"; New creates next to the open file
 - [ ] Hover `···` on folder rows: New file here, New folder here, Import here, Rename, Move to, Share folder, Delete folder
 - [ ] Move to… dialog (folder picker, no moving into itself, clash message)
 - [ ] Rename accepts `/` to move
 - [ ] Delete folder confirmation with file count
 - [ ] Bin shows each file's original location
-- [ ] Empty folder row hint
+- [x] Empty folder row hint
 - [ ] Gherkin scenarios (write failing ones first): create, nest, move, rename folder, delete, restore
-- [ ] Check phone layout of the real app first, then design the tree there
+- [x] Check phone layout of the real app first, then design the tree there
 
 ## Phase 3: cloud
 

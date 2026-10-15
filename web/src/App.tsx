@@ -35,6 +35,7 @@ export default function App() {
     editorCollapsed,
     setEditorCollapsed,
     creatingFile,
+    creatingFolder,
     deletingFileName,
     duplicatingFile,
     renamingFileName,
@@ -42,6 +43,7 @@ export default function App() {
     fileOpError,
     setFileOpError,
     handleCreate,
+    handleCreateFolder,
     handleDuplicate,
     handleRename,
     handleDelete,
@@ -207,6 +209,7 @@ export default function App() {
         store={store}
         onSelect={handleSelect}
         onCreate={handleCreate}
+        onCreateFolder={handleCreateFolder}
         onDuplicate={handleDuplicate}
         onRename={handleRename}
         onDelete={handleDelete}
@@ -215,6 +218,7 @@ export default function App() {
         saveLabel={saveLabel}
         autosaveDeadline={autosaveDeadline}
         creatingFile={creatingFile}
+        creatingFolder={creatingFolder}
         deletingFileName={deletingFileName}
         duplicatingFile={duplicatingFile}
         renamingFileName={renamingFileName}

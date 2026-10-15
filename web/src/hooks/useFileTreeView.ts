@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react'
-import {
-  activeFileLabel,
-  type FileStoreState,
-  fileTreeView,
-} from '../fileStore'
+import type { FileStoreState } from '../fileStore'
+import { activeFileLabel, fileTreeView } from '../fileStoreQueries'
 import type { FileActiveLabel, FileTreeViewRow } from '../jianpuWasm'
 import { ensureWasmInit } from '../wasmInit'
 
@@ -37,5 +34,12 @@ export function useFileTreeView(
         rows: fileTreeView(store, expanded),
         activeLabel: activeFileLabel(activeName),
       }
-    : { rows: [], activeLabel: { folderNames: [], fileName: activeName } }
+    : {
+        rows: [],
+        activeLabel: {
+          folderNames: [],
+          fileName: activeName,
+          folderPath: undefined,
+        },
+      }
 }

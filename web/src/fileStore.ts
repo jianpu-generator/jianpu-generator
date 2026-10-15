@@ -7,12 +7,9 @@ import {
   operationContext as wasmOperationContext,
 } from './fileStoreWasm'
 import type {
-  FileActiveLabel,
   FileOperationContext,
   FileStoreFailure,
   FileStoreResponse,
-  FileTreeRow,
-  FileTreeViewRow,
   PathChange,
   FileStoreState as WasmFileStoreState,
 } from './jianpuWasm'
@@ -170,6 +167,17 @@ export function createFile(
   )
 }
 
+/** New empty folder named `New folder` (made unique) inside `parent` (top
+ * level when omitted); the active file does not change. */
+export function createFolder(
+  state: FileStoreState,
+  parent?: string,
+): FileStoreState {
+  return applyOrKeep(state, (wasmState, context) =>
+    jianpuWasm().fileStoreCreateFolder(wasmState, parent, context),
+  )
+}
+
 /** Copies the active file next to itself, in the same folder. */
 export function duplicateFile(state: FileStoreState): FileStoreState {
   return applyOrKeep(state, (wasmState, context) =>
@@ -240,33 +248,6 @@ export function deleteFolder(
   return applyOrKeep(state, (wasmState, context) =>
     jianpuWasm().fileStoreDeleteFolder(wasmState, folder, context),
   )
-}
-
-/** The user's files and folders as display rows, depth-first, folders
- * before files, sorted (computed in Rust). Empty if the paths conflict. */
-export function fileTreeRows(state: FileStoreState): FileTreeRow[] {
-  const response = jianpuWasm().fileStoreTree(toWasmState(state))
-  return response.tag === 'ok' ? response.val : []
-}
-
-/** The visible rows of the file list (collapsed folders hidden, the active
- * file's ancestors forced open, the read-only `Demo/` row last), computed in
- * Rust from the raw `expanded` set. Empty if the paths conflict. */
-export function fileTreeView(
-  state: FileStoreState,
-  expanded: string[],
-): FileTreeViewRow[] {
-  const response = jianpuWasm().fileStoreTreeView(
-    toWasmState(state),
-    expanded,
-    DEMO_FILE_NAMES,
-  )
-  return response.tag === 'ok' ? response.val : []
-}
-
-/** The active file split into its folder names and own name (computed in Rust). */
-export function activeFileLabel(active: string): FileActiveLabel {
-  return jianpuWasm().fileStoreActiveLabel(active, DEMO_FILE_NAMES)
 }
 
 function mergeAddedRemoved(

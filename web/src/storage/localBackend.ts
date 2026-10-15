@@ -1,5 +1,6 @@
 import {
   createFile,
+  createFolder,
   deleteFile,
   duplicateFile,
   type FileStoreState,
@@ -53,7 +54,9 @@ export const localBackend: StorageBackend = {
 
   load: () => Promise.resolve(readInitialStoreSync()),
 
-  createFile: (state) => afterWasm(() => createFile(state)),
+  createFile: (state, folder) => afterWasm(() => createFile(state, folder)),
+
+  createFolder: (state, parent) => afterWasm(() => createFolder(state, parent)),
 
   duplicateFile: (state) => afterWasm(() => duplicateFile(state)),
 

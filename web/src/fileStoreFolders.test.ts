@@ -5,12 +5,12 @@ import {
   deleteFolder,
   duplicateFile,
   type FileStoreState,
-  fileTreeRows,
   moveFolder,
   renameFile,
   restoreFile,
 } from './fileStore'
 import { deserializeFileStore } from './fileStorePersistence'
+import { fileTreeRows } from './fileStoreQueries'
 import { loadWasmForTests } from './testing/loadWasmForTests'
 
 beforeAll(loadWasmForTests)

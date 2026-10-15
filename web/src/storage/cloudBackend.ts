@@ -5,6 +5,7 @@ import {
   fileIdForName,
   isReadOnlyFile,
   createFile as pureCreateFile,
+  createFolder as pureCreateFolder,
   deleteFile as pureDeleteFile,
   duplicateFile as pureDuplicateFile,
   importSharedFile as pureImportSharedFile,
@@ -44,10 +45,10 @@ export type {
  * `StorageBackend` implementation backed by `crates/live-share-worker`'s
  * `/files/*` routes (D1-backed), the replacement for the deleted GitHub
  * Contents API backend. Reuses `fileStore.ts`'s pure transforms exactly
- * like that backend did -- every structural op below
- * calls the matching pure transform, performs the corresponding HTTP call,
- * and returns the transform's resulting `FileStoreState` (reconciled by the
- * caller via `mergeBackendResult`, unchanged).
+ * like that backend did -- every structural op below calls the matching pure
+ * transform, performs the corresponding HTTP call, and returns the
+ * transform's resulting `FileStoreState` (reconciled by the caller via
+ * `mergeBackendResult`, unchanged).
  *
  * Design notes, contrasted with the deleted GitHub backend:
  * - No sha-refetch-before-write: `revisionByFileId` tracks each file's last
@@ -281,18 +282,19 @@ export function createCloudBackend(
       return { active: DEMO_FILE_NAMES[0] ?? '', userFiles, bin, fileIds }
     },
 
-    async createFile(state: FileStoreState): Promise<FileStoreState> {
-      await ensureWasm()
-      return createRemoteFile(state, pureCreateFile(state))
-    },
-
+    createFile: (state, folder) =>
+      ensureWasm().then(() =>
+        createRemoteFile(state, pureCreateFile(state, folder)),
+      ),
+    createFolder: (state, parent) =>
+      ensureWasm().then(() => pureCreateFolder(state, parent)),
     importFile: (state, filename, content) =>
       createRemoteFile(state, pureImportSharedFile(state, filename, content)),
 
-    async duplicateFile(state: FileStoreState): Promise<FileStoreState> {
-      await ensureWasm()
-      return createRemoteFile(state, pureDuplicateFile(state))
-    },
+    duplicateFile: (state) =>
+      ensureWasm().then(() =>
+        createRemoteFile(state, pureDuplicateFile(state)),
+      ),
 
     async renameFile(
       state: FileStoreState,

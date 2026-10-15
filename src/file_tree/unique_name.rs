@@ -29,3 +29,24 @@ pub fn unique_path(desired: &TreePath, taken: &HashSet<TreePath>) -> Result<Tree
         .unwrap_or_default();
     TreePath::child(parent.as_ref(), &candidate)
 }
+
+/// `desired` if free, else `name 2`, `name 3`, ... among the siblings of
+/// `desired`: the folder counterpart of [`unique_path`] (a folder name has no
+/// extension, so none is appended).
+pub fn unique_folder_path(
+    desired: &TreePath,
+    taken: &HashSet<TreePath>,
+) -> Result<TreePath, PathError> {
+    let parent = desired.parent();
+    let sibling_names: HashSet<&str> = taken
+        .iter()
+        .filter(|path| path.parent() == parent)
+        .map(TreePath::name)
+        .collect();
+    let name = desired.name();
+    let candidate = std::iter::once(name.to_string())
+        .chain((2..).map(|n| format!("{name} {n}")))
+        .find(|candidate| !sibling_names.contains(candidate.as_str()))
+        .unwrap_or_default();
+    TreePath::child(parent.as_ref(), &candidate)
+}

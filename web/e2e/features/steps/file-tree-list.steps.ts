@@ -71,6 +71,15 @@ Given(
   },
 )
 
+Given(
+  'the file tree also has the file {string}',
+  async ({ page }, path: string) => {
+    const seed = seeds.get(page)
+    if (!seed) throw new Error('file tree seed missing')
+    seeds.set(page, { ...seed, files: [...seed.files, path] })
+  },
+)
+
 When('the file tree app loads', async ({ page }) => {
   const seed = seeds.get(page)
   if (!seed) throw new Error('file tree seed missing')

@@ -4,6 +4,7 @@
 
 use super::path::TreePath;
 use super::store_state::{FileOperationContext, FileStoreError, FileStoreState};
+use super::unique_name::unique_folder_path;
 use std::collections::{BTreeMap, HashMap};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,6 +27,26 @@ pub struct FolderMoveOutcome {
     pub state: FileStoreState,
     /// Every stored path that moved; empty when `from == to`.
     pub changes: Vec<PathChange>,
+}
+
+const NEW_FOLDER_NAME: &str = "New folder";
+
+/// Adds an explicit empty folder named `New folder` (made unique among the
+/// siblings, files and bin entries included) inside `parent` (`None` = top
+/// level). The active file does not change.
+pub fn create_folder(
+    state: &FileStoreState,
+    parent: Option<&TreePath>,
+    context: &FileOperationContext,
+) -> Result<FileStoreState, FileStoreError> {
+    let desired = TreePath::child(parent, NEW_FOLDER_NAME)?;
+    if let Some(path) = state.ancestor_that_is_file(&desired, context) {
+        return Err(FileStoreError::AncestorIsFile { path });
+    }
+    let folder = unique_folder_path(&desired, &state.reserved_paths(context))?;
+    let mut next = state.clone();
+    next.folders.push(folder);
+    Ok(next)
 }
 
 /// Renames/moves folder `from` to `to` as one all-or-nothing batch.

@@ -146,6 +146,7 @@ fn active_label_splits_folders_from_the_file_name() {
         ActiveLabel {
             folder_names: strings(&["Hymns", "Advent"]),
             file_name: "O Come.jianpu".to_string(),
+            folder_path: Some("Hymns/Advent".to_string()),
         }
     );
     assert_eq!(
@@ -155,5 +156,10 @@ fn active_label_splits_folders_from_the_file_name() {
     assert_eq!(
         active_label("01.jianpu", &strings(&["01.jianpu"])).folder_names,
         strings(&["Demo"])
+    );
+    assert_eq!(active_label("a.jianpu", &[]).folder_path, None);
+    assert_eq!(
+        active_label("01.jianpu", &strings(&["01.jianpu"])).folder_path,
+        None
     );
 }

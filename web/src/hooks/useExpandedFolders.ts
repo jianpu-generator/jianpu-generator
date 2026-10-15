@@ -38,5 +38,15 @@ export function useExpandedFolders() {
       return next
     })
   }, [])
-  return { expanded, toggle }
+  /** Opens the given folders (no-op for those already open). */
+  const expand = useCallback((keys: string[]) => {
+    setExpanded((previous) => {
+      const added = keys.filter((key) => !previous.includes(key))
+      if (added.length === 0) return previous
+      const next = [...previous, ...added]
+      save(next)
+      return next
+    })
+  }, [])
+  return { expanded, toggle, expand }
 }

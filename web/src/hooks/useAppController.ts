@@ -42,6 +42,7 @@ export function useAppController() {
 
   const {
     creatingFile,
+    creatingFolder,
     deletingFileName,
     duplicatingFile,
     renamingFileName,
@@ -49,6 +50,7 @@ export function useAppController() {
     fileOpError,
     setFileOpError,
     handleCreate,
+    handleCreateFolder,
     handleDuplicate,
     handleRename,
     handleDelete,
@@ -267,6 +269,7 @@ export function useAppController() {
     editorCollapsed,
     setEditorCollapsed,
     creatingFile,
+    creatingFolder,
     deletingFileName,
     duplicatingFile,
     renamingFileName,
@@ -274,6 +277,7 @@ export function useAppController() {
     fileOpError,
     setFileOpError,
     handleCreate,
+    handleCreateFolder,
     handleDuplicate,
     handleRename,
     handleDelete,

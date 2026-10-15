@@ -18,6 +18,52 @@ pub(super) fn file_store_create_file(
     store_response(outcome)
 }
 
+pub(super) fn file_store_create_folder(
+    state: FileStoreState,
+    parent: Option<String>,
+    context: FileOperationContext,
+) -> FileStoreResponse {
+    let outcome = parse_optional(parent.as_deref())
+        .and_then(|parent| tree::create_folder(&state.into(), parent.as_ref(), &context.into()));
+    store_response(outcome)
+}
+
+pub(super) fn file_store_move_targets(
+    state: FileStoreState,
+    excluded_folder: Option<String>,
+) -> Vec<MoveTarget> {
+    let excluded = excluded_folder
+        .as_deref()
+        .and_then(|raw| tree::TreePath::parse(raw).ok());
+    tree::move_targets(&state.into(), excluded.as_ref())
+        .into_iter()
+        .map(|target| MoveTarget {
+            path: target.path,
+            name: target.name,
+            depth: u32::try_from(target.depth).unwrap_or(u32::MAX),
+        })
+        .collect()
+}
+
+pub(super) fn file_store_move_destination(
+    source_path: String,
+    folder: Option<String>,
+) -> Option<String> {
+    let folder = parse_optional(folder.as_deref()).ok()?;
+    tree::move_destination(&source_path, folder.as_ref())
+        .ok()
+        .map(|path| path.as_str().to_string())
+}
+
+pub(super) fn file_store_rename_error(
+    state: FileStoreState,
+    from_path: String,
+    to_path: String,
+    context: FileOperationContext,
+) -> Option<String> {
+    tree::rename_error(&state.into(), &from_path, &to_path, &context.into())
+}
+
 pub(super) fn file_store_duplicate_file(
     state: FileStoreState,
     source: String,
@@ -153,6 +199,7 @@ pub(super) fn file_store_active_label(
     FileActiveLabel {
         folder_names: label.folder_names,
         file_name: label.file_name,
+        folder_path: label.folder_path,
     }
 }
 
