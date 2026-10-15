@@ -20,6 +20,9 @@ pub enum ApiError {
     /// A create/rename/restore collided with another of the caller's file
     /// names (`idx_files_owner_name`).
     NameTaken,
+    /// A create/rename/restore asked for a file name that is not a valid
+    /// path (`jianpu_generator::file_tree::TreePath` rules); `message` says why.
+    InvalidName { message: String },
     /// A content save's `expectedRevision` lost the race -- feeds the
     /// "Overwrite mine"/"Discard mine" UI with the row's actual revision.
     RevisionConflict {
@@ -39,7 +42,7 @@ pub enum ApiError {
 impl ApiError {
     pub fn status_code(&self) -> u16 {
         match self {
-            ApiError::BadRequest => 400,
+            ApiError::BadRequest | ApiError::InvalidName { .. } => 400,
             ApiError::Unauthorized(_) => 401,
             ApiError::NotFound => 404,
             ApiError::NameTaken | ApiError::RevisionConflict { .. } => 409,

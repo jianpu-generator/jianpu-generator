@@ -1642,6 +1642,8 @@ world jianpu-wasm {
     export file-store-move-targets: func(state: file-store-state, excluded-folder: option<string>) -> list<move-target>;
     // Where `source-path` lands when moved into `folder` (`none` = top level); `none` if invalid.
     export file-store-move-destination: func(source-path: string, folder: option<string>) -> option<string>;
+    // The next numbered sibling to try after `rejected` was reported as taken (keeps the folder); none if invalid.
+    export file-store-name-after-collision: func(rejected: string) -> option<string>;
     // The reason renaming/moving a file to `to-path` would be rejected, if it would.
     export file-store-rename-error: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> option<string>;
     // The reason renaming/moving the folder `from-path` to `to-path` would be rejected, if it would.

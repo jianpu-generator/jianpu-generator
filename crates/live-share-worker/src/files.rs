@@ -13,8 +13,11 @@
 //! *classifying* the outcome of a content-save attempt -- the one op with
 //! real conflict semantics to get right.
 
+use jianpu_generator::file_tree::TreePath;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+use crate::api_error::ApiError;
 
 /// Mirrors a `files` row (see `live-share-worker/migrations/0003_files.sql`).
 /// `owner_user_id` is an internal, provider-agnostic `users.id`, never sent back to a client -- see
@@ -112,6 +115,19 @@ pub fn classify_content_write(
             None => ContentWriteOutcome::NotFound,
         },
     }
+}
+
+/// Checks that `name` is a valid file path: slash-separated, no empty
+/// segments, no `.`/`..`, at most 1024 UTF-8 bytes in total. The rules are
+/// `jianpu_generator::file_tree::TreePath`'s, shared with the web app. The
+/// unique index `idx_files_owner_name` is on the whole string, so two
+/// files in different folders may share a last segment.
+pub fn validate_file_name(name: &str) -> Result<(), ApiError> {
+    TreePath::parse(name)
+        .map(drop)
+        .map_err(|error| ApiError::InvalidName {
+            message: error.to_string(),
+        })
 }
 
 /// Decides what a unique-constraint violation on `POST /files` means.

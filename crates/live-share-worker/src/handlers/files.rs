@@ -39,6 +39,7 @@ pub(super) async fn create_file(
     _path: NoPathParams,
     body: CreateFileRequest,
 ) -> HandlerResult<Json<PublicFile>> {
+    files::validate_file_name(&body.name)?;
     let d1 = ctx.d1(D1_BINDING)?;
     let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
 
@@ -114,6 +115,7 @@ pub(super) async fn rename_file(
     path: FileIdPath,
     body: RenameFileRequest,
 ) -> HandlerResult<NoContent> {
+    files::validate_file_name(&body.name)?;
     let d1 = ctx.d1(D1_BINDING)?;
     let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
 
@@ -153,6 +155,7 @@ pub(super) async fn restore_file(
     path: FileIdPath,
     body: RestoreFileRequest,
 ) -> HandlerResult<NoContent> {
+    files::validate_file_name(&body.name)?;
     let d1 = ctx.d1(D1_BINDING)?;
     let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
 

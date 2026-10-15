@@ -42,6 +42,12 @@ base64 = "0.22"
 # `web/` generates its typed client from the exported spec, so the two
 # can't drift.
 utoipa = "6"
+# File names are slash paths (`Hymns/Advent/O Come.jianpu`); the web app and
+# this worker validate them with the very same rules, `file_tree::TreePath`
+# (no empty segments, no `.`/`..`, at most 1024 UTF-8 bytes for the whole
+# path). Default features off keeps the CLI/PDF/MIDI dependencies out of
+# the Worker build (same as `crates/jianpu-wasm`).
+jianpu-generator = { path = "../..", default-features = false }
 
 # `sqlx` is deliberately NOT a normal `[dependencies]` entry here, even
 # though task breakdown item 2 calls for "worker + sqlx deps". Reasoning:

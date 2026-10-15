@@ -39,6 +39,13 @@ pub fn empty_doc() -> SyncedDoc {
     }
 }
 
+/// The last segment of the file's path (`Hymns/Advent/O Come.jianpu` ->
+/// `O Come.jianpu`): a viewer of one shared file gets its name for the title
+/// and download, never the owner's folder names.
+fn file_name_only(path: &str) -> String {
+    path.rsplit('/').next().unwrap_or(path).to_string()
+}
+
 /// Builds the public wire shape for `GET /shares/{share_id}`. An ended share
 /// (stopped, or its file is in the bin) returns empty `filename`/`content`,
 /// so a stopped link can never leak what the file says now -- only
@@ -52,7 +59,7 @@ pub fn to_public_doc(view: Option<&ShareView>) -> SyncedDoc {
         },
         Some(view) => SyncedDoc {
             ended: false,
-            filename: view.filename.clone(),
+            filename: file_name_only(&view.filename),
             content: view.content.clone(),
             revision: view.revision,
             owner_login: view.owner_login.clone(),

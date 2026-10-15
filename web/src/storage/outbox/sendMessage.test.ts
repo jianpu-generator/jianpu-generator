@@ -1,7 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Message, SendRequest } from '../../jianpuWasm'
-import { suggestNameAfterCollision } from '../cloudBackendNaming'
+import { installRealWasm } from '../cloudBackendTestHelpers'
 import { type SendMessageDeps, sendMessage } from './sendMessage'
+
+beforeAll(installRealWasm)
 
 interface FakeReply {
   status: number
@@ -263,6 +265,20 @@ describe('sendMessage name_taken', () => {
     })
   })
 
+  it('keeps the folder when suggesting a new name', async () => {
+    const result = await sendMessage(
+      requestFor({
+        tag: 'rename-file',
+        val: { to: 'Hymns/Advent/O Come.jianpu' },
+      }),
+      makeDeps(taken),
+    )
+    expect(result).toEqual({
+      tag: 'name-taken',
+      val: { suggestedName: 'Hymns/Advent/O Come 2.jianpu' },
+    })
+  })
+
   it('is permanent for a message kind with no name', async () => {
     const result = await sendMessage(
       requestFor(saveContent('x')),
@@ -272,12 +288,5 @@ describe('sendMessage name_taken', () => {
       tag: 'permanent',
       val: { status: 409, reason: 'name_taken' },
     })
-  })
-})
-
-describe('suggestNameAfterCollision', () => {
-  it('appends 2, then increments', () => {
-    expect(suggestNameAfterCollision('a.jianpu')).toBe('a 2.jianpu')
-    expect(suggestNameAfterCollision('a 2.jianpu')).toBe('a 3.jianpu')
   })
 })

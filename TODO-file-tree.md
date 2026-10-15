@@ -32,13 +32,13 @@ Model is tentative: file name is a slash-separated path (`Hymns/Advent/O Come.ji
 - [x] Active file's ancestors always expanded; expanded state remembered
 - [x] Demo becomes a read-only `Demo/` row, last and separated
 - [x] `···` menu: add "New folder" and "Move to…"; New creates next to the open file
-- [ ] Hover `···` on folder rows: New file here, New folder here, Import here, Rename, Move to, Share folder, Delete folder
+- [x] Hover `···` on folder rows: New file here, New folder here, Import here, Rename, Move to, Share folder, Delete folder (Share folder deferred to Phase 4)
 - [x] Move to… dialog (folder picker, no moving into itself, clash message)
 - [x] Rename accepts `/` to move
-- [ ] Delete folder confirmation with file count
-- [ ] Bin shows each file's original location
+- [x] Delete folder confirmation with file count
+- [x] Bin shows each file's original location
 - [x] Empty folder row hint
-- [ ] Gherkin scenarios (write failing ones first): create, nest, move, rename folder, delete, restore
+- [x] Gherkin scenarios (write failing ones first): create, nest, move, rename folder, delete, restore
 - [x] Check phone layout of the real app first, then design the tree there
 
 ## Phase 3: cloud

@@ -25,7 +25,7 @@ pub use move_targets::{move_destination, move_targets, rename_error, MoveTarget}
 pub use path::{PathError, TreePath, MAX_PATH_BYTES};
 pub use store_state::{DemoFile, FileOperationContext, FileStoreError, FileStoreState};
 pub use tree::{FileNode, FileTree, FileTreeError, FolderContents, FolderNode, TreeRow};
-pub use unique_name::{unique_folder_path, unique_path};
+pub use unique_name::{path_after_collision, unique_folder_path, unique_path};
 pub use view::{
     active_label, ActiveLabel, TreeViewInput, TreeViewRow, TreeViewRowKind, DEMO_EXPANSION_KEY,
 };

@@ -87,3 +87,13 @@ fn never_leaks_an_owner_id_on_the_wire() -> Result<(), serde_json::Error> {
     );
     Ok(())
 }
+
+#[test]
+fn a_nested_file_is_shown_by_its_last_path_segment_only() {
+    let view = ShareView {
+        filename: "Hymns/Advent/O Come.jianpu".to_string(),
+        ..live_view()
+    };
+
+    assert_eq!(to_public_doc(Some(&view)).filename, "O Come.jianpu");
+}

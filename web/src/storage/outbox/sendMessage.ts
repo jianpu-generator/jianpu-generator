@@ -1,10 +1,9 @@
-import type { SendRequest, SendResult } from '../../jianpuWasm'
+import { jianpuWasm, type SendRequest, type SendResult } from '../../jianpuWasm'
 import {
   callWorker,
   type createWorkerClient,
   WorkerRequestError,
 } from '../../syncedShare/workerClient'
-import { suggestNameAfterCollision } from '../cloudBackendNaming'
 
 const SEND_TIMEOUT_MS = 15_000
 
@@ -146,12 +145,12 @@ async function classifyRequestError(
   }
   if (apiError?.code === 'name_taken') {
     const name = rejectedName(request, deps)
-    return name === null
+    // The next free numbered sibling in the same folder, computed in Rust.
+    const suggestedName =
+      name === null ? undefined : jianpuWasm().fileStoreNameAfterCollision(name)
+    return suggestedName === undefined
       ? { tag: 'permanent', val: { status: 409, reason: 'name_taken' } }
-      : {
-          tag: 'name-taken',
-          val: { suggestedName: suggestNameAfterCollision(name) },
-        }
+      : { tag: 'name-taken', val: { suggestedName } }
   }
   // A trash or restore the server already applied (its answer was lost) is
   // gone or back already, so the retry finds nothing to act on.

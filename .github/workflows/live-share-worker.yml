@@ -18,6 +18,7 @@ on:
     branches: [master]
     paths:
       - crates/live-share-worker/**
+      - src/file_tree/**
       - live-share-worker/migrations/**
       - .github/workflows/live-share-worker.yml
   workflow_dispatch:

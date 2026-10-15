@@ -80,3 +80,43 @@ fn suffix_pushing_past_the_limit_is_an_error() {
     let result = unique_path(&path(&long), &taken(&[&long]));
     assert!(matches!(result, Err(PathError::TooLong { .. })));
 }
+
+fn after_collision(rejected: &str) -> String {
+    path_after_collision(&path(rejected))
+        .unwrap()
+        .as_str()
+        .to_string()
+}
+
+#[test]
+fn after_collision_appends_two_then_increments() {
+    assert_eq!(after_collision("a.jianpu"), "a 2.jianpu");
+    assert_eq!(after_collision("a 2.jianpu"), "a 3.jianpu");
+    assert_eq!(after_collision("a 9.jianpu"), "a 10.jianpu");
+}
+
+#[test]
+fn after_collision_keeps_the_folder_prefix() {
+    assert_eq!(
+        after_collision("Hymns/Advent/O Come.jianpu"),
+        "Hymns/Advent/O Come 2.jianpu"
+    );
+    assert_eq!(after_collision("Hymns/X 2.jianpu"), "Hymns/X 3.jianpu");
+}
+
+#[test]
+fn after_collision_ignores_a_one_or_oversized_suffix() {
+    assert_eq!(after_collision("a 1.jianpu"), "a 1 2.jianpu");
+    assert_eq!(after_collision("a 99999.jianpu"), "a 99999 2.jianpu");
+}
+
+#[test]
+fn after_collision_without_extension_gets_jianpu() {
+    assert_eq!(after_collision("notes"), "notes 2.jianpu");
+}
+
+#[test]
+fn after_collision_fails_when_the_suffix_would_exceed_the_limit() {
+    let long = format!("{}.jianpu", "a".repeat(MAX_PATH_BYTES - ".jianpu".len()));
+    assert!(path_after_collision(&path(&long)).is_err());
+}
