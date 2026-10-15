@@ -23,6 +23,7 @@ pub mod desugar;
 mod document_render;
 pub mod error;
 pub mod error_reporter;
+pub mod file_tree;
 pub mod filters;
 mod font_metrics;
 pub mod fonts;
