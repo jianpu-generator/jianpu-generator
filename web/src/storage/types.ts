@@ -23,8 +23,12 @@ export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline'
 export interface StorageBackend {
   readonly kind: 'local' | 'cloud'
   load(): Promise<FileStoreState>
-  /** New file in `folder` (top level when omitted). */
-  createFile(state: FileStoreState, folder?: string): Promise<FileStoreState>
+  /** New file `name` in `folder` (top level when omitted). */
+  createFile(
+    state: FileStoreState,
+    folder: string | undefined,
+    name: string,
+  ): Promise<FileStoreState>
   /** New empty folder `name` inside `parent` (top level when omitted). */
   createFolder(
     state: FileStoreState,

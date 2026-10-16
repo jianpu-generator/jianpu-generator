@@ -1778,7 +1778,9 @@ world jianpu-wasm {
     export file-store-folders-to-reveal: func(path: string) -> list<string>;
     // The bin as a sorted list of leaf names and original locations.
     export file-store-bin-entries: func(state: file-store-state) -> list<bin-entry>;
-    export file-store-create-file: func(state: file-store-state, folder: option<string>, content: string, context: file-operation-context) -> file-store-response;
+    export file-store-create-file: func(state: file-store-state, folder: option<string>, name: string, content: string, context: file-operation-context) -> file-store-response;
+    // The reason creating the file `name` inside `folder` would be rejected, if it would.
+    export file-store-create-file-error: func(state: file-store-state, folder: option<string>, name: string, context: file-operation-context) -> option<string>;
     export file-store-duplicate-file: func(state: file-store-state, source: string, context: file-operation-context) -> file-store-response;
     export file-store-rename-file: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> file-store-response;
     export file-store-delete-file: func(state: file-store-state, path: string, context: file-operation-context) -> file-store-response;

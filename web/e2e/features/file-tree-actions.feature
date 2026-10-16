@@ -7,12 +7,32 @@ Feature: Creating, nesting and moving files and folders from the file actions me
     Given the file tree active file is "Hymns/Advent/O Come.jianpu"
     When the file tree app loads
     And I choose "New" from the file actions menu
+    And I name the new file "untitled"
     Then the file switcher toolbar button shows the folder prefix "Hymns / Advent /" and the file name "untitled"
 
   Scenario: New at the top level when the open file is at the top level
     When the file tree app loads
     And I choose "New" from the file actions menu
+    And I name the new file "untitled"
     Then the file switcher toolbar button shows no folder prefix and the file name "untitled"
+
+  Scenario: New asks for a name before creating anything
+    When the file tree app loads
+    And I choose "New" from the file actions menu
+    Then the new file dialog is open
+
+  Scenario: New file in the file tree list keeps the list open behind the name prompt
+    When the file tree app loads
+    And I open the file tree list
+    And I click "New file" in the file tree list
+    Then the new file dialog is open
+    And the file tree shows the file "Scratch"
+
+  Scenario: A taken file name is rejected
+    When the file tree app loads
+    And I choose "New" from the file actions menu
+    And I type "Scratch" in the new file dialog
+    Then the new file dialog cannot be confirmed
 
   Scenario: New folder asks for a name before creating anything
     When the file tree app loads

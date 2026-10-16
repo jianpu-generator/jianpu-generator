@@ -39,28 +39,61 @@ fn file_names(state: &FileStoreState) -> Vec<&str> {
 }
 
 #[test]
-fn create_file_at_top_level_is_unique_and_active() {
-    let state = store(&["untitled.jianpu"], &["untitled 2.jianpu"]);
-    let next = create_file(&state, None, "template", &context()).unwrap();
-    assert_eq!(next.active, "untitled 3.jianpu");
-    assert_eq!(next.user_files["untitled 3.jianpu"], "template");
-    assert_eq!(next.file_ids["untitled 3.jianpu"], "new-id");
+fn create_file_at_top_level_is_named_and_active() {
+    let state = store(&["a.jianpu"], &[]);
+    let next = create_file(&state, None, "  Song ", "template", &context()).unwrap();
+    assert_eq!(next.active, "Song.jianpu");
+    assert_eq!(next.user_files["Song.jianpu"], "template");
+    assert_eq!(next.file_ids["Song.jianpu"], "new-id");
+}
+
+#[test]
+fn create_file_keeps_an_existing_extension() {
+    let state = store(&[], &[]);
+    let next = create_file(&state, None, "Song.jianpu", "t", &context()).unwrap();
+    assert_eq!(next.active, "Song.jianpu");
 }
 
 #[test]
 fn create_file_in_folder_is_scoped_to_that_folder() {
-    let state = store(&["untitled.jianpu", "Hymns/untitled.jianpu"], &[]);
-    let next = create_file(&state, Some(&path("Hymns")), "t", &context()).unwrap();
-    assert_eq!(next.active, "Hymns/untitled 2.jianpu");
-    let next = create_file(&state, Some(&path("Other")), "t", &context()).unwrap();
-    assert_eq!(next.active, "Other/untitled.jianpu");
+    let state = store(&["Song.jianpu", "Hymns/Other.jianpu"], &[]);
+    let next = create_file(&state, Some(&path("Hymns")), "Song", "t", &context()).unwrap();
+    assert_eq!(next.active, "Hymns/Song.jianpu");
+}
+
+#[test]
+fn create_file_rejects_a_taken_name() {
+    let state = store(&["Song.jianpu"], &[]);
+    for taken in ["Song", "Song.jianpu"] {
+        assert!(
+            matches!(
+                create_file(&state, None, taken, "t", &context()),
+                Err(FileStoreError::Collision { .. })
+            ),
+            "{taken}"
+        );
+    }
+}
+
+#[test]
+fn create_file_rejects_an_empty_or_nested_name() {
+    let state = store(&[], &[]);
+    assert!(create_file(&state, None, "  ", "t", &context()).is_err());
+    assert!(create_file(&state, None, "A/B", "t", &context()).is_err());
+}
+
+#[test]
+fn create_file_error_explains_a_clash_but_not_success() {
+    let state = store(&["Song.jianpu"], &[]);
+    assert!(create_file_error(&state, None, "Song", &context()).is_some());
+    assert_eq!(create_file_error(&state, None, "New", &context()), None);
 }
 
 #[test]
 fn create_file_inside_a_file_is_rejected() {
     let state = store(&["a.jianpu"], &[]);
     assert_eq!(
-        create_file(&state, Some(&path("a.jianpu")), "t", &context()),
+        create_file(&state, Some(&path("a.jianpu")), "t", "t", &context()),
         Err(FileStoreError::AncestorIsFile {
             path: path("a.jianpu")
         })

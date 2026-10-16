@@ -26,13 +26,13 @@ function makeState(overrides: Partial<FileStoreState>): FileStoreState {
 }
 
 describe('file store operations delegated to Rust', () => {
-  it('creates a file inside a folder, unique within that folder', () => {
+  it('creates a named file inside a folder', () => {
     const state = makeState({
-      userFiles: { 'Hymns/untitled.jianpu': 'x' },
-      fileIds: { 'Hymns/untitled.jianpu': 'id-1' },
+      userFiles: { 'Hymns/a.jianpu': 'x' },
+      fileIds: { 'Hymns/a.jianpu': 'id-1' },
     })
-    const next = createFile(state, 'Hymns')
-    expect(next.active).toBe('Hymns/untitled 2.jianpu')
+    const next = createFile(state, 'Hymns', 'Psalm')
+    expect(next.active).toBe('Hymns/Psalm.jianpu')
   })
 
   it('duplicates in the same folder', () => {

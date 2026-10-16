@@ -187,3 +187,10 @@ export async function closeBin(page: Page) {
   await page.keyboard.press('Escape')
   await page.locator('[data-testid="bin-modal"]').waitFor({ state: 'hidden' })
 }
+
+/** Answers the New file name prompt and confirms it. */
+export async function nameNewFile(page: Page, name: string) {
+  const prompt = page.getByRole('dialog', { name: 'New file' })
+  await prompt.getByRole('textbox').fill(name)
+  await prompt.getByRole('button', { name: 'Create' }).click()
+}

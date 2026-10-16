@@ -1,5 +1,9 @@
 import { expect, type Page } from '@playwright/test'
-import { fileSwitcherTrigger, openFileActions } from '../../fileSwitcherHelpers'
+import {
+  fileSwitcherTrigger,
+  nameNewFile,
+  openFileActions,
+} from '../../fileSwitcherHelpers'
 import { Then, When } from './fixtures'
 
 function dialog(page: Page, name: string) {
@@ -13,6 +17,37 @@ When(
     await page.getByRole('menuitem', { name: item, exact: true }).click()
   },
 )
+
+When(
+  'I click {string} in the file tree list',
+  async ({ page }, label: string) => {
+    await page
+      .locator('.file-browser-toolbar')
+      .getByRole('button', { name: label, exact: true })
+      .click()
+  },
+)
+
+When('I name the new file {string}', async ({ page }, text: string) => {
+  await nameNewFile(page, text)
+})
+
+Then('the new file dialog is open', async ({ page }) => {
+  await expect(dialog(page, 'New file')).toBeVisible()
+})
+
+When(
+  'I type {string} in the new file dialog',
+  async ({ page }, text: string) => {
+    await dialog(page, 'New file').getByRole('textbox').fill(text)
+  },
+)
+
+Then('the new file dialog cannot be confirmed', async ({ page }) => {
+  await expect(
+    dialog(page, 'New file').getByRole('button', { name: 'Create' }),
+  ).toBeDisabled()
+})
 
 When('I open the file actions menu', async ({ page }) => {
   await openFileActions(page)

@@ -20,6 +20,7 @@ import {
 import { useExpandedFolders } from '../hooks/useExpandedFolders'
 import { useFileTreeView } from '../hooks/useFileTreeView'
 import { useFolderRowActions } from '../hooks/useFolderRowActions'
+import { useNewFilePrompt } from '../hooks/useNewFilePrompt'
 import { useNewFolderPrompt } from '../hooks/useNewFolderPrompt'
 import { useFileStaticShareLink } from '../hooks/useStaticShareLink'
 import { FileBrowserModal } from './FileBrowserModal'
@@ -29,7 +30,7 @@ import { type FolderDialogState, FolderDialogs } from './FolderDialogs'
 import { FolderShareModal, type FolderShareTarget } from './FolderShareModal'
 import { ImportButton } from './ImportButton'
 import { MoveToDialog } from './MoveToDialog'
-import { NewFolderDialog } from './NewFolderDialog'
+import { NewEntryDialog } from './NewEntryDialog'
 import { RenameFileDialog } from './RenameFileDialog'
 import { ResponsiveMenu } from './ResponsiveMenu'
 import { SaveStatusBadge } from './SaveStatusBadge'
@@ -97,6 +98,11 @@ export function FileSwitcher({
   const [folderDialog, setFolderDialog] = useState<FolderDialogState | null>(
     null,
   )
+  const newFilePrompt = useNewFilePrompt({
+    store,
+    onCreate,
+    onConfirmed: () => setFilesOpen(false),
+  })
   const newFolderPrompt = useNewFolderPrompt({
     store,
     onCreateFolder,
@@ -110,11 +116,11 @@ export function FileSwitcher({
   )
   const folderActions = useFolderRowActions({
     folderShares,
-    onCreate,
     onImportFile,
     closeList: () => setFilesOpen(false),
     openFolderDialog: setFolderDialog,
     openFolderShare: setShareFolder,
+    openNewFile: newFilePrompt.open,
     openNewFolder: newFolderPrompt.open,
   })
 
@@ -148,10 +154,7 @@ export function FileSwitcher({
           creating={creating}
           creatingFolder={creatingFolder}
           importing={importing}
-          onNewFile={async () => {
-            await onCreate(activeLabel.folderPath)
-            setFilesOpen(false)
-          }}
+          onNewFile={() => newFilePrompt.open(activeLabel.folderPath)}
           onNewFolder={() => {
             setFilesOpen(false)
             newFolderPrompt.open(activeLabel.folderPath)
@@ -202,9 +205,9 @@ export function FileSwitcher({
               role="menuitem"
               className="export-menu-item"
               disabled={creating}
-              onClick={async () => {
-                await onCreate(activeLabel.folderPath)
+              onClick={() => {
                 setActionsOpen(false)
+                newFilePrompt.open(activeLabel.folderPath)
               }}
             >
               <PlusIcon aria-hidden="true" />
@@ -355,7 +358,8 @@ export function FileSwitcher({
         moveError={(to) => renameError(store, store.active, to)}
         onMove={onRename}
       />
-      <NewFolderDialog {...newFolderPrompt.dialogProps} />
+      <NewEntryDialog {...newFilePrompt.dialogProps} />
+      <NewEntryDialog {...newFolderPrompt.dialogProps} />
       <FolderDialogs
         store={store}
         dialog={folderDialog}

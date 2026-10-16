@@ -12,7 +12,7 @@ interface NewFolderPromptInput {
 }
 
 /** State and wiring for the New folder name prompt: `open(parent)` shows it,
- * `dialogProps` go to `NewFolderDialog`. A confirmed name creates the folder
+ * `dialogProps` go to `NewEntryDialog`. A confirmed name creates the folder
  * and opens it, with the folders above it. */
 export function useNewFolderPrompt({
   store,
@@ -23,6 +23,7 @@ export function useNewFolderPrompt({
   return {
     open: (parent?: string) => setTarget({ parent }),
     dialogProps: {
+      kind: 'folder' as const,
       open: target !== null,
       onOpenChange: (open: boolean) => {
         if (!open) setTarget(null)

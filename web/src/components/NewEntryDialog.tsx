@@ -2,25 +2,30 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useRef, useState } from 'react'
 import './FileDialogs.css'
 
-export interface NewFolderDialogProps {
+export interface NewEntryDialogProps {
+  /** What is being named: a new file or a new folder. */
+  kind: 'file' | 'folder'
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** The folder the new one goes inside; `undefined` for the top level. */
+  /** The folder the new entry goes inside; `undefined` for the top level. */
   parent: string | undefined
   onCreate: (parent: string | undefined, name: string) => void
   /** Rust's reason creating this folder would be rejected, if it would. */
   createError: (parent: string | undefined, name: string) => string | undefined
 }
 
-/** Asks for the new folder's name; nothing is created until it is confirmed.
+/** Asks for the new file's or folder's name; nothing is created until it is
+ * confirmed.
  * Rust explains live why a name is rejected. */
-export function NewFolderDialog({
+export function NewEntryDialog({
+  kind,
   open,
   onOpenChange,
   parent,
   onCreate,
   createError,
-}: NewFolderDialogProps) {
+}: NewEntryDialogProps) {
+  const noun = kind === 'file' ? 'file' : 'folder'
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -52,7 +57,7 @@ export function NewFolderDialog({
         >
           <div className="file-dialog-header">
             <Dialog.Title className="file-dialog-title">
-              New folder
+              {kind === 'file' ? 'New file' : 'New folder'}
             </Dialog.Title>
             <Dialog.Close className="file-dialog-close" aria-label="Close">
               ×
@@ -67,14 +72,14 @@ export function NewFolderDialog({
             <div className="file-dialog-body">
               <p className="file-dialog-hint">
                 {parent === undefined
-                  ? 'Name the new folder.'
-                  : `Name the new folder inside ${parent}.`}
+                  ? `Name the new ${noun}.`
+                  : `Name the new ${noun} inside ${parent}.`}
               </p>
               <input
                 ref={inputRef}
                 type="text"
                 className="file-dialog-input"
-                aria-label="Folder name"
+                aria-label={kind === 'file' ? 'File name' : 'Folder name'}
                 aria-invalid={error !== undefined}
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}

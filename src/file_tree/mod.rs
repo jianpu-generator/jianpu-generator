@@ -18,7 +18,9 @@ mod unique_name;
 mod view;
 
 pub use bin_entries::{bin_entries, BinEntry};
-pub use file_ops::{create_file, delete_file, duplicate_file, rename_file, restore_file};
+pub use file_ops::{
+    create_file, create_file_error, delete_file, duplicate_file, rename_file, restore_file,
+};
 pub use folder_ops::{
     create_folder, delete_folder, move_folder, FolderMoveOutcome, PathChange, PathKind,
 };

@@ -7,19 +7,39 @@ use super::placeholder::is_reserved_leaf;
 use super::store_state::{FileOperationContext, FileStoreError, FileStoreState};
 use super::unique_name::unique_path;
 
-const NEW_FILE_NAME: &str = "untitled.jianpu";
 const EXTENSION: &str = ".jianpu";
 
-/// A new file (named `untitled.jianpu`, made unique) in `folder` (`None` =
-/// top level) holding `content`; it becomes active.
+/// A new file `name` (one path segment, trimmed, `.jianpu` appended when
+/// missing) in `folder` (`None` = top level) holding `content`; it becomes
+/// active. It may not collide with a file, folder, demo file or bin entry
+/// (`Collision`).
 pub fn create_file(
     state: &FileStoreState,
     folder: Option<&TreePath>,
+    name: &str,
     content: &str,
     context: &FileOperationContext,
 ) -> Result<FileStoreState, FileStoreError> {
-    let desired = TreePath::child(folder, NEW_FILE_NAME)?;
-    add_new_file(state, &desired, content.to_string(), context)
+    let trimmed = name.trim();
+    reject_reserved_leaf(&TreePath::child(folder, trimmed)?)?;
+    let leaf = if trimmed.ends_with(EXTENSION) {
+        trimmed.to_string()
+    } else {
+        format!("{trimmed}{EXTENSION}")
+    };
+    let path = TreePath::child(folder, &leaf)?;
+    if let Some(ancestor) = state.ancestor_that_is_file(&path, context) {
+        return Err(FileStoreError::AncestorIsFile { path: ancestor });
+    }
+    if state.reserved_paths(context).contains(&path) {
+        return Err(FileStoreError::Collision { path });
+    }
+    Ok(insert_active_file(
+        state,
+        &path,
+        content.to_string(),
+        context,
+    ))
 }
 
 /// Copies `source` (a user or demo file) next to itself, in the same folder,
@@ -55,12 +75,21 @@ fn add_new_file(
         return Err(FileStoreError::AncestorIsFile { path });
     }
     let path = unique_path(desired, &state.reserved_paths(context))?;
+    Ok(insert_active_file(state, &path, content, context))
+}
+
+fn insert_active_file(
+    state: &FileStoreState,
+    path: &TreePath,
+    content: String,
+    context: &FileOperationContext,
+) -> FileStoreState {
     let name = path.as_str().to_string();
     let mut next = state.clone();
     next.active = name.clone();
     next.user_files.insert(name.clone(), content);
     next.file_ids.insert(name, context.new_file_id.clone());
-    Ok(next)
+    next
 }
 
 /// Renames and/or moves a file to the path `to_raw` (trimmed, `.jianpu`
@@ -195,4 +224,22 @@ pub(super) fn reject_reserved_leaf(path: &TreePath) -> Result<(), FileStoreError
         return Err(FileStoreError::ReservedName { path: path.clone() });
     }
     Ok(())
+}
+
+/// Why creating a file `name` inside `folder` would be rejected, as the message
+/// to show; `None` when it would succeed. Same rules as [`create_file`], which
+/// this simply asks.
+pub fn create_file_error(
+    state: &FileStoreState,
+    folder: Option<&str>,
+    name: &str,
+    context: &FileOperationContext,
+) -> Option<String> {
+    let folder = match folder.map(TreePath::parse).transpose() {
+        Ok(folder) => folder,
+        Err(error) => return Some(error.to_string()),
+    };
+    create_file(state, folder.as_ref(), name, "", context)
+        .err()
+        .map(|error| error.to_string())
 }

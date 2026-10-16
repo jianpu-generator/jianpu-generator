@@ -85,7 +85,7 @@ interface AppHeaderProps {
   playFromCurrentMeasureShortcutLabel: string
   store: FileStoreState
   onSelect: (name: string) => void
-  onCreate: (folder?: string) => void
+  onCreate: (folder: string | undefined, name: string) => void
   onCreateFolder: (
     parent: string | undefined,
     name: string,

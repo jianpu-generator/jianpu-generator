@@ -24,6 +24,7 @@ Feature: Folder rows have their own actions menu, folders can be deleted to the 
     When the file tree app loads
     And I open the file tree list
     And I choose "New file here" from the actions menu of the folder "Hymns"
+    And I name the new file "untitled"
     Then the file switcher toolbar button shows the folder prefix "Hymns /" and the file name "untitled"
 
   Scenario: New folder here creates a folder inside that folder and shows it

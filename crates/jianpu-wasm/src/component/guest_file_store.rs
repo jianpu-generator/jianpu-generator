@@ -6,18 +6,6 @@ use super::*;
 use jianpu_generator::file_tree as tree;
 use std::collections::BTreeMap;
 
-pub(super) fn file_store_create_file(
-    state: FileStoreState,
-    folder: Option<String>,
-    content: String,
-    context: FileOperationContext,
-) -> FileStoreResponse {
-    let outcome = parse_optional(folder.as_deref()).and_then(|folder| {
-        tree::create_file(&state.into(), folder.as_ref(), &content, &context.into())
-    });
-    store_response(outcome)
-}
-
 pub(super) fn file_store_move_targets(
     state: FileStoreState,
     excluded_folder: Option<String>,

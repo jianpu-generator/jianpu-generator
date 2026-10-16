@@ -52,9 +52,9 @@ export function useFileOperations(
   )
 
   const handleCreate = useCallback(
-    (folder?: string) =>
+    (folder: string | undefined, name: string) =>
       runFileOp('Could not create file', setCreatingFile, (base) =>
-        backend.createFile(base, folder),
+        backend.createFile(base, folder, name),
       ),
     [runFileOp, backend],
   )

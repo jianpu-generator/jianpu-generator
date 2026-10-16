@@ -5,25 +5,26 @@ import type { FolderShares } from './useFolderShares'
 
 interface FolderRowActionsInput {
   folderShares: FolderShares
-  onCreate: (folder?: string) => void
   onImportFile?: (file: File, folder?: string) => void
   /** Closes the file list drawer/menu. */
   closeList: () => void
   openFolderDialog: (dialog: FolderDialogState) => void
   openFolderShare: (target: FolderShareTarget) => void
+  /** Opens the name prompt for a new file inside `folder`. */
+  openNewFile: (folder: string) => void
   /** Opens the name prompt for a new folder inside `parent`. */
   openNewFolder: (parent: string) => void
 }
 
 /** What each item of a folder row's `···` menu does. Pure wiring: the new
- * folder's name, the share state and the link all come from Rust. */
+ * entry's name, the share state and the link all come from Rust. */
 export function useFolderRowActions({
   folderShares,
-  onCreate,
   onImportFile,
   closeList,
   openFolderDialog,
   openFolderShare,
+  openNewFile,
   openNewFolder,
 }: FolderRowActionsInput): FolderActions {
   const dialog = (kind: FolderDialogState['kind']) => (folder: string) => {
@@ -35,10 +36,7 @@ export function useFolderRowActions({
     openFolderShare({ folder, tab })
   }
   return {
-    onNewFileHere: async (folder) => {
-      await onCreate(folder)
-      closeList()
-    },
+    onNewFileHere: openNewFile,
     onNewFolderHere: (folder) => {
       closeList()
       openNewFolder(folder)

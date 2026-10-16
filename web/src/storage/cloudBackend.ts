@@ -269,9 +269,9 @@ export function createCloudBackend(
       }
     },
 
-    createFile: (state, folder) =>
+    createFile: (state, folder, name) =>
       ensureWasm().then(() =>
-        createRemoteFile(state, pureCreateFile(state, folder)),
+        createRemoteFile(state, pureCreateFile(state, folder, name)),
       ),
     importFile: (state, filename, content) =>
       createRemoteFile(state, pureImportSharedFile(state, filename, content)),

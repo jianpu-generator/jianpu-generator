@@ -10,7 +10,8 @@ export interface FileSwitcherProps {
    * in the "Demo" submenu nested inside this same dropdown). */
   triggerLabel: string
   onSelect: (name: string) => void
-  onCreate: (folder?: string) => void
+  /** Resolves once the file exists; `name` is vetted by Rust beforehand. */
+  onCreate: (folder: string | undefined, name: string) => void
   /** Resolves to the resulting store, `undefined` if it failed. */
   onCreateFolder: (
     parent: string | undefined,

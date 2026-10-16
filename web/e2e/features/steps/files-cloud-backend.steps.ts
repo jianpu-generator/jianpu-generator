@@ -2,6 +2,7 @@ import { expect } from '@playwright/test'
 import {
   fileSwitcherTrigger,
   fileTabByExactName,
+  nameNewFile,
   openBin,
   openFileActions,
   openFileList,
@@ -32,6 +33,7 @@ When(
     expect(label).toBe('New')
     await openFileActions(page)
     await newButton({ page }).click()
+    await nameNewFile(page, 'untitled')
   },
 )
 

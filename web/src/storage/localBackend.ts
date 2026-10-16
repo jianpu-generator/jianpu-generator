@@ -57,7 +57,8 @@ export const localBackend: StorageBackend = {
 
   load: () => Promise.resolve(readInitialStoreSync()),
 
-  createFile: (state, folder) => afterWasm(() => createFile(state, folder)),
+  createFile: (state, folder, name) =>
+    afterWasm(() => createFile(state, folder, name)),
 
   createFolder: (state, parent, name) =>
     afterWasm(() => createFolder(state, parent, name)),

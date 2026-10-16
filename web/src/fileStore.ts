@@ -152,15 +152,18 @@ function applyOrKeep(
   return result.ok ? result.state : state
 }
 
-/** New file in `folder` (top level when omitted), made unique there. */
+/** New file `name` in `folder` (top level when omitted). Kept as is when
+ * `createFileError` objects. */
 export function createFile(
   state: FileStoreState,
-  folder?: string,
+  folder: string | undefined,
+  name: string,
 ): FileStoreState {
   return applyOrKeep(state, (wasmState, context) =>
     jianpuWasm().fileStoreCreateFile(
       wasmState,
       folder,
+      name,
       NEW_FILE_TEMPLATE,
       context,
     ),

@@ -2,6 +2,7 @@ import { expect } from '@playwright/test'
 import { workerRouteGlob } from '../../cloudFileHelpers'
 import {
   fileTabByExactName,
+  nameNewFile,
   openFileActions,
   openFileList,
 } from '../../fileSwitcherHelpers'
@@ -50,6 +51,7 @@ When(
     expect(label).toBe('New')
     await openFileActions(page)
     await newButton({ page }).click()
+    await nameNewFile(page, 'untitled')
   },
 )
 
