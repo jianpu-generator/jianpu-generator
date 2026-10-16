@@ -8,6 +8,8 @@ export interface DeleteFolderDialogProps {
   folder: string
   /** The sentence to show (file count and where the files go), from Rust. */
   message: string | undefined
+  /** What deleting does to live links involved (from Rust), if any. */
+  shareWarning?: string
   onConfirm: (folder: string) => void
 }
 
@@ -17,6 +19,7 @@ export function DeleteFolderDialog({
   onOpenChange,
   folder,
   message,
+  shareWarning,
   onConfirm,
 }: DeleteFolderDialogProps) {
   return (
@@ -34,6 +37,14 @@ export function DeleteFolderDialog({
           </div>
           <div className="file-dialog-body">
             <p className="file-dialog-warn-box">{message}</p>
+            {shareWarning ? (
+              <p
+                className="file-dialog-warn-box"
+                data-testid="delete-folder-share-warning"
+              >
+                {shareWarning}
+              </p>
+            ) : null}
           </div>
           <div className="file-dialog-footer">
             <button

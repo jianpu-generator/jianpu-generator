@@ -1,4 +1,8 @@
-import { ChevronDownIcon, ChevronRightIcon } from '@radix-ui/react-icons'
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  Link2Icon,
+} from '@radix-ui/react-icons'
 import type { CSSProperties } from 'react'
 import { displayFileName } from '../fileStore'
 import type { FileTreeViewRow } from '../jianpuWasm'
@@ -17,6 +21,16 @@ function FolderGlyph() {
     >
       <path d="M1.5 3.5h4l1.5 1.5h6.5v6.5a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1z" />
     </svg>
+  )
+}
+
+/** The muted "via <Folder>" tag of a row inside a shared folder. */
+function ViaTag({ name }: { name: string }) {
+  return (
+    <span
+      className="file-tree-via-tag"
+      aria-hidden="true"
+    >{`via ${name}`}</span>
   )
 }
 
@@ -74,6 +88,15 @@ export function FileTreeList({
                   )}
                   <FolderGlyph />
                   <span className="file-tree-name">{row.name}</span>
+                  {row.shareId ? (
+                    <Link2Icon
+                      className="file-tree-share-marker"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                  {!row.shareId && row.sharedVia ? (
+                    <ViaTag name={row.sharedVia.name} />
+                  ) : null}
                   <span className="file-tree-count" aria-hidden="true">
                     {row.fileCount}
                   </span>
@@ -86,6 +109,8 @@ export function FileTreeList({
                     creating={creating}
                     creatingFolder={creatingFolder}
                     importing={importing}
+                    shareId={row.shareId}
+                    sharedVia={row.sharedVia}
                   />
                 ) : null}
               </li>
@@ -117,6 +142,7 @@ export function FileTreeList({
                   renameError={renameError}
                   renaming={renamingName === row.key}
                 />
+                {row.sharedVia ? <ViaTag name={row.sharedVia.name} /> : null}
               </li>
             )
         }

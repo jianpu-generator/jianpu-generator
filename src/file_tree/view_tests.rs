@@ -50,6 +50,7 @@ fn folders_are_collapsed_by_default_and_show_recursive_file_counts() {
         active: "Scratch.jianpu",
         expanded: &[],
         demo_file_names: &strings(&["01.jianpu", "02.jianpu"]),
+        shares: &ShareOverview::default(),
     });
     assert_eq!(
         render(&rows),
@@ -68,6 +69,7 @@ fn an_expanded_folder_shows_its_children_and_remembers_nothing_else() {
         active: "Scratch.jianpu",
         expanded: &strings(&["Hymns"]),
         demo_file_names: &[],
+        shares: &ShareOverview::default(),
     });
     assert_eq!(
         render(&rows),
@@ -87,6 +89,7 @@ fn ancestors_of_the_active_file_are_open_even_when_not_expanded() {
         active: "Hymns/Advent/Rejoice.jianpu",
         expanded: &[],
         demo_file_names: &[],
+        shares: &ShareOverview::default(),
     });
     assert_eq!(
         render(&rows),
@@ -108,6 +111,7 @@ fn an_expanded_empty_folder_gets_a_hint_row() {
         active: "Scratch.jianpu",
         expanded: &strings(&["Empty"]),
         demo_file_names: &[],
+        shares: &ShareOverview::default(),
     });
     assert_eq!(rows[0].kind, TreeViewRowKind::Folder);
     assert_eq!(rows[1].kind, TreeViewRowKind::EmptyFolderHint);
@@ -121,6 +125,7 @@ fn demo_is_last_collapsed_by_default_and_opens_by_key_or_active_file() {
         active: "Scratch.jianpu",
         expanded: &strings(&[DEMO_EXPANSION_KEY]),
         demo_file_names: &demo,
+        shares: &ShareOverview::default(),
     });
     assert_eq!(
         &render(&opened)[3..],
@@ -132,6 +137,7 @@ fn demo_is_last_collapsed_by_default_and_opens_by_key_or_active_file() {
         active: "02.jianpu",
         expanded: &[],
         demo_file_names: &demo,
+        shares: &ShareOverview::default(),
     });
     assert_eq!(
         &render(&active_demo)[3..],
@@ -162,4 +168,36 @@ fn active_label_splits_folders_from_the_file_name() {
         active_label("01.jianpu", &strings(&["01.jianpu"])).folder_path,
         None
     );
+}
+
+#[test]
+fn rows_inside_a_shared_folder_carry_the_marker_and_the_via_tag() {
+    let shares = ShareOverview {
+        files: vec![],
+        folders: vec![FolderShareLink {
+            share_id: "S1".to_string(),
+            folder: "Hymns".to_string(),
+        }],
+    };
+    let rows = tree().view_rows(&TreeViewInput {
+        active: "Scratch.jianpu",
+        expanded: &strings(&["Hymns", "Hymns/Advent"]),
+        demo_file_names: &[],
+        shares: &shares,
+    });
+    let shared_info = |name: &str| {
+        let row = rows.iter().find(|row| row.name == name).unwrap();
+        (
+            row.share_id.clone(),
+            row.shared_via.as_ref().map(|via| via.name.clone()),
+        )
+    };
+    assert_eq!(shared_info("Hymns"), (Some("S1".to_string()), None));
+    assert_eq!(shared_info("Advent"), (None, Some("Hymns".to_string())));
+    assert_eq!(
+        shared_info("O Come.jianpu"),
+        (None, Some("Hymns".to_string()))
+    );
+    assert_eq!(shared_info("Scratch.jianpu"), (None, None));
+    assert_eq!(shared_info("Empty"), (None, None));
 }

@@ -20,15 +20,17 @@ import {
 } from '../fileStore'
 import {
   fileMoveTargets,
-  foldersToReveal,
   moveDestination,
   renameError,
 } from '../fileStoreQueries'
 import { useExpandedFolders } from '../hooks/useExpandedFolders'
 import { useFileTreeView } from '../hooks/useFileTreeView'
+import { useFolderRowActions } from '../hooks/useFolderRowActions'
+import { useFileStaticShareLink } from '../hooks/useStaticShareLink'
 import type { FileSwitcherProps } from './FileSwitcherProps'
 import { FileTreeList } from './FileTreeList'
 import { type FolderDialogState, FolderDialogs } from './FolderDialogs'
+import { FolderShareModal, type FolderShareTarget } from './FolderShareModal'
 import { ImportButton } from './ImportButton'
 import { MoveToDialog } from './MoveToDialog'
 import { RenameFileDialog } from './RenameFileDialog'
@@ -71,6 +73,7 @@ export function FileSwitcher({
   onStartSync,
   onStopSync,
   onSignInWithGithub,
+  folderShares,
 }: FileSwitcherProps) {
   const names = sortedUserFileNames(store)
   const showEmptyHint = !isLoadingCloud && names.length === 0
@@ -81,7 +84,12 @@ export function FileSwitcher({
     toggle: toggleFolder,
     expand: expandFolders,
   } = useExpandedFolders()
-  const { rows, activeLabel } = useFileTreeView(store, expanded, triggerLabel)
+  const { rows, activeLabel } = useFileTreeView(
+    store,
+    expanded,
+    triggerLabel,
+    folderShares.overview,
+  )
 
   const listRenameError = (from: string, to: string) =>
     renameError(store, from, to)
@@ -92,11 +100,23 @@ export function FileSwitcher({
   const [folderDialog, setFolderDialog] = useState<FolderDialogState | null>(
     null,
   )
-  const folderAction =
-    (kind: 'rename' | 'move' | 'delete') => (folder: string) => {
-      setFilesOpen(false)
-      setFolderDialog({ kind, folder })
-    }
+  const [shareFolder, setShareFolder] = useState<FolderShareTarget | null>(null)
+  const fileStaticLink = useFileStaticShareLink(
+    shareModalOpen,
+    store.active,
+    fileContent(store, store.active),
+  )
+  const folderActions = useFolderRowActions({
+    store,
+    folderShares,
+    onCreate,
+    onCreateFolder,
+    onImportFile,
+    expandFolders,
+    closeList: () => setFilesOpen(false),
+    openFolderDialog: setFolderDialog,
+    openFolderShare: setShareFolder,
+  })
 
   return (
     <div className="file-tab-bar">
@@ -154,29 +174,7 @@ export function FileSwitcher({
               creating={creating}
               creatingFolder={creatingFolder}
               importing={importing}
-              folderActions={{
-                onNewFileHere: async (folder) => {
-                  await onCreate(folder)
-                  setFilesOpen(false)
-                },
-                onNewFolderHere: async (folder) => {
-                  const next = await onCreateFolder(folder)
-                  const known = new Set(store.folders)
-                  // Open the folder and the one Rust just named inside it.
-                  expandFolders(
-                    (next?.folders ?? [])
-                      .filter((created) => !known.has(created))
-                      .flatMap(foldersToReveal),
-                  )
-                },
-                onImportHere: (folder, file) => {
-                  onImportFile?.(file, folder)
-                  setFilesOpen(false)
-                },
-                onRename: folderAction('rename'),
-                onMove: folderAction('move'),
-                onDelete: folderAction('delete'),
-              }}
+              folderActions={folderActions}
             />
           </ResponsiveMenu.Content>
         </ResponsiveMenu.Root>
@@ -362,6 +360,7 @@ export function FileSwitcher({
       <FolderDialogs
         store={store}
         dialog={folderDialog}
+        shares={folderShares.overview}
         onClose={() => setFolderDialog(null)}
         onMoveFolder={onMoveFolder}
         onDeleteFolder={onDeleteFolder}
@@ -370,8 +369,9 @@ export function FileSwitcher({
       <ShareModal
         open={shareModalOpen}
         onOpenChange={setShareModalOpen}
-        filename={store.active}
-        content={fileContent(store, store.active)}
+        kind="file"
+        name={store.active}
+        staticLink={fileStaticLink}
         canSync={canSync}
         isSynced={isSynced}
         syncedShareLink={syncedShareLink}
@@ -379,6 +379,15 @@ export function FileSwitcher({
         githubLogin={githubLogin}
         onStartSync={onStartSync}
         onStopSync={onStopSync}
+        onSignInWithGithub={onSignInWithGithub}
+      />
+      <FolderShareModal
+        store={store}
+        target={shareFolder}
+        onClose={() => setShareFolder(null)}
+        folderShares={folderShares}
+        isGithubConnected={isGithubConnected}
+        githubLogin={githubLogin}
         onSignInWithGithub={onSignInWithGithub}
       />
     </div>

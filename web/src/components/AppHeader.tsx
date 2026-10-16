@@ -1,5 +1,6 @@
 import type { FileStoreState } from '../fileStore'
 import { sortedBinNames } from '../fileStore'
+import type { FolderShares } from '../hooks/useFolderShares'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SyncedShareViewerStatus } from '../hooks/useSyncedShareViewer'
 import type { SharePayload } from '../shareUrl'
@@ -56,6 +57,7 @@ interface SyncedShareHeaderProps {
    * Synced Share request has failed. */
   syncFailure: SyncedShareFailure | null
   onDismissSyncFailure: () => void
+  folderShares: FolderShares
 }
 
 interface AppHeaderProps {
@@ -298,6 +300,7 @@ export function AppHeader({
             onStartSync={syncedShare.onStartSync}
             onStopSync={syncedShare.onStopSync}
             onSignInWithGithub={syncedShare.onSignInWithGithub}
+            folderShares={syncedShare.folderShares}
           />
         )}
         <SyncedShareErrorDialog

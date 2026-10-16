@@ -64,7 +64,7 @@ fn move_error_explains_invalid_paths_and_moving_into_itself() {
 #[test]
 fn delete_summary_counts_files_at_any_depth() {
     let state = store(&["A/x.jianpu", "A/B/y.jianpu", "other.jianpu"], &[], &[]);
-    let summary = folder_delete_summary(&state, &path("A")).unwrap();
+    let summary = folder_delete_summary(&state, &path("A"), &ShareOverview::default()).unwrap();
     assert_eq!(summary.file_count, 2);
     assert!(summary.message.starts_with("2 files will move to the bin"));
 }
@@ -72,17 +72,20 @@ fn delete_summary_counts_files_at_any_depth() {
 #[test]
 fn delete_summary_is_singular_for_one_file() {
     let state = store(&["A/x.jianpu"], &[], &[]);
-    let summary = folder_delete_summary(&state, &path("A")).unwrap();
+    let summary = folder_delete_summary(&state, &path("A"), &ShareOverview::default()).unwrap();
     assert!(summary.message.starts_with("1 file will move"));
 }
 
 #[test]
 fn delete_summary_for_an_empty_folder_and_a_missing_one() {
     let state = store(&[], &["Empty"], &[]);
-    let summary = folder_delete_summary(&state, &path("Empty")).unwrap();
+    let summary = folder_delete_summary(&state, &path("Empty"), &ShareOverview::default()).unwrap();
     assert_eq!(summary.file_count, 0);
     assert!(summary.message.contains("empty folder"));
-    assert_eq!(folder_delete_summary(&state, &path("Nope")), None);
+    assert_eq!(
+        folder_delete_summary(&state, &path("Nope"), &ShareOverview::default()),
+        None
+    );
 }
 
 #[test]
@@ -90,4 +93,23 @@ fn reveal_lists_the_folder_and_its_ancestors_outermost_first() {
     assert_eq!(folders_to_reveal("A/B/C"), vec!["A", "A/B", "A/B/C"]);
     assert_eq!(folders_to_reveal("A"), vec!["A"]);
     assert!(folders_to_reveal("A//B").is_empty());
+}
+
+#[test]
+fn delete_summary_carries_the_share_warning() {
+    let state = store(&["A/x.jianpu"], &[], &[]);
+    let shares = ShareOverview {
+        files: vec![],
+        folders: vec![FolderShareLink {
+            share_id: "S".to_string(),
+            folder: "A".to_string(),
+        }],
+    };
+    let summary = folder_delete_summary(&state, &path("A"), &shares).unwrap();
+    assert!(summary
+        .share_warning
+        .unwrap()
+        .contains("shared with a link"));
+    let plain = folder_delete_summary(&state, &path("A"), &ShareOverview::default()).unwrap();
+    assert_eq!(plain.share_warning, None);
 }

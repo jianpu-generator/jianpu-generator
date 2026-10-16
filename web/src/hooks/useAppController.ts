@@ -71,6 +71,7 @@ export function useAppController() {
     setStore,
     setFileOpError,
     setEditorCollapsed,
+    saveStatus,
   )
   const fileId = fileIdForName(store, store.active)
   useDocumentTitle(store.active)

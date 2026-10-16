@@ -1,11 +1,14 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { GitHubLogoIcon, Link2Icon, UpdateIcon } from '@radix-ui/react-icons'
 import { useCallback, useEffect, useState } from 'react'
-import { buildShareUrl } from '../shareUrl'
+import type { StaticShareLink } from '../hooks/useStaticShareLink'
 import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
+import { StopSyncControl } from './StopSyncControl'
+import { helpTextStyle, linkFieldStyle, linkRowStyle } from './shareModalStyles'
 import {
   backendButtonSelectedStyle,
   backendButtonStyle,
+  bannerStyle,
   bodyStyle,
   buttonStyle,
   contentStyle,
@@ -19,11 +22,21 @@ import {
 export interface ShareModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  filename: string
-  content: string
-  /** Whether the current file can have a live link at all -- only a file
-   * saved to cloud storage can, since the link points at its cloud row
-   * (see `useSyncedShareOwner.ts`). */
+  /** What is being shared: a single file or a whole folder. */
+  kind: 'file' | 'folder'
+  /** The file's path, or the folder's own name; shown in titles. */
+  name: string
+  /** The snapshot link; `null` while it is being built. */
+  staticLink: StaticShareLink | null
+  /** Tab shown when the dialog opens. A folder's "Sharing settings" opens on
+   * the synced tab. */
+  initialTab?: Tab
+  /** Said above "Start Sync" (a folder whose files already have their own
+   * links); from Rust. */
+  startWarning?: string | null
+  /** Whether the target can have a live link at all -- only a file (or the
+   * files of a folder) saved to cloud storage can, since the link points at
+   * cloud rows (see `useSyncedShareOwner.ts`). */
   canSync: boolean
   isSynced: boolean
   syncedShareLink: string | null
@@ -41,7 +54,7 @@ export interface ShareModalProps {
   onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
 }
 
-type Tab = 'static' | 'synced'
+export type Tab = 'static' | 'synced'
 
 type SignInStatus =
   | { kind: 'idle' }
@@ -49,36 +62,9 @@ type SignInStatus =
   | { kind: 'done'; login: string }
   | { kind: 'failed'; error: string }
 
-const dangerButtonStyle: React.CSSProperties = {
-  ...buttonStyle,
-  width: '100%',
-  padding: '8px 12px',
-  fontSize: '13px',
-  border: '1px solid #e0a0a0',
-  background: '#fff',
-  color: '#b00020',
-}
-
-const helpTextStyle: React.CSSProperties = {
-  margin: 0,
-  color: '#666',
-  fontSize: '12px',
-}
-
-const linkRowStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '8px',
-}
-
-const linkFieldStyle: React.CSSProperties = {
-  flex: 1,
-  fontFamily: 'inherit',
-  fontSize: '12px',
-  padding: '6px 8px',
-  borderRadius: '4px',
-  border: '1px solid #cbd5e0',
-  background: '#f9f9f9',
-  color: 'inherit',
+function countLabel(count: number | undefined, noun: string): string {
+  const n = count ?? 0
+  return `${n} ${noun}${n === 1 ? '' : 's'}`
 }
 
 /** Generalizes `ShareButton`'s clipboard/fallback-prompt copy logic to take
@@ -103,8 +89,11 @@ function useCopyLabel(defaultLabel: string) {
 export function ShareModal({
   open,
   onOpenChange,
-  filename,
-  content,
+  kind,
+  name,
+  staticLink,
+  initialTab = 'static',
+  startWarning = null,
   canSync,
   isSynced,
   syncedShareLink,
@@ -114,8 +103,7 @@ export function ShareModal({
   onStopSync,
   onSignInWithGithub,
 }: ShareModalProps) {
-  const [tab, setTab] = useState<Tab>('static')
-  const [staticLink, setStaticLink] = useState('')
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [signInStatus, setSignInStatus] = useState<SignInStatus>({
     kind: 'idle',
   })
@@ -125,20 +113,11 @@ export function ShareModal({
 
   useEffect(() => {
     if (!open) return
-    setTab('static')
+    setTab(initialTab)
     setSignInStatus({ kind: 'idle' })
-  }, [open])
+  }, [open, initialTab])
 
-  useEffect(() => {
-    if (!open || tab !== 'static') return
-    let cancelled = false
-    void buildShareUrl(filename, content).then((url) => {
-      if (!cancelled) setStaticLink(url)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [open, tab, filename, content])
+  const noun = kind === 'folder' ? 'folder' : 'file'
 
   const handleSignInWithGithub = useCallback(() => {
     setSignInStatus({ kind: 'signing-in' })
@@ -168,7 +147,7 @@ export function ShareModal({
             <Dialog.Title
               style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}
             >
-              Share
+              {kind === 'folder' ? `Share folder "${name}"` : 'Share'}
             </Dialog.Title>
             <Dialog.Close
               style={{
@@ -222,27 +201,54 @@ export function ShareModal({
               <div
                 style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
               >
-                <div style={linkRowStyle}>
-                  <input
-                    type="text"
-                    readOnly
-                    value={staticLink}
-                    style={linkFieldStyle}
-                    data-testid="share-modal-static-link"
-                    onFocus={(event) => event.currentTarget.select()}
-                  />
-                  <button
-                    type="button"
-                    style={buttonStyle}
-                    data-testid="share-modal-copy-static-link"
-                    onClick={() => void staticCopy.copy(staticLink)}
-                  >
-                    {staticCopy.label}
-                  </button>
-                </div>
-                <p style={helpTextStyle}>
-                  A snapshot of right now — future edits won't appear here.
-                </p>
+                {staticLink?.tooLong ? (
+                  <>
+                    <div style={bannerStyle} data-testid="share-modal-too-big">
+                      This folder has {countLabel(staticLink.fileCount, 'file')}
+                      , which is too much for a link to carry reliably. Use a
+                      synced link instead.
+                    </div>
+                    <button
+                      type="button"
+                      style={primaryButtonStyle}
+                      data-testid="share-modal-use-synced-link"
+                      onClick={() => setTab('synced')}
+                    >
+                      Use synced link
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div style={linkRowStyle}>
+                      <input
+                        type="text"
+                        readOnly
+                        value={staticLink?.url ?? ''}
+                        style={linkFieldStyle}
+                        data-testid="share-modal-static-link"
+                        onFocus={(event) => event.currentTarget.select()}
+                      />
+                      <button
+                        type="button"
+                        style={buttonStyle}
+                        data-testid="share-modal-copy-static-link"
+                        onClick={() =>
+                          void staticCopy.copy(staticLink?.url ?? '')
+                        }
+                      >
+                        {staticCopy.label}
+                      </button>
+                    </div>
+                    <p
+                      style={helpTextStyle}
+                      data-testid="share-modal-static-note"
+                    >
+                      {kind === 'folder'
+                        ? `A snapshot of ${countLabel(staticLink?.fileCount, 'file')} in ${countLabel(staticLink?.folderCount, 'folder')}. Future edits and new files won't appear here.`
+                        : "A snapshot of right now — future edits won't appear here."}
+                    </p>
+                  </>
+                )}
               </div>
             ) : !isGithubConnected ? (
               <div
@@ -285,7 +291,7 @@ export function ShareModal({
                   style={helpTextStyle}
                   data-testid="share-modal-synced-cloud-only"
                 >
-                  Live links are available for files saved to cloud storage.
+                  Live links are available for {noun}s saved to cloud storage.
                 </p>
               </div>
             ) : !isSynced ? (
@@ -296,9 +302,18 @@ export function ShareModal({
                   Signed in as <strong>@{githubLogin}</strong>
                 </p>
                 <p style={helpTextStyle}>
-                  Anyone with this link sees this file as last saved to the
-                  cloud. Don't share it publicly.
+                  {kind === 'folder'
+                    ? "Anyone with this link sees the files in this folder as last saved to the cloud, including files you add later. Don't share it publicly."
+                    : "Anyone with this link sees this file as last saved to the cloud. Don't share it publicly."}
                 </p>
+                {startWarning ? (
+                  <div
+                    style={bannerStyle}
+                    data-testid="share-modal-own-links-warning"
+                  >
+                    {startWarning}
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   style={primaryButtonStyle}
@@ -335,18 +350,17 @@ export function ShareModal({
                     {syncedCopy.label}
                   </button>
                 </div>
+                {kind === 'folder' ? (
+                  <p style={helpTextStyle}>
+                    Includes every file in this folder, now and added later.
+                    Viewers see changes when they reload, and cannot edit.
+                  </p>
+                ) : null}
                 <p style={helpTextStyle}>
                   Stopping ends the link for viewers, but syncing again reuses
                   it.
                 </p>
-                <button
-                  type="button"
-                  style={dangerButtonStyle}
-                  data-testid="share-modal-stop-sync"
-                  onClick={onStopSync}
-                >
-                  Stop Sync
-                </button>
+                <StopSyncControl kind={kind} name={name} onStop={onStopSync} />
               </div>
             )}
           </div>

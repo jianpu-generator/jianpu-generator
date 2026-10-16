@@ -119,17 +119,6 @@ pub(super) fn file_store_folder_move_error(
     tree::folder_move_error(&state.into(), &from_path, &to_path, &context.into())
 }
 
-pub(super) fn file_store_folder_delete_summary(
-    state: FileStoreState,
-    folder: String,
-) -> Option<FolderDeleteSummary> {
-    let folder = tree::TreePath::parse(&folder).ok()?;
-    tree::folder_delete_summary(&state.into(), &folder).map(|summary| FolderDeleteSummary {
-        file_count: u32::try_from(summary.file_count).unwrap_or(u32::MAX),
-        message: summary.message,
-    })
-}
-
 pub(super) fn file_store_folders_to_reveal(path: String) -> Vec<String> {
     tree::folders_to_reveal(&path)
 }
@@ -237,7 +226,9 @@ pub(super) fn file_store_tree_view(
     state: FileStoreState,
     expanded: Vec<String>,
     demo_file_names: Vec<String>,
+    shares: ShareOverview,
 ) -> FileTreeViewResponse {
+    let shares: tree::ShareOverview = shares.into();
     let active = state.active.clone();
     let state: tree::FileStoreState = state.into();
     match state.tree() {
@@ -247,6 +238,7 @@ pub(super) fn file_store_tree_view(
                     active: &active,
                     expanded: &expanded,
                     demo_file_names: &demo_file_names,
+                    shares: &shares,
                 })
                 .into_iter()
                 .map(|row| FileTreeViewRow {
@@ -265,6 +257,8 @@ pub(super) fn file_store_tree_view(
                     expanded: row.expanded,
                     file_count: u32::try_from(row.file_count).unwrap_or(u32::MAX),
                     is_active: row.is_active,
+                    share_id: row.share_id,
+                    shared_via: row.shared_via.map(Into::into),
                 })
                 .collect(),
         ),

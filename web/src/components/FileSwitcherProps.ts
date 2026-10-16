@@ -1,4 +1,5 @@
 import type { FileStoreState } from '../fileStore'
+import type { FolderShares } from '../hooks/useFolderShares'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
 
@@ -62,4 +63,6 @@ export interface FileSwitcherProps {
   onStartSync: () => Promise<string | null>
   onStopSync: () => void
   onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
+  /** Live links of whole folders and the overview behind the share markers. */
+  folderShares: FolderShares
 }

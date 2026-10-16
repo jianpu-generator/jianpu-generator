@@ -351,3 +351,20 @@ input.file-tab-name:focus {
   color: var(--text);
   background: var(--preview-bg);
 }
+
+/* Shared folder marker and the "via" tag of rows inside a shared folder. */
+.file-tree-share-marker {
+  flex: none;
+  color: var(--accent-selected-text, #2563eb);
+}
+
+.file-tree-via-tag {
+  flex: none;
+  margin-left: 0.4rem;
+  padding: 0 0.35rem;
+  border-radius: 3px;
+  background: var(--preview-bg);
+  color: var(--muted);
+  font-size: 0.65rem;
+  white-space: nowrap;
+}

@@ -6,6 +6,8 @@ mod bin_entries;
 mod file_ops;
 mod folder_ops;
 mod folder_queries;
+mod folder_share;
+mod folder_snapshot;
 mod move_targets;
 mod path;
 mod placeholder;
@@ -21,6 +23,14 @@ pub use folder_ops::{
 };
 pub use folder_queries::{
     folder_delete_summary, folder_move_error, folders_to_reveal, FolderDeleteSummary,
+};
+pub use folder_share::{
+    folder_delete_share_warning, folder_share_info, FileShareLink, FolderShareInfo,
+    FolderShareLink, ShareOverview, SharedVia,
+};
+pub use folder_snapshot::{
+    base64url_decode, base64url_encode, folder_snapshot, FolderSnapshot, SnapshotError,
+    SnapshotFile, MAX_STATIC_FOLDER_LINK_CHARS, MAX_UNCOMPRESSED_SNAPSHOT_BYTES,
 };
 pub use move_targets::{move_destination, move_targets, rename_error, MoveTarget};
 pub use path::{PathError, TreePath, MAX_PATH_BYTES};
@@ -43,6 +53,10 @@ mod file_ops_tests;
 mod folder_ops_tests;
 #[cfg(test)]
 mod folder_queries_tests;
+#[cfg(test)]
+mod folder_share_tests;
+#[cfg(test)]
+mod folder_snapshot_tests;
 #[cfg(test)]
 mod move_targets_tests;
 #[cfg(test)]

@@ -1618,6 +1618,65 @@ world jianpu-wasm {
         expanded: bool,
         file-count: u32,
         is-active: bool,
+        // For a folder row: the folder's own live link.
+        share-id: option<string>,
+        // The innermost shared folder the row lies inside.
+        shared-via: option<shared-via>,
+    }
+
+    // A shared folder (path and own name) with its share id.
+    record shared-via {
+        folder: string,
+        name: string,
+        share-id: string,
+    }
+
+    record file-share-link {
+        share-id: string,
+        file-id: string,
+        name: string,
+    }
+
+    record folder-share-link {
+        share-id: string,
+        folder: string,
+    }
+
+    // The owner's live links, as the worker's `POST /shares/overview` answers.
+    record share-overview {
+        files: list<file-share-link>,
+        folders: list<folder-share-link>,
+    }
+
+    // What one folder's Share dialog shows.
+    record folder-share-info {
+        name: string,
+        file-count: u32,
+        folder-count: u32,
+        share-id: option<string>,
+        shared-via: option<shared-via>,
+        // Files inside that already have their own link (they keep working independently).
+        own-link-warning: option<string>,
+    }
+
+    // A static folder link: the part after `#share-folder=`, or none if the snapshot is too long to be offered.
+    record folder-static-share {
+        file-count: u32,
+        folder-count: u32,
+        suffix: option<string>,
+        too-long: bool,
+    }
+
+    record snapshot-file {
+        path: string,
+        content: string,
+    }
+
+    // A decoded static folder link; paths are relative to the shared folder.
+    record folder-snapshot {
+        folder: string,
+        files: list<snapshot-file>,
+        empty-folders: list<string>,
     }
 
     variant file-tree-view-response {
@@ -1656,6 +1715,8 @@ world jianpu-wasm {
     record folder-delete-summary {
         file-count: u32,
         message: string,
+        // What deleting does to live links involved; none when nothing is shared.
+        share-warning: option<string>,
     }
 
     // One row of the cloud's file listing, as far as placeholder classification needs.
@@ -1698,7 +1759,13 @@ world jianpu-wasm {
     // The reason renaming/moving the folder `from-path` to `to-path` would be rejected, if it would.
     export file-store-folder-move-error: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> option<string>;
     // The confirmation text for deleting a folder; none if it does not exist.
-    export file-store-folder-delete-summary: func(state: file-store-state, folder: string) -> option<folder-delete-summary>;
+    export file-store-folder-delete-summary: func(state: file-store-state, folder: string, shares: share-overview) -> option<folder-delete-summary>;
+    // The Share dialog's facts about a folder; none if it does not exist.
+    export file-store-folder-share-info: func(state: file-store-state, shares: share-overview, folder: string) -> option<folder-share-info>;
+    // Encodes a folder as a static link payload; none if the folder does not exist.
+    export file-store-folder-static-share: func(state: file-store-state, folder: string) -> option<folder-static-share>;
+    // Decodes the part after `#share-folder=`; none if it is not a valid folder snapshot.
+    export decode-folder-share-suffix: func(suffix: string) -> option<folder-snapshot>;
     // The folder and every folder above it, outermost first (what to expand to show it).
     export file-store-folders-to-reveal: func(path: string) -> list<string>;
     // The bin as a sorted list of leaf names and original locations.
@@ -1711,6 +1778,6 @@ world jianpu-wasm {
     export file-store-move-folder: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> folder-move-response;
     export file-store-delete-folder: func(state: file-store-state, folder: string, context: file-operation-context) -> file-store-response;
     export file-store-tree: func(state: file-store-state) -> file-tree-response;
-    export file-store-tree-view: func(state: file-store-state, expanded: list<string>, demo-file-names: list<string>) -> file-tree-view-response;
+    export file-store-tree-view: func(state: file-store-state, expanded: list<string>, demo-file-names: list<string>, shares: share-overview) -> file-tree-view-response;
     export file-store-active-label: func(active: string, demo-file-names: list<string>) -> file-active-label;
 }

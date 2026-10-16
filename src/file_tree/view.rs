@@ -1,3 +1,4 @@
+use super::folder_share::{ShareOverview, SharedVia};
 use super::path::TreePath;
 use super::tree::{FileTree, FolderContents};
 
@@ -27,6 +28,8 @@ pub struct TreeViewInput<'a> {
     /// Expansion keys the user opened (folder paths, plus [`DEMO_EXPANSION_KEY`]).
     pub expanded: &'a [String],
     pub demo_file_names: &'a [String],
+    /// The owner's live links; drives the shared marker and the "via" tags.
+    pub shares: &'a ShareOverview,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,6 +47,10 @@ pub struct TreeViewRow {
     /// Files at any depth below a folder row; 0 for the other kinds.
     pub file_count: usize,
     pub is_active: bool,
+    /// For a folder row: the folder's own live link.
+    pub share_id: Option<String>,
+    /// The innermost shared folder this row lies inside, if any.
+    pub shared_via: Option<SharedVia>,
 }
 
 /// The active file's location split for the toolbar: its folder names
@@ -90,6 +97,11 @@ fn folder_rows(
                 expanded,
                 file_count: count_files(&folder.contents),
                 is_active: false,
+                share_id: input
+                    .shares
+                    .folder_share(&folder.path)
+                    .map(|share| share.share_id.clone()),
+                shared_via: input.shares.shared_via(&folder.path),
             };
             let children = if !expanded {
                 vec![]
@@ -108,6 +120,8 @@ fn folder_rows(
             expanded: false,
             file_count: 0,
             is_active: active_path.is_some_and(|active| *active == file.path),
+            share_id: None,
+            shared_via: input.shares.shared_via(&file.path),
         }))
         .collect()
 }
@@ -129,6 +143,8 @@ fn demo_rows(input: &TreeViewInput) -> Vec<TreeViewRow> {
         expanded,
         file_count: input.demo_file_names.len(),
         is_active: false,
+        share_id: None,
+        shared_via: None,
     };
     let files = input
         .demo_file_names
@@ -142,6 +158,8 @@ fn demo_rows(input: &TreeViewInput) -> Vec<TreeViewRow> {
             expanded: false,
             file_count: 0,
             is_active: name == input.active,
+            share_id: None,
+            shared_via: None,
         });
     std::iter::once(header).chain(files).collect()
 }
@@ -155,6 +173,8 @@ fn hint_row(depth: usize) -> TreeViewRow {
         expanded: false,
         file_count: 0,
         is_active: false,
+        share_id: None,
+        shared_via: None,
     }
 }
 

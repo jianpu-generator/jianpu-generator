@@ -32,6 +32,9 @@ mod tests_pdf;
 #[path = "tests_render.rs"]
 mod tests_render;
 
+#[path = "tests_folder_share.rs"]
+mod tests_folder_share;
+
 #[path = "tests_share.rs"]
 mod tests_share;
 

@@ -1,10 +1,12 @@
 import {
   DotsHorizontalIcon,
   FilePlusIcon,
+  Link2Icon,
   MoveIcon,
   Pencil1Icon,
   PlusIcon,
   TrashIcon,
+  UpdateIcon,
 } from '@radix-ui/react-icons'
 import { useState } from 'react'
 import { ImportButton } from './ImportButton'
@@ -19,6 +21,12 @@ export interface FolderActions {
   onRename: (folder: string) => void
   onMove: (folder: string) => void
   onDelete: (folder: string) => void
+  /** Opens the Share dialog of `folder` (its static tab). */
+  onShare: (folder: string) => void
+  /** Opens the Share dialog of a shared `folder` on its synced tab. */
+  onShareSettings: (folder: string) => void
+  /** Copies the synced link of a shared folder. */
+  onCopyShareLink: (shareId: string, name: string) => void
 }
 
 export interface FolderRowMenuProps {
@@ -30,6 +38,10 @@ export interface FolderRowMenuProps {
   creating: boolean
   creatingFolder: boolean
   importing: boolean
+  /** The folder's own live link, when it has one. */
+  shareId?: string
+  /** The shared folder this one lies inside, when it does. */
+  sharedVia?: { folder: string; name: string }
 }
 
 /** The `···` menu of a folder row (hover on desktop; always visible on
@@ -41,6 +53,8 @@ export function FolderRowMenu({
   creating,
   creatingFolder,
   importing,
+  shareId,
+  sharedVia,
 }: FolderRowMenuProps) {
   const [open, setOpen] = useState(false)
 
@@ -61,6 +75,25 @@ export function FolderRowMenu({
         sideOffset={4}
         title={name}
       >
+        {shareId ? (
+          <>
+            <ResponsiveMenu.Item
+              className="export-menu-item"
+              onSelect={() => actions.onCopyShareLink(shareId, name)}
+            >
+              <Link2Icon aria-hidden="true" />
+              Copy share link
+            </ResponsiveMenu.Item>
+            <ResponsiveMenu.Item
+              className="export-menu-item"
+              onSelect={() => actions.onShareSettings(folder)}
+            >
+              <UpdateIcon aria-hidden="true" />
+              Sharing settings
+            </ResponsiveMenu.Item>
+            <hr className="folder-menu-separator" />
+          </>
+        ) : null}
         <ResponsiveMenu.Item
           className="export-menu-item"
           disabled={creating}
@@ -100,8 +133,23 @@ export function FolderRowMenu({
           <MoveIcon aria-hidden="true" />
           Move to…
         </ResponsiveMenu.Item>
-        {/* "Share folder" belongs here (Phase 4), after Move to… and before
-            the separator that sets Delete folder apart. */}
+        {shareId ? null : sharedVia ? (
+          <ResponsiveMenu.Item
+            className="export-menu-item"
+            onSelect={() => actions.onShareSettings(sharedVia.folder)}
+          >
+            <Link2Icon aria-hidden="true" />
+            {`Shared via ${sharedVia.name}`}
+          </ResponsiveMenu.Item>
+        ) : (
+          <ResponsiveMenu.Item
+            className="export-menu-item"
+            onSelect={() => actions.onShare(folder)}
+          >
+            <Link2Icon aria-hidden="true" />
+            Share folder
+          </ResponsiveMenu.Item>
+        )}
         <hr className="folder-menu-separator" />
         <ResponsiveMenu.Item
           className="export-menu-item export-menu-item--danger"

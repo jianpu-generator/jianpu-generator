@@ -11,7 +11,10 @@ import type {
   FileTreeRow,
   FileTreeViewRow,
   FolderDeleteSummary,
+  FolderShareInfo,
+  FolderStaticShare,
   MoveTarget,
+  ShareOverview,
 } from './jianpuWasm'
 import { jianpuWasm } from './jianpuWasm'
 
@@ -28,11 +31,13 @@ export function fileTreeRows(state: FileStoreState): FileTreeRow[] {
 export function fileTreeView(
   state: FileStoreState,
   expanded: string[],
+  shares: ShareOverview,
 ): FileTreeViewRow[] {
   const response = jianpuWasm().fileStoreTreeView(
     toWasmState(state),
     expanded,
     DEMO_FILE_NAMES,
+    shares,
   )
   return response.tag === 'ok' ? response.val : []
 }
@@ -96,13 +101,42 @@ export function folderMoveError(
   )
 }
 
-/** What the "Delete folder" confirmation says (file count and sentence), from
- * Rust; `undefined` when the folder does not exist. */
+/** What the "Delete folder" confirmation says (file count, sentence and what
+ * happens to live links), from Rust; `undefined` when the folder does not
+ * exist. */
 export function folderDeleteSummary(
   state: FileStoreState,
   folder: string,
+  shares: ShareOverview,
 ): FolderDeleteSummary | undefined {
-  return jianpuWasm().fileStoreFolderDeleteSummary(toWasmState(state), folder)
+  return jianpuWasm().fileStoreFolderDeleteSummary(
+    toWasmState(state),
+    folder,
+    shares,
+  )
+}
+
+/** What a folder's Share dialog shows (counts, own link, enclosing share,
+ * own-link warning), from Rust; `undefined` when the folder does not exist. */
+export function folderShareInfo(
+  state: FileStoreState,
+  shares: ShareOverview,
+  folder: string,
+): FolderShareInfo | undefined {
+  return jianpuWasm().fileStoreFolderShareInfo(
+    toWasmState(state),
+    shares,
+    folder,
+  )
+}
+
+/** The static link payload of a folder (Rust encodes it and decides whether
+ * it is short enough to offer); `undefined` when the folder does not exist. */
+export function folderStaticShare(
+  state: FileStoreState,
+  folder: string,
+): FolderStaticShare | undefined {
+  return jianpuWasm().fileStoreFolderStaticShare(toWasmState(state), folder)
 }
 
 /** The bin as sorted entries: leaf name plus the folder it was deleted from. */

@@ -3,6 +3,7 @@
 //! shown as-is by the web app.
 
 use super::folder_ops::move_folder;
+use super::folder_share::{folder_delete_share_warning, ShareOverview};
 use super::path::TreePath;
 use super::store_state::{FileOperationContext, FileStoreState};
 
@@ -13,6 +14,10 @@ pub struct FolderDeleteSummary {
     pub file_count: usize,
     /// The sentence to show, e.g. `2 files will move to the bin ...`.
     pub message: String,
+    /// What deleting does to live links involved (this folder shared, shared
+    /// folders or files inside, or an enclosing shared folder); `None` when
+    /// nothing is shared.
+    pub share_warning: Option<String>,
 }
 
 /// Why renaming/moving the folder `from` to `to_raw` (trimmed) would be
@@ -38,6 +43,7 @@ pub fn folder_move_error(
 pub fn folder_delete_summary(
     state: &FileStoreState,
     folder: &TreePath,
+    shares: &ShareOverview,
 ) -> Option<FolderDeleteSummary> {
     let file_count = state.files_within(folder).len();
     if file_count == 0 && state.explicit_folders_within(folder).is_empty() {
@@ -54,6 +60,7 @@ pub fn folder_delete_summary(
     Some(FolderDeleteSummary {
         file_count,
         message,
+        share_warning: folder_delete_share_warning(shares, folder),
     })
 }
 

@@ -12,6 +12,8 @@ import {
 } from '../syncedShare/errors'
 import { callWorker, createWorkerClient } from '../syncedShare/workerClient'
 import { buildSyncedShareUrl } from '../syncedShareUrl'
+import { type FolderShares, useFolderShares } from './useFolderShares'
+import type { DisplaySaveStatus } from './useStorageBackend'
 
 /** Public Synced Share GitHub OAuth App client id -- a dedicated app,
  * separate from the deleted storage-backend device flow. Originally
@@ -79,6 +81,17 @@ export interface UseSyncedShareOwnerResult {
    * instead of resending the same now-invalid token forever. */
   syncFailure: SyncedShareFailure | null
   dismissSyncFailure: () => void
+  /** Live links of whole folders (and the overview of every live link). */
+  folderShares: FolderShares
+}
+
+/** What the folder side of the owner hook needs from the file store. */
+export interface FolderShareContext {
+  /** The cloud backend is active. */
+  isCloud: boolean
+  /** Changes whenever the set of file/folder paths changes. */
+  pathKey: string
+  saveStatus: DisplaySaveStatus
 }
 
 /**
@@ -104,6 +117,7 @@ export function useSyncedShareOwner(
    * `cloudFileIdFor`), `null` for a local or demo file, which can't be
    * shared live. */
   cloudFileId: string | null,
+  folderContext: FolderShareContext,
 ): UseSyncedShareOwnerResult {
   const [status, setStatus] = useState<FileShareStatus | null>(null)
   const [syncFailure, setSyncFailure] = useState<SyncedShareFailure | null>(
@@ -149,13 +163,16 @@ export function useSyncedShareOwner(
     async <Data>(
       operation: SyncedShareOperation,
       send: (client: ReturnType<typeof createWorkerClient>) => Promise<Data>,
+      options?: { silent?: boolean },
     ): Promise<{ data: Data } | null> => {
       const host = import.meta.env.VITE_SYNCED_SHARE_HOST
       if (!host) return null
       try {
         return { data: await send(createWorkerClient(host)) }
       } catch (error) {
-        recordSyncFailure(buildSyncedShareFailure(operation, error))
+        if (!options?.silent) {
+          recordSyncFailure(buildSyncedShareFailure(operation, error))
+        }
         return null
       }
     },
@@ -261,7 +278,15 @@ export function useSyncedShareOwner(
     setGithubAuth(null)
   }, [stopSync, githubAuth, setGithubAuth])
 
+  const folderShares = useFolderShares({
+    identityToken,
+    runShareRequest,
+    fileSyncKey: `${cloudFileId ?? ''}:${isSynced}`,
+    ...folderContext,
+  })
+
   return {
+    folderShares,
     canSync: cloudFileId !== null,
     isSynced,
     syncedShareLink:

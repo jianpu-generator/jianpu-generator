@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
 import { activeFileLabel, fileTreeView } from '../fileStoreQueries'
-import type { FileActiveLabel, FileTreeViewRow } from '../jianpuWasm'
+import type {
+  FileActiveLabel,
+  FileTreeViewRow,
+  ShareOverview,
+} from '../jianpuWasm'
 import { ensureWasmInit } from '../wasmInit'
 
 export interface FileTreeView {
@@ -16,6 +20,7 @@ export function useFileTreeView(
   store: FileStoreState,
   expanded: string[],
   activeName: string,
+  shares: ShareOverview,
 ): FileTreeView {
   const [wasmReady, setWasmReady] = useState(false)
 
@@ -31,7 +36,7 @@ export function useFileTreeView(
 
   return wasmReady
     ? {
-        rows: fileTreeView(store, expanded),
+        rows: fileTreeView(store, expanded, shares),
         activeLabel: activeFileLabel(activeName),
       }
     : {

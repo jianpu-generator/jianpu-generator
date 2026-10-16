@@ -7,6 +7,7 @@ import {
   moveDestination,
   parentFolder,
 } from '../fileStoreQueries'
+import type { ShareOverview } from '../jianpuWasm'
 import { DeleteFolderDialog } from './DeleteFolderDialog'
 import { MoveToDialog } from './MoveToDialog'
 import { RenameFileDialog } from './RenameFileDialog'
@@ -19,6 +20,8 @@ export interface FolderDialogState {
 interface FolderDialogsProps {
   store: FileStoreState
   dialog: FolderDialogState | null
+  /** The owner's live links, for the delete warning. */
+  shares: ShareOverview
   onClose: () => void
   onMoveFolder: (from: string, to: string) => void
   onDeleteFolder: (folder: string) => void
@@ -29,6 +32,7 @@ interface FolderDialogsProps {
 export function FolderDialogs({
   store,
   dialog,
+  shares,
   onClose,
   onMoveFolder,
   onDeleteFolder,
@@ -42,6 +46,10 @@ export function FolderDialogs({
     onMoveFolder(from, to)
     expandFolders(foldersToReveal(to))
   }
+  const deleteSummary =
+    dialog?.kind === 'delete'
+      ? folderDeleteSummary(store, folder, shares)
+      : undefined
   return (
     <>
       <RenameFileDialog
@@ -68,11 +76,8 @@ export function FolderDialogs({
         open={dialog?.kind === 'delete'}
         onOpenChange={onOpenChange}
         folder={folder}
-        message={
-          dialog?.kind === 'delete'
-            ? folderDeleteSummary(store, folder)?.message
-            : undefined
-        }
+        message={deleteSummary?.message}
+        shareWarning={deleteSummary?.shareWarning}
         onConfirm={onDeleteFolder}
       />
     </>

@@ -2,6 +2,7 @@
 
 mod component;
 mod diagnostics;
+mod folder_share_payload;
 mod lyric_selection_types;
 mod note_selection_types;
 mod part_declarations;

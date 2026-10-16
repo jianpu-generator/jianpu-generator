@@ -13,7 +13,7 @@ Feature: Folder rows have their own actions menu, folders can be deleted to the 
     And the folder menu offers "Rename"
     And the folder menu offers "Move to…"
     And the folder menu offers "Delete folder"
-    And the folder menu does not offer "Share folder"
+    And the folder menu offers "Share folder"
 
   Scenario: The read-only Demo row has no menu
     When the file tree app loads

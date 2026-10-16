@@ -6,6 +6,7 @@ import {
 } from '../fileStore'
 import type { StorageBackend } from '../storage/types'
 import { useSharedPreview } from './useSharedPreview'
+import type { DisplaySaveStatus } from './useStorageBackend'
 import { useSyncedShareOwner } from './useSyncedShareOwner'
 import { useSyncedShareViewer } from './useSyncedShareViewer'
 
@@ -46,6 +47,7 @@ export function useScoreSource(
   ) => void,
   setFileOpError: (error: FileOpError | null) => void,
   setEditorCollapsed: (collapsed: boolean) => void,
+  saveStatus: DisplaySaveStatus,
 ) {
   const { sharedPreview, handleDismissShared, handleImportShared } =
     useSharedPreview(
@@ -59,6 +61,15 @@ export function useScoreSource(
   const syncedShareOwner = useSyncedShareOwner(
     store.active,
     cloudFileIdFor(backend, store, store.active),
+    {
+      isCloud: backend.kind === 'cloud',
+      pathKey: [
+        ...Object.keys(store.userFiles).sort(),
+        '|',
+        ...(store.folders ?? []),
+      ].join('\n'),
+      saveStatus,
+    },
   )
   const {
     syncedShareViewerPreview,
@@ -112,6 +123,7 @@ export function useScoreSource(
       onDisconnectGithub: syncedShareOwner.disconnectGithub,
       syncFailure: syncedShareOwner.syncFailure,
       onDismissSyncFailure: syncedShareOwner.dismissSyncFailure,
+      folderShares: syncedShareOwner.folderShares,
     },
   }
 }

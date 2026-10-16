@@ -270,6 +270,7 @@ Then('the copied link is unchanged from before', async ({ page }) => {
 
 When('the owner clicks the stop-sync button', async ({ page }) => {
   await page.getByTestId('share-modal-stop-sync').click()
+  await page.getByTestId('share-modal-confirm-stop-sync').click()
 })
 
 Then('the viewer sees the preview page', async () => {
