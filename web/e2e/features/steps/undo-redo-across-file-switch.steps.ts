@@ -139,6 +139,10 @@ Then('the {string} tab is the active tab', async ({ page }, name: string) => {
   await expect(
     page.locator('.file-tab-name', { hasText: name }),
   ).toHaveAttribute('aria-current', 'true')
+  // The browser is a full-screen modal; close it so later steps can reach
+  // the editor.
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('file-browser')).toBeHidden()
 })
 
 Then(
