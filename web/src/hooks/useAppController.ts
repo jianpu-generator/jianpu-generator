@@ -61,6 +61,7 @@ export function useAppController() {
 
   const {
     sharedPreview,
+    sharedFolder,
     syncedShareViewerActive,
     source,
     readOnly,
@@ -73,7 +74,7 @@ export function useAppController() {
     setEditorCollapsed,
     saveStatus,
   )
-  const fileId = fileIdForName(store, store.active)
+  const fileId = sharedFolder?.fileId ?? fileIdForName(store, store.active)
   useDocumentTitle(store.active)
 
   const editorRef = useRef<EditorHandle>(null)

@@ -5,6 +5,7 @@ import {
   isReadOnlyFile,
 } from '../fileStore'
 import type { StorageBackend } from '../storage/types'
+import { useSharedFolderViewer } from './useSharedFolderViewer'
 import { useSharedPreview } from './useSharedPreview'
 import type { DisplaySaveStatus } from './useStorageBackend'
 import { useSyncedShareOwner } from './useSyncedShareOwner'
@@ -72,6 +73,8 @@ export function useScoreSource(
     },
   )
   const {
+    syncedFolder,
+    clearSyncedFolder,
     syncedShareViewerPreview,
     syncedShareViewerStatus,
     syncedShareViewerOwnerLogin,
@@ -84,15 +87,30 @@ export function useScoreSource(
     setFileOpError,
   )
 
+  const sharedFolder = useSharedFolderViewer(
+    syncedFolder,
+    syncedShareViewerOwnerLogin,
+    clearSyncedFolder,
+    store,
+    backend,
+    setStore,
+    setFileOpError,
+    setEditorCollapsed,
+  )
+
+  // Anything that is not a plain own-file session: a synced link being
+  // loaded, shown, stopped or failing, or a static shared folder.
   const syncedShareViewerActive =
     sharedPreview === null &&
-    (syncedShareViewerPreview !== null || syncedShareViewerStatus === 'ended')
+    (sharedFolder !== null || syncedShareViewerStatus !== 'none')
 
   const source = sharedPreview
     ? sharedPreview.content
-    : syncedShareViewerActive
-      ? (syncedShareViewerPreview?.content ?? '')
-      : fileContent(store, store.active)
+    : sharedFolder
+      ? sharedFolder.activeContent
+      : syncedShareViewerActive
+        ? (syncedShareViewerPreview?.content ?? '')
+        : fileContent(store, store.active)
   const readOnly =
     sharedPreview !== null ||
     syncedShareViewerActive ||
@@ -100,6 +118,7 @@ export function useScoreSource(
 
   return {
     sharedPreview,
+    sharedFolder,
     syncedShareViewerActive,
     source,
     readOnly,
@@ -108,6 +127,7 @@ export function useScoreSource(
       onImportShared: handleImportShared,
       onDismissShared: handleDismissShared,
       viewerActive: syncedShareViewerActive,
+      sharedFolder,
       viewerStatus: syncedShareViewerStatus,
       viewerFilename: syncedShareViewerPreview?.filename ?? null,
       viewerOwnerLogin: syncedShareViewerOwnerLogin,

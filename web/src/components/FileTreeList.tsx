@@ -37,30 +37,34 @@ function ViaTag({ name }: { name: string }) {
 export interface FileTreeListProps {
   /** Already-visible rows, computed in Rust (`fileTreeView`). */
   rows: FileTreeViewRow[]
-  renamingName: string | null
   onToggleFolder: (key: string) => void
   onSelect: (name: string) => void
-  onRename: (from: string, to: string) => void
+  /** A shared folder seen by a viewer: only folding and selecting, no rename
+   * and no folder menus. The editing props below are then not needed. */
+  readOnly?: boolean
+  renamingName?: string | null
+  onRename?: (from: string, to: string) => void
   /** Rust's reason a rename/move would be rejected, if it would. */
-  renameError: (from: string, to: string) => string | undefined
+  renameError?: (from: string, to: string) => string | undefined
   /** The folder rows' `···` menu; the read-only `Demo/` row has none. */
-  folderActions: FolderActions
-  creating: boolean
-  creatingFolder: boolean
-  importing: boolean
+  folderActions?: FolderActions
+  creating?: boolean
+  creatingFolder?: boolean
+  importing?: boolean
 }
 
 export function FileTreeList({
   rows,
-  renamingName,
+  readOnly = false,
+  renamingName = null,
   onToggleFolder,
   onSelect,
   onRename,
   renameError,
   folderActions,
-  creating,
-  creatingFolder,
-  importing,
+  creating = false,
+  creatingFolder = false,
+  importing = false,
 }: FileTreeListProps) {
   return (
     <ul className="file-tabs" aria-label="Files">
@@ -101,7 +105,7 @@ export function FileTreeList({
                     {row.fileCount}
                   </span>
                 </button>
-                {row.kind === 'folder' ? (
+                {row.kind === 'folder' && !readOnly && folderActions ? (
                   <FolderRowMenu
                     folder={row.key}
                     name={row.name}
@@ -133,15 +137,28 @@ export function FileTreeList({
                 style={rowStyle}
               >
                 <span className="file-tree-spacer" aria-hidden="true" />
-                <FileTabName
-                  name={row.key}
-                  label={displayFileName(row.name)}
-                  active={row.isActive}
-                  onSelect={onSelect}
-                  onRename={onRename}
-                  renameError={renameError}
-                  renaming={renamingName === row.key}
-                />
+                {readOnly ? (
+                  <button
+                    type="button"
+                    className="file-tab-name"
+                    aria-current={row.isActive ? 'true' : undefined}
+                    onClick={() => {
+                      if (!row.isActive) onSelect(row.key)
+                    }}
+                  >
+                    {displayFileName(row.name)}
+                  </button>
+                ) : (
+                  <FileTabName
+                    name={row.key}
+                    label={displayFileName(row.name)}
+                    active={row.isActive}
+                    onSelect={onSelect}
+                    onRename={onRename ?? (() => {})}
+                    renameError={renameError}
+                    renaming={renamingName === row.key}
+                  />
+                )}
                 {row.sharedVia ? <ViaTag name={row.sharedVia.name} /> : null}
               </li>
             )

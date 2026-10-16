@@ -7,6 +7,10 @@ import { ExportAudioToast } from './components/ExportAudioToast'
 import { PartToggles } from './components/PartToggles'
 import { SectionJumpToolbar } from './components/SectionJumpToolbar'
 import { SequenceJumpToolbar } from './components/SequenceJumpToolbar'
+import {
+  SharedViewerNotice,
+  showsSharedViewerNotice,
+} from './components/SharedViewerNotice'
 import { useAppController } from './hooks/useAppController'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import {
@@ -16,6 +20,7 @@ import {
 import './App.css'
 import './file-switcher.css'
 import './preview.css'
+import './shared-viewer.css'
 import './preview-toolbar.css'
 import './preview-play-controls.css'
 
@@ -311,77 +316,82 @@ export default function App() {
         onPartToggle={handlePartToggle}
         onSoloToggle={handleSoloToggle}
       />
-      <AppWorkspace
-        editorCollapsed={editorCollapsed}
-        setEditorCollapsed={setEditorCollapsed}
-        hideEditor={sharedPreview !== null || syncedShareViewerActive}
-        editorRef={editorRef}
-        fileId={fileId}
-        source={source}
-        handleSourceChange={handleSourceChange}
-        handleFormatScore={handleFormatScore}
-        handleEditSelection={handleEditSelection}
-        describeSelection={describeSelection}
-        readOnly={readOnly}
-        diagnostics={diagnostics}
-        diagnosticViewZones={diagnosticViewZones}
-        measureSpans={measureSpans}
-        setSelectedLineRange={setSelectedLineRange}
-        notifySelection={notifySelection}
-        setEditPartsOpen={setEditPartsOpen}
-        setEditMetadataOpen={setEditMetadataOpen}
-        forceSave={forceSave}
-        measureAudioPlaying={measureAudioPlaying}
-        stopMeasurePlayback={stopMeasurePlayback}
-        selectedMeasureRange={selectedMeasureRange}
-        measureAudioGenerating={measureAudioGenerating}
-        soundfontReady={soundfontReady}
-        playSelectedMeasures={playSelectedMeasures}
-        notePlaybackSelectionActive={selectedNoteRangePlaybackInfo !== null}
-        playNoteSelection={handlePlayNoteSelection}
-        editPartsOpen={editPartsOpen}
-        partDeclarations={partDeclarations}
-        parts={parts}
-        handlePartDeclarationChange={handlePartDeclarationChange}
-        handleShiftPartOctave={handleShiftPartOctave}
-        previewInstrument={previewInstrument}
-        previewPercussion={previewPercussion}
-        stopPreviewInstrument={stopPreviewInstrument}
-        previewAudioPlaying={previewAudioPlaying}
-        editMetadataOpen={editMetadataOpen}
-        parsedMetadata={parsedMetadata}
-        handleMetadataFieldChange={handleMetadataFieldChange}
-        // The preview's click/hover resolvers call `jianpuWasm()`
-        // synchronously, so its SVG only appears once the main-thread
-        // component is instantiated — a click can never land before then.
-        documents={previewInteractive ? documents : []}
-        highlightedDocuments={previewInteractive ? highlightedDocuments : []}
-        rendering={rendering || !previewInteractive}
-        handleSectionJump={handleSectionJump}
-        handleNoteRangeSelect={handleNoteRangeSelect}
-        handleEditorSelectionChange={handleEditorSelectionChange}
-        selectedNoteCells={selectedNoteCells}
-        selectedNoteByteRanges={selectedNoteByteRanges}
-        noteSpans={noteSpans}
-        handleLyricRangeSelect={handleLyricRangeSelect}
-        handleLyricEditorSelectionChange={handleLyricEditorSelectionChange}
-        selectedLyricCells={selectedLyricCells}
-        lyricSpans={lyricSpans}
-        handleMeasureRangeSelect={handleMeasureRangeSelect}
-        audioGenerating={audioGenerating}
-        wavUrl={wavUrl}
-        wavFilename={wavFilename}
-        mp3Exporting={mp3Exporting}
-        mp3Url={mp3Url}
-        mp3Filename={mp3Filename}
-        onRequestAudioDownload={(url, filename) =>
-          requestDownload(url, filename, false)
-        }
-        noteTimings={noteTimings}
-        measureAudioNoteTimings={measureAudioNoteTimings}
-        measureAudioElement={measureAudioElement}
-        noPartsSelected={noPartsSelected}
-      />
+      {syncedShareViewerActive &&
+      showsSharedViewerNotice(syncedShare.viewerStatus) ? (
+        <SharedViewerNotice status={syncedShare.viewerStatus} />
+      ) : (
+        <AppWorkspace
+          editorCollapsed={editorCollapsed}
+          setEditorCollapsed={setEditorCollapsed}
+          hideEditor={sharedPreview !== null || syncedShareViewerActive}
+          editorRef={editorRef}
+          fileId={fileId}
+          source={source}
+          handleSourceChange={handleSourceChange}
+          handleFormatScore={handleFormatScore}
+          handleEditSelection={handleEditSelection}
+          describeSelection={describeSelection}
+          readOnly={readOnly}
+          diagnostics={diagnostics}
+          diagnosticViewZones={diagnosticViewZones}
+          measureSpans={measureSpans}
+          setSelectedLineRange={setSelectedLineRange}
+          notifySelection={notifySelection}
+          setEditPartsOpen={setEditPartsOpen}
+          setEditMetadataOpen={setEditMetadataOpen}
+          forceSave={forceSave}
+          measureAudioPlaying={measureAudioPlaying}
+          stopMeasurePlayback={stopMeasurePlayback}
+          selectedMeasureRange={selectedMeasureRange}
+          measureAudioGenerating={measureAudioGenerating}
+          soundfontReady={soundfontReady}
+          playSelectedMeasures={playSelectedMeasures}
+          notePlaybackSelectionActive={selectedNoteRangePlaybackInfo !== null}
+          playNoteSelection={handlePlayNoteSelection}
+          editPartsOpen={editPartsOpen}
+          partDeclarations={partDeclarations}
+          parts={parts}
+          handlePartDeclarationChange={handlePartDeclarationChange}
+          handleShiftPartOctave={handleShiftPartOctave}
+          previewInstrument={previewInstrument}
+          previewPercussion={previewPercussion}
+          stopPreviewInstrument={stopPreviewInstrument}
+          previewAudioPlaying={previewAudioPlaying}
+          editMetadataOpen={editMetadataOpen}
+          parsedMetadata={parsedMetadata}
+          handleMetadataFieldChange={handleMetadataFieldChange}
+          // The preview's click/hover resolvers call `jianpuWasm()`
+          // synchronously, so its SVG only appears once the main-thread
+          // component is instantiated — a click can never land before then.
+          documents={previewInteractive ? documents : []}
+          highlightedDocuments={previewInteractive ? highlightedDocuments : []}
+          rendering={rendering || !previewInteractive}
+          handleSectionJump={handleSectionJump}
+          handleNoteRangeSelect={handleNoteRangeSelect}
+          handleEditorSelectionChange={handleEditorSelectionChange}
+          selectedNoteCells={selectedNoteCells}
+          selectedNoteByteRanges={selectedNoteByteRanges}
+          noteSpans={noteSpans}
+          handleLyricRangeSelect={handleLyricRangeSelect}
+          handleLyricEditorSelectionChange={handleLyricEditorSelectionChange}
+          selectedLyricCells={selectedLyricCells}
+          lyricSpans={lyricSpans}
+          handleMeasureRangeSelect={handleMeasureRangeSelect}
+          audioGenerating={audioGenerating}
+          wavUrl={wavUrl}
+          wavFilename={wavFilename}
+          mp3Exporting={mp3Exporting}
+          mp3Url={mp3Url}
+          mp3Filename={mp3Filename}
+          onRequestAudioDownload={(url, filename) =>
+            requestDownload(url, filename, false)
+          }
+          noteTimings={noteTimings}
+          measureAudioNoteTimings={measureAudioNoteTimings}
+          measureAudioElement={measureAudioElement}
+          noPartsSelected={noPartsSelected}
+        />
+      )}
     </div>
   )
 }

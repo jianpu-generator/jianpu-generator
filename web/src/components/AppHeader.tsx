@@ -1,6 +1,7 @@
 import type { FileStoreState } from '../fileStore'
 import { sortedBinNames } from '../fileStore'
 import type { FolderShares } from '../hooks/useFolderShares'
+import type { SharedFolderViewer } from '../hooks/useSharedFolderViewer'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SyncedShareViewerStatus } from '../hooks/useSyncedShareViewer'
 import type { SharePayload } from '../shareUrl'
@@ -12,6 +13,7 @@ import { PlayAllButton } from './PlayAllButton'
 import { PlayFromCurrentMeasureButton } from './PlayFromCurrentMeasureButton'
 import { PlayMeasureButton } from './PlayMeasureButton'
 import { ProfileControl } from './ProfileControl'
+import { SharedFolderSwitcher } from './SharedFolderSwitcher'
 import { SharedPreviewBanner } from './SharedPreviewBanner'
 import { SyncedShareBanner } from './SyncedShareBanner'
 import { SyncedShareErrorDialog } from './SyncedShareErrorDialog'
@@ -29,6 +31,8 @@ interface SyncedShareHeaderProps {
    * `sharedPreview` if both are somehow present at once (a documented edge
    * case, not expected in practice). */
   viewerActive: boolean
+  /** The shared folder being viewed (static or synced link), if any. */
+  sharedFolder: SharedFolderViewer | null
   viewerStatus: SyncedShareViewerStatus
   viewerFilename: string | null
   /** The owning user's cached GitHub login (`user_identities.login`),
@@ -200,10 +204,20 @@ export function AppHeader({
   syncedShare,
   onSignOut,
 }: AppHeaderProps) {
-  const { sharedPreview, viewerActive: syncedShareViewerActive } = syncedShare
+  const {
+    sharedPreview,
+    sharedFolder,
+    viewerActive: syncedShareViewerActive,
+  } = syncedShare
   return (
     <header className="app-header">
-      {sharedPreview ? (
+      {sharedFolder?.kind === 'static' ? (
+        <SharedPreviewBanner
+          folderName={sharedFolder.folderName}
+          onImport={sharedFolder.onImport}
+          onDiscard={sharedFolder.onDiscard}
+        />
+      ) : sharedPreview ? (
         <SharedPreviewBanner
           onImport={syncedShare.onImportShared}
           onDiscard={syncedShare.onDismissShared}
@@ -213,8 +227,13 @@ export function AppHeader({
           <SyncedShareBanner
             status={syncedShare.viewerStatus}
             filename={syncedShare.viewerFilename}
+            folderName={sharedFolder?.folderName ?? null}
             ownerLogin={syncedShare.viewerOwnerLogin}
-            onImport={syncedShare.onImportSyncedShare}
+            onImport={
+              sharedFolder
+                ? sharedFolder.onImport
+                : syncedShare.onImportSyncedShare
+            }
           />
         )
       )}
@@ -265,6 +284,7 @@ export function AppHeader({
         />
       )}
       <div className="app-header-actions">
+        {sharedFolder && <SharedFolderSwitcher viewer={sharedFolder} />}
         {!sharedPreview && !syncedShareViewerActive && (
           <FileSwitcher
             store={store}

@@ -30,8 +30,8 @@ Then(
     if (!state.lateViewerPage)
       throw new Error('lateViewerPage was not opened yet')
     await expect(
-      state.lateViewerPage.locator('.preview-page'),
-    ).not.toContainText(text)
+      state.lateViewerPage.locator('.preview-page').filter({ hasText: text }),
+    ).toHaveCount(0)
   },
 )
 

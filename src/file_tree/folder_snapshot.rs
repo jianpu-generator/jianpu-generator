@@ -111,7 +111,7 @@ impl FolderSnapshot {
         Ok(snapshot)
     }
 
-    fn validate(&self) -> Result<(), SnapshotError> {
+    pub(super) fn validate(&self) -> Result<(), SnapshotError> {
         let root = TreePath::parse(&self.folder)
             .ok()
             .filter(|root| root.parent().is_none())

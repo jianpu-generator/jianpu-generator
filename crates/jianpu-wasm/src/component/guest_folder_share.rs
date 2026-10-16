@@ -125,3 +125,49 @@ pub(super) fn file_store_folder_delete_summary(
         }
     })
 }
+
+impl From<FolderSnapshot> for tree::FolderSnapshot {
+    fn from(snapshot: FolderSnapshot) -> Self {
+        Self {
+            folder: snapshot.folder,
+            files: snapshot
+                .files
+                .into_iter()
+                .map(|file| tree::SnapshotFile {
+                    path: file.path,
+                    content: file.content,
+                })
+                .collect(),
+            empty_folders: snapshot.empty_folders,
+        }
+    }
+}
+
+pub(super) fn shared_folder_first_file(snapshot: FolderSnapshot) -> Option<String> {
+    tree::shared_folder_first_file(&snapshot.into())
+}
+
+pub(super) fn shared_folder_view(
+    snapshot: FolderSnapshot,
+    active: String,
+    expanded: Vec<String>,
+) -> FileTreeViewResponse {
+    match tree::shared_folder_view(&snapshot.into(), &active, &expanded) {
+        Ok(rows) => FileTreeViewResponse::Ok(rows.into_iter().map(view_row).collect()),
+        Err(error) => FileTreeViewResponse::Err(error.to_string()),
+    }
+}
+
+pub(super) fn file_store_import_shared_folder(
+    state: FileStoreState,
+    snapshot: FolderSnapshot,
+    file_ids: Vec<String>,
+    context: FileOperationContext,
+) -> FileStoreResponse {
+    store_response(tree::import_shared_folder(
+        &state.into(),
+        &snapshot.into(),
+        &file_ids,
+        &context.into(),
+    ))
+}

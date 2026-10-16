@@ -241,28 +241,30 @@ pub(super) fn file_store_tree_view(
                     shares: &shares,
                 })
                 .into_iter()
-                .map(|row| FileTreeViewRow {
-                    key: row.key,
-                    name: row.name,
-                    depth: u32::try_from(row.depth).unwrap_or(u32::MAX),
-                    kind: match row.kind {
-                        tree::TreeViewRowKind::Folder => FileTreeViewRowKind::Folder,
-                        tree::TreeViewRowKind::File => FileTreeViewRowKind::File,
-                        tree::TreeViewRowKind::DemoFolder => FileTreeViewRowKind::DemoFolder,
-                        tree::TreeViewRowKind::DemoFile => FileTreeViewRowKind::DemoFile,
-                        tree::TreeViewRowKind::EmptyFolderHint => {
-                            FileTreeViewRowKind::EmptyFolderHint
-                        }
-                    },
-                    expanded: row.expanded,
-                    file_count: u32::try_from(row.file_count).unwrap_or(u32::MAX),
-                    is_active: row.is_active,
-                    share_id: row.share_id,
-                    shared_via: row.shared_via.map(Into::into),
-                })
+                .map(view_row)
                 .collect(),
         ),
         Err(error) => FileTreeViewResponse::Err(error.to_string()),
+    }
+}
+
+pub(super) fn view_row(row: tree::TreeViewRow) -> FileTreeViewRow {
+    FileTreeViewRow {
+        key: row.key,
+        name: row.name,
+        depth: u32::try_from(row.depth).unwrap_or(u32::MAX),
+        kind: match row.kind {
+            tree::TreeViewRowKind::Folder => FileTreeViewRowKind::Folder,
+            tree::TreeViewRowKind::File => FileTreeViewRowKind::File,
+            tree::TreeViewRowKind::DemoFolder => FileTreeViewRowKind::DemoFolder,
+            tree::TreeViewRowKind::DemoFile => FileTreeViewRowKind::DemoFile,
+            tree::TreeViewRowKind::EmptyFolderHint => FileTreeViewRowKind::EmptyFolderHint,
+        },
+        expanded: row.expanded,
+        file_count: u32::try_from(row.file_count).unwrap_or(u32::MAX),
+        is_active: row.is_active,
+        share_id: row.share_id,
+        shared_via: row.shared_via.map(Into::into),
     }
 }
 
@@ -286,7 +288,7 @@ fn parse_optional(raw: Option<&str>) -> Result<Option<tree::TreePath>, tree::Fil
     raw.map(parse).transpose()
 }
 
-fn store_response(
+pub(super) fn store_response(
     outcome: Result<tree::FileStoreState, tree::FileStoreError>,
 ) -> FileStoreResponse {
     match outcome {
@@ -383,6 +385,7 @@ impl From<tree::FileStoreError> for FileStoreFailure {
             tree::FileStoreError::MoveIntoItself { .. } => FileStoreErrorKind::MoveIntoItself,
             tree::FileStoreError::DemoFileReadOnly { .. } => FileStoreErrorKind::DemoFileReadOnly,
             tree::FileStoreError::ReservedName { .. } => FileStoreErrorKind::ReservedName,
+            tree::FileStoreError::InvalidSharedFolder { .. } => FileStoreErrorKind::InvalidPath,
         };
         Self {
             kind,

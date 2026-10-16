@@ -15,6 +15,7 @@ import {
   deserializeFileStore,
   readInitialFileStore,
 } from '../fileStorePersistence'
+import { importSharedFolderState } from '../sharedFolder'
 import { ensureWasmInit } from '../wasmInit'
 import type { SaveStatus, StorageBackend } from './types'
 
@@ -64,6 +65,9 @@ export const localBackend: StorageBackend = {
 
   importFile: (state, filename, content) =>
     Promise.resolve(importSharedFile(state, filename, content)),
+
+  importFolder: (state, snapshot) =>
+    afterWasm(() => importSharedFolderState(state, snapshot)),
 
   renameFile: (state, from, to) => afterWasm(() => renameFile(state, from, to)),
 

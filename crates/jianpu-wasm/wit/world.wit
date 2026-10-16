@@ -1766,6 +1766,12 @@ world jianpu-wasm {
     export file-store-folder-static-share: func(state: file-store-state, folder: string) -> option<folder-static-share>;
     // Decodes the part after `#share-folder=`; none if it is not a valid folder snapshot.
     export decode-folder-share-suffix: func(suffix: string) -> option<folder-snapshot>;
+    // The file a shared-folder viewer opens first (first in tree order); none if the folder holds no file.
+    export shared-folder-first-file: func(snapshot: folder-snapshot) -> option<string>;
+    // The read-only file list of a shared folder, rooted at it (no Demo row, no share markers).
+    export shared-folder-view: func(snapshot: folder-snapshot, active: string, expanded: list<string>) -> file-tree-view-response;
+    // Copies a shared folder into the store as a new top-level folder (`Name 2` on a clash); `file-ids` are the new files' ids in snapshot order.
+    export file-store-import-shared-folder: func(state: file-store-state, snapshot: folder-snapshot, file-ids: list<string>, context: file-operation-context) -> file-store-response;
     // The folder and every folder above it, outermost first (what to expand to show it).
     export file-store-folders-to-reveal: func(path: string) -> list<string>;
     // The bin as a sorted list of leaf names and original locations.

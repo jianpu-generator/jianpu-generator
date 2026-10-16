@@ -67,6 +67,11 @@ pub enum FileStoreError {
     ReservedName {
         path: TreePath,
     },
+    /// A shared folder's contents are not a valid folder (bad path, or a
+    /// path that is both a file and a folder).
+    InvalidSharedFolder {
+        reason: String,
+    },
 }
 
 impl From<PathError> for FileStoreError {
@@ -94,6 +99,9 @@ impl fmt::Display for FileStoreError {
                 destination.as_str()
             ),
             Self::DemoFileReadOnly { path } => write!(f, "`{path}` is a read-only demo file"),
+            Self::InvalidSharedFolder { reason } => {
+                write!(f, "the shared folder is not valid: {reason}")
+            }
             Self::ReservedName { path } => {
                 write!(f, "`{}` is a reserved name and cannot be used", path.name())
             }

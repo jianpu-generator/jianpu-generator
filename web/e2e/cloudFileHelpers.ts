@@ -178,6 +178,21 @@ export async function trashCloudFile(login: string, id: string): Promise<void> {
   )
 }
 
+/** Renames (or moves) a previously seeded file to `name`, by its real D1 id. */
+export async function renameCloudFile(
+  login: string,
+  id: string,
+  name: string,
+): Promise<void> {
+  await expectOk(
+    'POST /files/{id}/rename',
+    worker.POST('/files/{id}/rename', {
+      params: { path: { id } },
+      body: { identityToken: syncedShareIdentityTokenFor(login), name },
+    }),
+  )
+}
+
 /** Restores a previously trashed file out of the bin under `name`, by its
  * real D1 id. */
 export async function restoreCloudFile(

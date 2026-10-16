@@ -364,6 +364,9 @@ impl Guest for Component {
         file_store_folder_share_info(state: FileStoreState, shares: ShareOverview, folder: String) -> Option<FolderShareInfo>;
         file_store_folder_static_share(state: FileStoreState, folder: String) -> Option<FolderStaticShare>;
         decode_folder_share_suffix(suffix: String) -> Option<FolderSnapshot>;
+        shared_folder_first_file(snapshot: FolderSnapshot) -> Option<String>;
+        shared_folder_view(snapshot: FolderSnapshot, active: String, expanded: Vec<String>) -> FileTreeViewResponse;
+        file_store_import_shared_folder(state: FileStoreState, snapshot: FolderSnapshot, file_ids: Vec<String>, context: FileOperationContext) -> FileStoreResponse;
         file_store_bin_entries(state: FileStoreState) -> Vec<BinEntry>;
         file_store_folders_to_reveal(path: String) -> Vec<String>;
         file_store_create_file(state: FileStoreState, folder: Option<String>, content: String, context: FileOperationContext) -> FileStoreResponse;

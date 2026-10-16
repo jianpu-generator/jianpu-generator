@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { type FileStoreState, mergeBackendResult } from '../fileStore'
+import type { FolderSnapshot } from '../jianpuWasm'
 import type { StorageBackend } from '../storage/types'
 
 interface FileOpError {
@@ -23,7 +24,25 @@ export function useImportToStorage(
   ) => void,
   setFileOpError: (error: FileOpError | null) => void,
 ) {
-  return useCallback(
+  const importFolder = useCallback(
+    async (snapshot: FolderSnapshot) => {
+      const base = store
+      try {
+        const next = await backend.importFolder(base, snapshot)
+        setStore((prev) => mergeBackendResult(prev, base, next))
+        return next
+      } catch (error) {
+        setFileOpError({
+          title: 'Could not import shared folder',
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        })
+        throw error
+      }
+    },
+    [store, backend, setStore, setFileOpError],
+  )
+  const importFile = useCallback(
     async (filename: string, content: string) => {
       const base = store
       try {
@@ -40,4 +59,5 @@ export function useImportToStorage(
     },
     [store, backend, setStore, setFileOpError],
   )
+  return { importFile, importFolder }
 }

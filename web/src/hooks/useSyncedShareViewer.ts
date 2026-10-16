@@ -1,16 +1,25 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
+import type { FolderSnapshot } from '../jianpuWasm'
 import type { SharePayload } from '../shareUrl'
 import type { StorageBackend } from '../storage/types'
-import { callWorker, createWorkerClient } from '../syncedShare/workerClient'
+import {
+  callWorker,
+  createWorkerClient,
+  WorkerRequestError,
+} from '../syncedShare/workerClient'
 import { clearSyncedShare, parseSyncedShare } from '../syncedShareUrl'
 import { useImportToStorage } from './useImportToStorage'
 
 export type SyncedShareViewerStatus =
+  /** Not viewing a synced link at all (none in the URL, or already left). */
+  | 'none'
   | 'loading'
   | 'synced'
   | 'unreachable'
   | 'ended'
+  /** A folder share too big for the worker to serve (413). */
+  | 'too-large'
 
 interface FileOpError {
   title: string
@@ -25,6 +34,10 @@ interface FileOpError {
  * content}` shape `useSharedPreview` does, so it plugs into the identical
  * `source`/`readOnly` derivation in `App.tsx`. Also collapses the editor
  * pane, mirroring `useSharedPreview`.
+ *
+ * A link to a shared folder answers with the folder's whole tree instead
+ * (`folder`): that is exposed as `syncedFolder`, a `FolderSnapshot` shaped
+ * like a static folder link's payload, and `useSharedFolderViewer` shows it.
  *
  * There is no push from the server: an owner's later edits only reach a
  * viewer that reloads the page after the owner's cloud autosave has landed,
@@ -43,10 +56,15 @@ export function useSyncedShareViewer(
   const [syncedShareViewerPreview, setSyncedShareViewerPreview] =
     useState<SharePayload | null>(null)
   const [syncedShareViewerStatus, setSyncedShareViewerStatus] =
-    useState<SyncedShareViewerStatus>('loading')
+    useState<SyncedShareViewerStatus>(() =>
+      parseSyncedShare() && import.meta.env.VITE_SYNCED_SHARE_HOST
+        ? 'loading'
+        : 'none',
+    )
+  const [syncedFolder, setSyncedFolder] = useState<FolderSnapshot | null>(null)
   const [syncedShareViewerOwnerLogin, setSyncedShareViewerOwnerLogin] =
     useState<string | null>(null)
-  const importToStorage = useImportToStorage(
+  const { importFile: importToStorage } = useImportToStorage(
     store,
     backend,
     setStore,
@@ -61,6 +79,7 @@ export function useSyncedShareViewer(
       )
       clearSyncedShare()
       setSyncedShareViewerPreview(null)
+      setSyncedShareViewerStatus('none')
     } catch {
       // handled by importToStorage via setFileOpError
     }
@@ -89,14 +108,26 @@ export function useSyncedShareViewer(
           setSyncedShareViewerStatus('ended')
           return
         }
-        setSyncedShareViewerPreview({
-          filename: doc.filename,
-          content: doc.content,
-        })
+        if (doc.folder) {
+          setSyncedFolder({
+            folder: doc.folder.name,
+            files: doc.folder.files.map(({ path, content }) => ({
+              path,
+              content,
+            })),
+            emptyFolders: doc.folder.emptyFolders,
+          })
+        } else {
+          setSyncedShareViewerPreview({
+            filename: doc.filename,
+            content: doc.content,
+          })
+        }
         setSyncedShareViewerStatus('synced')
       })
-      .catch(() => {
-        if (!cancelled) setSyncedShareViewerStatus('unreachable')
+      .catch((error: unknown) => {
+        if (cancelled) return
+        setSyncedShareViewerStatus(failureStatus(error))
       })
 
     return () => {
@@ -104,10 +135,28 @@ export function useSyncedShareViewer(
     }
   }, [setEditorCollapsed])
 
+  const clearSyncedFolder = useCallback(() => {
+    clearSyncedShare()
+    setSyncedFolder(null)
+    setSyncedShareViewerStatus('none')
+  }, [])
+
   return {
+    syncedFolder,
+    clearSyncedFolder,
     syncedShareViewerPreview,
     syncedShareViewerStatus,
     syncedShareViewerOwnerLogin,
     handleImportSyncedShare,
   }
+}
+
+/** What a failed `GET /shares/{id}` means for the viewer: an oversized folder
+ * says so, anything else is a connection problem worth retrying. (An unknown
+ * or stopped share is not a failure: the worker answers `ended: true`.) */
+function failureStatus(error: unknown): SyncedShareViewerStatus {
+  if (error instanceof WorkerRequestError) {
+    if (error.apiError?.code === 'shared_folder_too_large') return 'too-large'
+  }
+  return 'unreachable'
 }

@@ -1,10 +1,12 @@
 import {
   type FileStoreState,
+  fileIdForName,
   createFolder as pureCreateFolder,
   deleteFolder as pureDeleteFolder,
   moveFolder as pureMoveFolder,
 } from '../fileStore'
-import type { RenameMove } from '../jianpuWasm'
+import type { FolderSnapshot, RenameMove } from '../jianpuWasm'
+import { importSharedFolderState } from '../sharedFolder'
 import type { CloudPlaceholders } from './cloudBackendPlaceholders'
 import type { OutboxLooper } from './outbox/outboxLooper'
 
@@ -41,6 +43,31 @@ export function createFolderOperations({
     ): Promise<FileStoreState> {
       await ensureWasm()
       const nextState = pureCreateFolder(state, parent)
+      const before = state.folders ?? []
+      for (const folder of nextState.folders ?? []) {
+        if (!before.includes(folder)) await placeholders.create(folder)
+      }
+      return nextState
+    },
+
+    /** Imports a shared folder: every file becomes a queued create and every
+     * explicit empty folder a placeholder; nothing existing is touched. */
+    async importFolder(
+      state: FileStoreState,
+      snapshot: FolderSnapshot,
+    ): Promise<FileStoreState> {
+      await ensureWasm()
+      const nextState = importSharedFolderState(state, snapshot)
+      await whenReady()
+      for (const [name, content] of Object.entries(nextState.userFiles)) {
+        if (name in state.userFiles) continue
+        const id = fileIdForName(nextState, name)
+        activeIdByName.set(name, id)
+        await looper.enqueue(id, {
+          tag: 'create-file',
+          val: { name, content },
+        })
+      }
       const before = state.folders ?? []
       for (const folder of nextState.folders ?? []) {
         if (!before.includes(folder)) await placeholders.create(folder)

@@ -11,6 +11,7 @@ mod folder_snapshot;
 mod move_targets;
 mod path;
 mod placeholder;
+mod shared_folder;
 mod store_state;
 mod tree;
 mod unique_name;
@@ -38,6 +39,7 @@ pub use placeholder::{
     classify_cloud_listing, is_placeholder_path, placeholder_path, FolderPlaceholder, ListedEntry,
     ListingClassification, PLACEHOLDER_LEAF,
 };
+pub use shared_folder::{import_shared_folder, shared_folder_first_file, shared_folder_view};
 pub use store_state::{DemoFile, FileOperationContext, FileStoreError, FileStoreState};
 pub use tree::{FileNode, FileTree, FileTreeError, FolderContents, FolderNode, TreeRow};
 pub use unique_name::{path_after_collision, unique_folder_path, unique_path};
@@ -63,6 +65,8 @@ mod move_targets_tests;
 mod path_tests;
 #[cfg(test)]
 mod placeholder_tests;
+#[cfg(test)]
+mod shared_folder_tests;
 #[cfg(test)]
 mod tree_tests;
 #[cfg(test)]

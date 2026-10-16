@@ -29,7 +29,7 @@ export function useSharedPreview(
   setEditorCollapsed: (collapsed: boolean) => void,
 ) {
   const [sharedPreview, setSharedPreview] = useState<SharePayload | null>(null)
-  const importToStorage = useImportToStorage(
+  const { importFile: importToStorage } = useImportToStorage(
     store,
     backend,
     setStore,

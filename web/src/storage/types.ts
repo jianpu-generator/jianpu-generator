@@ -1,4 +1,5 @@
 import type { FileStoreState } from '../fileStore'
+import type { FolderSnapshot } from '../jianpuWasm'
 
 /**
  * Persistence/save-indicator state exposed by a backend. `'offline'` and
@@ -32,6 +33,14 @@ export interface StorageBackend {
     state: FileStoreState,
     filename: string,
     content: string,
+  ): Promise<FileStoreState>
+  /** Copies a shared folder into the store as a new top-level folder (named
+   * `Name 2` on a clash), all of it in one state update; the cloud backend
+   * queues a create per file and a placeholder per empty folder. Rejects
+   * when the folder is not valid. */
+  importFolder(
+    state: FileStoreState,
+    snapshot: FolderSnapshot,
   ): Promise<FileStoreState>
   renameFile(
     state: FileStoreState,
