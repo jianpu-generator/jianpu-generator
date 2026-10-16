@@ -212,3 +212,38 @@ pub fn plan_batch_rename(moves: &[RenameBatchMove], rows: &[FileNameRow]) -> Bat
         BatchRenamePlan::NamesTaken(taken)
     }
 }
+
+/// Finds a write that would make a path both a file and a folder. `live` are
+/// the owner's non-trashed files; `proposed` are the names a write is about
+/// to give (a new file's, a rename's, a whole batch's), each with its file
+/// id. The check runs on the final state: the proposed files replace their
+/// current rows in `live`. Returns the first proposed name that equals a
+/// folder of another final file, or lies inside another final file.
+/// `<folder>/.keep` placeholders are plain files, so they only conflict with
+/// a file called `<folder>`.
+pub fn find_file_folder_conflict(live: &[FileNameRow], proposed: &[FileNameRow]) -> Option<String> {
+    let moved: HashSet<&str> = proposed.iter().map(|row| row.id.as_str()).collect();
+    let others: Vec<&FileNameRow> = live
+        .iter()
+        .filter(|row| !moved.contains(row.id.as_str()))
+        .chain(proposed)
+        .collect();
+    let folders: HashSet<String> = others
+        .iter()
+        .filter_map(|row| TreePath::parse(&row.name).ok())
+        .flat_map(|path| path.ancestors())
+        .map(|ancestor| ancestor.as_str().to_string())
+        .collect();
+    let file_names: HashSet<&str> = others.iter().map(|row| row.name.as_str()).collect();
+    proposed
+        .iter()
+        .find(|row| {
+            folders.contains(&row.name)
+                || TreePath::parse(&row.name).is_ok_and(|path| {
+                    path.ancestors()
+                        .iter()
+                        .any(|ancestor| file_names.contains(ancestor.as_str()))
+                })
+        })
+        .map(|row| row.name.clone())
+}

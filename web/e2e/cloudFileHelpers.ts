@@ -167,6 +167,39 @@ async function reseedExistingFile(
   }
 }
 
+/** What the worker answered a write: `ok`, or the `ApiError` code. */
+export type CloudWriteOutcome = 'ok' | ApiError['code']
+
+/** Tries to create a cloud file and reports the worker's verdict instead of
+ * failing the step -- for scenarios about refused writes. */
+export async function tryCreateCloudFile(
+  login: string,
+  name: string,
+): Promise<CloudWriteOutcome> {
+  const { error } = await worker.POST('/files', {
+    body: {
+      identityToken: syncedShareIdentityTokenFor(login),
+      id: crypto.randomUUID(),
+      name,
+      content: DEFAULT_CLOUD_FILE_CONTENT,
+    },
+  })
+  return error ? error.code : 'ok'
+}
+
+/** Tries to rename a cloud file and reports the worker's verdict. */
+export async function tryRenameCloudFile(
+  login: string,
+  id: string,
+  name: string,
+): Promise<CloudWriteOutcome> {
+  const { error } = await worker.POST('/files/{id}/rename', {
+    params: { path: { id } },
+    body: { identityToken: syncedShareIdentityTokenFor(login), name },
+  })
+  return error ? error.code : 'ok'
+}
+
 /** Moves a previously seeded file to the bin, by its real D1 id. */
 export async function trashCloudFile(login: string, id: string): Promise<void> {
   await expectOk(

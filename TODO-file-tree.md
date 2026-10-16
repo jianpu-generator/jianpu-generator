@@ -16,6 +16,7 @@ Model is tentative: file name is a slash-separated path (`Hymns/Advent/O Come.ji
 ## Phase 1: model (pure functions, tests in separate files)
 
 - [x] Path rules: no empty segments, no `.`/`..`, a path can't be both file and folder
+- [x] Worker also rejects a path that is both file and folder (`ApiError::FileFolderConflict`) on create, rename, restore and batch rename
 - [x] Derive folder tree from the flat file map; explicit empty folders (`folders` list)
 - [x] Sorting: folders first, then files, alphabetical
 - [x] Unique-name logic scoped to a folder

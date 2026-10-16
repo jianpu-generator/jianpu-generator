@@ -13,6 +13,7 @@ const INSERT_FILE: &str = include_str!("../../queries/insert_file.sql");
 const GET_FILE_BY_ID: &str = include_str!("../../queries/get_file_by_id.sql");
 const UPDATE_FILE_CONTENT: &str = include_str!("../../queries/update_file_content.sql");
 const RENAME_FILE: &str = include_str!("../../queries/rename_file.sql");
+const LIST_LIVE_FILE_NAMES: &str = include_str!("../../queries/list_live_file_names.sql");
 const GET_FILE_NAMES_BY_IDS_OR_NAMES: &str =
     include_str!("../../queries/get_file_names_by_ids_or_names.sql");
 const RENAME_FILES_BATCH: &str = include_str!("../../queries/rename_files_batch.sql");
@@ -167,6 +168,27 @@ struct FileNameRowRaw {
 
 fn to_json(value: &impl serde::Serialize) -> Result<String> {
     serde_json::to_string(value).map_err(|error| worker::Error::RustError(error.to_string()))
+}
+
+/// The id and name of every active file of the owner (see
+/// `files::find_file_folder_conflict`).
+pub(crate) async fn list_live_file_names(
+    db: &D1Database,
+    owner_user_id: &str,
+) -> Result<Vec<FileNameRow>> {
+    let rows: Vec<FileNameRowRaw> = db
+        .prepare(LIST_LIVE_FILE_NAMES)
+        .bind(&[JsValue::from_str(owner_user_id)])?
+        .all()
+        .await?
+        .results()?;
+    Ok(rows
+        .into_iter()
+        .map(|row| FileNameRow {
+            id: row.id,
+            name: row.name,
+        })
+        .collect())
 }
 
 /// The caller's files that are one of `moves`' files or hold one of their

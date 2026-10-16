@@ -23,6 +23,10 @@ pub enum ApiError {
     /// A batch rename was refused as a whole because these destinations are
     /// held by other files (`names`); nothing was applied.
     NamesTaken { names: Vec<String> },
+    /// A create/rename/restore/batch rename was refused because `path` would
+    /// be both a file and a folder: it equals the folder of another live
+    /// file, or lies inside a live file. Nothing was applied.
+    FileFolderConflict { path: String },
     /// A create/rename/restore asked for a file name that is not a valid
     /// path (`jianpu_generator::file_tree::TreePath` rules); `message` says why.
     InvalidName { message: String },
@@ -55,6 +59,7 @@ impl ApiError {
             ApiError::NotFound => 404,
             ApiError::NameTaken
             | ApiError::NamesTaken { .. }
+            | ApiError::FileFolderConflict { .. }
             | ApiError::RevisionConflict { .. } => 409,
             ApiError::SharedFolderTooLarge { .. } => 413,
             ApiError::Internal { .. } => 500,
