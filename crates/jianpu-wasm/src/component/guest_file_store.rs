@@ -55,6 +55,45 @@ pub(super) fn file_store_move_destination(
         .map(|path| path.as_str().to_string())
 }
 
+pub(super) fn file_store_classify_cloud_listing(
+    entries: Vec<CloudListedEntry>,
+) -> CloudListingClassification {
+    let entries: Vec<tree::ListedEntry> = entries
+        .into_iter()
+        .map(|entry| tree::ListedEntry {
+            id: entry.id,
+            name: entry.name,
+            trashed: entry.trashed,
+        })
+        .collect();
+    let classified = tree::classify_cloud_listing(&entries);
+    let convert = |placeholders: Vec<tree::FolderPlaceholder>| -> Vec<FolderPlaceholder> {
+        placeholders
+            .into_iter()
+            .map(|placeholder| FolderPlaceholder {
+                folder: placeholder.folder.as_str().to_string(),
+                file_id: placeholder.file_id,
+            })
+            .collect()
+    };
+    CloudListingClassification {
+        folders: convert(classified.folders),
+        trashed_folders: convert(classified.trashed_folders),
+        hidden_file_ids: classified.hidden_file_ids,
+    }
+}
+
+pub(super) fn file_store_is_placeholder_path(path: String) -> bool {
+    tree::is_placeholder_path(&path)
+}
+
+pub(super) fn file_store_placeholder_path(folder: String) -> Option<String> {
+    let folder = tree::TreePath::parse(&folder).ok()?;
+    tree::placeholder_path(&folder)
+        .ok()
+        .map(|path| path.as_str().to_string())
+}
+
 pub(super) fn file_store_name_after_collision(rejected: String) -> Option<String> {
     let rejected = tree::TreePath::parse(&rejected).ok()?;
     tree::path_after_collision(&rejected)
@@ -349,6 +388,7 @@ impl From<tree::FileStoreError> for FileStoreFailure {
             tree::FileStoreError::AncestorIsFile { .. } => FileStoreErrorKind::AncestorIsFile,
             tree::FileStoreError::MoveIntoItself { .. } => FileStoreErrorKind::MoveIntoItself,
             tree::FileStoreError::DemoFileReadOnly { .. } => FileStoreErrorKind::DemoFileReadOnly,
+            tree::FileStoreError::ReservedName { .. } => FileStoreErrorKind::ReservedName,
         };
         Self {
             kind,

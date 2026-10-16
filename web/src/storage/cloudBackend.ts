@@ -5,7 +5,6 @@ import {
   fileIdForName,
   isReadOnlyFile,
   createFile as pureCreateFile,
-  createFolder as pureCreateFolder,
   deleteFile as pureDeleteFile,
   duplicateFile as pureDuplicateFile,
   importSharedFile as pureImportSharedFile,
@@ -25,6 +24,7 @@ import {
   pendingContentByFileId,
   recordListedBases,
 } from './cloudBackendOutbox'
+import { createPlaceholders } from './cloudBackendPlaceholders'
 import type {
   CloudBackend,
   CloudBackendConfig,
@@ -44,22 +44,15 @@ export type {
 
 /**
  * `StorageBackend` implementation backed by `crates/live-share-worker`'s
- * `/files/*` routes (D1-backed), the replacement for the deleted GitHub
- * Contents API backend. Reuses `fileStore.ts`'s pure transforms exactly
- * like that backend did -- every structural op below calls the matching pure
- * transform, performs the corresponding HTTP call, and returns the
- * transform's resulting `FileStoreState` (reconciled by the caller via
- * `mergeBackendResult`, unchanged).
- *
- * Requests go through the worker's generated client (`workerClient.ts` --
- * paths, bodies and the `ApiError` failure union all come from the Rust
- * handlers). Every write (content or structural) is applied to local state
- * at once and queued in the outbox (`outbox/`), which delivers it in the
- * background. A `name_taken` answer is resolved by the outbox rewriting the
- * queued name; this backend then reports the local rename through
- * `onLocalRename`. Naming helpers and the public types live in
- * `cloudBackendNaming.ts` and `cloudBackendTypes.ts` -- split out of this
- * file to stay under this repo's 400-line cap.
+ * `/files/*` routes (D1-backed). Every structural op calls the matching pure
+ * transform from `fileStore.ts`, applies it to local state at once and queues
+ * the HTTP call in the outbox (`outbox/`), which delivers it in the
+ * background; the transform's resulting `FileStoreState` is returned
+ * (reconciled by the caller via `mergeBackendResult`). A `name_taken` answer
+ * is resolved by the outbox rewriting the queued name; this backend then
+ * reports the local rename through `onLocalRename`. Helpers live in
+ * `cloudBackendNaming.ts`, `cloudBackendTypes.ts`, `cloudBackendFolders.ts`
+ * and `cloudBackendPlaceholders.ts` (empty folders).
  */
 export interface CloudBackendDependencies {
   looper?: OutboxLooper
@@ -76,11 +69,9 @@ export function createCloudBackend(
 
   const renameListeners = new Set<(change: LocalRename) => void>()
   // `FileStoreState.fileIds` is one flat map keyed by display name, shared
-  // across `userFiles` and `bin`. A `load()` response can in principle list
-  // an active and a trashed row under the same name (e2e deliberately
-  // manufactures that to exercise `restoreFile`'s collision-avoidance), so
-  // each bucket's ids are tracked separately here: `renameFile`/`deleteFile`
-  // (known-active names) and `restoreFile` (known-trashed names) never
+  // across `userFiles` and `bin`, and a listing can hold an active and a
+  // trashed row under one name (e2e manufactures that), so each bucket's ids
+  // are tracked separately: `renameFile`/`deleteFile` and `restoreFile` never
   // resolve the wrong row. Kept in sync alongside every structural op.
   const activeIdByName = new Map<string, string>()
   const trashedIdByName = new Map<string, string>()
@@ -100,9 +91,10 @@ export function createCloudBackend(
 
   /** The current local name of `fileId`, for a `RestoreFile` message. */
   function trashedNameOf(fileId: string): string {
-    for (const [name, id] of activeIdByName) if (id === fileId) return name
-    for (const [name, id] of trashedIdByName) if (id === fileId) return name
-    return ''
+    const named = [...activeIdByName, ...trashedIdByName].find(
+      ([, id]) => id === fileId,
+    )
+    return named?.[0] ?? placeholders.nameOf(fileId) ?? ''
   }
 
   const { looper, bases } = createCloudOutbox(
@@ -116,10 +108,12 @@ export function createCloudBackend(
   )
   const ensureWasm = dependencies.ensureWasm ?? ensureWasmInit
   let ready: Promise<void> | null = null
+  const placeholders = createPlaceholders(looper, () => whenReady())
   const folderOperations = createFolderOperations({
     ensureWasm,
     whenReady: () => whenReady(),
     looper,
+    placeholders,
     activeFileId,
     activeIdByName,
     trashedIdByName,
@@ -254,9 +248,11 @@ export function createCloudBackend(
       const fileIds: Record<string, string> = {}
       activeIdByName.clear()
       trashedIdByName.clear()
-      const listed = pendingSnapshot.halted
-        ? response.files
-        : applyPendingStructure(response.files, pendingSnapshot)
+      const { files: listed, folders } = placeholders.classify(
+        pendingSnapshot.halted
+          ? response.files
+          : applyPendingStructure(response.files, pendingSnapshot),
+      )
       for (const file of listed) {
         fileIds[file.name] = file.id
         if (file.trashedAt === null) {
@@ -276,15 +272,19 @@ export function createCloudBackend(
         const name = [...activeIdByName].find(([, value]) => value === id)?.[0]
         if (name !== undefined) userFiles[name] = content
       }
-      return { active: DEMO_FILE_NAMES[0] ?? '', userFiles, bin, fileIds }
+      return {
+        active: DEMO_FILE_NAMES[0] ?? '',
+        userFiles,
+        bin,
+        fileIds,
+        ...(folders.length > 0 ? { folders } : {}),
+      }
     },
 
     createFile: (state, folder) =>
       ensureWasm().then(() =>
         createRemoteFile(state, pureCreateFile(state, folder)),
       ),
-    createFolder: (state, parent) =>
-      ensureWasm().then(() => pureCreateFolder(state, parent)),
     importFile: (state, filename, content) =>
       createRemoteFile(state, pureImportSharedFile(state, filename, content)),
 

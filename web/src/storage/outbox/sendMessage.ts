@@ -145,6 +145,12 @@ async function classifyRequestError(
   }
   if (apiError?.code === 'name_taken') {
     const name = rejectedName(request, deps)
+    // A folder's `.keep` placeholder already in the cloud (another device
+    // made the same folder) is the folder itself: never rename it to a
+    // visible `.keep 2.jianpu`.
+    if (name !== null && jianpuWasm().fileStoreIsPlaceholderPath(name)) {
+      return { tag: 'ok', val: { revision: request.expectedRevision } }
+    }
     // The next free numbered sibling in the same folder, computed in Rust.
     const suggestedName =
       name === null ? undefined : jianpuWasm().fileStoreNameAfterCollision(name)

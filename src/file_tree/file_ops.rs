@@ -3,6 +3,7 @@
 //! `web/src/fileStore.ts`, generalised to paths. Each returns a new state.
 
 use super::path::TreePath;
+use super::placeholder::is_reserved_leaf;
 use super::store_state::{FileOperationContext, FileStoreError, FileStoreState};
 use super::unique_name::unique_path;
 
@@ -179,11 +180,19 @@ pub fn restore_file(
 
 fn with_extension(raw: &str) -> Result<TreePath, FileStoreError> {
     let trimmed = raw.trim();
-    TreePath::parse(trimmed)?;
+    reject_reserved_leaf(&TreePath::parse(trimmed)?)?;
     let named = if trimmed.ends_with(EXTENSION) {
         trimmed.to_string()
     } else {
         format!("{trimmed}{EXTENSION}")
     };
     Ok(TreePath::parse(&named)?)
+}
+
+/// Users may not name anything with the placeholder's reserved leaf.
+pub(super) fn reject_reserved_leaf(path: &TreePath) -> Result<(), FileStoreError> {
+    if is_reserved_leaf(path.name()) {
+        return Err(FileStoreError::ReservedName { path: path.clone() });
+    }
+    Ok(())
 }

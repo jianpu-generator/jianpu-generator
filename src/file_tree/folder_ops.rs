@@ -2,6 +2,7 @@
 //! moving one rewrites the key of every file (and explicit empty folder)
 //! under it; file ids travel with their files.
 
+use super::file_ops::reject_reserved_leaf;
 use super::path::TreePath;
 use super::store_state::{FileOperationContext, FileStoreError, FileStoreState};
 use super::unique_name::unique_folder_path;
@@ -81,6 +82,7 @@ pub fn move_folder(
             changes: Vec::new(),
         });
     }
+    reject_reserved_leaf(to)?;
     if to.is_within(from) {
         return Err(FileStoreError::MoveIntoItself {
             folder: from.clone(),

@@ -63,6 +63,10 @@ pub enum FileStoreError {
     DemoFileReadOnly {
         path: String,
     },
+    /// The destination's last segment is the reserved placeholder leaf.
+    ReservedName {
+        path: TreePath,
+    },
 }
 
 impl From<PathError> for FileStoreError {
@@ -90,6 +94,9 @@ impl fmt::Display for FileStoreError {
                 destination.as_str()
             ),
             Self::DemoFileReadOnly { path } => write!(f, "`{path}` is a read-only demo file"),
+            Self::ReservedName { path } => {
+                write!(f, "`{}` is a reserved name and cannot be used", path.name())
+            }
         }
     }
 }

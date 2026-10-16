@@ -8,6 +8,7 @@ mod folder_ops;
 mod folder_queries;
 mod move_targets;
 mod path;
+mod placeholder;
 mod store_state;
 mod tree;
 mod unique_name;
@@ -23,6 +24,10 @@ pub use folder_queries::{
 };
 pub use move_targets::{move_destination, move_targets, rename_error, MoveTarget};
 pub use path::{PathError, TreePath, MAX_PATH_BYTES};
+pub use placeholder::{
+    classify_cloud_listing, is_placeholder_path, placeholder_path, FolderPlaceholder, ListedEntry,
+    ListingClassification, PLACEHOLDER_LEAF,
+};
 pub use store_state::{DemoFile, FileOperationContext, FileStoreError, FileStoreState};
 pub use tree::{FileNode, FileTree, FileTreeError, FolderContents, FolderNode, TreeRow};
 pub use unique_name::{path_after_collision, unique_folder_path, unique_path};
@@ -42,6 +47,8 @@ mod folder_queries_tests;
 mod move_targets_tests;
 #[cfg(test)]
 mod path_tests;
+#[cfg(test)]
+mod placeholder_tests;
 #[cfg(test)]
 mod tree_tests;
 #[cfg(test)]

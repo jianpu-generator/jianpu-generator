@@ -1535,6 +1535,7 @@ world jianpu-wasm {
         ancestor-is-file,
         move-into-itself,
         demo-file-read-only,
+        reserved-name,
     }
 
     record file-store-failure {
@@ -1636,6 +1637,33 @@ world jianpu-wasm {
         message: string,
     }
 
+    // One row of the cloud's file listing, as far as placeholder classification needs.
+    record cloud-listed-entry {
+        id: string,
+        name: string,
+        trashed: bool,
+    }
+
+    // An active placeholder row: the explicit empty `folder` it keeps and the `file-id` to rename or trash with it.
+    record folder-placeholder {
+        folder: string,
+        file-id: string,
+    }
+
+    record cloud-listing-classification {
+        folders: list<folder-placeholder>,
+        // Placeholders of deleted folders: hidden, but they still hold their name in the cloud.
+        trashed-folders: list<folder-placeholder>,
+        // Every placeholder row (active or trashed): not a file, drop it from the listing.
+        hidden-file-ids: list<string>,
+    }
+
+    // Splits the `<folder>/.keep` placeholder rows out of a cloud listing.
+    export file-store-classify-cloud-listing: func(entries: list<cloud-listed-entry>) -> cloud-listing-classification;
+    // Whether `path` is a `<folder>/.keep` placeholder file's path.
+    export file-store-is-placeholder-path: func(path: string) -> bool;
+    // The placeholder file's path for `folder`; none if invalid.
+    export file-store-placeholder-path: func(folder: string) -> option<string>;
     // `folder` is `none` for the top level.
     export file-store-create-folder: func(state: file-store-state, parent: option<string>, context: file-operation-context) -> file-store-response;
     // Top level plus every folder; `excluded-folder` and its descendants are left out.

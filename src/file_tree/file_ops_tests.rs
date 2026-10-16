@@ -226,3 +226,35 @@ fn restore_under_a_file_fails_and_keeps_the_bin() {
         Err(FileStoreError::NotFound { .. })
     ));
 }
+
+#[test]
+fn rename_to_the_reserved_placeholder_leaf_is_rejected() {
+    let state = store(&["a.jianpu"], &[]);
+    let error = rename_file(&state, "a.jianpu", "Songs/.keep", &context()).unwrap_err();
+    assert_eq!(
+        error,
+        FileStoreError::ReservedName {
+            path: path("Songs/.keep")
+        }
+    );
+    assert_eq!(
+        error.to_string(),
+        "`.keep` is a reserved name and cannot be used"
+    );
+}
+
+#[test]
+fn rename_error_reports_the_reserved_leaf() {
+    let state = store(&["a.jianpu"], &[]);
+    assert_eq!(
+        rename_error(&state, "a.jianpu", "Songs/.keep", &context()).as_deref(),
+        Some("`.keep` is a reserved name and cannot be used")
+    );
+}
+
+#[test]
+fn a_name_that_merely_starts_with_keep_is_fine() {
+    let state = store(&["a.jianpu"], &[]);
+    let next = rename_file(&state, "a.jianpu", "Songs/.keep.jianpu", &context()).unwrap();
+    assert!(next.user_files.contains_key("Songs/.keep.jianpu"));
+}

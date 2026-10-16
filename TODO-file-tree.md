@@ -10,6 +10,7 @@ Model is tentative: file name is a slash-separated path (`Hymns/Advent/O Come.ji
 - [x] Path length limit: same as S3 object keys, 1024 bytes of UTF-8 for the whole path (CJK names use 3 bytes per character, so count bytes, not characters)
 - [ ] Copy `Demo/` into the user's own files? (not asked; default is a later follow-up, out of scope here)
 - [x] Tree logic lives in Rust/wasm; TypeScript only renders and passes raw UI actions
+- [x] Cloud stores the path as a plain slash-separated string in `name` (backward compatible); folders are a UI concept like S3; explicit empty folders persist as a hidden placeholder file
 
 ## Phase 1: model (pure functions, tests in separate files)
 
@@ -43,10 +44,10 @@ Model is tentative: file name is a slash-separated path (`Hymns/Advent/O Come.ji
 
 ## Phase 3: cloud
 
-- [ ] Paths as names in the cloud store; uniqueness on full path
+- [x] Paths as names in the cloud store; uniqueness on full path
 - [ ] Batch-rename message in the outbox (no half-delivered folder move)
-- [ ] Explicit empty folders (marker entry or table)
-- [ ] Collision-retry naming for folders
+- [ ] Explicit empty folders: placeholder file `<folder>/.keep` (reserved leaf name with no `.jianpu` extension, so users can't collide); worker stays unaware of folders
+- [x] Collision-retry naming for folders
 - [ ] Capture signed-in / Start Sync share states from the real app for mockups
 
 ## Phase 4: share a folder

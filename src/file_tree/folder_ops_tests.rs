@@ -263,3 +263,15 @@ fn create_folder_inside_a_file_fails() {
         Err(FileStoreError::AncestorIsFile { .. })
     ));
 }
+
+#[test]
+fn moving_a_folder_to_the_reserved_leaf_is_rejected() {
+    let state = store(&["A/a.jianpu"], &[], &[]);
+    let error = move_folder(&state, &path("A"), &path("B/.keep"), &context()).unwrap_err();
+    assert_eq!(
+        error,
+        FileStoreError::ReservedName {
+            path: path("B/.keep")
+        }
+    );
+}

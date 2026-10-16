@@ -355,6 +355,9 @@ impl Guest for Component {
         file_store_move_targets(state: FileStoreState, excluded_folder: Option<String>) -> Vec<MoveTarget>;
         file_store_move_destination(source_path: String, folder: Option<String>) -> Option<String>;
         file_store_name_after_collision(rejected: String) -> Option<String>;
+        file_store_classify_cloud_listing(entries: Vec<CloudListedEntry>) -> CloudListingClassification;
+        file_store_placeholder_path(folder: String) -> Option<String>;
+        file_store_is_placeholder_path(path: String) -> bool;
         file_store_rename_error(state: FileStoreState, from_path: String, to_path: String, context: FileOperationContext) -> Option<String>;
         file_store_folder_move_error(state: FileStoreState, from_path: String, to_path: String, context: FileOperationContext) -> Option<String>;
         file_store_folder_delete_summary(state: FileStoreState, folder: String) -> Option<FolderDeleteSummary>;
