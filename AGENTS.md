@@ -59,6 +59,18 @@ To run local dev, use `mprocs -c dekit.yaml`.
   message rather than failing if the `wasm32-unknown-unknown` target isn't
   installed (`rustup target add wasm32-unknown-unknown`).
 
+## Staging D1
+
+**Purpose:** prod D1 (`jianpu-live-share`) is the only other database, and the local e2e worker runs plain SQLite, not D1. Staging is where a migration or a risky SQL statement gets run against real D1, on a copy of prod data, before it reaches prod. Use it for anything D1 could handle differently from SQLite (table-rebuild migrations, multi-row atomicity, constraint behaviour). It is not a place to deploy the worker or run e2e. Prod is deployed straight from `master` with no staging gate, so this check is manual: do it before merging a PR that adds a migration or changes `crates/live-share-worker/queries/`.
+
+Database: `jianpu-live-share-staging` (id `e388837b-aed7-495c-96d3-fca824639cfc`, same Cloudflare account as prod). Only the database exists: no staging worker is deployed, and nothing in the repo or CI points at it.
+
+- **Contents:** a copy of prod data, last taken 2026-10-16 at migration `0004`, with `0005` applied on top (first use: the file-tree PR). It includes the `oauth_sessions` rows, so treat it as sensitive as prod. Earlier tests leave stray data (e.g. files renamed to `Zed/...`), so refresh before relying on it.
+- **Refresh from prod** (read-only on prod): `npx wrangler d1 export jianpu-live-share --remote --output <file>.sql`, then `npx wrangler d1 execute jianpu-live-share-staging --remote --file <file>.sql`. The export uses plain `CREATE TABLE`, so importing into a database that already has tables should fail (not tried): drop the tables first or create a fresh database. Keep the export outside the repo.
+- **Apply migrations:** `d1 migrations apply` needs a config naming the database, and there is none in the repo. Write a throwaway `wrangler.staging.jsonc` outside the repo: `{"name":"staging-tmp","compatibility_date":"2024-09-23","d1_databases":[{"binding":"DB","database_name":"jianpu-live-share-staging","database_id":"e388837b-aed7-495c-96d3-fca824639cfc","migrations_dir":"<absolute path to live-share-worker/migrations>"}]}`, then `npx wrangler d1 migrations apply DB --remote -c <that file>`. Wrangler asks no confirmation in a non-interactive shell, and `-y` is rejected.
+- **Run SQL:** `npx wrangler d1 execute DB --remote -c <that file> --command "..."`. It can't bind parameters, so inline literals when replaying a query from `crates/live-share-worker/queries/`.
+- **Never** point `deploy.json`, `cloudflare.config.ts` or the deploy workflow at the staging id, or the next push to `master` would deploy against it.
+
 ## Cross-boundary invariants (Rust ↔ TS)
 
 A cross-boundary invariant is any value, shape or rule that two sides must agree on. The two sides can be Rust and TS, or either of them and config/scripts. Examples:
