@@ -55,13 +55,13 @@ Model is tentative: file name is a slash-separated path (`Hymns/Advent/O Come.ji
 
 - [x] Share dialog for folders: static link (snapshot of the subtree) and synced link
 - [x] Static link size guard: warn and offer synced link when too big
-- [ ] Synced folder: new files, edits, renames and deletions appear for viewers on reload (no polling or push, same as single-file synced links)
+- [x] Synced folder: new files, edits, renames and deletions appear for viewers on reload (no polling or push, same as single-file synced links)
 - [x] Shared marker on the folder row, "via" tag on files inside
 - [x] Shared folder menu: Copy share link, Sharing settings; nested folder shows "Shared via"
 - [x] Warn on delete of a shared folder; moving keeps the link working
 - [x] Warn when a file inside already has its own synced link
 - [x] Stop sync confirmation
-- [ ] Viewer: same toolbar as today, file picker rooted at the shared folder, read-only
-- [ ] Viewer: "Import this folder" (name clash becomes `Hymns 2`) and Discard
-- [ ] Viewer: "no longer shared" screen (updates on reload, no live push)
-- [ ] Update `syntax.md` only if `.jianpu` syntax changes (not expected)
+- [x] Viewer: same toolbar as today, file picker rooted at the shared folder, read-only
+- [x] Viewer: "Import this folder" (name clash becomes `Hymns 2`) and Discard
+- [x] Viewer: "no longer shared" screen (updates on reload, no live push)
+- [x] Update `syntax.md` only if `.jianpu` syntax changes (not expected) — unchanged, no syntax change
