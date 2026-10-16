@@ -2,6 +2,8 @@
 
 **Never commit directly to `master`.** Always work on a feature branch and open a pull request. The full e2e suite is too large to run in the pre-commit hook, so it runs in CI (`.github/workflows/ci.yml`) on the PR instead — the PR is the gate, not the local commit.
 
+Locally, run only the specific e2e tests you need with plain Playwright (`cd web && pnpm test:e2e --grep "..."`), not the auto-retry script `pnpm test:e2e:resolve` — that is reserved for CI. Stop any dev server you started once the run finishes.
+
 ## Syntax documentation
 
 The `.jianpu` input syntax is documented in `syntax.md`.
