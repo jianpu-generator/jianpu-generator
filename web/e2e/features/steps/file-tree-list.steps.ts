@@ -115,7 +115,11 @@ When('I open the file tree list', async ({ page }) => {
 })
 
 function folderRow(page: Page, name: string) {
-  return page.getByRole('button', { name, exact: true })
+  // Scoped to the tree: the file browser's own "New folder" toolbar button
+  // would otherwise match a folder named "New folder".
+  return page
+    .locator('li.file-tree-row')
+    .getByRole('button', { name, exact: true })
 }
 
 function fileRow(page: Page, name: string) {
@@ -220,3 +224,33 @@ Then(
     await expect(trigger).toHaveText(name)
   },
 )
+
+When(
+  'I search the file browser for {string}',
+  async ({ page }, text: string) => {
+    await page.getByRole('searchbox', { name: 'Search files' }).fill(text)
+  },
+)
+
+When('I press Escape in the file browser', async ({ page }) => {
+  await page.keyboard.press('Escape')
+})
+
+Then(
+  'the file browser says no files match {string}',
+  async ({ page }, text: string) => {
+    await expect(page.getByTestId('file-browser')).toContainText(
+      `No files match “${text}”.`,
+    )
+  },
+)
+
+Then('the file browser search box is empty', async ({ page }) => {
+  await expect(
+    page.getByRole('searchbox', { name: 'Search files' }),
+  ).toHaveValue('')
+})
+
+Then('the file browser is closed', async ({ page }) => {
+  await expect(page.getByTestId('file-browser')).toBeHidden()
+})

@@ -1786,6 +1786,6 @@ world jianpu-wasm {
     export file-store-move-folder: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> folder-move-response;
     export file-store-delete-folder: func(state: file-store-state, folder: string, context: file-operation-context) -> file-store-response;
     export file-store-tree: func(state: file-store-state) -> file-tree-response;
-    export file-store-tree-view: func(state: file-store-state, expanded: list<string>, demo-file-names: list<string>, shares: share-overview) -> file-tree-view-response;
+    export file-store-tree-view: func(state: file-store-state, expanded: list<string>, demo-file-names: list<string>, shares: share-overview, query: string) -> file-tree-view-response;
     export file-store-active-label: func(active: string, demo-file-names: list<string>) -> file-active-label;
 }

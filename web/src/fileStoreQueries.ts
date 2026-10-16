@@ -27,17 +27,20 @@ export function fileTreeRows(state: FileStoreState): FileTreeRow[] {
 
 /** The visible rows of the file list (collapsed folders hidden, the active
  * file's ancestors forced open, the read-only `Demo/` row last), computed in
- * Rust from the raw `expanded` set. Empty if the paths conflict. */
+ * Rust from the raw `expanded` set and the search `query` (blank shows
+ * everything). Empty if the paths conflict. */
 export function fileTreeView(
   state: FileStoreState,
   expanded: string[],
   shares: ShareOverview,
+  query: string,
 ): FileTreeViewRow[] {
   const response = jianpuWasm().fileStoreTreeView(
     toWasmState(state),
     expanded,
     DEMO_FILE_NAMES,
     shares,
+    query,
   )
   return response.tag === 'ok' ? response.val : []
 }

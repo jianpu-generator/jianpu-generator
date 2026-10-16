@@ -3,6 +3,7 @@ import createClient from 'openapi-fetch'
 import type { paths } from '../../../src/generated/live-share-worker/schema'
 import { CLOUD_WORKER_ORIGIN, matchWorkerRoute } from '../../cloudFileHelpers'
 import {
+  fileSwitcherTrigger,
   fileTabByExactName,
   openFileActions,
   openFileList,
@@ -56,6 +57,11 @@ async function renameActiveFile(page: Page, newName: string): Promise<void> {
   const input = page.locator('.file-tab--active input.file-tab-name')
   await input.fill(newName)
   await input.press('Enter')
+  // The rename lands a beat after Enter; later steps (seeding, going back
+  // online) must not race it.
+  await expect(fileSwitcherTrigger(page)).toContainText(
+    newName.split('/').at(-1) ?? newName,
+  )
 }
 
 // "New" creates and activates a fresh file; renaming it gives it the

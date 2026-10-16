@@ -21,6 +21,7 @@ export function useFileTreeView(
   expanded: string[],
   activeName: string,
   shares: ShareOverview,
+  query: string,
 ): FileTreeView {
   const [wasmReady, setWasmReady] = useState(false)
 
@@ -36,7 +37,7 @@ export function useFileTreeView(
 
   return wasmReady
     ? {
-        rows: fileTreeView(store, expanded, shares),
+        rows: fileTreeView(store, expanded, shares, query),
         activeLabel: activeFileLabel(activeName),
       }
     : {

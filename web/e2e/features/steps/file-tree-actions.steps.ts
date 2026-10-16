@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test'
-import { openFileActions } from '../../fileSwitcherHelpers'
+import { fileSwitcherTrigger, openFileActions } from '../../fileSwitcherHelpers'
 import { Then, When } from './fixtures'
 
 function dialog(page: Page, name: string) {
@@ -88,6 +88,10 @@ When(
     const input = page.locator('input.file-tab-name')
     await input.fill(to)
     await input.press('Enter')
+    // The rename lands a beat after Enter; later steps must not race it.
+    await expect(fileSwitcherTrigger(page)).toContainText(
+      to.split('/').at(-1) ?? to,
+    )
   },
 )
 

@@ -217,6 +217,7 @@ pub(super) fn file_store_tree_view(
     expanded: Vec<String>,
     demo_file_names: Vec<String>,
     shares: ShareOverview,
+    query: String,
 ) -> FileTreeViewResponse {
     let shares: tree::ShareOverview = shares.into();
     let active = state.active.clone();
@@ -229,6 +230,7 @@ pub(super) fn file_store_tree_view(
                     expanded: &expanded,
                     demo_file_names: &demo_file_names,
                     shares: &shares,
+                    query: &query,
                 })
                 .into_iter()
                 .map(view_row)

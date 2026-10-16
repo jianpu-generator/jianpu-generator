@@ -160,6 +160,12 @@ export function fileTabByExactName(page: Page, name: string) {
  * in the header. Idempotent — the trigger toggles open/closed, so this is a
  * no-op if already open. */
 export async function openFileActions(page: Page) {
+  // The file browser is a modal: it makes the rest of the page inert.
+  const browser = page.getByTestId('file-browser')
+  if (await browser.isVisible()) {
+    await page.keyboard.press('Escape')
+    await browser.waitFor({ state: 'hidden' })
+  }
   const trigger = page.getByRole('button', { name: 'File actions' })
   if ((await trigger.getAttribute('aria-expanded')) === 'true') return
   await trigger.click()

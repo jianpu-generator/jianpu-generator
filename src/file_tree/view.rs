@@ -30,6 +30,9 @@ pub struct TreeViewInput<'a> {
     pub demo_file_names: &'a [String],
     /// The owner's live links; drives the shared marker and the "via" tags.
     pub shares: &'a ShareOverview,
+    /// What the search box holds. Blank shows the whole tree; otherwise only
+    /// the rows whose name contains it (ignoring case), with their folders.
+    pub query: &'a str,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,9 +73,11 @@ impl FileTree {
     /// files are in [`FileTree::rows`] order.
     pub fn view_rows(&self, input: &TreeViewInput) -> Vec<TreeViewRow> {
         let active_path = TreePath::parse(input.active).ok();
-        folder_rows(&self.root, 0, input, active_path.as_ref())
+        let query = input.query.trim().to_lowercase();
+        let filter = (!query.is_empty()).then_some(query.as_str());
+        folder_rows(&self.root, 0, input, active_path.as_ref(), filter)
             .into_iter()
-            .chain(demo_rows(input))
+            .chain(demo_rows(input, filter))
             .collect()
     }
 }
@@ -82,13 +87,23 @@ fn folder_rows(
     depth: usize,
     input: &TreeViewInput,
     active_path: Option<&TreePath>,
+    filter: Option<&str>,
 ) -> Vec<TreeViewRow> {
     contents
         .folders
         .iter()
+        .filter(|folder| {
+            filter.is_none_or(|query| {
+                name_matches(&folder.name, query) || has_match(&folder.contents, query)
+            })
+        })
         .flat_map(|folder| {
-            let expanded = input.expanded.iter().any(|key| key == folder.path.as_str())
+            // While searching, every folder that is shown is open. A folder
+            // matching by its own name shows everything inside it.
+            let expanded = filter.is_some()
+                || input.expanded.iter().any(|key| key == folder.path.as_str())
                 || active_path.is_some_and(|active| active.is_within(&folder.path));
+            let child_filter = filter.filter(|query| !name_matches(&folder.name, query));
             let header = TreeViewRow {
                 key: folder.path.as_str().to_string(),
                 name: folder.name.clone(),
@@ -108,33 +123,57 @@ fn folder_rows(
             } else if folder.contents.folders.is_empty() && folder.contents.files.is_empty() {
                 vec![hint_row(depth + 1)]
             } else {
-                folder_rows(&folder.contents, depth + 1, input, active_path)
+                folder_rows(
+                    &folder.contents,
+                    depth + 1,
+                    input,
+                    active_path,
+                    child_filter,
+                )
             };
             std::iter::once(header).chain(children)
         })
-        .chain(contents.files.iter().map(|file| TreeViewRow {
-            key: file.path.as_str().to_string(),
-            name: file.name.clone(),
-            depth,
-            kind: TreeViewRowKind::File,
-            expanded: false,
-            file_count: 0,
-            is_active: active_path.is_some_and(|active| *active == file.path),
-            share_id: None,
-            shared_via: input.shares.shared_via(&file.path),
-        }))
+        .chain(
+            contents
+                .files
+                .iter()
+                .filter(|file| filter.is_none_or(|query| name_matches(&file.name, query)))
+                .map(|file| TreeViewRow {
+                    key: file.path.as_str().to_string(),
+                    name: file.name.clone(),
+                    depth,
+                    kind: TreeViewRowKind::File,
+                    expanded: false,
+                    file_count: 0,
+                    is_active: active_path.is_some_and(|active| *active == file.path),
+                    share_id: None,
+                    shared_via: input.shares.shared_via(&file.path),
+                }),
+        )
         .collect()
 }
 
-fn demo_rows(input: &TreeViewInput) -> Vec<TreeViewRow> {
+fn demo_rows(input: &TreeViewInput, filter: Option<&str>) -> Vec<TreeViewRow> {
     if input.demo_file_names.is_empty() {
+        return vec![];
+    }
+    let demo_name_matches = filter.is_some_and(|query| name_matches(DEMO_FOLDER_NAME, query));
+    let file_filter = filter.filter(|_| !demo_name_matches);
+    let shown_files: Vec<&String> = input
+        .demo_file_names
+        .iter()
+        .filter(|name| file_filter.is_none_or(|query| name_matches(name, query)))
+        .collect();
+    if shown_files.is_empty() {
         return vec![];
     }
     let active_is_demo = input
         .demo_file_names
         .iter()
         .any(|name| name == input.active);
-    let expanded = active_is_demo || input.expanded.iter().any(|key| key == DEMO_EXPANSION_KEY);
+    let expanded = filter.is_some()
+        || active_is_demo
+        || input.expanded.iter().any(|key| key == DEMO_EXPANSION_KEY);
     let header = TreeViewRow {
         key: DEMO_EXPANSION_KEY.to_string(),
         name: DEMO_FOLDER_NAME.to_string(),
@@ -146,9 +185,8 @@ fn demo_rows(input: &TreeViewInput) -> Vec<TreeViewRow> {
         share_id: None,
         shared_via: None,
     };
-    let files = input
-        .demo_file_names
-        .iter()
+    let files = shown_files
+        .into_iter()
         .filter(|_| expanded)
         .map(|name| TreeViewRow {
             key: name.clone(),
@@ -176,6 +214,27 @@ fn hint_row(depth: usize) -> TreeViewRow {
         share_id: None,
         shared_via: None,
     }
+}
+
+/// Whether a file or folder name contains the (already lowercased) query.
+/// The `.jianpu` extension is not part of the name the user sees.
+fn name_matches(name: &str, query: &str) -> bool {
+    name.strip_suffix(".jianpu")
+        .unwrap_or(name)
+        .to_lowercase()
+        .contains(query)
+}
+
+/// Whether anything inside `contents`, at any depth, matches the query.
+fn has_match(contents: &FolderContents, query: &str) -> bool {
+    contents
+        .files
+        .iter()
+        .any(|file| name_matches(&file.name, query))
+        || contents
+            .folders
+            .iter()
+            .any(|folder| name_matches(&folder.name, query) || has_match(&folder.contents, query))
 }
 
 fn count_files(contents: &FolderContents) -> usize {

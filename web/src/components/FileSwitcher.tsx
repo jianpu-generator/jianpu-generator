@@ -1,6 +1,5 @@
 import {
   ArchiveIcon,
-  ChevronDownIcon,
   CopyIcon,
   DotsHorizontalIcon,
   FilePlusIcon,
@@ -12,12 +11,7 @@ import {
   TrashIcon,
 } from '@radix-ui/react-icons'
 import { useState } from 'react'
-import {
-  displayFileName,
-  fileContent,
-  isReadOnlyFile,
-  sortedUserFileNames,
-} from '../fileStore'
+import { fileContent, isReadOnlyFile, sortedUserFileNames } from '../fileStore'
 import {
   fileMoveTargets,
   moveDestination,
@@ -28,8 +22,9 @@ import { useFileTreeView } from '../hooks/useFileTreeView'
 import { useFolderRowActions } from '../hooks/useFolderRowActions'
 import { useNewFolderPrompt } from '../hooks/useNewFolderPrompt'
 import { useFileStaticShareLink } from '../hooks/useStaticShareLink'
+import { FileBrowserModal } from './FileBrowserModal'
 import type { FileSwitcherProps } from './FileSwitcherProps'
-import { FileTreeList } from './FileTreeList'
+import { FileSwitcherTrigger } from './FileSwitcherTrigger'
 import { type FolderDialogState, FolderDialogs } from './FolderDialogs'
 import { FolderShareModal, type FolderShareTarget } from './FolderShareModal'
 import { ImportButton } from './ImportButton'
@@ -79,8 +74,8 @@ export function FileSwitcher({
 }: FileSwitcherProps) {
   const names = sortedUserFileNames(store)
   const showEmptyHint = !isLoadingCloud && names.length === 0
-
   const [filesOpen, setFilesOpen] = useState(false)
+  const [query, setQuery] = useState('')
   const {
     expanded,
     toggle: toggleFolder,
@@ -91,8 +86,8 @@ export function FileSwitcher({
     expanded,
     triggerLabel,
     folderShares.overview,
+    query,
   )
-
   const listRenameError = (from: string, to: string) =>
     renameError(store, from, to)
   const [actionsOpen, setActionsOpen] = useState(false)
@@ -132,57 +127,58 @@ export function FileSwitcher({
         autosaveDeadline={autosaveDeadline}
       />
       <div className="export-menu">
-        <ResponsiveMenu.Root open={filesOpen} onOpenChange={setFilesOpen}>
-          <ResponsiveMenu.Trigger asChild>
-            <button type="button" className="preview-export-btn">
-              {activeLabel.folderNames.length > 0 ? (
-                <>
-                  <span className="file-switcher-folder-prefix">
-                    {`${activeLabel.folderNames.join(' / ')} /`}
-                  </span>{' '}
-                </>
-              ) : null}
-              {displayFileName(activeLabel.fileName)}
-              {isLoadingCloud ? (
-                <span className="file-tab-bar-spinner" aria-hidden="true" />
-              ) : (
-                <ChevronDownIcon
-                  className="export-menu-caret"
-                  aria-hidden="true"
-                />
-              )}
-            </button>
-          </ResponsiveMenu.Trigger>
-          <ResponsiveMenu.Content
-            className="export-menu-list file-tab-bar-files-list"
-            align="end"
-            sideOffset={4}
-            title="Files"
-          >
-            {isLoadingCloud ? (
-              <p className="file-tab-bar-hint">Loading files from the cloud…</p>
-            ) : showEmptyHint ? (
-              <p className="file-tab-bar-hint">
-                No files yet — click New to create one.
-              </p>
-            ) : null}
-            <FileTreeList
-              rows={rows}
-              renamingName={renamingName}
-              onToggleFolder={toggleFolder}
-              onSelect={(selected) => {
-                onSelect(selected)
-                setFilesOpen(false)
-              }}
-              onRename={onRename}
-              renameError={listRenameError}
-              creating={creating}
-              creatingFolder={creatingFolder}
-              importing={importing}
-              folderActions={folderActions}
+        <FileBrowserModal
+          open={filesOpen}
+          onOpenChange={(open) => {
+            setFilesOpen(open)
+            if (open) setQuery('')
+          }}
+          trigger={
+            <FileSwitcherTrigger
+              activeLabel={activeLabel}
+              isLoadingCloud={isLoadingCloud}
             />
-          </ResponsiveMenu.Content>
-        </ResponsiveMenu.Root>
+          }
+          activePath={store.active}
+          query={query}
+          onQueryChange={setQuery}
+          rows={rows}
+          isLoadingCloud={isLoadingCloud}
+          storeIsEmpty={showEmptyHint}
+          creating={creating}
+          creatingFolder={creatingFolder}
+          importing={importing}
+          onNewFile={async () => {
+            await onCreate(activeLabel.folderPath)
+            setFilesOpen(false)
+          }}
+          onNewFolder={() => {
+            setFilesOpen(false)
+            newFolderPrompt.open(activeLabel.folderPath)
+          }}
+          onImportFile={
+            onImportFile
+              ? (file) => {
+                  onImportFile(file, activeLabel.folderPath)
+                  setFilesOpen(false)
+                }
+              : undefined
+          }
+          treeProps={{
+            renamingName,
+            onToggleFolder: toggleFolder,
+            onSelect: (selected) => {
+              onSelect(selected)
+              setFilesOpen(false)
+            },
+            onRename,
+            renameError: listRenameError,
+            creating,
+            creatingFolder,
+            importing,
+            folderActions,
+          }}
+        />
       </div>
       <div className="export-menu">
         <ResponsiveMenu.Root open={actionsOpen} onOpenChange={setActionsOpen}>

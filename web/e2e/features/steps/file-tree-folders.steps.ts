@@ -70,7 +70,8 @@ When(
   async ({ page }, folder: string, name: string) => {
     await openFolderMenu(page, folder)
     await page.getByRole('menuitem', { name: 'Import here' }).click()
-    await page.setInputFiles('input[type=file]', {
+    // The menu's own input: the file browser's toolbar has one too.
+    await page.setInputFiles('[role=menu] input[type=file]', {
       name: `${name}.pdf`,
       mimeType: 'application/pdf',
       buffer: exportedPdfBytes(),

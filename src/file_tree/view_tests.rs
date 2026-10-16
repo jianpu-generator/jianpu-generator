@@ -51,6 +51,7 @@ fn folders_are_collapsed_by_default_and_show_recursive_file_counts() {
         expanded: &[],
         demo_file_names: &strings(&["01.jianpu", "02.jianpu"]),
         shares: &ShareOverview::default(),
+        query: "",
     });
     assert_eq!(
         render(&rows),
@@ -70,6 +71,7 @@ fn an_expanded_folder_shows_its_children_and_remembers_nothing_else() {
         expanded: &strings(&["Hymns"]),
         demo_file_names: &[],
         shares: &ShareOverview::default(),
+        query: "",
     });
     assert_eq!(
         render(&rows),
@@ -90,6 +92,7 @@ fn ancestors_of_the_active_file_are_open_even_when_not_expanded() {
         expanded: &[],
         demo_file_names: &[],
         shares: &ShareOverview::default(),
+        query: "",
     });
     assert_eq!(
         render(&rows),
@@ -112,6 +115,7 @@ fn an_expanded_empty_folder_gets_a_hint_row() {
         expanded: &strings(&["Empty"]),
         demo_file_names: &[],
         shares: &ShareOverview::default(),
+        query: "",
     });
     assert_eq!(rows[0].kind, TreeViewRowKind::Folder);
     assert_eq!(rows[1].kind, TreeViewRowKind::EmptyFolderHint);
@@ -126,6 +130,7 @@ fn demo_is_last_collapsed_by_default_and_opens_by_key_or_active_file() {
         expanded: &strings(&[DEMO_EXPANSION_KEY]),
         demo_file_names: &demo,
         shares: &ShareOverview::default(),
+        query: "",
     });
     assert_eq!(
         &render(&opened)[3..],
@@ -138,6 +143,7 @@ fn demo_is_last_collapsed_by_default_and_opens_by_key_or_active_file() {
         expanded: &[],
         demo_file_names: &demo,
         shares: &ShareOverview::default(),
+        query: "",
     });
     assert_eq!(
         &render(&active_demo)[3..],
@@ -184,6 +190,7 @@ fn rows_inside_a_shared_folder_carry_the_marker_and_the_via_tag() {
         expanded: &strings(&["Hymns", "Hymns/Advent"]),
         demo_file_names: &[],
         shares: &shares,
+        query: "",
     });
     let shared_info = |name: &str| {
         let row = rows.iter().find(|row| row.name == name).unwrap();
@@ -200,4 +207,55 @@ fn rows_inside_a_shared_folder_carry_the_marker_and_the_via_tag() {
     );
     assert_eq!(shared_info("Scratch.jianpu"), (None, None));
     assert_eq!(shared_info("Empty"), (None, None));
+}
+
+fn searched(query: &str) -> Vec<String> {
+    render(&tree().view_rows(&TreeViewInput {
+        active: "Scratch.jianpu",
+        expanded: &[],
+        demo_file_names: &strings(&["01-scale.jianpu", "02-rests.jianpu"]),
+        shares: &ShareOverview::default(),
+        query,
+    }))
+}
+
+#[test]
+fn a_blank_query_shows_the_whole_tree() {
+    assert_eq!(searched("   "), searched(""));
+}
+
+#[test]
+fn a_matching_file_keeps_its_folders_open_and_hides_the_rest() {
+    assert_eq!(
+        searched("rejoice"),
+        vec!["Hymns/ 3 open", "  Advent/ 2 open", "    Rejoice.jianpu"]
+    );
+}
+
+#[test]
+fn a_folder_matching_by_name_shows_everything_inside_it() {
+    assert_eq!(
+        searched("advent"),
+        vec![
+            "Hymns/ 3 open",
+            "  Advent/ 2 open",
+            "    O Come.jianpu",
+            "    Rejoice.jianpu"
+        ]
+    );
+}
+
+#[test]
+fn the_extension_is_not_searchable() {
+    assert_eq!(searched("jianpu"), Vec::<String>::new());
+}
+
+#[test]
+fn demo_files_are_searched_too() {
+    assert_eq!(searched("rests"), vec!["Demo/ 2 open", "  02-rests.jianpu"]);
+}
+
+#[test]
+fn a_query_matching_nothing_leaves_no_rows() {
+    assert_eq!(searched("zzz"), Vec::<String>::new());
 }

@@ -4,14 +4,15 @@
 .responsive-menu-overlay {
   position: fixed;
   inset: 0;
-  z-index: 30;
+  /* Above the full-screen file browser (1000), whose folder menus open it. */
+  z-index: 1100;
   background: rgb(0 0 0 / 0.4);
 }
 
 .responsive-menu-drawer {
   position: fixed;
   inset: 0;
-  z-index: 31;
+  z-index: 1101;
   display: flex;
   flex-direction: column;
   background: var(--surface);

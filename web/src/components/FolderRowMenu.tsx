@@ -70,7 +70,7 @@ export function FolderRowMenu({
         </button>
       </ResponsiveMenu.Trigger>
       <ResponsiveMenu.Content
-        className="export-menu-list"
+        className="export-menu-list folder-row-menu"
         align="end"
         sideOffset={4}
         title={name}
