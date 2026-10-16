@@ -2,8 +2,8 @@
 
 use crate::backoff::backoff_ms;
 use crate::types::{
-    Attempt, AttemptOutcome, FileRevision, Lane, LaneStatus, Message, Queue, QueuedMessage,
-    Resolution, SendResult,
+    Attempt, AttemptOutcome, FileRevision, Lane, LaneStatus, Message, NameAdjustment, Queue,
+    QueuedMessage, RenameMove, Resolution, SendResult, BATCH_LANE_PREFIX,
 };
 
 fn with_lane(queue: Queue, file_id: &str, update: impl FnOnce(Lane) -> Lane) -> Queue {
@@ -83,6 +83,72 @@ fn rename_head(lane: &mut Lane, suggested_name: &str) -> bool {
     }
 }
 
+/// The moves with each adjusted destination replaced (or the move dropped).
+/// `None` when no adjustment applies to any move, so a resend could not
+/// change the outcome.
+fn adjust_moves(moves: &[RenameMove], adjustments: &[NameAdjustment]) -> Option<Vec<RenameMove>> {
+    let adjusted: Vec<RenameMove> = moves
+        .iter()
+        .filter_map(
+            |rename| match adjustments.iter().find(|entry| entry.rejected == rename.to) {
+                None => Some(rename.clone()),
+                Some(NameAdjustment {
+                    replacement: Some(to),
+                    ..
+                }) => Some(RenameMove {
+                    file_id: rename.file_id.clone(),
+                    to: to.clone(),
+                }),
+                Some(NameAdjustment {
+                    replacement: None, ..
+                }) => None,
+            },
+        )
+        .collect();
+    (adjusted != moves).then_some(adjusted)
+}
+
+/// A batch refused as a whole is resent with the rejected destinations
+/// adjusted: all of it or none of it is ever applied. A batch left with no
+/// move is done.
+fn apply_names_taken(
+    lane: Lane,
+    adjustments: Vec<NameAdjustment>,
+    now_ms: u64,
+    jitter_unit: f64,
+) -> Lane {
+    let mut lane = lane;
+    let adjusted = match lane.messages.first().map(|head| &head.message) {
+        Some(Message::RenameFiles { moves }) => adjust_moves(moves, &adjustments),
+        _ => None,
+    };
+    match adjusted {
+        Some(moves) if moves.is_empty() => {
+            apply_result(lane, SendResult::Ok { revision: 0 }, now_ms, jitter_unit)
+        }
+        Some(moves) => {
+            if let Some(head) = lane.messages.first_mut() {
+                head.message = Message::RenameFiles { moves };
+            }
+            halt_with_attempt(
+                lane,
+                now_ms,
+                AttemptOutcome::NamesTaken { adjustments },
+                |_| LaneStatus::Draining,
+            )
+        }
+        None => apply_result(
+            lane,
+            SendResult::Permanent {
+                status: 409,
+                reason: "name_taken".to_string(),
+            },
+            now_ms,
+            jitter_unit,
+        ),
+    }
+}
+
 fn apply_result(lane: Lane, result: SendResult, now_ms: u64, jitter_unit: f64) -> Lane {
     match result {
         SendResult::Ok { .. } => {
@@ -141,6 +207,9 @@ fn apply_result(lane: Lane, result: SendResult, now_ms: u64, jitter_unit: f64) -
                 )
             }
         }
+        SendResult::NamesTaken { adjustments } => {
+            apply_names_taken(lane, adjustments, now_ms, jitter_unit)
+        }
         SendResult::Permanent { status, reason } => {
             let failed = LaneStatus::Failed {
                 reason: reason.clone(),
@@ -178,14 +247,25 @@ pub fn on_result(
     if !is_current {
         return queue;
     }
+    let is_batch = file_id.starts_with(BATCH_LANE_PREFIX);
     let revisions = match &result {
-        SendResult::Ok { revision } => set_revision(queue.revisions.clone(), file_id, *revision),
+        // A batch has no revision of its own: it is not a file.
+        SendResult::Ok { revision } if !is_batch => {
+            set_revision(queue.revisions.clone(), file_id, *revision)
+        }
         _ => queue.revisions.clone(),
     };
     let queue = with_lane(queue, file_id, |lane| {
         apply_result(lane, result, now_ms, jitter_unit)
     });
-    Queue { revisions, ..queue }
+    // A delivered batch leaves nothing behind: its lane exists for that one
+    // message only.
+    let lanes = queue
+        .lanes
+        .into_iter()
+        .filter(|lane| !(lane.file_id == file_id && is_batch && lane.messages.is_empty()))
+        .collect();
+    Queue { lanes, revisions }
 }
 
 /// Apply a user's resolution to a halted lane.

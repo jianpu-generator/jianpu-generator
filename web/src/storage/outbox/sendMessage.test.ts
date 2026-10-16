@@ -237,6 +237,93 @@ describe('sendMessage revision conflict', () => {
   })
 })
 
+describe('sendMessage batch rename', () => {
+  const batch = (...moves: Array<{ fileId: string; to: string }>): Message => ({
+    tag: 'rename-files',
+    val: { moves },
+  })
+
+  it('posts every move to the batch route', async () => {
+    const post = vi.fn<Post>(async () => replyWith({ status: 204 }))
+
+    const result = await sendMessage(
+      requestFor(
+        batch(
+          { fileId: 'a', to: 'New/a.jianpu' },
+          { fileId: 'b', to: 'New/b.jianpu' },
+        ),
+      ),
+      makeDeps(post),
+    )
+
+    expect(result).toEqual({ tag: 'ok', val: { revision: 3n } })
+    expect(post).toHaveBeenCalledWith(
+      '/files/rename-batch',
+      expect.objectContaining({
+        body: {
+          identityToken: 'token',
+          moves: [
+            { id: 'a', name: 'New/a.jianpu' },
+            { id: 'b', name: 'New/b.jianpu' },
+          ],
+        },
+      }),
+    )
+  })
+
+  it('adjusts each destination the worker reports as taken', async () => {
+    const result = await sendMessage(
+      requestFor(batch({ fileId: 'a', to: 'New/a.jianpu' })),
+      makeDeps(
+        respond({
+          status: 409,
+          body: { code: 'names_taken', names: ['New/a.jianpu'] },
+        }),
+      ),
+    )
+
+    expect(result).toEqual({
+      tag: 'names-taken',
+      val: {
+        adjustments: [
+          { rejected: 'New/a.jianpu', replacement: 'New/a 2.jianpu' },
+        ],
+      },
+    })
+  })
+
+  it('drops the move of a folder marker that already exists', async () => {
+    const result = await sendMessage(
+      requestFor(batch({ fileId: 'k', to: 'New/.keep' })),
+      makeDeps(
+        respond({
+          status: 409,
+          body: { code: 'names_taken', names: ['New/.keep'] },
+        }),
+      ),
+    )
+
+    expect(result).toEqual({
+      tag: 'names-taken',
+      val: {
+        adjustments: [{ rejected: 'New/.keep', replacement: undefined }],
+      },
+    })
+  })
+
+  it('is permanent when a file of the batch no longer exists', async () => {
+    const result = await sendMessage(
+      requestFor(batch({ fileId: 'a', to: 'New/a.jianpu' })),
+      makeDeps(respond({ status: 404, body: { code: 'not_found' } })),
+    )
+
+    expect(result).toEqual({
+      tag: 'permanent',
+      val: { status: 404, reason: 'not_found' },
+    })
+  })
+})
+
 describe('sendMessage name_taken', () => {
   const taken = respond({ status: 409, body: { code: 'name_taken' } })
 

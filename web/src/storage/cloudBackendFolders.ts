@@ -4,6 +4,7 @@ import {
   deleteFolder as pureDeleteFolder,
   moveFolder as pureMoveFolder,
 } from '../fileStore'
+import type { RenameMove } from '../jianpuWasm'
 import type { CloudPlaceholders } from './cloudBackendPlaceholders'
 import type { OutboxLooper } from './outbox/outboxLooper'
 
@@ -17,9 +18,10 @@ interface FolderOperationDependencies {
   trashedIdByName: Map<string, string>
 }
 
-/** Folder create, rename/move and delete for the cloud backend. Each file
- * inside is renamed or trashed on its own (one outbox message per file, not
- * one batch). Explicit folders are persisted as placeholder files
+/** Folder create, rename/move and delete for the cloud backend. A folder
+ * rename/move is ONE outbox `RenameFiles` message covering every file inside
+ * and the folders' placeholders, delivered all-or-nothing; a delete trashes
+ * each file on its own. Explicit folders are persisted as placeholder files
  * (`cloudBackendPlaceholders.ts`): created with the folder, renamed with it
  * and trashed with it; a placeholder left behind in a folder that later got
  * real files is harmless and stays. */
@@ -55,18 +57,24 @@ export function createFolderOperations({
       const result = pureMoveFolder(state, from, to)
       if (!result.ok) return state
       await whenReady()
+      const moves: RenameMove[] = []
       for (const change of result.changes) {
         if (change.kind === 'explicit-folder') {
-          await placeholders.rename(change.oldPath, change.newPath)
+          const placeholderMove = await placeholders.rename(
+            change.oldPath,
+            change.newPath,
+          )
+          if (placeholderMove) moves.push(placeholderMove)
           continue
         }
         const id = activeFileId(state, change.oldPath)
         activeIdByName.delete(change.oldPath)
         activeIdByName.set(change.newPath, id)
-        await looper.enqueue(id, {
-          tag: 'rename-file',
-          val: { to: change.newPath },
-        })
+        moves.push({ fileId: id, to: change.newPath })
+      }
+      if (moves.length > 0) {
+        // The batch lives on a lane of its own; its id is chosen in Rust.
+        await looper.enqueue('', { tag: 'rename-files', val: { moves } })
       }
       return result.state
     },

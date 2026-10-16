@@ -8,7 +8,8 @@ use crate::db;
 use crate::files::{self, ContentWriteAttempt, ContentWriteOutcome, PublicFile};
 use crate::protocol::{
     CreateFileRequest, DeleteFileRequest, FileIdPath, ListFilesRequest, ListFilesResponse,
-    RenameFileRequest, RestoreFileRequest, UpdateFileContentRequest, UpdateFileContentResponse,
+    RenameBatchRequest, RenameFileRequest, RestoreFileRequest, UpdateFileContentRequest,
+    UpdateFileContentResponse,
 };
 
 use super::routes::{HandlerResult, Json, NoContent, NoPathParams};
@@ -124,6 +125,47 @@ pub(super) async fn rename_file(
         Ok(true) => Ok(NoContent),
         Ok(false) => Err(ApiError::NotFound),
         Err(error) if is_unique_constraint_violation(&error) => Err(ApiError::NameTaken),
+        Err(error) => Err(error.into()),
+    }
+}
+
+/// `POST /files/rename-batch` -- renames every listed file or none (a folder
+/// move). Every name is validated first; then `files::plan_batch_rename`
+/// decides from the current rows: `NotFound` if a file is missing, success
+/// without writing when every file already has its name (a retry whose
+/// answer was lost), `NamesTaken` listing the destinations held by other
+/// files. Otherwise one statement writes every move, so a race into a
+/// unique-index violation still applies nothing.
+pub(super) async fn rename_files_batch(
+    ctx: RouteContext<()>,
+    _path: NoPathParams,
+    body: RenameBatchRequest,
+) -> HandlerResult<NoContent> {
+    body.moves
+        .iter()
+        .try_for_each(|rename| files::validate_file_name(&rename.name))?;
+    let d1 = ctx.d1(D1_BINDING)?;
+    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+
+    let rows = db::file_names_for_batch(&d1, &owner_user_id, &body.moves).await?;
+    match files::plan_batch_rename(&body.moves, &rows) {
+        files::BatchRenamePlan::AlreadyApplied => return Ok(NoContent),
+        files::BatchRenamePlan::NotFound => return Err(ApiError::NotFound),
+        files::BatchRenamePlan::Invalid => return Err(ApiError::BadRequest),
+        files::BatchRenamePlan::NamesTaken(names) => return Err(ApiError::NamesTaken { names }),
+        files::BatchRenamePlan::Apply => {}
+    }
+    let now = worker::Date::now().as_millis() as i64;
+    match db::rename_files_batch(&d1, &owner_user_id, &body.moves, now).await {
+        Ok(()) => Ok(NoContent),
+        Err(error) if is_unique_constraint_violation(&error) => {
+            // Lost a race with another writer: report what is taken now.
+            let rows = db::file_names_for_batch(&d1, &owner_user_id, &body.moves).await?;
+            match files::plan_batch_rename(&body.moves, &rows) {
+                files::BatchRenamePlan::NamesTaken(names) => Err(ApiError::NamesTaken { names }),
+                _ => Err(ApiError::NameTaken),
+            }
+        }
         Err(error) => Err(error.into()),
     }
 }

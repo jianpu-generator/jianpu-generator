@@ -91,6 +91,19 @@ async function post(
           body: { identityToken, name: message.val.to },
         }),
       )
+    case 'rename-files':
+      return callWorker(
+        client.POST('/files/rename-batch', {
+          signal,
+          body: {
+            identityToken,
+            moves: message.val.moves.map(({ fileId, to }) => ({
+              id: fileId,
+              name: to,
+            })),
+          },
+        }),
+      )
     case 'trash-file':
       return callWorker(
         client.POST('/files/{id}/delete', {
@@ -142,6 +155,23 @@ async function classifyRequestError(
   }
   if (apiError?.code === 'revision_conflict') {
     return classifyRevisionConflict(request, apiError.currentRevision, deps)
+  }
+  if (apiError?.code === 'names_taken') {
+    // The batch was refused as a whole. Each taken destination gets the next
+    // free numbered sibling in its folder (computed in Rust); a folder's
+    // `.keep` marker that already exists is the folder itself, so that move
+    // is dropped instead.
+    return {
+      tag: 'names-taken',
+      val: {
+        adjustments: apiError.names.map((rejected) => ({
+          rejected,
+          replacement: jianpuWasm().fileStoreIsPlaceholderPath(rejected)
+            ? undefined
+            : jianpuWasm().fileStoreNameAfterCollision(rejected),
+        })),
+      },
+    }
   }
   if (apiError?.code === 'name_taken') {
     const name = rejectedName(request, deps)

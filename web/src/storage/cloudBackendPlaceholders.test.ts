@@ -108,8 +108,16 @@ describe('createCloudBackend: empty folders are placeholder files', () => {
     const next = await backend.moveFolder(loaded, 'Old', 'Sub/New')
 
     expect(next.folders).toEqual(['Sub/New'])
-    expect(lane(looper, 'id-k')).toEqual([
-      { tag: 'rename-file', val: { to: 'Sub/New/.keep' } },
+    expect(
+      looper
+        .snapshot()
+        .queue.lanes.filter((l) => l.fileId.startsWith('batch:'))
+        .flatMap((l) => l.messages.map(({ message }) => message)),
+    ).toEqual([
+      {
+        tag: 'rename-files',
+        val: { moves: [{ fileId: 'id-k', to: 'Sub/New/.keep' }] },
+      },
     ])
   })
 

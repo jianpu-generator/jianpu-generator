@@ -20,6 +20,9 @@ pub enum ApiError {
     /// A create/rename/restore collided with another of the caller's file
     /// names (`idx_files_owner_name`).
     NameTaken,
+    /// A batch rename was refused as a whole because these destinations are
+    /// held by other files (`names`); nothing was applied.
+    NamesTaken { names: Vec<String> },
     /// A create/rename/restore asked for a file name that is not a valid
     /// path (`jianpu_generator::file_tree::TreePath` rules); `message` says why.
     InvalidName { message: String },
@@ -45,7 +48,9 @@ impl ApiError {
             ApiError::BadRequest | ApiError::InvalidName { .. } => 400,
             ApiError::Unauthorized(_) => 401,
             ApiError::NotFound => 404,
-            ApiError::NameTaken | ApiError::RevisionConflict { .. } => 409,
+            ApiError::NameTaken
+            | ApiError::NamesTaken { .. }
+            | ApiError::RevisionConflict { .. } => 409,
             ApiError::Internal { .. } => 500,
             ApiError::UpstreamFailed { .. } => 502,
         }

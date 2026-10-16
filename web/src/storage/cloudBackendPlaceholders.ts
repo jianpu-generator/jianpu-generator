@@ -1,5 +1,5 @@
 import { generateFileId } from '../fileStore'
-import { jianpuWasm } from '../jianpuWasm'
+import { jianpuWasm, type RenameMove } from '../jianpuWasm'
 import type { OutboxLooper } from './outbox/outboxLooper'
 
 /**
@@ -94,25 +94,24 @@ export function createPlaceholders(
       await looper.enqueue(row.fileId, { tag: 'trash-file' })
     },
 
-    /** The folder `from` became `to`. If a deleted folder's placeholder
-     * already holds the name `to/.keep`, that row is brought back (a rename
-     * onto it would be a `name_taken`) and the old one is trashed. */
-    async rename(from: string, to: string): Promise<void> {
+    /** The folder `from` became `to`: the placeholder rename that belongs in
+     * the folder move's batch, or undefined when there is none. If a deleted
+     * folder's placeholder already holds the name `to/.keep`, that row is
+     * brought back instead (a rename onto it would be a `name_taken`) and the
+     * old one is trashed, which no batch can express. */
+    async rename(from: string, to: string): Promise<RenameMove | undefined> {
       const row = rowByFolder.get(from)
-      if (!row || row.trashed) return
+      if (!row || row.trashed) return undefined
       const target = rowByFolder.get(to)
       if (target?.trashed) {
         await this.trash(from)
         await this.create(to)
-        return
+        return undefined
       }
       await whenReady()
       rowByFolder.delete(from)
       rowByFolder.set(to, row)
-      await looper.enqueue(row.fileId, {
-        tag: 'rename-file',
-        val: { to: placeholderPath(to) },
-      })
+      return { fileId: row.fileId, to: placeholderPath(to) }
     },
   }
 }

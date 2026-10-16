@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 
 pub const QUEUE_SCHEMA_VERSION: u32 = 1;
 pub const POSSIBLY_STUCK_AFTER: u32 = 10;
+/// Lane id prefix of a batch message: it covers several files, so it gets a
+/// lane of its own, `batch:<message id>`, instead of a file's lane.
+pub const BATCH_LANE_PREFIX: &str = "batch:";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -39,15 +42,45 @@ pub struct QueuedMessage {
     pub attempts: Vec<Attempt>,
 }
 
-/// The file id lives on the lane.
+/// One file's new path inside a `RenameFiles` batch.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RenameMove {
+    pub file_id: String,
+    pub to: String,
+}
+
+/// The file id lives on the lane, except for `RenameFiles`, which names its
+/// files itself and lives on a `batch:` lane.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum Message {
-    CreateFile { name: String, content: String },
-    SaveContent { content: String },
-    RenameFile { to: String },
+    CreateFile {
+        name: String,
+        content: String,
+    },
+    SaveContent {
+        content: String,
+    },
+    RenameFile {
+        to: String,
+    },
+    /// Renames every listed file, or none of them (one folder move).
+    RenameFiles {
+        moves: Vec<RenameMove>,
+    },
     TrashFile,
     RestoreFile,
+}
+
+/// How a rejected destination of a `RenameFiles` batch is changed: to
+/// `replacement`, or (`None`) the move is dropped because the destination
+/// is a folder marker that already exists.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NameAdjustment {
+    pub rejected: String,
+    pub replacement: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -74,6 +107,10 @@ pub enum AttemptOutcome {
     #[serde(rename_all = "camelCase")]
     NameTaken {
         suggested_name: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    NamesTaken {
+        adjustments: Vec<NameAdjustment>,
     },
     Permanent {
         status: u16,
@@ -127,6 +164,12 @@ pub enum SendResult {
     #[serde(rename_all = "camelCase")]
     NameTaken {
         suggested_name: String,
+    },
+    /// A `RenameFiles` batch was refused as a whole (nothing applied);
+    /// these destinations were taken and are adjusted before the resend.
+    #[serde(rename_all = "camelCase")]
+    NamesTaken {
+        adjustments: Vec<NameAdjustment>,
     },
     Permanent {
         status: u16,

@@ -13,11 +13,14 @@
 //! *classifying* the outcome of a content-save attempt -- the one op with
 //! real conflict semantics to get right.
 
+use std::collections::{HashMap, HashSet};
+
 use jianpu_generator::file_tree::TreePath;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::api_error::ApiError;
+use crate::protocol::RenameBatchMove;
 
 /// Mirrors a `files` row (see `live-share-worker/migrations/0003_files.sql`).
 /// `owner_user_id` is an internal, provider-agnostic `users.id`, never sent back to a client -- see
@@ -143,4 +146,69 @@ pub fn idempotent_create_match(
     existing
         .filter(|file| file.name == requested_name)
         .map(to_public_file)
+}
+
+/// A file's id and current name: all `plan_batch_rename` needs to know about
+/// the rows a batch touches or collides with.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileNameRow {
+    pub id: String,
+    pub name: String,
+}
+
+/// What a batch rename should do, decided before anything is written.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BatchRenamePlan {
+    /// Write every move in one statement.
+    Apply,
+    /// Every file already has its requested name: a repeat of a batch whose
+    /// answer was lost.
+    AlreadyApplied,
+    /// A file is not the caller's (or does not exist).
+    NotFound,
+    /// The request itself is contradictory (a file or a name listed twice).
+    Invalid,
+    /// These requested names are held by files outside the batch.
+    NamesTaken(Vec<String>),
+}
+
+/// Plans a batch rename. `rows` are the caller's files that are either one
+/// of the moved files or hold one of the requested names.
+pub fn plan_batch_rename(moves: &[RenameBatchMove], rows: &[FileNameRow]) -> BatchRenamePlan {
+    let ids: HashSet<&str> = moves.iter().map(|rename| rename.id.as_str()).collect();
+    let names: HashSet<&str> = moves.iter().map(|rename| rename.name.as_str()).collect();
+    if ids.len() != moves.len() || names.len() != moves.len() {
+        return BatchRenamePlan::Invalid;
+    }
+    let current: HashMap<&str, &str> = rows
+        .iter()
+        .map(|row| (row.id.as_str(), row.name.as_str()))
+        .collect();
+    if moves
+        .iter()
+        .any(|rename| !current.contains_key(rename.id.as_str()))
+    {
+        return BatchRenamePlan::NotFound;
+    }
+    if moves
+        .iter()
+        .all(|rename| current.get(rename.id.as_str()) == Some(&rename.name.as_str()))
+    {
+        return BatchRenamePlan::AlreadyApplied;
+    }
+    // A name held by another file of the batch counts as taken too: the
+    // writes would otherwise depend on the order they are applied in.
+    let taken: Vec<String> = moves
+        .iter()
+        .filter(|rename| {
+            rows.iter()
+                .any(|row| row.name == rename.name && row.id != rename.id)
+        })
+        .map(|rename| rename.name.clone())
+        .collect();
+    if taken.is_empty() {
+        BatchRenamePlan::Apply
+    } else {
+        BatchRenamePlan::NamesTaken(taken)
+    }
 }

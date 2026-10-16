@@ -29,8 +29,16 @@ function queued(
   return lane?.messages.map(({ message }) => message) ?? []
 }
 
-describe('createCloudBackend: folder operations are per-file messages', () => {
-  it('moveFolder renames every file inside on its own', async () => {
+/** Every message on the batch lanes (a folder move's single message). */
+function batches(looper: ReturnType<typeof createTestBackend>['looper']) {
+  return looper
+    .snapshot()
+    .queue.lanes.filter((lane) => lane.fileId.startsWith('batch:'))
+    .flatMap((lane) => lane.messages.map(({ message }) => message))
+}
+
+describe('createCloudBackend: folder operations', () => {
+  it('moveFolder queues one batch rename covering every file inside', async () => {
     const { backend, looper } = createTestBackend()
     neverAnswer()
 
@@ -41,12 +49,19 @@ describe('createCloudBackend: folder operations are per-file messages', () => {
       'Songs/Advent/O Come.jianpu',
       'Songs/Amazing.jianpu',
     ])
-    expect(queued(looper, 'id-come')).toEqual([
-      { tag: 'rename-file', val: { to: 'Songs/Advent/O Come.jianpu' } },
+    expect(batches(looper)).toEqual([
+      {
+        tag: 'rename-files',
+        val: {
+          moves: [
+            { fileId: 'id-come', to: 'Songs/Advent/O Come.jianpu' },
+            { fileId: 'id-amazing', to: 'Songs/Amazing.jianpu' },
+          ],
+        },
+      },
     ])
-    expect(queued(looper, 'id-amazing')).toEqual([
-      { tag: 'rename-file', val: { to: 'Songs/Amazing.jianpu' } },
-    ])
+    expect(queued(looper, 'id-come')).toEqual([])
+    expect(queued(looper, 'id-amazing')).toEqual([])
     expect(queued(looper, 'id-scratch')).toEqual([])
   })
 
@@ -57,7 +72,7 @@ describe('createCloudBackend: folder operations are per-file messages', () => {
     const next = await backend.moveFolder(state, 'Hymns', 'Scratch.jianpu')
 
     expect(next).toBe(state)
-    expect(queued(looper, 'id-come')).toEqual([])
+    expect(batches(looper)).toEqual([])
   })
 
   it('deleteFolder trashes every file inside on its own', async () => {

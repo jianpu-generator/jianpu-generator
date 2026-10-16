@@ -1251,10 +1251,20 @@ world jianpu-wasm {
         to: string,
     }
 
+    record rename-move {
+        file-id: string,
+        to: string,
+    }
+
+    record rename-files-message {
+        moves: list<rename-move>,
+    }
+
     variant message {
         create-file(create-file-message),
         save-content(save-content-message),
         rename-file(rename-file-message),
+        rename-files(rename-files-message),
         trash-file,
         restore-file,
     }
@@ -1271,6 +1281,15 @@ world jianpu-wasm {
         suggested-name: string,
     }
 
+    record name-adjustment {
+        rejected: string,
+        replacement: option<string>,
+    }
+
+    record names-taken-details {
+        adjustments: list<name-adjustment>,
+    }
+
     record permanent-details {
         status: u16,
         reason: string,
@@ -1282,6 +1301,7 @@ world jianpu-wasm {
         unauthorized,
         revision-conflict(revision-conflict-details),
         name-taken(name-taken-details),
+        names-taken(names-taken-details),
         permanent(permanent-details),
     }
 
@@ -1352,6 +1372,7 @@ world jianpu-wasm {
         unauthorized,
         conflict(revision-conflict-details),
         name-taken(name-taken-details),
+        names-taken(names-taken-details),
         permanent(permanent-details),
     }
 

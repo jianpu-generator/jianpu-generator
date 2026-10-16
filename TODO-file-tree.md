@@ -46,7 +46,7 @@ Model is tentative: file name is a slash-separated path (`Hymns/Advent/O Come.ji
 
 - [x] Paths as names in the cloud store; uniqueness on full path
 - [ ] Batch-rename message in the outbox (no half-delivered folder move)
-- [ ] Explicit empty folders: placeholder file `<folder>/.keep` (reserved leaf name with no `.jianpu` extension, so users can't collide); worker stays unaware of folders
+- [x] Explicit empty folders: placeholder file `<folder>/.keep` (reserved leaf name with no `.jianpu` extension, so users can't collide); worker stays unaware of folders
 - [x] Collision-retry naming for folders
 - [ ] Capture signed-in / Start Sync share states from the real app for mockups
 

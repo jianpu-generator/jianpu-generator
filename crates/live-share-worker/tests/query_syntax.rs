@@ -86,6 +86,14 @@ const QUERIES: &[(&str, &str)] = &[
         "rename_file.sql",
         include_str!("../queries/rename_file.sql"),
     ),
+    (
+        "get_file_names_by_ids_or_names.sql",
+        include_str!("../queries/get_file_names_by_ids_or_names.sql"),
+    ),
+    (
+        "rename_files_batch.sql",
+        include_str!("../queries/rename_files_batch.sql"),
+    ),
     ("trash_file.sql", include_str!("../queries/trash_file.sql")),
     (
         "restore_file.sql",

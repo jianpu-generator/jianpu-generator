@@ -184,6 +184,43 @@ export function pendingContentByFileId(
   return pending
 }
 
+/** Every unsent message with the file id of its lane, in the order they were
+ * made, across lanes: a batch rename and a per-file rename of the same file
+ * must land in that order. A create sorts before anything made in the same
+ * millisecond. */
+function pendingMessagesInOrder(snapshot: OutboxSnapshot) {
+  return snapshot.queue.lanes
+    .flatMap((lane) =>
+      lane.messages.map(({ message, createdAtMs }) => ({
+        fileId: lane.fileId,
+        message,
+        createdAtMs,
+      })),
+    )
+    .sort(
+      (a, b) =>
+        Number(a.createdAtMs - b.createdAtMs) ||
+        Number(b.message.tag === 'create-file') -
+          Number(a.message.tag === 'create-file'),
+    )
+}
+
+/** The name each file gets once its unsent creates, renames and batch renames
+ * are delivered, keyed by file id. */
+export function pendingNameByFileId(
+  snapshot: OutboxSnapshot,
+): Map<string, string> {
+  const names = new Map<string, string>()
+  for (const { fileId, message } of pendingMessagesInOrder(snapshot)) {
+    if (message.tag === 'create-file') names.set(fileId, message.val.name)
+    else if (message.tag === 'rename-file') names.set(fileId, message.val.to)
+    else if (message.tag === 'rename-files') {
+      for (const move of message.val.moves) names.set(move.fileId, move.to)
+    }
+  }
+  return names
+}
+
 interface ListedFile {
   id: string
   name: string
@@ -203,34 +240,38 @@ export function applyPendingStructure<File extends ListedFile>(
   snapshot: OutboxSnapshot,
 ): File[] {
   const byId = new Map(files.map((file) => [file.id, file]))
-  for (const lane of snapshot.queue.lanes) {
-    for (const { message } of lane.messages) {
-      const existing = byId.get(lane.fileId)
-      switch (message.tag) {
-        case 'create-file':
-          if (!existing) {
-            byId.set(lane.fileId, {
-              id: lane.fileId,
-              name: message.val.name,
-              content: message.val.content,
-              revision: 0,
-              trashedAt: null,
-            } as File)
-          }
-          break
-        case 'rename-file':
-          if (existing)
-            byId.set(lane.fileId, { ...existing, name: message.val.to })
-          break
-        case 'trash-file':
-          if (existing) byId.set(lane.fileId, { ...existing, trashedAt: 1 })
-          break
-        case 'restore-file':
-          if (existing) byId.set(lane.fileId, { ...existing, trashedAt: null })
-          break
-        case 'save-content':
-          break
-      }
+  const pending = pendingMessagesInOrder(snapshot)
+  for (const { fileId, message } of pending) {
+    const existing = byId.get(fileId)
+    switch (message.tag) {
+      case 'create-file':
+        if (!existing) {
+          byId.set(fileId, {
+            id: fileId,
+            name: message.val.name,
+            content: message.val.content,
+            revision: 0,
+            trashedAt: null,
+          } as File)
+        }
+        break
+      case 'rename-file':
+        if (existing) byId.set(fileId, { ...existing, name: message.val.to })
+        break
+      case 'rename-files':
+        for (const { fileId: movedId, to } of message.val.moves) {
+          const moved = byId.get(movedId)
+          if (moved) byId.set(movedId, { ...moved, name: to })
+        }
+        break
+      case 'trash-file':
+        if (existing) byId.set(fileId, { ...existing, trashedAt: 1 })
+        break
+      case 'restore-file':
+        if (existing) byId.set(fileId, { ...existing, trashedAt: null })
+        break
+      case 'save-content':
+        break
     }
   }
   return [...byId.values()]

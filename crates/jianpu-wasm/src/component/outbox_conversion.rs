@@ -13,6 +13,9 @@ impl From<co::Message> for Message {
                 Message::SaveContent(SaveContentMessage { content })
             }
             co::Message::RenameFile { to } => Message::RenameFile(RenameFileMessage { to }),
+            co::Message::RenameFiles { moves } => Message::RenameFiles(RenameFilesMessage {
+                moves: moves.into_iter().map(Into::into).collect(),
+            }),
             co::Message::TrashFile => Message::TrashFile,
             co::Message::RestoreFile => Message::RestoreFile,
         }
@@ -29,8 +32,47 @@ impl From<Message> for co::Message {
                 co::Message::SaveContent { content }
             }
             Message::RenameFile(RenameFileMessage { to }) => co::Message::RenameFile { to },
+            Message::RenameFiles(RenameFilesMessage { moves }) => co::Message::RenameFiles {
+                moves: moves.into_iter().map(Into::into).collect(),
+            },
             Message::TrashFile => co::Message::TrashFile,
             Message::RestoreFile => co::Message::RestoreFile,
+        }
+    }
+}
+
+impl From<co::RenameMove> for RenameMove {
+    fn from(rename: co::RenameMove) -> Self {
+        RenameMove {
+            file_id: rename.file_id,
+            to: rename.to,
+        }
+    }
+}
+
+impl From<RenameMove> for co::RenameMove {
+    fn from(rename: RenameMove) -> Self {
+        co::RenameMove {
+            file_id: rename.file_id,
+            to: rename.to,
+        }
+    }
+}
+
+impl From<co::NameAdjustment> for NameAdjustment {
+    fn from(adjustment: co::NameAdjustment) -> Self {
+        NameAdjustment {
+            rejected: adjustment.rejected,
+            replacement: adjustment.replacement,
+        }
+    }
+}
+
+impl From<NameAdjustment> for co::NameAdjustment {
+    fn from(adjustment: NameAdjustment) -> Self {
+        co::NameAdjustment {
+            rejected: adjustment.rejected,
+            replacement: adjustment.replacement,
         }
     }
 }
@@ -48,6 +90,11 @@ impl From<co::AttemptOutcome> for AttemptOutcome {
             }
             co::AttemptOutcome::NameTaken { suggested_name } => {
                 AttemptOutcome::NameTaken(NameTakenDetails { suggested_name })
+            }
+            co::AttemptOutcome::NamesTaken { adjustments } => {
+                AttemptOutcome::NamesTaken(NamesTakenDetails {
+                    adjustments: adjustments.into_iter().map(Into::into).collect(),
+                })
             }
             co::AttemptOutcome::Permanent { status, reason } => {
                 AttemptOutcome::Permanent(PermanentDetails { status, reason })
@@ -69,6 +116,11 @@ impl From<AttemptOutcome> for co::AttemptOutcome {
             }
             AttemptOutcome::NameTaken(NameTakenDetails { suggested_name }) => {
                 co::AttemptOutcome::NameTaken { suggested_name }
+            }
+            AttemptOutcome::NamesTaken(NamesTakenDetails { adjustments }) => {
+                co::AttemptOutcome::NamesTaken {
+                    adjustments: adjustments.into_iter().map(Into::into).collect(),
+                }
             }
             AttemptOutcome::Permanent(PermanentDetails { status, reason }) => {
                 co::AttemptOutcome::Permanent { status, reason }
@@ -233,6 +285,11 @@ impl From<SendResult> for co::SendResult {
             }
             SendResult::NameTaken(NameTakenDetails { suggested_name }) => {
                 co::SendResult::NameTaken { suggested_name }
+            }
+            SendResult::NamesTaken(NamesTakenDetails { adjustments }) => {
+                co::SendResult::NamesTaken {
+                    adjustments: adjustments.into_iter().map(Into::into).collect(),
+                }
             }
             SendResult::Permanent(PermanentDetails { status, reason }) => {
                 co::SendResult::Permanent { status, reason }

@@ -144,6 +144,27 @@ pub struct RenameFileRequest {
     pub name: String,
 }
 
+/// One file's new name in a `RenameBatchRequest`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RenameBatchMove {
+    pub id: String,
+    pub name: String,
+}
+
+/// Body of `POST /files/rename-batch` -- renames every listed file, or none
+/// of them (a folder move). No revision gate, like `RenameFileRequest`.
+/// `ApiError::NotFound` if any file is not the caller's; a destination held
+/// by another file maps to `ApiError::NamesTaken` listing those
+/// destinations, with nothing applied. Repeating a batch that was already
+/// applied (its answer was lost) succeeds.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RenameBatchRequest {
+    pub identity_token: String,
+    pub moves: Vec<RenameBatchMove>,
+}
+
 /// Body of `POST /files/{id}/delete` -- moves the file to the bin
 /// (`trashed_at`). No revision gate; `ApiError::NotFound` on zero rows
 /// affected.

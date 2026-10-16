@@ -95,3 +95,17 @@ fn derives_each_status_code_from_the_variant() {
         assert_eq!(case.error.status_code(), case.status, "{:?}", case.error);
     }
 }
+
+#[test]
+fn serializes_names_taken_with_the_rejected_destinations() -> Result<(), serde_json::Error> {
+    let error = ApiError::NamesTaken {
+        names: vec!["A/x".to_string()],
+    };
+
+    assert_eq!(
+        serde_json::to_string(&error)?,
+        r#"{"code":"names_taken","names":["A/x"]}"#
+    );
+    assert_eq!(error.status_code(), 409);
+    Ok(())
+}

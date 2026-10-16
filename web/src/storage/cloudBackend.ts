@@ -22,6 +22,7 @@ import {
   outboxLaneError,
   outboxSaveStatus,
   pendingContentByFileId,
+  pendingNameByFileId,
   recordListedBases,
 } from './cloudBackendOutbox'
 import { createPlaceholders } from './cloudBackendPlaceholders'
@@ -155,30 +156,17 @@ export function createCloudBackend(
     return ready
   }
 
-  /** The name the last queued `CreateFile`/`RenameFile` of each lane asks
-   * for. When the outbox rewrote one after a `name_taken` answer, it differs
-   * from the local name, which is then renamed to match. */
-  function reconcileLocalNames({ queue }: OutboxSnapshot): void {
-    for (const lane of queue.lanes) {
-      const wanted = lane.messages
-        .map(({ message }) =>
-          message.tag === 'create-file'
-            ? message.val.name
-            : message.tag === 'rename-file'
-              ? message.val.to
-              : undefined,
-        )
-        .findLast((name) => name !== undefined)
-      const current = [...activeIdByName].find(
-        ([, id]) => id === lane.fileId,
-      )?.[0]
-      if (wanted === undefined || current === undefined || wanted === current) {
-        continue
-      }
+  /** The name the last queued `CreateFile`/`RenameFile`/`RenameFiles` of
+   * each file asks for. When the outbox rewrote one after a `name_taken`
+   * answer, it differs from the local name, which is then renamed to match. */
+  function reconcileLocalNames(snapshot: OutboxSnapshot): void {
+    for (const [fileId, wanted] of pendingNameByFileId(snapshot)) {
+      const current = [...activeIdByName].find(([, id]) => id === fileId)?.[0]
+      if (current === undefined || wanted === current) continue
       activeIdByName.delete(current)
-      activeIdByName.set(wanted, lane.fileId)
+      activeIdByName.set(wanted, fileId)
       for (const listener of renameListeners) {
-        listener({ fileId: lane.fileId, from: current, to: wanted })
+        listener({ fileId, from: current, to: wanted })
       }
     }
   }
