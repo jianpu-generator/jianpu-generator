@@ -26,6 +26,11 @@ pub enum ApiError {
     /// A create/rename/restore asked for a file name that is not a valid
     /// path (`jianpu_generator::file_tree::TreePath` rules); `message` says why.
     InvalidName { message: String },
+    /// A folder share would cover more files or content than
+    /// `folder_share::MAX_SHARED_FOLDER_FILES`/`MAX_SHARED_FOLDER_BYTES`
+    /// allow: refused when starting the share, and answered to a viewer
+    /// whose folder has grown past the limits since.
+    SharedFolderTooLarge { message: String },
     /// A content save's `expectedRevision` lost the race -- feeds the
     /// "Overwrite mine"/"Discard mine" UI with the row's actual revision.
     RevisionConflict {
@@ -51,6 +56,7 @@ impl ApiError {
             ApiError::NameTaken
             | ApiError::NamesTaken { .. }
             | ApiError::RevisionConflict { .. } => 409,
+            ApiError::SharedFolderTooLarge { .. } => 413,
             ApiError::Internal { .. } => 500,
             ApiError::UpstreamFailed { .. } => 502,
         }

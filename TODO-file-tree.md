@@ -10,6 +10,7 @@ Model is tentative: file name is a slash-separated path (`Hymns/Advent/O Come.ji
 - [x] Path length limit: same as S3 object keys, 1024 bytes of UTF-8 for the whole path (CJK names use 3 bytes per character, so count bytes, not characters)
 - [ ] Copy `Demo/` into the user's own files? (not asked; default is a later follow-up, out of scope here)
 - [x] Tree logic lives in Rust/wasm; TypeScript only renders and passes raw UI actions
+- [x] Synced folder share: identified by a `folder_prefix` on the shares row (follows folder renames via the rename-batch route); viewers see changes on reload, no polling/push
 - [x] Cloud stores the path as a plain slash-separated string in `name` (backward compatible); folders are a UI concept like S3; explicit empty folders persist as a hidden placeholder file
 
 ## Phase 1: model (pure functions, tests in separate files)
@@ -45,16 +46,16 @@ Model is tentative: file name is a slash-separated path (`Hymns/Advent/O Come.ji
 ## Phase 3: cloud
 
 - [x] Paths as names in the cloud store; uniqueness on full path
-- [ ] Batch-rename message in the outbox (no half-delivered folder move)
+- [x] Batch-rename message in the outbox (no half-delivered folder move)
 - [x] Explicit empty folders: placeholder file `<folder>/.keep` (reserved leaf name with no `.jianpu` extension, so users can't collide); worker stays unaware of folders
 - [x] Collision-retry naming for folders
-- [ ] Capture signed-in / Start Sync share states from the real app for mockups
+- [x] Capture signed-in / Start Sync share states from the real app for mockups
 
 ## Phase 4: share a folder
 
 - [ ] Share dialog for folders: static link (snapshot of the subtree) and synced link
 - [ ] Static link size guard: warn and offer synced link when too big
-- [ ] Synced folder: new files, edits, renames and deletions appear for viewers
+- [ ] Synced folder: new files, edits, renames and deletions appear for viewers on reload (no polling or push, same as single-file synced links)
 - [ ] Shared marker on the folder row, "via" tag on files inside
 - [ ] Shared folder menu: Copy share link, Sharing settings; nested folder shows "Shared via"
 - [ ] Warn on delete of a shared folder; moving keeps the link working
@@ -62,5 +63,5 @@ Model is tentative: file name is a slash-separated path (`Hymns/Advent/O Come.ji
 - [ ] Stop sync confirmation
 - [ ] Viewer: same toolbar as today, file picker rooted at the shared folder, read-only
 - [ ] Viewer: "Import this folder" (name clash becomes `Hymns 2`) and Discard
-- [ ] Viewer: "no longer shared" screen; live updates without reload
+- [ ] Viewer: "no longer shared" screen (updates on reload, no live push)
 - [ ] Update `syntax.md` only if `.jianpu` syntax changes (not expected)

@@ -36,6 +36,7 @@ pub fn empty_doc() -> SyncedDoc {
         content: String::new(),
         revision: 0,
         owner_login: None,
+        folder: None,
     }
 }
 
@@ -63,6 +64,7 @@ pub fn to_public_doc(view: Option<&ShareView>) -> SyncedDoc {
             content: view.content.clone(),
             revision: view.revision,
             owner_login: view.owner_login.clone(),
+            folder: None,
         },
     }
 }

@@ -6,6 +6,7 @@ use worker::RouteContext;
 use crate::api_error::ApiError;
 use crate::db;
 use crate::files::{self, ContentWriteAttempt, ContentWriteOutcome, PublicFile};
+use crate::folder_share;
 use crate::protocol::{
     CreateFileRequest, DeleteFileRequest, FileIdPath, ListFilesRequest, ListFilesResponse,
     RenameBatchRequest, RenameFileRequest, RestoreFileRequest, UpdateFileContentRequest,
@@ -155,8 +156,17 @@ pub(super) async fn rename_files_batch(
         files::BatchRenamePlan::NamesTaken(names) => return Err(ApiError::NamesTaken { names }),
         files::BatchRenamePlan::Apply => {}
     }
+    // A folder with a synced link that this batch moves as a whole takes the
+    // link along: its prefix is re-pointed in the same transaction.
+    let prefixes = db::list_folder_share_prefixes(&d1, &owner_user_id).await?;
+    let rewrites = if prefixes.is_empty() {
+        Vec::new()
+    } else {
+        let current = db::active_files_under_prefixes(&d1, &owner_user_id, &prefixes).await?;
+        folder_share::plan_prefix_rewrites(&prefixes, &body.moves, &current)
+    };
     let now = worker::Date::now().as_millis() as i64;
-    match db::rename_files_batch(&d1, &owner_user_id, &body.moves, now).await {
+    match db::rename_files_batch(&d1, &owner_user_id, &body.moves, &rewrites, now).await {
         Ok(()) => Ok(NoContent),
         Err(error) if is_unique_constraint_violation(&error) => {
             // Lost a race with another writer: report what is taken now.

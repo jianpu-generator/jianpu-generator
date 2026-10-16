@@ -5,6 +5,7 @@ use worker::wasm_bindgen::JsValue;
 use worker::{D1Database, Result};
 
 use crate::files::{ContentWriteAttempt, FileNameRow, StoredFile};
+use crate::folder_share::{ActiveFileName, PrefixRewrite};
 use crate::protocol::RenameBatchMove;
 
 const LIST_FILES_BY_OWNER: &str = include_str!("../../queries/list_files_by_owner.sql");
@@ -15,6 +16,12 @@ const RENAME_FILE: &str = include_str!("../../queries/rename_file.sql");
 const GET_FILE_NAMES_BY_IDS_OR_NAMES: &str =
     include_str!("../../queries/get_file_names_by_ids_or_names.sql");
 const RENAME_FILES_BATCH: &str = include_str!("../../queries/rename_files_batch.sql");
+const LIST_FOLDER_SHARE_PREFIXES: &str =
+    include_str!("../../queries/list_folder_share_prefixes.sql");
+const LIST_ACTIVE_FILES_UNDER_PREFIXES: &str =
+    include_str!("../../queries/list_active_files_under_prefixes.sql");
+const REWRITE_FOLDER_SHARE_PREFIX: &str =
+    include_str!("../../queries/rewrite_folder_share_prefix.sql");
 const TRASH_FILE: &str = include_str!("../../queries/trash_file.sql");
 const RESTORE_FILE: &str = include_str!("../../queries/restore_file.sql");
 
@@ -190,13 +197,58 @@ pub(crate) async fn file_names_for_batch(
         .collect())
 }
 
-/// Renames every file of `moves` in one statement: all of them or, on a
-/// `idx_files_owner_name` unique-constraint violation (propagated as-is, like
-/// `rename_file`), none. The caller has checked that every file exists.
+/// The folders the owner has a share row for, live or stopped.
+pub(crate) async fn list_folder_share_prefixes(
+    db: &D1Database,
+    owner_user_id: &str,
+) -> Result<Vec<String>> {
+    #[derive(Deserialize)]
+    struct PrefixRow {
+        folder_prefix: String,
+    }
+    let rows: Vec<PrefixRow> = db
+        .prepare(LIST_FOLDER_SHARE_PREFIXES)
+        .bind(&[JsValue::from_str(owner_user_id)])?
+        .all()
+        .await?
+        .results()?;
+    Ok(rows.into_iter().map(|row| row.folder_prefix).collect())
+}
+
+/// The owner's active files lying under one of `prefixes`.
+pub(crate) async fn active_files_under_prefixes(
+    db: &D1Database,
+    owner_user_id: &str,
+    prefixes: &[String],
+) -> Result<Vec<ActiveFileName>> {
+    let rows: Vec<FileNameRowRaw> = db
+        .prepare(LIST_ACTIVE_FILES_UNDER_PREFIXES)
+        .bind(&[
+            JsValue::from_str(owner_user_id),
+            JsValue::from_str(&to_json(&prefixes)?),
+        ])?
+        .all()
+        .await?
+        .results()?;
+    Ok(rows
+        .into_iter()
+        .map(|row| ActiveFileName {
+            id: row.id,
+            name: row.name,
+        })
+        .collect())
+}
+
+/// Renames every file of `moves` and re-points the folder shares of
+/// `rewrites` in one D1 batch (a single transaction): all of it or, on a
+/// `idx_files_owner_name` or `idx_shares_owner_folder_prefix` unique-constraint
+/// violation (propagated as-is, like `rename_file`), none. The caller has
+/// checked that every file exists.
 pub(crate) async fn rename_files_batch(
     db: &D1Database,
     owner_user_id: &str,
     moves: &[RenameBatchMove],
+    rewrites: &[PrefixRewrite],
     now: i64,
 ) -> Result<()> {
     let moves_json = to_json(
@@ -205,13 +257,22 @@ pub(crate) async fn rename_files_batch(
             .map(|rename| serde_json::json!({ "id": rename.id, "name": rename.name }))
             .collect::<Vec<_>>(),
     )?;
-    db.prepare(RENAME_FILES_BATCH)
-        .bind(&[
-            JsValue::from_str(&moves_json),
-            JsValue::from_f64(now as f64),
-            JsValue::from_str(owner_user_id),
-        ])?
-        .run()
+    let rename = db.prepare(RENAME_FILES_BATCH).bind(&[
+        JsValue::from_str(&moves_json),
+        JsValue::from_f64(now as f64),
+        JsValue::from_str(owner_user_id),
+    ])?;
+    let rewrite_statements = rewrites
+        .iter()
+        .map(|rewrite| {
+            db.prepare(REWRITE_FOLDER_SHARE_PREFIX).bind(&[
+                JsValue::from_str(&rewrite.to),
+                JsValue::from_str(owner_user_id),
+                JsValue::from_str(&rewrite.from),
+            ])
+        })
+        .collect::<Result<Vec<_>>>()?;
+    db.batch(std::iter::once(rename).chain(rewrite_statements).collect())
         .await?;
     Ok(())
 }

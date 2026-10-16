@@ -31,6 +31,7 @@ fn a_live_share_shows_the_files_current_content_and_owner_login() {
             content: "[M] 1".to_string(),
             revision: 3,
             owner_login: Some("octocat".to_string()),
+            folder: None,
         }
     );
 }
