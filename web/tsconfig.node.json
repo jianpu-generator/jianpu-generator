@@ -30,6 +30,7 @@
     "scripts/**/*.ts",
     "e2e/mock-github-oauth-server.ts",
     "e2e/mockGithubIdentity.ts",
+    "e2e/webServers.ts",
     "e2e-pages/static-pages-server.ts"
   ]
 }
