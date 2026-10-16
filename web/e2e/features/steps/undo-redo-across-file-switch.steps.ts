@@ -156,6 +156,7 @@ When(
   'I switch the active tab back to {string}',
   async ({ page }, name: string) => {
     // Switch back to file A: the edit must still be there.
+    await openFileList(page)
     await page.locator('.file-tab-name', { hasText: name }).click()
   },
 )
