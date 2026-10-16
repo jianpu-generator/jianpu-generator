@@ -237,29 +237,44 @@ fn deleting_a_missing_folder_is_not_found() {
 #[test]
 fn create_folder_adds_an_explicit_folder_and_leaves_the_active_file() {
     let state = store(&["Hymns/a.jianpu"], &[], &[]);
-    let next = create_folder(&state, Some(&path("Hymns")), &context()).unwrap();
-    assert_eq!(next.folders, vec![path("Hymns/New folder")]);
+    let next = create_folder(&state, Some(&path("Hymns")), "Psalms", &context()).unwrap();
+    assert_eq!(next.folders, vec![path("Hymns/Psalms")]);
     assert_eq!(next.active, state.active);
 }
 
 #[test]
-fn create_folder_is_unique_among_files_and_folders_of_the_same_parent() {
-    let state = store(
-        &["New folder 3/a.jianpu", "Hymns/New folder.jianpu"],
-        &["New folder", "New folder 2"],
-        &[],
-    );
-    let top = create_folder(&state, None, &context()).unwrap();
-    assert!(top.folders.contains(&path("New folder 4")));
-    let nested = create_folder(&state, Some(&path("Hymns")), &context()).unwrap();
-    assert!(nested.folders.contains(&path("Hymns/New folder")));
+fn create_folder_trims_the_name() {
+    let state = store(&["a.jianpu"], &[], &[]);
+    let next = create_folder(&state, None, "  Hymns ", &context()).unwrap();
+    assert_eq!(next.folders, vec![path("Hymns")]);
+}
+
+#[test]
+fn create_folder_rejects_a_name_taken_by_a_file_folder_or_implied_folder() {
+    let state = store(&["Hymns/a.jianpu", "b.jianpu"], &["Empty"], &[]);
+    for taken in ["Hymns", "Empty", "b.jianpu"] {
+        assert!(
+            matches!(
+                create_folder(&state, None, taken, &context()),
+                Err(FileStoreError::Collision { .. })
+            ),
+            "{taken}"
+        );
+    }
+}
+
+#[test]
+fn create_folder_rejects_an_empty_or_nested_name() {
+    let state = store(&["a.jianpu"], &[], &[]);
+    assert!(create_folder(&state, None, "  ", &context()).is_err());
+    assert!(create_folder(&state, None, "A/B", &context()).is_err());
 }
 
 #[test]
 fn create_folder_inside_a_file_fails() {
     let state = store(&["a.jianpu"], &[], &[]);
     assert!(matches!(
-        create_folder(&state, Some(&path("a.jianpu")), &context()),
+        create_folder(&state, Some(&path("a.jianpu")), "X", &context()),
         Err(FileStoreError::AncestorIsFile { .. })
     ));
 }

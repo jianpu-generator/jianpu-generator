@@ -153,6 +153,13 @@ Then(
 )
 
 Then(
+  'the file tree shows no folder {string}',
+  async ({ page }, name: string) => {
+    await expect(folderRow(page, name)).toHaveCount(0)
+  },
+)
+
+Then(
   'the file tree shows the file {string}',
   async ({ page }, name: string) => {
     await expect(fileRow(page, name)).toBeVisible()

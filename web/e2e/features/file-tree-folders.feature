@@ -30,7 +30,9 @@ Feature: Folder rows have their own actions menu, folders can be deleted to the 
     When the file tree app loads
     And I open the file tree list
     And I choose "New folder here" from the actions menu of the folder "Empty"
-    Then the file tree shows the folder "New folder" nested 2 levels deep
+    And I name the new folder "Psalms"
+    And I open the file tree list
+    Then the file tree shows the folder "Psalms" nested 2 levels deep
     And the file tree shows the empty folder hint
 
   Scenario: Import here puts the recovered file inside that folder

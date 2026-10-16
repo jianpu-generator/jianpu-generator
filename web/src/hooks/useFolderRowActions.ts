@@ -1,35 +1,30 @@
 import type { FolderDialogState } from '../components/FolderDialogs'
 import type { FolderActions } from '../components/FolderRowMenu'
 import type { FolderShareTarget } from '../components/FolderShareModal'
-import type { FileStoreState } from '../fileStore'
-import { foldersToReveal } from '../fileStoreQueries'
 import type { FolderShares } from './useFolderShares'
 
 interface FolderRowActionsInput {
-  store: FileStoreState
   folderShares: FolderShares
   onCreate: (folder?: string) => void
-  onCreateFolder: (parent?: string) => Promise<FileStoreState | undefined>
   onImportFile?: (file: File, folder?: string) => void
-  expandFolders: (folders: string[]) => void
   /** Closes the file list drawer/menu. */
   closeList: () => void
   openFolderDialog: (dialog: FolderDialogState) => void
   openFolderShare: (target: FolderShareTarget) => void
+  /** Opens the name prompt for a new folder inside `parent`. */
+  openNewFolder: (parent: string) => void
 }
 
 /** What each item of a folder row's `···` menu does. Pure wiring: the new
  * folder's name, the share state and the link all come from Rust. */
 export function useFolderRowActions({
-  store,
   folderShares,
   onCreate,
-  onCreateFolder,
   onImportFile,
-  expandFolders,
   closeList,
   openFolderDialog,
   openFolderShare,
+  openNewFolder,
 }: FolderRowActionsInput): FolderActions {
   const dialog = (kind: FolderDialogState['kind']) => (folder: string) => {
     closeList()
@@ -44,15 +39,9 @@ export function useFolderRowActions({
       await onCreate(folder)
       closeList()
     },
-    onNewFolderHere: async (folder) => {
-      const next = await onCreateFolder(folder)
-      const known = new Set(store.folders)
-      // Open the folder and the one Rust just named inside it.
-      expandFolders(
-        (next?.folders ?? [])
-          .filter((created) => !known.has(created))
-          .flatMap(foldersToReveal),
-      )
+    onNewFolderHere: (folder) => {
+      closeList()
+      openNewFolder(folder)
     },
     onImportHere: (folder, file) => {
       onImportFile?.(file, folder)

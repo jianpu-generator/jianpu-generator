@@ -18,16 +18,6 @@ pub(super) fn file_store_create_file(
     store_response(outcome)
 }
 
-pub(super) fn file_store_create_folder(
-    state: FileStoreState,
-    parent: Option<String>,
-    context: FileOperationContext,
-) -> FileStoreResponse {
-    let outcome = parse_optional(parent.as_deref())
-        .and_then(|parent| tree::create_folder(&state.into(), parent.as_ref(), &context.into()));
-    store_response(outcome)
-}
-
 pub(super) fn file_store_move_targets(
     state: FileStoreState,
     excluded_folder: Option<String>,
@@ -284,7 +274,9 @@ fn parse(raw: &str) -> Result<tree::TreePath, tree::FileStoreError> {
     Ok(tree::TreePath::parse(raw)?)
 }
 
-fn parse_optional(raw: Option<&str>) -> Result<Option<tree::TreePath>, tree::FileStoreError> {
+pub(super) fn parse_optional(
+    raw: Option<&str>,
+) -> Result<Option<tree::TreePath>, tree::FileStoreError> {
     raw.map(parse).transpose()
 }
 

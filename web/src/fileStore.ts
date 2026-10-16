@@ -167,14 +167,15 @@ export function createFile(
   )
 }
 
-/** New empty folder named `New folder` (made unique) inside `parent` (top
- * level when omitted); the active file does not change. */
+/** New empty folder `name` inside `parent` (top level when omitted); the
+ * active file does not change. Kept as is when `createFolderError` objects. */
 export function createFolder(
   state: FileStoreState,
-  parent?: string,
+  parent: string | undefined,
+  name: string,
 ): FileStoreState {
   return applyOrKeep(state, (wasmState, context) =>
-    jianpuWasm().fileStoreCreateFolder(wasmState, parent, context),
+    jianpuWasm().fileStoreCreateFolder(wasmState, parent, name, context),
   )
 }
 

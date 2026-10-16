@@ -2,7 +2,7 @@
 //! rejected (and why), and what does deleting a folder do. The messages are
 //! shown as-is by the web app.
 
-use super::folder_ops::move_folder;
+use super::folder_ops::{create_folder, move_folder};
 use super::folder_share::{folder_delete_share_warning, ShareOverview};
 use super::path::TreePath;
 use super::store_state::{FileOperationContext, FileStoreState};
@@ -18,6 +18,24 @@ pub struct FolderDeleteSummary {
     /// folders or files inside, or an enclosing shared folder); `None` when
     /// nothing is shared.
     pub share_warning: Option<String>,
+}
+
+/// Why creating a folder `name` (trimmed) inside `parent` would be rejected,
+/// as the message to show; `None` when it would succeed. Same rules as
+/// [`create_folder`], which this simply asks.
+pub fn create_folder_error(
+    state: &FileStoreState,
+    parent: Option<&str>,
+    name: &str,
+    context: &FileOperationContext,
+) -> Option<String> {
+    let parent = match parent.map(TreePath::parse).transpose() {
+        Ok(parent) => parent,
+        Err(error) => return Some(error.to_string()),
+    };
+    create_folder(state, parent.as_ref(), name, context)
+        .err()
+        .map(|error| error.to_string())
 }
 
 /// Why renaming/moving the folder `from` to `to_raw` (trimmed) would be

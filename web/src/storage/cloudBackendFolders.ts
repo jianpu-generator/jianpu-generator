@@ -39,10 +39,11 @@ export function createFolderOperations({
   return {
     async createFolder(
       state: FileStoreState,
-      parent?: string,
+      parent: string | undefined,
+      name: string,
     ): Promise<FileStoreState> {
       await ensureWasm()
-      const nextState = pureCreateFolder(state, parent)
+      const nextState = pureCreateFolder(state, parent, name)
       const before = state.folders ?? []
       for (const folder of nextState.folders ?? []) {
         if (!before.includes(folder)) await placeholders.create(folder)

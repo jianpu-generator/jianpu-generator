@@ -14,30 +14,42 @@ Feature: Creating, nesting and moving files and folders from the file actions me
     And I choose "New" from the file actions menu
     Then the file switcher toolbar button shows no folder prefix and the file name "untitled"
 
+  Scenario: New folder asks for a name before creating anything
+    When the file tree app loads
+    And I choose "New folder" from the file actions menu
+    Then the new folder dialog is open
+
+  Scenario: Cancelling the new folder prompt creates nothing
+    When the file tree app loads
+    And I choose "New folder" from the file actions menu
+    And I cancel the new folder dialog
+    And I open the file tree list
+    Then the file tree shows no folder "New folder"
+
   Scenario: New folder is created next to the open file and shown expanded
     Given the file tree active file is "Hymns/Amazing.jianpu"
     When the file tree app loads
     And I choose "New folder" from the file actions menu
+    And I name the new folder "Psalms"
     And I open the file tree list
-    Then the file tree shows the folder "New folder" with a count of 0
+    Then the file tree shows the folder "Psalms" with a count of 0
     And the file tree shows the empty folder hint
     And the file switcher toolbar button shows the folder prefix "Hymns /" and the file name "Amazing"
 
-  Scenario: A second New folder gets a unique name
+  Scenario: A taken folder name is rejected
     When the file tree app loads
     And I choose "New folder" from the file actions menu
-    And I choose "New folder" from the file actions menu
-    And I open the file tree list
-    Then the file tree shows the folder "New folder" with a count of 0
-    And the file tree shows the folder "New folder 2" with a count of 0
+    And I type "Hymns" in the new folder dialog
+    Then the new folder dialog cannot be confirmed
 
   Scenario: A folder can be created inside a folder
     Given the file tree active file is "Hymns/Advent/O Come.jianpu"
     When the file tree app loads
     And I choose "New folder" from the file actions menu
+    And I name the new folder "Psalms"
     And I open the file tree list
-    Then the file tree shows the folder "New folder" with a count of 0
-    And the file tree shows the folder "New folder" nested 3 levels deep
+    Then the file tree shows the folder "Psalms" with a count of 0
+    And the file tree shows the folder "Psalms" nested 3 levels deep
 
   Scenario: Move to lists every folder and moves the open file into the chosen one
     When the file tree app loads

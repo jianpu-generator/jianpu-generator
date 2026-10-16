@@ -1746,8 +1746,10 @@ world jianpu-wasm {
     export file-store-is-placeholder-path: func(path: string) -> bool;
     // The placeholder file's path for `folder`; none if invalid.
     export file-store-placeholder-path: func(folder: string) -> option<string>;
-    // `folder` is `none` for the top level.
-    export file-store-create-folder: func(state: file-store-state, parent: option<string>, context: file-operation-context) -> file-store-response;
+    // Creates the folder `name` inside `parent` (`none` for the top level).
+    export file-store-create-folder: func(state: file-store-state, parent: option<string>, name: string, context: file-operation-context) -> file-store-response;
+    // The reason creating the folder `name` inside `parent` would be rejected, if it would.
+    export file-store-create-folder-error: func(state: file-store-state, parent: option<string>, name: string, context: file-operation-context) -> option<string>;
     // Top level plus every folder; `excluded-folder` and its descendants are left out.
     export file-store-move-targets: func(state: file-store-state, excluded-folder: option<string>) -> list<move-target>;
     // Where `source-path` lands when moved into `folder` (`none` = top level); `none` if invalid.

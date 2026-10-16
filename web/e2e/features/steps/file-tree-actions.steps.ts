@@ -139,3 +139,32 @@ Then('the rename dialog can be confirmed', async ({ page }) => {
     dialog(page, 'Rename').getByRole('button', { name: 'Rename' }),
   ).toBeEnabled()
 })
+
+Then('the new folder dialog is open', async ({ page }) => {
+  await expect(dialog(page, 'New folder')).toBeVisible()
+})
+
+When(
+  'I type {string} in the new folder dialog',
+  async ({ page }, text: string) => {
+    await dialog(page, 'New folder').getByRole('textbox').fill(text)
+  },
+)
+
+When('I name the new folder {string}', async ({ page }, text: string) => {
+  const prompt = dialog(page, 'New folder')
+  await prompt.getByRole('textbox').fill(text)
+  await prompt.getByRole('button', { name: 'Create' }).click()
+})
+
+When('I cancel the new folder dialog', async ({ page }) => {
+  await dialog(page, 'New folder')
+    .getByRole('button', { name: 'Cancel' })
+    .click()
+})
+
+Then('the new folder dialog cannot be confirmed', async ({ page }) => {
+  await expect(
+    dialog(page, 'New folder').getByRole('button', { name: 'Create' }),
+  ).toBeDisabled()
+})

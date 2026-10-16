@@ -12,7 +12,10 @@ export interface FileSwitcherProps {
   onSelect: (name: string) => void
   onCreate: (folder?: string) => void
   /** Resolves to the resulting store, `undefined` if it failed. */
-  onCreateFolder: (parent?: string) => Promise<FileStoreState | undefined>
+  onCreateFolder: (
+    parent: string | undefined,
+    name: string,
+  ) => Promise<FileStoreState | undefined>
   onDuplicate: () => void
   onRename: (from: string, to: string) => void
   onDelete: (name: string) => void

@@ -86,6 +86,21 @@ export function parentFolder(path: string): string | undefined {
   return activeFileLabel(path).folderPath
 }
 
+/** Why creating the folder `name` inside `parent` would be rejected, as a
+ * message from Rust; `undefined` when it would succeed. */
+export function createFolderError(
+  state: FileStoreState,
+  parent: string | undefined,
+  name: string,
+): string | undefined {
+  return jianpuWasm().fileStoreCreateFolderError(
+    toWasmState(state),
+    parent,
+    name,
+    operationContext(DEMO_FILES, ''),
+  )
+}
+
 /** Why renaming/moving the folder `from` to `to` would be rejected, as a
  * message from Rust; `undefined` when it would succeed. */
 export function folderMoveError(

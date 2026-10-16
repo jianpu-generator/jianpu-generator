@@ -25,9 +25,12 @@ export interface StorageBackend {
   load(): Promise<FileStoreState>
   /** New file in `folder` (top level when omitted). */
   createFile(state: FileStoreState, folder?: string): Promise<FileStoreState>
-  /** New empty folder inside `parent` (top level when omitted). The cloud
-   * backend keeps it local-only until Phase 3 (gone after a reload). */
-  createFolder(state: FileStoreState, parent?: string): Promise<FileStoreState>
+  /** New empty folder `name` inside `parent` (top level when omitted). */
+  createFolder(
+    state: FileStoreState,
+    parent: string | undefined,
+    name: string,
+  ): Promise<FileStoreState>
   duplicateFile(state: FileStoreState): Promise<FileStoreState>
   importFile(
     state: FileStoreState,

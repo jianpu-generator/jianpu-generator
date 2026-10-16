@@ -26,6 +26,7 @@ import {
 import { useExpandedFolders } from '../hooks/useExpandedFolders'
 import { useFileTreeView } from '../hooks/useFileTreeView'
 import { useFolderRowActions } from '../hooks/useFolderRowActions'
+import { useNewFolderPrompt } from '../hooks/useNewFolderPrompt'
 import { useFileStaticShareLink } from '../hooks/useStaticShareLink'
 import type { FileSwitcherProps } from './FileSwitcherProps'
 import { FileTreeList } from './FileTreeList'
@@ -33,6 +34,7 @@ import { type FolderDialogState, FolderDialogs } from './FolderDialogs'
 import { FolderShareModal, type FolderShareTarget } from './FolderShareModal'
 import { ImportButton } from './ImportButton'
 import { MoveToDialog } from './MoveToDialog'
+import { NewFolderDialog } from './NewFolderDialog'
 import { RenameFileDialog } from './RenameFileDialog'
 import { ResponsiveMenu } from './ResponsiveMenu'
 import { SaveStatusBadge } from './SaveStatusBadge'
@@ -100,6 +102,11 @@ export function FileSwitcher({
   const [folderDialog, setFolderDialog] = useState<FolderDialogState | null>(
     null,
   )
+  const newFolderPrompt = useNewFolderPrompt({
+    store,
+    onCreateFolder,
+    expandFolders,
+  })
   const [shareFolder, setShareFolder] = useState<FolderShareTarget | null>(null)
   const fileStaticLink = useFileStaticShareLink(
     shareModalOpen,
@@ -107,15 +114,13 @@ export function FileSwitcher({
     fileContent(store, store.active),
   )
   const folderActions = useFolderRowActions({
-    store,
     folderShares,
     onCreate,
-    onCreateFolder,
     onImportFile,
-    expandFolders,
     closeList: () => setFilesOpen(false),
     openFolderDialog: setFolderDialog,
     openFolderShare: setShareFolder,
+    openNewFolder: newFolderPrompt.open,
   })
 
   return (
@@ -214,12 +219,9 @@ export function FileSwitcher({
               role="menuitem"
               className="export-menu-item"
               disabled={creatingFolder}
-              onClick={async () => {
-                const next = await onCreateFolder(activeLabel.folderPath)
-                const known = new Set(store.folders)
-                // Open the folder Rust just named.
-                expandFolders(next?.folders?.filter((f) => !known.has(f)) ?? [])
+              onClick={() => {
                 setActionsOpen(false)
+                newFolderPrompt.open(activeLabel.folderPath)
               }}
             >
               <FilePlusIcon aria-hidden="true" />
@@ -357,6 +359,7 @@ export function FileSwitcher({
         moveError={(to) => renameError(store, store.active, to)}
         onMove={onRename}
       />
+      <NewFolderDialog {...newFolderPrompt.dialogProps} />
       <FolderDialogs
         store={store}
         dialog={folderDialog}

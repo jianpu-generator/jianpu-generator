@@ -69,7 +69,7 @@ describe('createCloudBackend: empty folders are placeholder files', () => {
     const { backend, looper } = createTestBackend()
     neverAnswer()
 
-    const next = await backend.createFolder(emptyStore)
+    const next = await backend.createFolder(emptyStore, undefined, 'New folder')
 
     expect(next.folders).toEqual(['New folder'])
     const queued = looper.snapshot().queue.lanes.flatMap((l) => l.messages)
@@ -81,7 +81,7 @@ describe('createCloudBackend: empty folders are placeholder files', () => {
   it('a still-queued create-folder shows after a reload', async () => {
     const { backend } = createTestBackend()
     neverAnswer()
-    await backend.createFolder(emptyStore)
+    await backend.createFolder(emptyStore, undefined, 'New folder')
     fetchMock.mockReset()
     fetchMock.mockImplementation((request) =>
       request.url.endsWith('/files/list')
@@ -149,7 +149,7 @@ describe('createCloudBackend: empty folders are placeholder files', () => {
     const loaded = await backend.load()
     neverAnswer()
 
-    await backend.createFolder(loaded)
+    await backend.createFolder(loaded, undefined, 'New folder')
 
     expect(lane(looper, 'id-k')).toEqual([{ tag: 'restore-file' }])
   })

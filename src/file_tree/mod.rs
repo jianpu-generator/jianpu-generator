@@ -23,7 +23,8 @@ pub use folder_ops::{
     create_folder, delete_folder, move_folder, FolderMoveOutcome, PathChange, PathKind,
 };
 pub use folder_queries::{
-    folder_delete_summary, folder_move_error, folders_to_reveal, FolderDeleteSummary,
+    create_folder_error, folder_delete_summary, folder_move_error, folders_to_reveal,
+    FolderDeleteSummary,
 };
 pub use folder_share::{
     folder_delete_share_warning, folder_share_info, FileShareLink, FolderShareInfo,

@@ -86,7 +86,10 @@ interface AppHeaderProps {
   store: FileStoreState
   onSelect: (name: string) => void
   onCreate: (folder?: string) => void
-  onCreateFolder: (parent?: string) => Promise<FileStoreState | undefined>
+  onCreateFolder: (
+    parent: string | undefined,
+    name: string,
+  ) => Promise<FileStoreState | undefined>
   onDuplicate: () => void
   onRename: (from: string, to: string) => void
   onDelete: (name: string) => void

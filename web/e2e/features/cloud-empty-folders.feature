@@ -6,9 +6,8 @@ Feature: Empty folders in the cloud are kept as hidden placeholder files
   Scenario: A new empty folder is stored as a placeholder and survives a reload
     When the app loads the cloud-backed file list
     And I create a new folder from the file actions menu
+    And I name the new folder "CloudEmptyA"
     And I open the file tree list
-    And I choose "Rename" from the actions menu of the folder "New folder"
-    And I type "CloudEmptyA" in the rename dialog and confirm
     Then "CloudEmptyA/.keep" exists on the server for the signed-in account
     When I reload the page and reopen the file list
     Then the file tree shows the folder "CloudEmptyA"

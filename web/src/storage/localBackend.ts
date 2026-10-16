@@ -59,7 +59,8 @@ export const localBackend: StorageBackend = {
 
   createFile: (state, folder) => afterWasm(() => createFile(state, folder)),
 
-  createFolder: (state, parent) => afterWasm(() => createFolder(state, parent)),
+  createFolder: (state, parent, name) =>
+    afterWasm(() => createFolder(state, parent, name)),
 
   duplicateFile: (state) => afterWasm(() => duplicateFile(state)),
 

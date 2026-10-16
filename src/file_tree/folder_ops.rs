@@ -5,7 +5,6 @@
 use super::file_ops::reject_reserved_leaf;
 use super::path::TreePath;
 use super::store_state::{FileOperationContext, FileStoreError, FileStoreState};
-use super::unique_name::unique_folder_path;
 use std::collections::{BTreeMap, HashMap};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -30,21 +29,23 @@ pub struct FolderMoveOutcome {
     pub changes: Vec<PathChange>,
 }
 
-const NEW_FOLDER_NAME: &str = "New folder";
-
-/// Adds an explicit empty folder named `New folder` (made unique among the
-/// siblings, files and bin entries included) inside `parent` (`None` = top
-/// level). The active file does not change.
+/// Adds an explicit empty folder `name` (one path segment, trimmed) inside
+/// `parent` (`None` = top level). It may not collide with a file, folder, demo
+/// file or bin entry (`Collision`). The active file does not change.
 pub fn create_folder(
     state: &FileStoreState,
     parent: Option<&TreePath>,
+    name: &str,
     context: &FileOperationContext,
 ) -> Result<FileStoreState, FileStoreError> {
-    let desired = TreePath::child(parent, NEW_FOLDER_NAME)?;
-    if let Some(path) = state.ancestor_that_is_file(&desired, context) {
+    let folder = TreePath::child(parent, name.trim())?;
+    reject_reserved_leaf(&folder)?;
+    if let Some(path) = state.ancestor_that_is_file(&folder, context) {
         return Err(FileStoreError::AncestorIsFile { path });
     }
-    let folder = unique_folder_path(&desired, &state.reserved_paths(context))?;
+    if state.reserved_paths(context).contains(&folder) {
+        return Err(FileStoreError::Collision { path: folder });
+    }
     let mut next = state.clone();
     next.folders.push(folder);
     Ok(next)

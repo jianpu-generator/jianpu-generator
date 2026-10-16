@@ -61,9 +61,9 @@ export function useFileOperations(
 
   /** Resolves to the new store, so the caller can reveal the new folder. */
   const handleCreateFolder = useCallback(
-    (parent?: string) =>
+    (parent: string | undefined, name: string) =>
       runFileOp('Could not create folder', setCreatingFolder, (base) =>
-        backend.createFolder(base, parent),
+        backend.createFolder(base, parent, name),
       ),
     [runFileOp, backend],
   )
