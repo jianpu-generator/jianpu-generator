@@ -49,8 +49,8 @@ Feature: Folder rows have their own actions menu, folders can be deleted to the 
     And I choose "Rename" from the actions menu of the folder "Hymns"
     Then the rename dialog holds "Hymns"
     When I type "Songs" in the rename dialog and confirm
-    When I open the file tree list
-    Then the file tree shows the folder "Songs" with a count of 2
+    Then the file browser is open
+    And the file tree shows the folder "Songs" with a count of 2
     And the file tree does not show the folder "Hymns"
 
   Scenario: Renaming a folder with a slash moves it
