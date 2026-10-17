@@ -11,6 +11,7 @@ import { displayFileName } from '../fileStore'
 import type { CheckState, FileTreeViewRow } from '../jianpuWasm'
 import { FileTabName } from './FileTabName'
 import { type FolderActions, FolderRowMenu } from './FolderRowMenu'
+import { HighlightedName } from './HighlightedName'
 
 function FolderGlyph() {
   return (
@@ -67,7 +68,9 @@ function FolderLabel({ row }: { row: FileTreeViewRow }) {
   return (
     <>
       <FolderGlyph />
-      <span className="file-tree-name">{row.name}</span>
+      <span className="file-tree-name">
+        <HighlightedName text={row.name} match={row.nameMatch} />
+      </span>
       {row.shareId ? (
         <Link2Icon className="file-tree-share-marker" aria-hidden="true" />
       ) : null}
@@ -226,7 +229,10 @@ export function FileTreeList({
                 <span className="file-tree-spacer" aria-hidden="true" />
                 {selecting ? (
                   <span className="file-tab-name">
-                    {displayFileName(row.name)}
+                    <HighlightedName
+                      text={displayFileName(row.name)}
+                      match={row.nameMatch}
+                    />
                   </span>
                 ) : readOnly ? (
                   <button
@@ -237,12 +243,20 @@ export function FileTreeList({
                       if (!row.isActive) onSelect(row.key)
                     }}
                   >
-                    {displayFileName(row.name)}
+                    <HighlightedName
+                      text={displayFileName(row.name)}
+                      match={row.nameMatch}
+                    />
                   </button>
                 ) : (
                   <FileTabName
                     name={row.key}
-                    label={displayFileName(row.name)}
+                    label={
+                      <HighlightedName
+                        text={displayFileName(row.name)}
+                        match={row.nameMatch}
+                      />
+                    }
                     active={row.isActive}
                     onSelect={onSelect}
                     onRename={onRename ?? (() => {})}

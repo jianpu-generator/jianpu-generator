@@ -57,9 +57,19 @@ pub struct TreeViewRow {
     pub share_id: Option<String>,
     /// The innermost shared folder this row lies inside, if any.
     pub shared_via: Option<SharedVia>,
+    /// The part of the displayed name the search query matched, if any.
+    pub name_match: Option<NameMatch>,
     /// The row's checkbox; `None` for rows that cannot be selected (demo
     /// files and the empty-folder hint).
     pub check: Option<CheckState>,
+}
+
+/// A half-open range of UTF-16 code units in a row's displayed name (without
+/// the `.jianpu` extension), the unit JavaScript string indices use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NameMatch {
+    pub start: usize,
+    pub end: usize,
 }
 
 /// The active file's location split for the toolbar: its folder names
@@ -84,6 +94,12 @@ impl FileTree {
         folder_rows(&self.root, 0, input, active_path.as_ref(), filter)
             .into_iter()
             .chain(demo_rows(input, filter))
+            .map(|row| TreeViewRow {
+                name_match: filter
+                    .filter(|_| row.kind != TreeViewRowKind::EmptyFolderHint)
+                    .and_then(|query| name_match(&row.name, query)),
+                ..row
+            })
             .collect()
     }
 }
@@ -123,6 +139,7 @@ fn folder_rows(
                     .folder_share(&folder.path)
                     .map(|share| share.share_id.clone()),
                 shared_via: input.shares.shared_via(&folder.path),
+                name_match: None,
                 check: Some(folder_check(&folder.contents, input.selected)),
             };
             let children = if !expanded {
@@ -155,6 +172,7 @@ fn folder_rows(
                     is_active: active_path.is_some_and(|active| *active == file.path),
                     share_id: None,
                     shared_via: input.shares.shared_via(&file.path),
+                    name_match: None,
                     check: Some(file_check(&file.path, input.selected)),
                 }),
         )
@@ -192,6 +210,7 @@ fn demo_rows(input: &TreeViewInput, filter: Option<&str>) -> Vec<TreeViewRow> {
         is_active: false,
         share_id: None,
         shared_via: None,
+        name_match: None,
         check: None,
     };
     let files = shown_files
@@ -207,6 +226,7 @@ fn demo_rows(input: &TreeViewInput, filter: Option<&str>) -> Vec<TreeViewRow> {
             is_active: name == input.active,
             share_id: None,
             shared_via: None,
+            name_match: None,
             check: None,
         });
     std::iter::once(header).chain(files).collect()
@@ -223,6 +243,7 @@ fn hint_row(depth: usize) -> TreeViewRow {
         is_active: false,
         share_id: None,
         shared_via: None,
+        name_match: None,
         check: None,
     }
 }
@@ -234,6 +255,24 @@ fn name_matches(name: &str, query: &str) -> bool {
         .unwrap_or(name)
         .to_lowercase()
         .contains(query)
+}
+
+/// Where the (already lowercased) query occurs in the name as the user sees
+/// it, so the list can highlight it. `None` when it does not occur, or when
+/// lowercasing changes the name's length (offsets could not be mapped back).
+fn name_match(name: &str, query: &str) -> Option<NameMatch> {
+    let shown = name.strip_suffix(".jianpu").unwrap_or(name);
+    let lowered = shown.to_lowercase();
+    if lowered.chars().count() != shown.chars().count() {
+        return None;
+    }
+    let start_byte = lowered.find(query)?;
+    let utf16_len = |text: &str| text.encode_utf16().count();
+    let start = utf16_len(&lowered[..start_byte]);
+    Some(NameMatch {
+        start,
+        end: start + utf16_len(query),
+    })
 }
 
 /// Whether anything inside `contents`, at any depth, matches the query.

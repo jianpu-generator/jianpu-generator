@@ -1,10 +1,12 @@
+import type { ReactNode } from 'react'
+
 /** Shows the shared spinner alongside a button's label while `pending` is true. */
 export function SpinnerLabel({
   pending,
   label,
 }: {
   pending: boolean
-  label: string
+  label: ReactNode
 }) {
   return (
     <>

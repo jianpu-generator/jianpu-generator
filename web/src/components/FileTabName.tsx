@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { displayFileName, isReadOnlyFile } from '../fileStore'
 import { SpinnerLabel } from './SpinnerLabel'
 
@@ -20,7 +20,7 @@ export function FileTabName({
   renaming?: boolean
   /** Text shown for the row; defaults to the extension-less `name`. A tree
    * row passes just the file's own name, not its folder path. */
-  label?: string
+  label?: ReactNode
 }) {
   const readOnly = isReadOnlyFile(name)
   const [draft, setDraft] = useState(displayFileName(name))
