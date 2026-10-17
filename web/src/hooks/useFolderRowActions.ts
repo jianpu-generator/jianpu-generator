@@ -28,7 +28,9 @@ export function useFolderRowActions({
   openNewFolder,
 }: FolderRowActionsInput): FolderActions {
   const dialog = (kind: FolderDialogState['kind']) => (folder: string) => {
-    closeList()
+    // Renaming keeps the file browser open underneath, so the user lands back
+    // in the tree afterwards.
+    if (kind !== 'rename') closeList()
     openFolderDialog({ kind, folder })
   }
   const share = (tab: FolderShareTarget['tab']) => (folder: string) => {

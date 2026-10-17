@@ -111,7 +111,13 @@ When('I reload the file tree app', async ({ page }) => {
 })
 
 When('I open the file tree list', async ({ page }) => {
+  // Already open, e.g. after a folder rename that keeps the browser up.
+  if (await page.getByTestId('file-browser').isVisible()) return
   await openFileList(page)
+})
+
+Then('the file browser is open', async ({ page }) => {
+  await expect(page.getByTestId('file-browser')).toBeVisible()
 })
 
 function folderRow(page: Page, name: string) {
