@@ -75,7 +75,6 @@ interface CliOptions {
   maxPasses: number
 }
 
-
 function fail(message: string): never {
   console.error(`e2e: ${message}`)
   process.exit(1)
