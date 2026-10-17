@@ -1607,6 +1607,14 @@ world jianpu-wasm {
         empty-folder-hint,
     }
 
+    // A row's checkbox in select mode.
+    enum check-state {
+        unchecked,
+        checked,
+        // A folder with some, but not all, of its files selected.
+        mixed,
+    }
+
     // A visible row of the file list. `key` is the folder path, file path,
     // bare demo file name, or (demo folder) the expansion key `Demo/`; the
     // ancestors of the active file are already `expanded`.
@@ -1624,6 +1632,8 @@ world jianpu-wasm {
         shared-via: option<shared-via>,
         // The part of the displayed name the search query matched.
         name-match: option<name-match>,
+        // The row's checkbox; none for rows that cannot be selected (demo files, the empty-folder hint).
+        check: option<check-state>,
     }
 
     // A half-open range of UTF-16 code units in a row's displayed name (no `.jianpu`).
@@ -1703,6 +1713,37 @@ world jianpu-wasm {
     variant file-tree-response {
         ok(list<file-tree-row>),
         err(string),
+    }
+
+    // One thing a multi-select action applies to: a file, or a folder whose files are all selected.
+    record selection-unit {
+        path: string,
+        is-folder: bool,
+        // Files in the unit; 1 for a file.
+        file-count: u32,
+    }
+
+    record selection-move {
+        from-path: string,
+        to-path: string,
+        is-folder: bool,
+    }
+
+    // The moves that put the selection into a folder, in the order to apply them; units already there are left out.
+    record selection-move-plan {
+        moves: list<selection-move>,
+        // The first reason the moves would be rejected, if any.
+        error: option<string>,
+    }
+
+    // What the multi-select "Delete" confirmation shows.
+    record selection-delete-summary {
+        units: list<selection-unit>,
+        // One line per unit, ready to list.
+        lines: list<string>,
+        message: string,
+        // What deleting does to live links involved; none when nothing is shared.
+        share-warning: option<string>,
     }
 
     // One choice in the "Move to" folder picker; `path` is empty for the top level.
@@ -1796,6 +1837,17 @@ world jianpu-wasm {
     export file-store-move-folder: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> folder-move-response;
     export file-store-delete-folder: func(state: file-store-state, folder: string, context: file-operation-context) -> file-store-response;
     export file-store-tree: func(state: file-store-state) -> file-tree-response;
-    export file-store-tree-view: func(state: file-store-state, expanded: list<string>, demo-file-names: list<string>, shares: share-overview, query: string) -> file-tree-view-response;
+    // `selected` are the file paths ticked in select mode; they drive each row's `check`.
+    export file-store-tree-view: func(state: file-store-state, expanded: list<string>, demo-file-names: list<string>, shares: share-overview, query: string, selected: list<string>) -> file-tree-view-response;
+    // Every file path, for "Select all".
+    export file-store-selection-all: func(state: file-store-state) -> list<string>;
+    // `selected` after clicking the checkbox of `key` (a file, or a folder meaning every file inside it).
+    export file-store-selection-toggle: func(state: file-store-state, selected: list<string>, key: string) -> list<string>;
+    // What an action on the selection applies to: whole folders whose files are all selected, and the other selected files.
+    export file-store-selection-units: func(state: file-store-state, selected: list<string>) -> list<selection-unit>;
+    // The moves that put the selection into `folder` (`none` = top level), or why they would be rejected.
+    export file-store-selection-move-plan: func(state: file-store-state, selected: list<string>, folder: option<string>, context: file-operation-context) -> selection-move-plan;
+    // The confirmation for deleting the selection.
+    export file-store-selection-delete-summary: func(state: file-store-state, selected: list<string>, shares: share-overview) -> selection-delete-summary;
     export file-store-active-label: func(active: string, demo-file-names: list<string>) -> file-active-label;
 }

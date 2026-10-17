@@ -1,11 +1,14 @@
+import * as Checkbox from '@radix-ui/react-checkbox'
 import {
+  CheckIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  DividerHorizontalIcon,
   Link2Icon,
 } from '@radix-ui/react-icons'
 import type { CSSProperties } from 'react'
 import { displayFileName } from '../fileStore'
-import type { FileTreeViewRow } from '../jianpuWasm'
+import type { CheckState, FileTreeViewRow } from '../jianpuWasm'
 import { FileTabName } from './FileTabName'
 import { HighlightedName } from './HighlightedName'
 import { type FolderActions, FolderRowMenu } from './FolderRowMenu'
@@ -35,6 +38,52 @@ function ViaTag({ name }: { name: string }) {
   )
 }
 
+/** A row's checkbox in select mode. Its hit area is stretched over the whole
+ * row (see `.file-tree-check::after`), so any click on the row toggles it. */
+function RowCheckbox({
+  check,
+  label,
+  onToggle,
+}: {
+  check: CheckState
+  label: string
+  onToggle: () => void
+}) {
+  return (
+    <Checkbox.Root
+      className="file-tree-check"
+      checked={check === 'mixed' ? 'indeterminate' : check === 'checked'}
+      onCheckedChange={onToggle}
+      aria-label={label}
+    >
+      <Checkbox.Indicator className="file-tree-check-indicator">
+        {check === 'mixed' ? <DividerHorizontalIcon /> : <CheckIcon />}
+      </Checkbox.Indicator>
+    </Checkbox.Root>
+  )
+}
+
+/** What a folder row shows after its chevron. */
+function FolderLabel({ row }: { row: FileTreeViewRow }) {
+  return (
+    <>
+      <FolderGlyph />
+      <span className="file-tree-name">
+        <HighlightedName text={row.name} match={row.nameMatch} />
+      </span>
+      {row.shareId ? (
+        <Link2Icon className="file-tree-share-marker" aria-hidden="true" />
+      ) : null}
+      {!row.shareId && row.sharedVia ? (
+        <ViaTag name={row.sharedVia.name} />
+      ) : null}
+      <span className="file-tree-count" aria-hidden="true">
+        {row.fileCount}
+      </span>
+    </>
+  )
+}
+
 export interface FileTreeListProps {
   /** Already-visible rows, computed in Rust (`fileTreeView`). */
   rows: FileTreeViewRow[]
@@ -52,6 +101,19 @@ export interface FileTreeListProps {
   creating?: boolean
   creatingFolder?: boolean
   importing?: boolean
+  /** Select mode: user rows get a checkbox and a click anywhere on them
+   * toggles it (given the row's key) instead of opening or renaming. */
+  onToggleSelect?: (key: string) => void
+}
+
+/** Extra classes of a row in select mode: it is clickable as a whole, and a
+ * checked one is highlighted. */
+function rowSelectionClass(
+  selecting: boolean,
+  check: CheckState | undefined,
+): string {
+  if (!selecting) return ''
+  return ` file-tree-row--selecting${check === 'checked' ? ' file-tree-row--checked' : ''}`
 }
 
 export function FileTreeList({
@@ -66,6 +128,7 @@ export function FileTreeList({
   creating = false,
   creatingFolder = false,
   importing = false,
+  onToggleSelect,
 }: FileTreeListProps) {
   return (
     <ul className="file-tabs" aria-label="Files">
@@ -73,42 +136,56 @@ export function FileTreeList({
         const rowStyle = { '--tree-depth': row.depth } as CSSProperties
         switch (row.kind) {
           case 'folder':
-          case 'demo-folder':
+          case 'demo-folder': {
+            const demo = row.kind === 'demo-folder'
+            const selecting =
+              onToggleSelect !== undefined && row.check !== undefined
+            const chevron = row.expanded ? (
+              <ChevronDownIcon aria-hidden="true" />
+            ) : (
+              <ChevronRightIcon aria-hidden="true" />
+            )
             return (
               <li
                 key={`${row.kind}:${row.key}`}
-                className={`file-tree-row file-tree-folder-row${row.kind === 'demo-folder' ? ' file-tree-demo-row' : ''}`}
+                className={`file-tree-row file-tree-folder-row${demo ? ' file-tree-demo-row' : ''}${rowSelectionClass(selecting, row.check)}`}
                 style={rowStyle}
               >
-                <button
-                  type="button"
-                  className="file-tree-folder"
-                  aria-expanded={row.expanded}
-                  onClick={() => onToggleFolder(row.key)}
-                >
-                  {row.expanded ? (
-                    <ChevronDownIcon aria-hidden="true" />
-                  ) : (
-                    <ChevronRightIcon aria-hidden="true" />
-                  )}
-                  <FolderGlyph />
-                  <span className="file-tree-name">
-                    <HighlightedName text={row.name} match={row.nameMatch} />
-                  </span>
-                  {row.shareId ? (
-                    <Link2Icon
-                      className="file-tree-share-marker"
-                      aria-hidden="true"
+                {selecting ? (
+                  <>
+                    <RowCheckbox
+                      check={row.check ?? 'unchecked'}
+                      label={`Select folder ${row.name}`}
+                      onToggle={() => onToggleSelect(row.key)}
                     />
-                  ) : null}
-                  {!row.shareId && row.sharedVia ? (
-                    <ViaTag name={row.sharedVia.name} />
-                  ) : null}
-                  <span className="file-tree-count" aria-hidden="true">
-                    {row.fileCount}
-                  </span>
-                </button>
-                {row.kind === 'folder' && !readOnly && folderActions ? (
+                    <div className="file-tree-folder file-tree-folder--selecting">
+                      <button
+                        type="button"
+                        className="file-tree-chevron"
+                        aria-expanded={row.expanded}
+                        aria-label={`${row.expanded ? 'Collapse' : 'Expand'} folder ${row.name}`}
+                        onClick={() => onToggleFolder(row.key)}
+                      >
+                        {chevron}
+                      </button>
+                      <FolderLabel row={row} />
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="file-tree-folder"
+                    aria-expanded={row.expanded}
+                    onClick={() => onToggleFolder(row.key)}
+                  >
+                    {chevron}
+                    <FolderLabel row={row} />
+                  </button>
+                )}
+                {row.kind === 'folder' &&
+                !selecting &&
+                !readOnly &&
+                folderActions ? (
                   <FolderRowMenu
                     folder={row.key}
                     name={row.name}
@@ -122,6 +199,7 @@ export function FileTreeList({
                 ) : null}
               </li>
             )
+          }
           case 'empty-folder-hint':
             return (
               <li
@@ -132,15 +210,31 @@ export function FileTreeList({
                 {row.name}
               </li>
             )
-          default:
+          default: {
+            const selecting =
+              onToggleSelect !== undefined && row.check !== undefined
             return (
               <li
                 key={`${row.kind}:${row.key}`}
-                className={`file-tab file-tree-row${row.isActive ? ' file-tab--active' : ''}`}
+                className={`file-tab file-tree-row${row.isActive ? ' file-tab--active' : ''}${rowSelectionClass(selecting, row.check)}`}
                 style={rowStyle}
               >
+                {selecting ? (
+                  <RowCheckbox
+                    check={row.check ?? 'unchecked'}
+                    label={`Select ${displayFileName(row.name)}`}
+                    onToggle={() => onToggleSelect(row.key)}
+                  />
+                ) : null}
                 <span className="file-tree-spacer" aria-hidden="true" />
-                {readOnly ? (
+                {selecting ? (
+                  <span className="file-tab-name">
+                    <HighlightedName
+                      text={displayFileName(row.name)}
+                      match={row.nameMatch}
+                    />
+                  </span>
+                ) : readOnly ? (
                   <button
                     type="button"
                     className="file-tab-name"
@@ -173,6 +267,7 @@ export function FileTreeList({
                 {row.sharedVia ? <ViaTag name={row.sharedVia.name} /> : null}
               </li>
             )
+          }
         }
       })}
     </ul>

@@ -198,3 +198,18 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* The items a multi-select Delete is about to bin. */
+.file-dialog-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  max-height: 12rem;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--preview-bg);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}

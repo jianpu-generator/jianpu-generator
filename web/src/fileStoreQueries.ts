@@ -14,6 +14,9 @@ import type {
   FolderShareInfo,
   FolderStaticShare,
   MoveTarget,
+  SelectionDeleteSummary,
+  SelectionMovePlan,
+  SelectionUnit,
   ShareOverview,
 } from './jianpuWasm'
 import { jianpuWasm } from './jianpuWasm'
@@ -27,13 +30,15 @@ export function fileTreeRows(state: FileStoreState): FileTreeRow[] {
 
 /** The visible rows of the file list (collapsed folders hidden, the active
  * file's ancestors forced open, the read-only `Demo/` row last), computed in
- * Rust from the raw `expanded` set and the search `query` (blank shows
- * everything). Empty if the paths conflict. */
+ * Rust from the raw `expanded` set, the search `query` (blank shows
+ * everything) and the `selected` file paths (each row's checkbox). Empty if
+ * the paths conflict. */
 export function fileTreeView(
   state: FileStoreState,
   expanded: string[],
   shares: ShareOverview,
   query: string,
+  selected: string[],
 ): FileTreeViewRow[] {
   const response = jianpuWasm().fileStoreTreeView(
     toWasmState(state),
@@ -41,6 +46,7 @@ export function fileTreeView(
     DEMO_FILE_NAMES,
     shares,
     query,
+    selected,
   )
   return response.tag === 'ok' ? response.val : []
 }
@@ -181,4 +187,60 @@ export function binEntries(state: FileStoreState): BinEntry[] {
  * must expand to show a folder that was just created or moved. */
 export function foldersToReveal(folder: string): string[] {
   return jianpuWasm().fileStoreFoldersToReveal(folder)
+}
+
+/** Every file path, for "Select all". */
+export function selectionAll(state: FileStoreState): string[] {
+  return jianpuWasm().fileStoreSelectionAll(toWasmState(state))
+}
+
+/** `selected` after clicking the checkbox of `key` (a file, or a folder
+ * meaning every file inside it). */
+export function selectionToggle(
+  state: FileStoreState,
+  selected: string[],
+  key: string,
+): string[] {
+  return jianpuWasm().fileStoreSelectionToggle(
+    toWasmState(state),
+    selected,
+    key,
+  )
+}
+
+/** What an action on the selection applies to: whole folders whose files are
+ * all selected, and the other selected files. */
+export function selectionUnits(
+  state: FileStoreState,
+  selected: string[],
+): SelectionUnit[] {
+  return jianpuWasm().fileStoreSelectionUnits(toWasmState(state), selected)
+}
+
+/** The moves that put the selection into `folder` (top level when omitted),
+ * or why they would be rejected. */
+export function selectionMovePlan(
+  state: FileStoreState,
+  selected: string[],
+  folder?: string,
+): SelectionMovePlan {
+  return jianpuWasm().fileStoreSelectionMovePlan(
+    toWasmState(state),
+    selected,
+    folder,
+    operationContext(DEMO_FILES, ''),
+  )
+}
+
+/** What the "Delete" confirmation for the selection says. */
+export function selectionDeleteSummary(
+  state: FileStoreState,
+  selected: string[],
+  shares: ShareOverview,
+): SelectionDeleteSummary {
+  return jianpuWasm().fileStoreSelectionDeleteSummary(
+    toWasmState(state),
+    selected,
+    shares,
+  )
 }
