@@ -42,6 +42,7 @@ export function useAppController() {
 
   const {
     creatingFile,
+    creatingFolder,
     deletingFileName,
     duplicatingFile,
     renamingFileName,
@@ -49,14 +50,18 @@ export function useAppController() {
     fileOpError,
     setFileOpError,
     handleCreate,
+    handleCreateFolder,
     handleDuplicate,
     handleRename,
     handleDelete,
+    handleMoveFolder,
+    handleDeleteFolder,
     handleRestore,
   } = useFileOperations(store, setStore, backend)
 
   const {
     sharedPreview,
+    sharedFolder,
     syncedShareViewerActive,
     source,
     readOnly,
@@ -67,8 +72,9 @@ export function useAppController() {
     setStore,
     setFileOpError,
     setEditorCollapsed,
+    saveStatus,
   )
-  const fileId = fileIdForName(store, store.active)
+  const fileId = sharedFolder?.fileId ?? fileIdForName(store, store.active)
   useDocumentTitle(store.active)
 
   const editorRef = useRef<EditorHandle>(null)
@@ -267,6 +273,7 @@ export function useAppController() {
     editorCollapsed,
     setEditorCollapsed,
     creatingFile,
+    creatingFolder,
     deletingFileName,
     duplicatingFile,
     renamingFileName,
@@ -274,9 +281,12 @@ export function useAppController() {
     fileOpError,
     setFileOpError,
     handleCreate,
+    handleCreateFolder,
     handleDuplicate,
     handleRename,
     handleDelete,
+    handleMoveFolder,
+    handleDeleteFolder,
     handleRestore,
     sharedPreview,
     syncedShareViewerActive,

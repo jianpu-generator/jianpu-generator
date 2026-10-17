@@ -3,7 +3,9 @@ import createClient from 'openapi-fetch'
 import type { paths } from '../../../src/generated/live-share-worker/schema'
 import { CLOUD_WORKER_ORIGIN, matchWorkerRoute } from '../../cloudFileHelpers'
 import {
+  fileSwitcherTrigger,
   fileTabByExactName,
+  nameNewFile,
   openFileActions,
   openFileList,
 } from '../../fileSwitcherHelpers'
@@ -56,14 +58,22 @@ async function renameActiveFile(page: Page, newName: string): Promise<void> {
   const input = page.locator('.file-tab--active input.file-tab-name')
   await input.fill(newName)
   await input.press('Enter')
+  // The rename lands a beat after Enter; later steps (seeding, going back
+  // online) must not race it.
+  await expect(fileSwitcherTrigger(page)).toContainText(
+    newName.split('/').at(-1) ?? newName,
+  )
 }
 
-// "New" creates and activates a fresh file; renaming it gives it the
-// requested name (both apply locally at once and are queued).
+// "New" asks for the leaf name and creates and activates the file; a name
+// with folders is then moved there by a rename (both apply locally at once
+// and are queued).
 When('I create a file named {string}', async ({ page }, name: string) => {
   await openFileActions(page)
   await page.locator('.export-menu-item').first().click()
-  await renameActiveFile(page, name)
+  const leaf = name.split('/').at(-1) ?? name
+  await nameNewFile(page, leaf)
+  if (leaf !== name) await renameActiveFile(page, name)
 })
 
 When(

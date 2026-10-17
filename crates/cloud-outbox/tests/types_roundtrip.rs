@@ -29,6 +29,12 @@ fn messages_roundtrip() -> TestResult {
             content: "c".into(),
         },
         Message::RenameFile { to: "d".into() },
+        Message::RenameFiles {
+            moves: vec![RenameMove {
+                file_id: "f".into(),
+                to: "A/d".into(),
+            }],
+        },
         Message::TrashFile,
         Message::RestoreFile,
     ] {
@@ -47,6 +53,18 @@ fn attempt_outcomes_roundtrip() -> TestResult {
         },
         AttemptOutcome::NameTaken {
             suggested_name: "n".into(),
+        },
+        AttemptOutcome::NamesTaken {
+            adjustments: vec![
+                NameAdjustment {
+                    rejected: "a".into(),
+                    replacement: Some("a 2".into()),
+                },
+                NameAdjustment {
+                    rejected: "b".into(),
+                    replacement: None,
+                },
+            ],
         },
         AttemptOutcome::Permanent {
             status: 500,

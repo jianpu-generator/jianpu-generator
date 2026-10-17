@@ -68,7 +68,7 @@ describe('createCloudBackend: createFile()', () => {
       bin: {},
       fileIds: {},
     }
-    const nextState = await backend.createFile(state)
+    const nextState = await backend.createFile(state, undefined, 'untitled')
     await looper.whenIdle()
 
     const { url, body } = await lastCall()

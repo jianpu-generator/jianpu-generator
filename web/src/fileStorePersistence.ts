@@ -5,7 +5,6 @@ import {
   type FileStoreState,
   generateFileId,
   STORAGE_KEY,
-  sortedUserFileNames,
 } from './fileStore'
 
 function ensureFileIds(
@@ -36,8 +35,13 @@ function normalizeState(parsed: Partial<FileStoreState>): FileStoreState {
     userFiles,
     bin,
     fileIds: ensureFileIds(userFiles, bin, parsed.fileIds),
+    // Optional and absent in stores saved before folders existed: no version
+    // bump, old stores load with no explicit folders.
+    ...(Array.isArray(parsed.folders) && parsed.folders.length > 0
+      ? { folders: parsed.folders.filter((f) => typeof f === 'string') }
+      : {}),
   }
-  const names = [...DEMO_FILE_NAMES, ...sortedUserFileNames(state)]
+  const names = [...DEMO_FILE_NAMES, ...Object.keys(userFiles)]
   return {
     ...state,
     active: names.includes(state.active)

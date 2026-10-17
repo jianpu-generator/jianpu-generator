@@ -71,7 +71,7 @@ export function lastCall(): Promise<RecordedCall> {
   return callAt(-1)
 }
 
-async function installRealWasm(): Promise<void> {
+export async function installRealWasm(): Promise<void> {
   const bytes = readFileSync(
     new URL(
       '../../../crates/jianpu-wasm/pkg-component/jianpu_wasm.core.wasm',

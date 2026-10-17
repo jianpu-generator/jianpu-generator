@@ -20,6 +20,21 @@ pub enum ApiError {
     /// A create/rename/restore collided with another of the caller's file
     /// names (`idx_files_owner_name`).
     NameTaken,
+    /// A batch rename was refused as a whole because these destinations are
+    /// held by other files (`names`); nothing was applied.
+    NamesTaken { names: Vec<String> },
+    /// A create/rename/restore/batch rename was refused because `path` would
+    /// be both a file and a folder: it equals the folder of another live
+    /// file, or lies inside a live file. Nothing was applied.
+    FileFolderConflict { path: String },
+    /// A create/rename/restore asked for a file name that is not a valid
+    /// path (`jianpu_generator::file_tree::TreePath` rules); `message` says why.
+    InvalidName { message: String },
+    /// A folder share would cover more files or content than
+    /// `folder_share::MAX_SHARED_FOLDER_FILES`/`MAX_SHARED_FOLDER_BYTES`
+    /// allow: refused when starting the share, and answered to a viewer
+    /// whose folder has grown past the limits since.
+    SharedFolderTooLarge { message: String },
     /// A content save's `expectedRevision` lost the race -- feeds the
     /// "Overwrite mine"/"Discard mine" UI with the row's actual revision.
     RevisionConflict {
@@ -39,10 +54,14 @@ pub enum ApiError {
 impl ApiError {
     pub fn status_code(&self) -> u16 {
         match self {
-            ApiError::BadRequest => 400,
+            ApiError::BadRequest | ApiError::InvalidName { .. } => 400,
             ApiError::Unauthorized(_) => 401,
             ApiError::NotFound => 404,
-            ApiError::NameTaken | ApiError::RevisionConflict { .. } => 409,
+            ApiError::NameTaken
+            | ApiError::NamesTaken { .. }
+            | ApiError::FileFolderConflict { .. }
+            | ApiError::RevisionConflict { .. } => 409,
+            ApiError::SharedFolderTooLarge { .. } => 413,
             ApiError::Internal { .. } => 500,
             ApiError::UpstreamFailed { .. } => 502,
         }

@@ -1,6 +1,8 @@
-import { expect } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import { fileSwitcherTrigger, openFileActions } from '../../fileSwitcherHelpers'
 import { Given, Then, When } from './fixtures'
+
+const renameAnswers = new WeakMap<Page, string | null>()
 
 const SOURCE = [
   '# metadata',
@@ -42,21 +44,25 @@ Given('the app loads the seeded rename-menu test file', async ({ page }) => {
 Given(
   'the rename dialog will be accepted with {string}',
   async ({ page }, name: string) => {
-    page.once('dialog', (dialog) => {
-      void dialog.accept(name)
-    })
+    renameAnswers.set(page, name)
   },
 )
 
 Given('the rename dialog will be dismissed', async ({ page }) => {
-  page.once('dialog', (dialog) => {
-    void dialog.dismiss()
-  })
+  renameAnswers.set(page, null)
 })
 
 When('I open file actions and click the Rename menu item', async ({ page }) => {
   await openFileActions(page)
   await page.getByRole('menuitem', { name: 'Rename' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Rename' })
+  const answer = renameAnswers.get(page)
+  if (answer === null || answer === undefined) {
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    return
+  }
+  await dialog.getByRole('textbox').fill(answer)
+  await dialog.getByRole('button', { name: 'Rename' }).click()
 })
 
 Then(

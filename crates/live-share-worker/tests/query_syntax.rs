@@ -86,6 +86,14 @@ const QUERIES: &[(&str, &str)] = &[
         "rename_file.sql",
         include_str!("../queries/rename_file.sql"),
     ),
+    (
+        "get_file_names_by_ids_or_names.sql",
+        include_str!("../queries/get_file_names_by_ids_or_names.sql"),
+    ),
+    (
+        "rename_files_batch.sql",
+        include_str!("../queries/rename_files_batch.sql"),
+    ),
     ("trash_file.sql", include_str!("../queries/trash_file.sql")),
     (
         "restore_file.sql",
@@ -98,6 +106,50 @@ const QUERIES: &[(&str, &str)] = &[
     (
         "delete_files_of_provider_users.sql",
         include_str!("../queries/delete_files_of_provider_users.sql"),
+    ),
+    (
+        "upsert_folder_share.sql",
+        include_str!("../queries/upsert_folder_share.sql"),
+    ),
+    (
+        "end_folder_share.sql",
+        include_str!("../queries/end_folder_share.sql"),
+    ),
+    (
+        "get_folder_share_status.sql",
+        include_str!("../queries/get_folder_share_status.sql"),
+    ),
+    (
+        "get_folder_share_header.sql",
+        include_str!("../queries/get_folder_share_header.sql"),
+    ),
+    (
+        "get_folder_files_stats.sql",
+        include_str!("../queries/get_folder_files_stats.sql"),
+    ),
+    (
+        "list_folder_files.sql",
+        include_str!("../queries/list_folder_files.sql"),
+    ),
+    (
+        "list_live_file_shares_by_owner.sql",
+        include_str!("../queries/list_live_file_shares_by_owner.sql"),
+    ),
+    (
+        "list_live_folder_shares_by_owner.sql",
+        include_str!("../queries/list_live_folder_shares_by_owner.sql"),
+    ),
+    (
+        "list_folder_share_prefixes.sql",
+        include_str!("../queries/list_folder_share_prefixes.sql"),
+    ),
+    (
+        "list_active_files_under_prefixes.sql",
+        include_str!("../queries/list_active_files_under_prefixes.sql"),
+    ),
+    (
+        "rewrite_folder_share_prefix.sql",
+        include_str!("../queries/rewrite_folder_share_prefix.sql"),
     ),
 ];
 

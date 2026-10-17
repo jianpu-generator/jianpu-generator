@@ -26,7 +26,7 @@ The pre-commit hook runs cargo checks and the web typecheck, which can take a fe
 
 ## Running e2e tests
 
-Whenever you need to run Playwright e2e tests yourself — full suite or scoped with `--grep` — always run `cd web && pnpm test:e2e:resolve [-- --grep ...]`, never `pnpm test:e2e` or a raw `playwright test` invocation. The suite has known flaky tests; `test:e2e:resolve` (`web/scripts/resolve-e2e-flakes.ts`) re-runs only the still-failing subset across passes until it settles, so you get a real pass/fail signal instead of getting stuck chasing flakes across manual re-runs. This applies everywhere e2e tests are run by hand.
+When you run Playwright e2e tests yourself locally, run only the specific tests you need, with plain Playwright: `cd web && pnpm test:e2e --grep "..."`. Do **not** use the auto-retry script `pnpm test:e2e:resolve` locally — it exists for CI (`web/scripts/resolve-e2e-flakes.ts`), where the full suite runs and its known flaky tests are re-run until the failing set settles. A scoped local run is small enough to read directly, and a failure there should be investigated, not retried away. Stop any dev server you started once the run finishes.
 
 Avoid using uncommon abbreviations when naming (e.g. `TimedRdParser` for "recursive descent" — spell it out as `TimedRecursiveDescentParser` instead). Widely understood abbreviations (e.g. `Ast`, `Id`, `Http`) are fine.
 

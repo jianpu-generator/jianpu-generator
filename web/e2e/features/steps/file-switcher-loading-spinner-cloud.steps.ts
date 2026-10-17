@@ -41,7 +41,7 @@ Then(
   'opening the file list shows the hint {string}',
   async ({ page }, hint: string) => {
     await openFileList(page)
-    await expect(page.locator('.file-tab-bar-hint')).toHaveText(hint)
+    await expect(page.locator('.file-browser-hint')).toHaveText(hint)
   },
 )
 

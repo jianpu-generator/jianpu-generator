@@ -5,7 +5,9 @@ import {
   isReadOnlyFile,
 } from '../fileStore'
 import type { StorageBackend } from '../storage/types'
+import { useSharedFolderViewer } from './useSharedFolderViewer'
 import { useSharedPreview } from './useSharedPreview'
+import type { DisplaySaveStatus } from './useStorageBackend'
 import { useSyncedShareOwner } from './useSyncedShareOwner'
 import { useSyncedShareViewer } from './useSyncedShareViewer'
 
@@ -46,6 +48,7 @@ export function useScoreSource(
   ) => void,
   setFileOpError: (error: FileOpError | null) => void,
   setEditorCollapsed: (collapsed: boolean) => void,
+  saveStatus: DisplaySaveStatus,
 ) {
   const { sharedPreview, handleDismissShared, handleImportShared } =
     useSharedPreview(
@@ -59,8 +62,19 @@ export function useScoreSource(
   const syncedShareOwner = useSyncedShareOwner(
     store.active,
     cloudFileIdFor(backend, store, store.active),
+    {
+      isCloud: backend.kind === 'cloud',
+      pathKey: [
+        ...Object.keys(store.userFiles).sort(),
+        '|',
+        ...(store.folders ?? []),
+      ].join('\n'),
+      saveStatus,
+    },
   )
   const {
+    syncedFolder,
+    clearSyncedFolder,
     syncedShareViewerPreview,
     syncedShareViewerStatus,
     syncedShareViewerOwnerLogin,
@@ -73,15 +87,30 @@ export function useScoreSource(
     setFileOpError,
   )
 
+  const sharedFolder = useSharedFolderViewer(
+    syncedFolder,
+    syncedShareViewerOwnerLogin,
+    clearSyncedFolder,
+    store,
+    backend,
+    setStore,
+    setFileOpError,
+    setEditorCollapsed,
+  )
+
+  // Anything that is not a plain own-file session: a synced link being
+  // loaded, shown, stopped or failing, or a static shared folder.
   const syncedShareViewerActive =
     sharedPreview === null &&
-    (syncedShareViewerPreview !== null || syncedShareViewerStatus === 'ended')
+    (sharedFolder !== null || syncedShareViewerStatus !== 'none')
 
   const source = sharedPreview
     ? sharedPreview.content
-    : syncedShareViewerActive
-      ? (syncedShareViewerPreview?.content ?? '')
-      : fileContent(store, store.active)
+    : sharedFolder
+      ? sharedFolder.activeContent
+      : syncedShareViewerActive
+        ? (syncedShareViewerPreview?.content ?? '')
+        : fileContent(store, store.active)
   const readOnly =
     sharedPreview !== null ||
     syncedShareViewerActive ||
@@ -89,6 +118,7 @@ export function useScoreSource(
 
   return {
     sharedPreview,
+    sharedFolder,
     syncedShareViewerActive,
     source,
     readOnly,
@@ -97,6 +127,7 @@ export function useScoreSource(
       onImportShared: handleImportShared,
       onDismissShared: handleDismissShared,
       viewerActive: syncedShareViewerActive,
+      sharedFolder,
       viewerStatus: syncedShareViewerStatus,
       viewerFilename: syncedShareViewerPreview?.filename ?? null,
       viewerOwnerLogin: syncedShareViewerOwnerLogin,
@@ -112,6 +143,7 @@ export function useScoreSource(
       onDisconnectGithub: syncedShareOwner.disconnectGithub,
       syncFailure: syncedShareOwner.syncFailure,
       onDismissSyncFailure: syncedShareOwner.dismissSyncFailure,
+      folderShares: syncedShareOwner.folderShares,
     },
   }
 }

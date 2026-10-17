@@ -43,7 +43,7 @@ describe('createCloudBackend: structural operations are applied locally at once'
     const { backend, looper } = createTestBackend()
     neverAnswer()
 
-    const next = await backend.createFile(emptyState)
+    const next = await backend.createFile(emptyState, undefined, 'untitled')
 
     expect(next.active).toBe('untitled.jianpu')
     const id = next.fileIds['untitled.jianpu'] ?? ''
@@ -86,7 +86,7 @@ describe('createCloudBackend: ordering within a file', () => {
     const { backend, looper } = createTestBackend()
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'))
 
-    const created = await backend.createFile(emptyState)
+    const created = await backend.createFile(emptyState, undefined, 'untitled')
     await backend.saveContent({
       ...created,
       userFiles: { ...created.userFiles, 'untitled.jianpu': 'edited' },
@@ -102,7 +102,7 @@ describe('createCloudBackend: ordering within a file', () => {
     const { backend, looper, wake, advance } = createTestBackend()
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
 
-    const created = await backend.createFile(emptyState)
+    const created = await backend.createFile(emptyState, undefined, 'untitled')
     await backend.saveContent({
       ...created,
       userFiles: { ...created.userFiles, 'untitled.jianpu': 'edited' },
@@ -135,7 +135,7 @@ describe('createCloudBackend: a name collision found at delivery time', () => {
       .mockResolvedValueOnce(apiErrorResponse(409, { code: 'name_taken' }))
       .mockResolvedValueOnce(createdFile('untitled 2.jianpu'))
 
-    await backend.createFile(emptyState)
+    await backend.createFile(emptyState, undefined, 'untitled')
     await looper.whenIdle()
 
     expect((await callAt(0)).body.name).toBe('untitled.jianpu')

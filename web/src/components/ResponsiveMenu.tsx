@@ -25,6 +25,14 @@ interface ResponsiveMenuContextValue {
   setOpen: (open: boolean) => void
 }
 
+/** Where menu content is portaled to (default: `document.body`). A menu
+ * opened from inside a modal Radix `Dialog` must render inside the dialog:
+ * the dialog's focus trap would otherwise yank focus out of the menu and
+ * dismiss it at once. */
+export const ResponsiveMenuContainerContext = createContext<
+  HTMLElement | null | undefined
+>(undefined)
+
 const ResponsiveMenuContext = createContext<ResponsiveMenuContextValue | null>(
   null,
 )
@@ -119,10 +127,11 @@ function Content({
   children,
 }: ContentProps) {
   const { isMobile } = useResponsiveMenuContext('Content')
+  const container = useContext(ResponsiveMenuContainerContext) ?? undefined
 
   if (isMobile) {
     return (
-      <Drawer.Portal>
+      <Drawer.Portal container={container}>
         <Drawer.Overlay className="responsive-menu-overlay" />
         <Drawer.Content className="responsive-menu-drawer">
           <div className="responsive-menu-drawer-header">
@@ -140,7 +149,7 @@ function Content({
   }
 
   return (
-    <DropdownMenu.Portal>
+    <DropdownMenu.Portal container={container}>
       <DropdownMenu.Content
         className={className}
         align={align}

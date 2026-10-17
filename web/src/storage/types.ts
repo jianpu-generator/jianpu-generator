@@ -1,4 +1,5 @@
 import type { FileStoreState } from '../fileStore'
+import type { FolderSnapshot } from '../jianpuWasm'
 
 /**
  * Persistence/save-indicator state exposed by a backend. `'offline'` and
@@ -22,12 +23,31 @@ export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline'
 export interface StorageBackend {
   readonly kind: 'local' | 'cloud'
   load(): Promise<FileStoreState>
-  createFile(state: FileStoreState): Promise<FileStoreState>
+  /** New file `name` in `folder` (top level when omitted). */
+  createFile(
+    state: FileStoreState,
+    folder: string | undefined,
+    name: string,
+  ): Promise<FileStoreState>
+  /** New empty folder `name` inside `parent` (top level when omitted). */
+  createFolder(
+    state: FileStoreState,
+    parent: string | undefined,
+    name: string,
+  ): Promise<FileStoreState>
   duplicateFile(state: FileStoreState): Promise<FileStoreState>
   importFile(
     state: FileStoreState,
     filename: string,
     content: string,
+  ): Promise<FileStoreState>
+  /** Copies a shared folder into the store as a new top-level folder (named
+   * `Name 2` on a clash), all of it in one state update; the cloud backend
+   * queues a create per file and a placeholder per empty folder. Rejects
+   * when the folder is not valid. */
+  importFolder(
+    state: FileStoreState,
+    snapshot: FolderSnapshot,
   ): Promise<FileStoreState>
   renameFile(
     state: FileStoreState,
@@ -35,6 +55,17 @@ export interface StorageBackend {
     to: string,
   ): Promise<FileStoreState>
   deleteFile(state: FileStoreState, name: string): Promise<FileStoreState>
+  /** Renames/moves a whole folder; resolves to the same state when Rust
+   * rejects it (collision, invalid path). The cloud backend renames each
+   * file on its own, not as one batch, until Phase 3. */
+  moveFolder(
+    state: FileStoreState,
+    from: string,
+    to: string,
+  ): Promise<FileStoreState>
+  /** Moves every file in the folder to the bin; the cloud backend trashes
+   * each file on its own, not as one batch, until Phase 3. */
+  deleteFolder(state: FileStoreState, folder: string): Promise<FileStoreState>
   restoreFile(state: FileStoreState, name: string): Promise<FileStoreState>
   updateActiveContent(state: FileStoreState, content: string): FileStoreState
   saveContent(state: FileStoreState): Promise<void>

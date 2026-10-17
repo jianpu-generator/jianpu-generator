@@ -11,6 +11,7 @@
 mod keyword_enum;
 
 pub mod ast;
+#[cfg(feature = "midi")]
 mod audio_source;
 #[cfg(feature = "cli")]
 pub mod cli;
@@ -23,6 +24,7 @@ pub mod desugar;
 mod document_render;
 pub mod error;
 pub mod error_reporter;
+pub mod file_tree;
 pub mod filters;
 mod font_metrics;
 pub mod fonts;
@@ -59,6 +61,7 @@ pub mod pdf;
 #[cfg(feature = "wav")]
 pub mod wav;
 
+#[cfg(feature = "midi")]
 pub use audio_source::*;
 pub use document_render::{
     render_documents_from_source_with_visibility,

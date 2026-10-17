@@ -1,5 +1,5 @@
 import LZString from 'lz-string'
-import { jianpuWasm } from './jianpuWasm'
+import { type FolderSnapshot, jianpuWasm } from './jianpuWasm'
 import { ensureWasmInit } from './wasmInit'
 
 export interface SharePayload {
@@ -8,6 +8,10 @@ export interface SharePayload {
 }
 
 const SHARE_HASH_PREFIX = '#share='
+/** Static folder links: `#share-folder=<brotli+base64url snapshot>`, encoded
+ * and decoded in Rust (`jianpu-wasm`'s `folder_share_payload.rs`). A separate
+ * prefix keeps the single-file `#share=` links decoding exactly as before. */
+const FOLDER_SHARE_HASH_PREFIX = '#share-folder='
 
 function bytesToBase64Url(bytes: Uint8Array): string {
   let binary = ''
@@ -103,4 +107,25 @@ export function clearShareHash(): void {
   const url = new URL(window.location.href)
   url.hash = ''
   history.replaceState(null, '', `${url.pathname}${url.search}`)
+}
+
+/** The static link of a folder from the suffix Rust produced
+ * (`folderStaticShare`). */
+export function buildFolderShareUrl(suffix: string): string {
+  const base = new URL(import.meta.env.BASE_URL, window.location.origin)
+  return `${base.href}${FOLDER_SHARE_HASH_PREFIX}${suffix}`
+}
+
+/** The folder snapshot a `#share-folder=` hash carries; `null` for any other
+ * hash or an invalid snapshot (Rust validates it). */
+export async function parseFolderShareFromHash(
+  hash: string = window.location.hash,
+): Promise<FolderSnapshot | null> {
+  if (!hash.startsWith(FOLDER_SHARE_HASH_PREFIX)) return null
+  await ensureWasmInit()
+  return (
+    jianpuWasm().decodeFolderShareSuffix(
+      hash.slice(FOLDER_SHARE_HASH_PREFIX.length),
+    ) ?? null
+  )
 }

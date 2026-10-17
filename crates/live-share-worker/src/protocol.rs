@@ -24,6 +24,13 @@ use utoipa::{IntoParams, ToSchema};
 /// name, not an internal id) is exposed here specifically so the
 /// viewer-facing `SyncedShareBanner` can show "Shared by @login"; it's
 /// `None` when the owner has no cached login (task 10).
+///
+/// A FOLDER share also answers with this shape: `folder` is then set to the
+/// whole tree, and `filename` is the folder's name, `content` empty and
+/// `revision` 0, so a client that predates folder shares sees an empty file
+/// rather than an error. `folder` is absent (not `null`) for a file share,
+/// an ended share and an unknown id, so those responses are byte-for-byte
+/// what they were before folder shares existed.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncedDoc {
@@ -32,6 +39,33 @@ pub struct SyncedDoc {
     pub content: String,
     pub revision: i64,
     pub owner_login: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folder: Option<SharedFolder>,
+}
+
+/// The tree a folder share shows its viewers (read-only). Paths are relative
+/// to the shared folder; the owner's ancestor folders are never exposed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SharedFolder {
+    /// The shared folder's own name (last segment of its path).
+    pub name: String,
+    /// Every active file, in path order, `.keep` placeholders excluded.
+    pub files: Vec<SharedFolderFile>,
+    /// Relative folders that exist only as an empty folder (a `.keep`
+    /// placeholder, no file under them). Folders implied by `files` paths
+    /// are not repeated here.
+    pub empty_folders: Vec<String>,
+}
+
+/// One file of a shared folder.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SharedFolderFile {
+    /// Path relative to the shared folder, e.g. `Advent/O Come.jianpu`.
+    pub path: String,
+    pub content: String,
+    pub revision: i64,
 }
 
 /// Body of `POST /files/{id}/share`, `POST /files/{id}/share/stop` and `POST
@@ -67,6 +101,56 @@ pub struct ShareStatusResponse {
 pub struct ShareStatus {
     pub share_id: String,
     pub ended: bool,
+}
+
+/// Body of `POST /folders/share`, `/folders/share/stop` and
+/// `/folders/share/status`. `folder` is the folder's path without a trailing
+/// slash (`Hymns/Advent`), validated with the shared `TreePath` rules
+/// (`ApiError::InvalidName` otherwise).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FolderShareRequest {
+    pub identity_token: String,
+    pub folder: String,
+}
+
+/// Body of `POST /shares/overview`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ShareOverviewRequest {
+    pub identity_token: String,
+}
+
+/// A live synced link on one file.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FileShareEntry {
+    pub share_id: String,
+    pub file_id: String,
+    /// The file's current path.
+    pub name: String,
+}
+
+/// A live synced link on one folder.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FolderShareEntry {
+    pub share_id: String,
+    /// The folder's current path, no trailing slash.
+    pub folder: String,
+}
+
+/// Response of `POST /shares/overview`: every LIVE synced link the caller
+/// has (stopped links and links of binned files are left out). One call
+/// feeds all the share markers: a folder or file has its own link when it
+/// appears here, a file or folder is "shared via" an ancestor when a
+/// `folders` entry is a proper path-segment prefix of it, and a folder's
+/// files that have a link of their own are the `files` entries under it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ShareOverviewResponse {
+    pub files: Vec<FileShareEntry>,
+    pub folders: Vec<FolderShareEntry>,
 }
 
 // -- `/files/*` (cloud storage backend) -------------------------------------
@@ -142,6 +226,27 @@ pub struct UpdateFileContentResponse {
 pub struct RenameFileRequest {
     pub identity_token: String,
     pub name: String,
+}
+
+/// One file's new name in a `RenameBatchRequest`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RenameBatchMove {
+    pub id: String,
+    pub name: String,
+}
+
+/// Body of `POST /files/rename-batch` -- renames every listed file, or none
+/// of them (a folder move). No revision gate, like `RenameFileRequest`.
+/// `ApiError::NotFound` if any file is not the caller's; a destination held
+/// by another file maps to `ApiError::NamesTaken` listing those
+/// destinations, with nothing applied. Repeating a batch that was already
+/// applied (its answer was lost) succeeds.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct RenameBatchRequest {
+    pub identity_token: String,
+    pub moves: Vec<RenameBatchMove>,
 }
 
 /// Body of `POST /files/{id}/delete` -- moves the file to the bin

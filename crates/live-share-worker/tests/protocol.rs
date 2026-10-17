@@ -14,6 +14,7 @@ fn serializes_synced_doc_with_camel_case_fields() -> Result<(), serde_json::Erro
         content: "[M] 1".to_string(),
         revision: 1,
         owner_login: Some("octocat".to_string()),
+        folder: None,
     };
 
     let json = serde_json::to_string(&doc)?;
@@ -32,6 +33,7 @@ fn serializes_synced_doc_owner_login_as_null_when_absent() -> Result<(), serde_j
         content: String::new(),
         revision: 0,
         owner_login: None,
+        folder: None,
     };
 
     let json = serde_json::to_string(&doc)?;

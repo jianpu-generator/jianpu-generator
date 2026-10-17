@@ -27,6 +27,13 @@ function editorHasFocus() {
  * immediately-following keyboard shortcuts. Retries the click, and falls
  * back to focusing the editor's input node directly, until focus lands. */
 export async function focusEditor(page: Page) {
+  // The file browser is a full-screen modal; a scenario that opened it to
+  // pick or check a file may have left it open over the editor.
+  const browser = page.getByTestId('file-browser')
+  if (await browser.isVisible()) {
+    await page.keyboard.press('Escape')
+    await browser.waitFor({ state: 'hidden' })
+  }
   for (let attempt = 0; attempt < 10; attempt++) {
     await page.click('.monaco-editor .view-lines')
     if (await page.evaluate(editorHasFocus)) return
@@ -100,7 +107,7 @@ export async function typeAtEditorEnd(page: Page, text: string) {
 
 /** The file-switcher ("<filename> ▾") trigger button in the header — its
  * text is the currently active file's name, whether that's a user file or
- * one of the read-only demo files (which live in the nested "Demo" submenu
+ * one of the read-only demo files (which live under the read-only `Demo/` row
  * of this same dropdown). */
 export function fileSwitcherTrigger(page: Page) {
   return page
@@ -124,9 +131,9 @@ export async function openFileList(page: Page) {
   await trigger.click()
 }
 
-/** Opens the file-switcher dropdown and expands its nested "Demo" submenu
+/** Opens the file-switcher dropdown and expands its `Demo/` row
  * (the read-only `demo/*.jianpu` file list). Idempotent — a no-op if the
- * submenu is already expanded. */
+ * row is already expanded. */
 export async function openDemoFileList(page: Page) {
   await openFileList(page)
   const disclosure = demoDisclosure(page)
@@ -134,7 +141,7 @@ export async function openDemoFileList(page: Page) {
   await disclosure.click()
 }
 
-/** Expands the "Demo" submenu and selects the fragment named `name` (e.g.
+/** Expands the "Demo/` row and selects the fragment named `name` (e.g.
  * `02-durations.jianpu`), closing the file-switcher dropdown. */
 export async function selectDemoFile(page: Page, name: string) {
   await openDemoFileList(page)
@@ -160,6 +167,12 @@ export function fileTabByExactName(page: Page, name: string) {
  * in the header. Idempotent — the trigger toggles open/closed, so this is a
  * no-op if already open. */
 export async function openFileActions(page: Page) {
+  // The file browser is a modal: it makes the rest of the page inert.
+  const browser = page.getByTestId('file-browser')
+  if (await browser.isVisible()) {
+    await page.keyboard.press('Escape')
+    await browser.waitFor({ state: 'hidden' })
+  }
   const trigger = page.getByRole('button', { name: 'File actions' })
   if ((await trigger.getAttribute('aria-expanded')) === 'true') return
   await trigger.click()
@@ -180,4 +193,11 @@ export async function openBin(page: Page) {
 export async function closeBin(page: Page) {
   await page.keyboard.press('Escape')
   await page.locator('[data-testid="bin-modal"]').waitFor({ state: 'hidden' })
+}
+
+/** Answers the New file name prompt and confirms it. */
+export async function nameNewFile(page: Page, name: string) {
+  const prompt = page.getByRole('dialog', { name: 'New file' })
+  await prompt.getByRole('textbox').fill(name)
+  await prompt.getByRole('button', { name: 'Create' }).click()
 }

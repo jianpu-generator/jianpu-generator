@@ -1,5 +1,7 @@
 import type { FileStoreState } from '../fileStore'
 import { sortedBinNames } from '../fileStore'
+import type { FolderShares } from '../hooks/useFolderShares'
+import type { SharedFolderViewer } from '../hooks/useSharedFolderViewer'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SyncedShareViewerStatus } from '../hooks/useSyncedShareViewer'
 import type { SharePayload } from '../shareUrl'
@@ -11,6 +13,7 @@ import { PlayAllButton } from './PlayAllButton'
 import { PlayFromCurrentMeasureButton } from './PlayFromCurrentMeasureButton'
 import { PlayMeasureButton } from './PlayMeasureButton'
 import { ProfileControl } from './ProfileControl'
+import { SharedFolderSwitcher } from './SharedFolderSwitcher'
 import { SharedPreviewBanner } from './SharedPreviewBanner'
 import { SyncedShareBanner } from './SyncedShareBanner'
 import { SyncedShareErrorDialog } from './SyncedShareErrorDialog'
@@ -28,6 +31,8 @@ interface SyncedShareHeaderProps {
    * `sharedPreview` if both are somehow present at once (a documented edge
    * case, not expected in practice). */
   viewerActive: boolean
+  /** The shared folder being viewed (static or synced link), if any. */
+  sharedFolder: SharedFolderViewer | null
   viewerStatus: SyncedShareViewerStatus
   viewerFilename: string | null
   /** The owning user's cached GitHub login (`user_identities.login`),
@@ -56,6 +61,7 @@ interface SyncedShareHeaderProps {
    * Synced Share request has failed. */
   syncFailure: SyncedShareFailure | null
   onDismissSyncFailure: () => void
+  folderShares: FolderShares
 }
 
 interface AppHeaderProps {
@@ -79,15 +85,22 @@ interface AppHeaderProps {
   playFromCurrentMeasureShortcutLabel: string
   store: FileStoreState
   onSelect: (name: string) => void
-  onCreate: () => void
+  onCreate: (folder: string | undefined, name: string) => void
+  onCreateFolder: (
+    parent: string | undefined,
+    name: string,
+  ) => Promise<FileStoreState | undefined>
   onDuplicate: () => void
   onRename: (from: string, to: string) => void
   onDelete: (name: string) => void
+  onMoveFolder: (from: string, to: string) => void
+  onDeleteFolder: (folder: string) => void
   onOpenStorageSettings: () => void
   saveStatus: DisplaySaveStatus
   saveLabel: string | null
   autosaveDeadline: number | null
   creatingFile?: boolean
+  creatingFolder?: boolean
   deletingFileName?: string | null
   duplicatingFile?: boolean
   renamingFileName?: string | null
@@ -120,7 +133,7 @@ interface AppHeaderProps {
   onExportSplitMp3?: () => void
   partsCount?: number
   importing?: boolean
-  onImportFile?: (file: File) => void
+  onImportFile?: (file: File, folder?: string) => void
   syncedShare: SyncedShareHeaderProps
   /** The header account chip's only action -- see `App.tsx`'s
    * `handleAccountSignOut`. Everything else `ProfileControl` needs comes
@@ -146,14 +159,18 @@ export function AppHeader({
   store,
   onSelect,
   onCreate,
+  onCreateFolder,
   onDuplicate,
   onRename,
   onDelete,
+  onMoveFolder,
+  onDeleteFolder,
   onOpenStorageSettings,
   saveStatus,
   saveLabel,
   autosaveDeadline,
   creatingFile,
+  creatingFolder,
   deletingFileName,
   duplicatingFile,
   renamingFileName,
@@ -190,10 +207,20 @@ export function AppHeader({
   syncedShare,
   onSignOut,
 }: AppHeaderProps) {
-  const { sharedPreview, viewerActive: syncedShareViewerActive } = syncedShare
+  const {
+    sharedPreview,
+    sharedFolder,
+    viewerActive: syncedShareViewerActive,
+  } = syncedShare
   return (
     <header className="app-header">
-      {sharedPreview ? (
+      {sharedFolder?.kind === 'static' ? (
+        <SharedPreviewBanner
+          folderName={sharedFolder.folderName}
+          onImport={sharedFolder.onImport}
+          onDiscard={sharedFolder.onDiscard}
+        />
+      ) : sharedPreview ? (
         <SharedPreviewBanner
           onImport={syncedShare.onImportShared}
           onDiscard={syncedShare.onDismissShared}
@@ -203,8 +230,13 @@ export function AppHeader({
           <SyncedShareBanner
             status={syncedShare.viewerStatus}
             filename={syncedShare.viewerFilename}
+            folderName={sharedFolder?.folderName ?? null}
             ownerLogin={syncedShare.viewerOwnerLogin}
-            onImport={syncedShare.onImportSyncedShare}
+            onImport={
+              sharedFolder
+                ? sharedFolder.onImport
+                : syncedShare.onImportSyncedShare
+            }
           />
         )
       )}
@@ -255,20 +287,25 @@ export function AppHeader({
         />
       )}
       <div className="app-header-actions">
+        {sharedFolder && <SharedFolderSwitcher viewer={sharedFolder} />}
         {!sharedPreview && !syncedShareViewerActive && (
           <FileSwitcher
             store={store}
             triggerLabel={store.active}
             onSelect={onSelect}
             onCreate={onCreate}
+            onCreateFolder={onCreateFolder}
             onDuplicate={onDuplicate}
             onRename={onRename}
             onDelete={onDelete}
+            onMoveFolder={onMoveFolder}
+            onDeleteFolder={onDeleteFolder}
             onOpenStorageSettings={onOpenStorageSettings}
             saveStatus={saveStatus}
             saveLabel={saveLabel}
             autosaveDeadline={autosaveDeadline}
             creating={creatingFile}
+            creatingFolder={creatingFolder}
             deletingName={deletingFileName}
             duplicating={duplicatingFile}
             renamingName={renamingFileName}
@@ -286,6 +323,7 @@ export function AppHeader({
             onStartSync={syncedShare.onStartSync}
             onStopSync={syncedShare.onStopSync}
             onSignInWithGithub={syncedShare.onSignInWithGithub}
+            folderShares={syncedShare.folderShares}
           />
         )}
         <SyncedShareErrorDialog

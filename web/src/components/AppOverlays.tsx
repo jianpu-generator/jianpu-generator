@@ -1,5 +1,5 @@
 import type { FileStoreState } from '../fileStore'
-import { sortedBinNames } from '../fileStore'
+import { binEntries } from '../fileStoreQueries'
 import type { FileOpError } from '../hooks/useFileOperations'
 import type { PendingDownload } from '../hooks/useJianpuWorkerTypes'
 import type {
@@ -101,7 +101,7 @@ export function AppOverlays({
       <BinModal
         open={binOpen}
         onOpenChange={setBinOpen}
-        binNames={sortedBinNames(store)}
+        entries={binOpen ? binEntries(store) : []}
         onRestore={onRestore}
         restoringName={restoringFileName}
       />

@@ -351,6 +351,35 @@ impl Guest for Component {
     }
 
     forward_to_free_functions! {
+        file_store_create_folder(state: FileStoreState, parent: Option<String>, name: String, context: FileOperationContext) -> FileStoreResponse;
+        file_store_create_folder_error(state: FileStoreState, parent: Option<String>, name: String, context: FileOperationContext) -> Option<String>;
+        file_store_move_targets(state: FileStoreState, excluded_folder: Option<String>) -> Vec<MoveTarget>;
+        file_store_move_destination(source_path: String, folder: Option<String>) -> Option<String>;
+        file_store_name_after_collision(rejected: String) -> Option<String>;
+        file_store_classify_cloud_listing(entries: Vec<CloudListedEntry>) -> CloudListingClassification;
+        file_store_placeholder_path(folder: String) -> Option<String>;
+        file_store_is_placeholder_path(path: String) -> bool;
+        file_store_rename_error(state: FileStoreState, from_path: String, to_path: String, context: FileOperationContext) -> Option<String>;
+        file_store_folder_move_error(state: FileStoreState, from_path: String, to_path: String, context: FileOperationContext) -> Option<String>;
+        file_store_folder_delete_summary(state: FileStoreState, folder: String, shares: ShareOverview) -> Option<FolderDeleteSummary>;
+        file_store_folder_share_info(state: FileStoreState, shares: ShareOverview, folder: String) -> Option<FolderShareInfo>;
+        file_store_folder_static_share(state: FileStoreState, folder: String) -> Option<FolderStaticShare>;
+        decode_folder_share_suffix(suffix: String) -> Option<FolderSnapshot>;
+        shared_folder_first_file(snapshot: FolderSnapshot) -> Option<String>;
+        shared_folder_view(snapshot: FolderSnapshot, active: String, expanded: Vec<String>) -> FileTreeViewResponse;
+        file_store_import_shared_folder(state: FileStoreState, snapshot: FolderSnapshot, file_ids: Vec<String>, context: FileOperationContext) -> FileStoreResponse;
+        file_store_bin_entries(state: FileStoreState) -> Vec<BinEntry>;
+        file_store_folders_to_reveal(path: String) -> Vec<String>;
+        file_store_create_file(state: FileStoreState, folder: Option<String>, name: String, content: String, context: FileOperationContext) -> FileStoreResponse; file_store_create_file_error(state: FileStoreState, folder: Option<String>, name: String, context: FileOperationContext) -> Option<String>;
+        file_store_duplicate_file(state: FileStoreState, source: String, context: FileOperationContext) -> FileStoreResponse;
+        file_store_rename_file(state: FileStoreState, from_path: String, to_path: String, context: FileOperationContext) -> FileStoreResponse;
+        file_store_delete_file(state: FileStoreState, path: String, context: FileOperationContext) -> FileStoreResponse;
+        file_store_restore_file(state: FileStoreState, bin_key: String, context: FileOperationContext) -> FileStoreResponse;
+        file_store_move_folder(state: FileStoreState, from_path: String, to_path: String, context: FileOperationContext) -> FolderMoveResponse;
+        file_store_delete_folder(state: FileStoreState, folder: String, context: FileOperationContext) -> FileStoreResponse;
+        file_store_tree(state: FileStoreState) -> FileTreeResponse;
+        file_store_tree_view(state: FileStoreState, expanded: Vec<String>, demo_file_names: Vec<String>, shares: ShareOverview, query: String) -> FileTreeViewResponse;
+        file_store_active_label(active: String, demo_file_names: Vec<String>) -> FileActiveLabel;
         outbox_enqueue(queue: Queue, file_id: String, message: Message, message_id: String, now_ms: u64) -> Queue;
         outbox_begin_send(queue: Queue, now_ms: u64) -> BeginSend;
         outbox_next_wake_ms(queue: Queue) -> Option<u64>;

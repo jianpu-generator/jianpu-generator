@@ -32,6 +32,7 @@ pub mod api_error;
 pub mod e2e_reset;
 pub mod e2e_worker_config;
 pub mod files;
+pub mod folder_share;
 pub mod protocol;
 pub mod share;
 pub mod share_id;

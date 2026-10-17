@@ -14,6 +14,7 @@ import {
 } from '../fileStore'
 import { callWorker, createWorkerClient } from '../syncedShare/workerClient'
 import { ensureWasmInit } from '../wasmInit'
+import { createFolderOperations } from './cloudBackendFolders'
 import { addedName } from './cloudBackendNaming'
 import {
   applyPendingStructure,
@@ -21,8 +22,10 @@ import {
   outboxLaneError,
   outboxSaveStatus,
   pendingContentByFileId,
+  pendingNameByFileId,
   recordListedBases,
 } from './cloudBackendOutbox'
+import { createPlaceholders } from './cloudBackendPlaceholders'
 import type {
   CloudBackend,
   CloudBackendConfig,
@@ -42,34 +45,15 @@ export type {
 
 /**
  * `StorageBackend` implementation backed by `crates/live-share-worker`'s
- * `/files/*` routes (D1-backed), the replacement for the deleted GitHub
- * Contents API backend. Reuses `fileStore.ts`'s pure transforms exactly
- * like that backend did -- every structural op below
- * calls the matching pure transform, performs the corresponding HTTP call,
- * and returns the transform's resulting `FileStoreState` (reconciled by the
- * caller via `mergeBackendResult`, unchanged).
- *
- * Design notes, contrasted with the deleted GitHub backend:
- * - No sha-refetch-before-write: `revisionByFileId` tracks each file's last
- *   known `revision` (populated by `load()`, advanced after every
- *   successful content save), sent as `expectedRevision` on the next save --
- *   the server's atomic `UPDATE ... WHERE revision = ?` is the actual CAS
- *   guard (see `crate::files::classify_content_write`).
- * - Rename/delete/restore are each a single atomic server-side `UPDATE`,
- *   not two sequential calls -- no "left at both paths" window to recover
- *   from.
- * - A file's id is the real, durable D1 row id straight from the server
- *   (`load()`'s response) -- no more localStorage name -> UUID shim.
- *
- * Requests go through the worker's generated client (`workerClient.ts` --
- * paths, bodies and the `ApiError` failure union all come from the Rust
- * handlers). Every write (content or structural) is applied to local state
- * at once and queued in the outbox (`outbox/`), which delivers it in the
- * background. A `name_taken` answer is resolved by the outbox rewriting the
- * queued name; this backend then reports the local rename through
- * `onLocalRename`. Naming helpers and the public types live in
- * `cloudBackendNaming.ts` and `cloudBackendTypes.ts` -- split out of this
- * file to stay under this repo's 400-line cap.
+ * `/files/*` routes (D1-backed). Every structural op calls the matching pure
+ * transform from `fileStore.ts`, applies it to local state at once and queues
+ * the HTTP call in the outbox (`outbox/`), which delivers it in the
+ * background; the transform's resulting `FileStoreState` is returned
+ * (reconciled by the caller via `mergeBackendResult`). A `name_taken` answer
+ * is resolved by the outbox rewriting the queued name; this backend then
+ * reports the local rename through `onLocalRename`. Helpers live in
+ * `cloudBackendNaming.ts`, `cloudBackendTypes.ts`, `cloudBackendFolders.ts`
+ * and `cloudBackendPlaceholders.ts` (empty folders).
  */
 export interface CloudBackendDependencies {
   looper?: OutboxLooper
@@ -86,21 +70,10 @@ export function createCloudBackend(
 
   const renameListeners = new Set<(change: LocalRename) => void>()
   // `FileStoreState.fileIds` is one flat map keyed by display name, shared
-  // across `userFiles` and `bin` -- sound for every *pure* transform in
-  // `fileStore.ts` (which never lets the same name occupy both buckets at
-  // once, see `reservedNames`), but this backend's own `load()` response can
-  // -- in principle -- list an active and a trashed row under the same
-  // name (the real D1 schema's `idx_files_owner_name` unique index makes
-  // that impossible for a genuine, unmodified server response, but nothing
-  // in this client trusts that invariant blindly, and this project's own
-  // e2e coverage deliberately manufactures exactly that response shape to
-  // exercise `fileStore.ts`'s `restoreFile` collision-avoidance -- see
-  // `files-cloud-backend.steps.ts`'s restore-collision `Given`). Tracking
-  // each bucket's ids separately here means `renameFile`/`deleteFile`
-  // (always operating on a *known-active* name) and `restoreFile` (always
-  // operating on a *known-trashed* name) never resolve the wrong row's id
-  // out of a name that happens to collide across buckets. Kept in sync
-  // alongside every structural op, for the same reason.
+  // across `userFiles` and `bin`, and a listing can hold an active and a
+  // trashed row under one name (e2e manufactures that), so each bucket's ids
+  // are tracked separately: `renameFile`/`deleteFile` and `restoreFile` never
+  // resolve the wrong row. Kept in sync alongside every structural op.
   const activeIdByName = new Map<string, string>()
   const trashedIdByName = new Map<string, string>()
 
@@ -119,9 +92,10 @@ export function createCloudBackend(
 
   /** The current local name of `fileId`, for a `RestoreFile` message. */
   function trashedNameOf(fileId: string): string {
-    for (const [name, id] of activeIdByName) if (id === fileId) return name
-    for (const [name, id] of trashedIdByName) if (id === fileId) return name
-    return ''
+    const named = [...activeIdByName, ...trashedIdByName].find(
+      ([, id]) => id === fileId,
+    )
+    return named?.[0] ?? placeholders.nameOf(fileId) ?? ''
   }
 
   const { looper, bases } = createCloudOutbox(
@@ -135,6 +109,16 @@ export function createCloudBackend(
   )
   const ensureWasm = dependencies.ensureWasm ?? ensureWasmInit
   let ready: Promise<void> | null = null
+  const placeholders = createPlaceholders(looper, () => whenReady())
+  const folderOperations = createFolderOperations({
+    ensureWasm,
+    whenReady: () => whenReady(),
+    looper,
+    placeholders,
+    activeFileId,
+    activeIdByName,
+    trashedIdByName,
+  })
   async function fetchServerFile(fileId: string) {
     const response = await callWorker(
       client.POST('/files/list', { body: { identityToken } }),
@@ -172,30 +156,17 @@ export function createCloudBackend(
     return ready
   }
 
-  /** The name the last queued `CreateFile`/`RenameFile` of each lane asks
-   * for. When the outbox rewrote one after a `name_taken` answer, it differs
-   * from the local name, which is then renamed to match. */
-  function reconcileLocalNames({ queue }: OutboxSnapshot): void {
-    for (const lane of queue.lanes) {
-      const wanted = lane.messages
-        .map(({ message }) =>
-          message.tag === 'create-file'
-            ? message.val.name
-            : message.tag === 'rename-file'
-              ? message.val.to
-              : undefined,
-        )
-        .findLast((name) => name !== undefined)
-      const current = [...activeIdByName].find(
-        ([, id]) => id === lane.fileId,
-      )?.[0]
-      if (wanted === undefined || current === undefined || wanted === current) {
-        continue
-      }
+  /** The name the last queued `CreateFile`/`RenameFile`/`RenameFiles` of
+   * each file asks for. When the outbox rewrote one after a `name_taken`
+   * answer, it differs from the local name, which is then renamed to match. */
+  function reconcileLocalNames(snapshot: OutboxSnapshot): void {
+    for (const [fileId, wanted] of pendingNameByFileId(snapshot)) {
+      const current = [...activeIdByName].find(([, id]) => id === fileId)?.[0]
+      if (current === undefined || wanted === current) continue
       activeIdByName.delete(current)
-      activeIdByName.set(wanted, lane.fileId)
+      activeIdByName.set(wanted, fileId)
       for (const listener of renameListeners) {
-        listener({ fileId: lane.fileId, from: current, to: wanted })
+        listener({ fileId, from: current, to: wanted })
       }
     }
   }
@@ -265,9 +236,11 @@ export function createCloudBackend(
       const fileIds: Record<string, string> = {}
       activeIdByName.clear()
       trashedIdByName.clear()
-      const listed = pendingSnapshot.halted
-        ? response.files
-        : applyPendingStructure(response.files, pendingSnapshot)
+      const { files: listed, folders } = placeholders.classify(
+        pendingSnapshot.halted
+          ? response.files
+          : applyPendingStructure(response.files, pendingSnapshot),
+      )
       for (const file of listed) {
         fileIds[file.name] = file.id
         if (file.trashedAt === null) {
@@ -287,21 +260,33 @@ export function createCloudBackend(
         const name = [...activeIdByName].find(([, value]) => value === id)?.[0]
         if (name !== undefined) userFiles[name] = content
       }
-      return { active: DEMO_FILE_NAMES[0] ?? '', userFiles, bin, fileIds }
+      return {
+        active: DEMO_FILE_NAMES[0] ?? '',
+        userFiles,
+        bin,
+        fileIds,
+        ...(folders.length > 0 ? { folders } : {}),
+      }
     },
 
-    createFile: (state) => createRemoteFile(state, pureCreateFile(state)),
-
+    createFile: (state, folder, name) =>
+      ensureWasm().then(() =>
+        createRemoteFile(state, pureCreateFile(state, folder, name)),
+      ),
     importFile: (state, filename, content) =>
       createRemoteFile(state, pureImportSharedFile(state, filename, content)),
 
-    duplicateFile: (state) => createRemoteFile(state, pureDuplicateFile(state)),
+    duplicateFile: (state) =>
+      ensureWasm().then(() =>
+        createRemoteFile(state, pureDuplicateFile(state)),
+      ),
 
     async renameFile(
       state: FileStoreState,
       from: string,
       to: string,
     ): Promise<FileStoreState> {
+      await ensureWasm()
       const nextState = pureRenameFile(state, from, to)
       const newName = addedName(state, nextState)
       if (!newName) return nextState
@@ -317,6 +302,7 @@ export function createCloudBackend(
       state: FileStoreState,
       name: string,
     ): Promise<FileStoreState> {
+      await ensureWasm()
       const nextState = pureDeleteFile(state, name)
       if (nextState === state) return nextState
       const id = activeFileId(state, name)
@@ -327,10 +313,13 @@ export function createCloudBackend(
       return nextState
     },
 
+    ...folderOperations,
+
     async restoreFile(
       state: FileStoreState,
       name: string,
     ): Promise<FileStoreState> {
+      await ensureWasm()
       const nextState = pureRestoreFile(state, name)
       const newName = addedName(state, nextState)
       if (!newName) return nextState

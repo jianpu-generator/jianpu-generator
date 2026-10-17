@@ -17,6 +17,13 @@ const SOURCE = [
 
 let pdfBytes: Buffer | undefined
 
+/** The PDF produced by the last "I export the active file as a PDF" step. */
+export function exportedPdfBytes(): Buffer {
+  if (!pdfBytes)
+    throw new Error('pdfBytes not set — export step must run first')
+  return pdfBytes
+}
+
 function importButton(page: import('@playwright/test').Page) {
   return page.getByRole('menuitem', { name: /^Import$/ })
 }

@@ -270,6 +270,7 @@ Then('the copied link is unchanged from before', async ({ page }) => {
 
 When('the owner clicks the stop-sync button', async ({ page }) => {
   await page.getByTestId('share-modal-stop-sync').click()
+  await page.getByTestId('share-modal-confirm-stop-sync').click()
 })
 
 Then('the viewer sees the preview page', async () => {
@@ -288,9 +289,11 @@ Then(
   "the viewer's preview no longer contains {string}",
   async ({}, text: string) => {
     if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
-    await expect(state.viewerPage.locator('.preview-page')).not.toContainText(
-      text,
-    )
+    // `filter` + count, not `not.toContainText`: an ended share now replaces
+    // the score with a notice, so no preview page exists at all.
+    await expect(
+      state.viewerPage.locator('.preview-page').filter({ hasText: text }),
+    ).toHaveCount(0)
   },
 )
 

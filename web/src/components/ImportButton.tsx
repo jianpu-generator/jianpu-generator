@@ -4,6 +4,11 @@ import { useRef } from 'react'
 interface ImportButtonProps {
   disabled?: boolean
   importing?: boolean
+  /** Menu item text; "Import here" on a folder row. */
+  label?: string
+  /** Extra class for the button; when set the button is a plain toolbar
+   * button instead of a menu item. */
+  className?: string
   onImportFile: (file: File) => void
 }
 
@@ -16,6 +21,8 @@ interface ImportButtonProps {
 export function ImportButton({
   disabled = false,
   importing = false,
+  label = 'Import',
+  className,
   onImportFile,
 }: ImportButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -24,13 +31,13 @@ export function ImportButton({
     <>
       <button
         type="button"
-        role="menuitem"
-        className="export-menu-item"
+        role={className ? undefined : 'menuitem'}
+        className={className ?? 'export-menu-item'}
         disabled={disabled || importing}
         onClick={() => inputRef.current?.click()}
       >
         <UploadIcon aria-hidden="true" />
-        {importing ? 'Importing…' : 'Import'}
+        {importing ? 'Importing…' : label}
       </button>
       <input
         ref={inputRef}

@@ -2,7 +2,8 @@
 //! `live-share-worker/src/index.ts`. CORS and the `OPTIONS` preflight are
 //! handled once in `lib.rs` around whatever this router returns; this
 //! module owns the Synced Share routes (`GET /shares/{share_id}` and
-//! `POST /files/{id}/share{,/stop,/status}`; `shares` submodule), the
+//! `POST /files/{id}/share{,/stop,/status}`, `POST /folders/share{,/stop,/status}`
+//! and `POST /shares/overview`; `shares` submodule), the
 //! `/files` routes (the cloud storage backend, see `crate::files`; `files`
 //! submodule), plus the `/auth/github/callback` and `/auth/github/revoke`
 //! routes (see `crate::oauth`) added for the dedicated Synced Share sign-in
@@ -61,12 +62,17 @@ pub(crate) fn routes(e2e_reset_enabled: bool) -> worker::Result<Routes> {
         .post("/files/list", files::list_files)?
         .post("/files", files::create_file)?
         .post("/files/{id}/content", files::update_file_content)?
+        .post("/files/rename-batch", files::rename_files_batch)?
         .post("/files/{id}/rename", files::rename_file)?
         .post("/files/{id}/delete", files::delete_file)?
         .post("/files/{id}/restore", files::restore_file)?
         .post("/files/{id}/share", shares::start_share)?
         .post("/files/{id}/share/stop", shares::stop_share)?
         .post("/files/{id}/share/status", shares::share_status)?
+        .post("/folders/share", shares::start_folder_share)?
+        .post("/folders/share/stop", shares::stop_folder_share)?
+        .post("/folders/share/status", shares::folder_share_status)?
+        .post("/shares/overview", shares::share_overview)?
         .post_if(e2e_reset_enabled, "/e2e/reset", e2e_reset::reset)
 }
 

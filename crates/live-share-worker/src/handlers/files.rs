@@ -6,13 +6,37 @@ use worker::RouteContext;
 use crate::api_error::ApiError;
 use crate::db;
 use crate::files::{self, ContentWriteAttempt, ContentWriteOutcome, PublicFile};
+use crate::folder_share;
 use crate::protocol::{
     CreateFileRequest, DeleteFileRequest, FileIdPath, ListFilesRequest, ListFilesResponse,
-    RenameFileRequest, RestoreFileRequest, UpdateFileContentRequest, UpdateFileContentResponse,
+    RenameBatchRequest, RenameFileRequest, RestoreFileRequest, UpdateFileContentRequest,
+    UpdateFileContentResponse,
 };
 
 use super::routes::{HandlerResult, Json, NoContent, NoPathParams};
 use super::{is_unique_constraint_violation, resolve_files_caller, D1_BINDING};
+
+/// Refuses `proposed` (the names a write is about to give, by file id) when
+/// the owner's live files, with those renamed, would have a path that is both
+/// a file and a folder.
+async fn ensure_no_file_folder_conflict(
+    d1: &worker::D1Database,
+    owner_user_id: &str,
+    proposed: &[files::FileNameRow],
+) -> Result<(), ApiError> {
+    let live = db::list_live_file_names(d1, owner_user_id).await?;
+    match files::find_file_folder_conflict(&live, proposed) {
+        Some(path) => Err(ApiError::FileFolderConflict { path }),
+        None => Ok(()),
+    }
+}
+
+fn proposed_name(id: &str, name: &str) -> Vec<files::FileNameRow> {
+    vec![files::FileNameRow {
+        id: id.to_string(),
+        name: name.to_string(),
+    }]
+}
 
 /// `POST /files/list` -- every file (active and trashed alike) owned by the
 /// resolved caller; the client partitions the result by `trashedAt` (see
@@ -39,9 +63,12 @@ pub(super) async fn create_file(
     _path: NoPathParams,
     body: CreateFileRequest,
 ) -> HandlerResult<Json<PublicFile>> {
+    files::validate_file_name(&body.name)?;
     let d1 = ctx.d1(D1_BINDING)?;
     let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
 
+    ensure_no_file_folder_conflict(&d1, &owner_user_id, &proposed_name(&body.id, &body.name))
+        .await?;
     let now = worker::Date::now().as_millis() as i64;
     let created = files::StoredFile {
         id: body.id,
@@ -114,14 +141,76 @@ pub(super) async fn rename_file(
     path: FileIdPath,
     body: RenameFileRequest,
 ) -> HandlerResult<NoContent> {
+    files::validate_file_name(&body.name)?;
     let d1 = ctx.d1(D1_BINDING)?;
     let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
 
+    ensure_no_file_folder_conflict(&d1, &owner_user_id, &proposed_name(&path.id, &body.name))
+        .await?;
     let now = worker::Date::now().as_millis() as i64;
     match db::rename_file(&d1, &path.id, &owner_user_id, &body.name, now).await {
         Ok(true) => Ok(NoContent),
         Ok(false) => Err(ApiError::NotFound),
         Err(error) if is_unique_constraint_violation(&error) => Err(ApiError::NameTaken),
+        Err(error) => Err(error.into()),
+    }
+}
+
+/// `POST /files/rename-batch` -- renames every listed file or none (a folder
+/// move). Every name is validated first; then `files::plan_batch_rename`
+/// decides from the current rows: `NotFound` if a file is missing, success
+/// without writing when every file already has its name (a retry whose
+/// answer was lost), `NamesTaken` listing the destinations held by other
+/// files. Otherwise one statement writes every move, so a race into a
+/// unique-index violation still applies nothing.
+pub(super) async fn rename_files_batch(
+    ctx: RouteContext<()>,
+    _path: NoPathParams,
+    body: RenameBatchRequest,
+) -> HandlerResult<NoContent> {
+    body.moves
+        .iter()
+        .try_for_each(|rename| files::validate_file_name(&rename.name))?;
+    let d1 = ctx.d1(D1_BINDING)?;
+    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+
+    let rows = db::file_names_for_batch(&d1, &owner_user_id, &body.moves).await?;
+    match files::plan_batch_rename(&body.moves, &rows) {
+        files::BatchRenamePlan::AlreadyApplied => return Ok(NoContent),
+        files::BatchRenamePlan::NotFound => return Err(ApiError::NotFound),
+        files::BatchRenamePlan::Invalid => return Err(ApiError::BadRequest),
+        files::BatchRenamePlan::NamesTaken(names) => return Err(ApiError::NamesTaken { names }),
+        files::BatchRenamePlan::Apply => {}
+    }
+    let proposed: Vec<files::FileNameRow> = body
+        .moves
+        .iter()
+        .map(|rename| files::FileNameRow {
+            id: rename.id.clone(),
+            name: rename.name.clone(),
+        })
+        .collect();
+    ensure_no_file_folder_conflict(&d1, &owner_user_id, &proposed).await?;
+    // A folder with a synced link that this batch moves as a whole takes the
+    // link along: its prefix is re-pointed in the same transaction.
+    let prefixes = db::list_folder_share_prefixes(&d1, &owner_user_id).await?;
+    let rewrites = if prefixes.is_empty() {
+        Vec::new()
+    } else {
+        let current = db::active_files_under_prefixes(&d1, &owner_user_id, &prefixes).await?;
+        folder_share::plan_prefix_rewrites(&prefixes, &body.moves, &current)
+    };
+    let now = worker::Date::now().as_millis() as i64;
+    match db::rename_files_batch(&d1, &owner_user_id, &body.moves, &rewrites, now).await {
+        Ok(()) => Ok(NoContent),
+        Err(error) if is_unique_constraint_violation(&error) => {
+            // Lost a race with another writer: report what is taken now.
+            let rows = db::file_names_for_batch(&d1, &owner_user_id, &body.moves).await?;
+            match files::plan_batch_rename(&body.moves, &rows) {
+                files::BatchRenamePlan::NamesTaken(names) => Err(ApiError::NamesTaken { names }),
+                _ => Err(ApiError::NameTaken),
+            }
+        }
         Err(error) => Err(error.into()),
     }
 }
@@ -147,15 +236,20 @@ pub(super) async fn delete_file(
 /// `POST /files/{id}/restore` -- atomic restore out of the bin. `NotFound`
 /// on zero rows affected (no such trashed file for this caller); a name
 /// collision (against the caller's other files) maps to
-/// `ApiError::NameTaken`, same as `create_file`/`rename_file`.
+/// `ApiError::NameTaken`, same as `create_file`/`rename_file`. Like them, a name
+/// that would make a path both a file and a folder is
+/// `ApiError::FileFolderConflict`.
 pub(super) async fn restore_file(
     ctx: RouteContext<()>,
     path: FileIdPath,
     body: RestoreFileRequest,
 ) -> HandlerResult<NoContent> {
+    files::validate_file_name(&body.name)?;
     let d1 = ctx.d1(D1_BINDING)?;
     let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
 
+    ensure_no_file_folder_conflict(&d1, &owner_user_id, &proposed_name(&path.id, &body.name))
+        .await?;
     let now = worker::Date::now().as_millis() as i64;
     match db::restore_file(&d1, &path.id, &owner_user_id, &body.name, now).await {
         Ok(true) => Ok(NoContent),

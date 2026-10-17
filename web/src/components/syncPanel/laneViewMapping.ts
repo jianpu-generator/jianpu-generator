@@ -40,6 +40,7 @@ const KIND_LABEL: Record<Message['tag'], string> = {
   'create-file': 'CreateFile',
   'save-content': 'SaveContent',
   'rename-file': 'RenameFile',
+  'rename-files': 'RenameFiles',
   'trash-file': 'TrashFile',
   'restore-file': 'RestoreFile',
 }
@@ -68,6 +69,8 @@ export function outcomeLabel(outcome: Attempt['outcome']): string {
       return `Changed elsewhere (server revision ${outcome.val.currentRevision})`
     case 'name-taken':
       return `Name taken, tried ${outcome.val.suggestedName}`
+    case 'names-taken':
+      return `${outcome.val.adjustments.length} names taken, adjusted`
     case 'permanent':
       return `${outcome.val.status} ${outcome.val.reason}`
   }

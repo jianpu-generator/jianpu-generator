@@ -17,6 +17,7 @@ export function useFileOperations(
 ) {
   const [creatingFile, setCreatingFile] = useState(false)
   const [deletingFileName, setDeletingFileName] = useState<string | null>(null)
+  const [creatingFolder, setCreatingFolder] = useState(false)
   const [duplicatingFile, setDuplicatingFile] = useState(false)
   const [renamingFileName, setRenamingFileName] = useState<string | null>(null)
   const [restoringFileName, setRestoringFileName] = useState<string | null>(
@@ -29,12 +30,13 @@ export function useFileOperations(
       errorTitle: string,
       setPending: (pending: boolean) => void,
       op: (base: FileStoreState) => Promise<FileStoreState>,
-    ) => {
+    ): Promise<FileStoreState | undefined> => {
       const base = store
       setPending(true)
       try {
         const next = await op(base)
         setStore((prev) => mergeBackendResult(prev, base, next))
+        return next
       } catch (error) {
         setFileOpError({
           title: errorTitle,
@@ -44,14 +46,24 @@ export function useFileOperations(
       } finally {
         setPending(false)
       }
+      return undefined
     },
     [setStore, store],
   )
 
   const handleCreate = useCallback(
-    () =>
+    (folder: string | undefined, name: string) =>
       runFileOp('Could not create file', setCreatingFile, (base) =>
-        backend.createFile(base),
+        backend.createFile(base, folder, name),
+      ),
+    [runFileOp, backend],
+  )
+
+  /** Resolves to the new store, so the caller can reveal the new folder. */
+  const handleCreateFolder = useCallback(
+    (parent: string | undefined, name: string) =>
+      runFileOp('Could not create folder', setCreatingFolder, (base) =>
+        backend.createFolder(base, parent, name),
       ),
     [runFileOp, backend],
   )
@@ -84,6 +96,26 @@ export function useFileOperations(
     [runFileOp, backend],
   )
 
+  const handleMoveFolder = useCallback(
+    (from: string, to: string) =>
+      runFileOp(
+        'Could not move folder',
+        (pending) => setRenamingFileName(pending ? from : null),
+        (base) => backend.moveFolder(base, from, to),
+      ),
+    [runFileOp, backend],
+  )
+
+  const handleDeleteFolder = useCallback(
+    (folder: string) =>
+      runFileOp(
+        'Could not delete folder',
+        (pending) => setDeletingFileName(pending ? folder : null),
+        (base) => backend.deleteFolder(base, folder),
+      ),
+    [runFileOp, backend],
+  )
+
   const handleRestore = useCallback(
     (name: string) =>
       runFileOp(
@@ -96,6 +128,7 @@ export function useFileOperations(
 
   return {
     creatingFile,
+    creatingFolder,
     deletingFileName,
     duplicatingFile,
     renamingFileName,
@@ -103,9 +136,12 @@ export function useFileOperations(
     fileOpError,
     setFileOpError,
     handleCreate,
+    handleCreateFolder,
     handleDuplicate,
     handleRename,
     handleDelete,
+    handleMoveFolder,
+    handleDeleteFolder,
     handleRestore,
   }
 }

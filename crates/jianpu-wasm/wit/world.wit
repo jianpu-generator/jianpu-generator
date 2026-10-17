@@ -1251,10 +1251,20 @@ world jianpu-wasm {
         to: string,
     }
 
+    record rename-move {
+        file-id: string,
+        to: string,
+    }
+
+    record rename-files-message {
+        moves: list<rename-move>,
+    }
+
     variant message {
         create-file(create-file-message),
         save-content(save-content-message),
         rename-file(rename-file-message),
+        rename-files(rename-files-message),
         trash-file,
         restore-file,
     }
@@ -1271,6 +1281,15 @@ world jianpu-wasm {
         suggested-name: string,
     }
 
+    record name-adjustment {
+        rejected: string,
+        replacement: option<string>,
+    }
+
+    record names-taken-details {
+        adjustments: list<name-adjustment>,
+    }
+
     record permanent-details {
         status: u16,
         reason: string,
@@ -1282,6 +1301,7 @@ world jianpu-wasm {
         unauthorized,
         revision-conflict(revision-conflict-details),
         name-taken(name-taken-details),
+        names-taken(names-taken-details),
         permanent(permanent-details),
     }
 
@@ -1352,6 +1372,7 @@ world jianpu-wasm {
         unauthorized,
         conflict(revision-conflict-details),
         name-taken(name-taken-details),
+        names-taken(names-taken-details),
         permanent(permanent-details),
     }
 
@@ -1502,4 +1523,271 @@ world jianpu-wasm {
     export outbox-record-sent: func(queue-before: queue, existing: list<stored-record>, file-id: string, message-id: string, revision: s64, now-ms: u64) -> history-write;
     export outbox-history-rows: func(queue: queue, sent-records: list<stored-record>, file-names: list<file-name>, filter: history-filter, now-ms: u64) -> list<history-row>;
     export merge-three-way: func(base: string, mine: string, theirs: string) -> merge-outcome;
+
+    // File tree store (`jianpu_generator::file_tree`). The TS `FileStoreState`
+    // maps (`Record<string, string>`) cross as ordered key/value lists.
+    record string-entry {
+        key: string,
+        value: string,
+    }
+
+    record file-store-state {
+        active: string,
+        user-files: list<string-entry>,
+        bin: list<string-entry>,
+        file-ids: list<string-entry>,
+        folders: list<string>,
+    }
+
+    record demo-file {
+        path: string,
+        content: string,
+    }
+
+    record file-operation-context {
+        demo-files: list<demo-file>,
+        new-file-id: string,
+    }
+
+    enum file-store-error-kind {
+        invalid-path,
+        not-found,
+        collision,
+        ancestor-is-file,
+        move-into-itself,
+        demo-file-read-only,
+        reserved-name,
+    }
+
+    record file-store-failure {
+        kind: file-store-error-kind,
+        message: string,
+    }
+
+    variant file-store-response {
+        ok(file-store-state),
+        err(file-store-failure),
+    }
+
+    enum path-kind {
+        file,
+        explicit-folder,
+    }
+
+    record path-change {
+        kind: path-kind,
+        old-path: string,
+        new-path: string,
+    }
+
+    record folder-move-success {
+        state: file-store-state,
+        changes: list<path-change>,
+    }
+
+    variant folder-move-response {
+        ok(folder-move-success),
+        err(file-store-failure),
+    }
+
+    // One visible row of the file tree, depth-first (folders before files
+    // within a folder, each alphabetical); `depth` is 0 at the top level.
+    record file-tree-row {
+        path: string,
+        name: string,
+        depth: u32,
+        is-folder: bool,
+    }
+
+    enum file-tree-view-row-kind {
+        folder,
+        file,
+        demo-folder,
+        demo-file,
+        empty-folder-hint,
+    }
+
+    // A visible row of the file list. `key` is the folder path, file path,
+    // bare demo file name, or (demo folder) the expansion key `Demo/`; the
+    // ancestors of the active file are already `expanded`.
+    record file-tree-view-row {
+        key: string,
+        name: string,
+        depth: u32,
+        kind: file-tree-view-row-kind,
+        expanded: bool,
+        file-count: u32,
+        is-active: bool,
+        // For a folder row: the folder's own live link.
+        share-id: option<string>,
+        // The innermost shared folder the row lies inside.
+        shared-via: option<shared-via>,
+    }
+
+    // A shared folder (path and own name) with its share id.
+    record shared-via {
+        folder: string,
+        name: string,
+        share-id: string,
+    }
+
+    record file-share-link {
+        share-id: string,
+        file-id: string,
+        name: string,
+    }
+
+    record folder-share-link {
+        share-id: string,
+        folder: string,
+    }
+
+    // The owner's live links, as the worker's `POST /shares/overview` answers.
+    record share-overview {
+        files: list<file-share-link>,
+        folders: list<folder-share-link>,
+    }
+
+    // What one folder's Share dialog shows.
+    record folder-share-info {
+        name: string,
+        file-count: u32,
+        folder-count: u32,
+        share-id: option<string>,
+        shared-via: option<shared-via>,
+        // Files inside that already have their own link (they keep working independently).
+        own-link-warning: option<string>,
+    }
+
+    // A static folder link: the part after `#share-folder=`, or none if the snapshot is too long to be offered.
+    record folder-static-share {
+        file-count: u32,
+        folder-count: u32,
+        suffix: option<string>,
+        too-long: bool,
+    }
+
+    record snapshot-file {
+        path: string,
+        content: string,
+    }
+
+    // A decoded static folder link; paths are relative to the shared folder.
+    record folder-snapshot {
+        folder: string,
+        files: list<snapshot-file>,
+        empty-folders: list<string>,
+    }
+
+    variant file-tree-view-response {
+        ok(list<file-tree-view-row>),
+        err(string),
+    }
+
+    // The active file split for the toolbar button.
+    record file-active-label {
+        folder-names: list<string>,
+        file-name: string,
+        // The folder holding the file (new items go next to it); none at the top level and for demo files.
+        folder-path: option<string>,
+    }
+
+    variant file-tree-response {
+        ok(list<file-tree-row>),
+        err(string),
+    }
+
+    // One choice in the "Move to" folder picker; `path` is empty for the top level.
+    record move-target {
+        path: string,
+        name: string,
+        depth: u32,
+    }
+
+    // One binned file: `key` is what to hand to `file-store-restore-file`, `name` its own name, `location` the folder it was deleted from (none = top level).
+    record bin-entry {
+        key: string,
+        name: string,
+        location: option<string>,
+    }
+
+    // What the "Delete folder" confirmation shows.
+    record folder-delete-summary {
+        file-count: u32,
+        message: string,
+        // What deleting does to live links involved; none when nothing is shared.
+        share-warning: option<string>,
+    }
+
+    // One row of the cloud's file listing, as far as placeholder classification needs.
+    record cloud-listed-entry {
+        id: string,
+        name: string,
+        trashed: bool,
+    }
+
+    // An active placeholder row: the explicit empty `folder` it keeps and the `file-id` to rename or trash with it.
+    record folder-placeholder {
+        folder: string,
+        file-id: string,
+    }
+
+    record cloud-listing-classification {
+        folders: list<folder-placeholder>,
+        // Placeholders of deleted folders: hidden, but they still hold their name in the cloud.
+        trashed-folders: list<folder-placeholder>,
+        // Every placeholder row (active or trashed): not a file, drop it from the listing.
+        hidden-file-ids: list<string>,
+    }
+
+    // Splits the `<folder>/.keep` placeholder rows out of a cloud listing.
+    export file-store-classify-cloud-listing: func(entries: list<cloud-listed-entry>) -> cloud-listing-classification;
+    // Whether `path` is a `<folder>/.keep` placeholder file's path.
+    export file-store-is-placeholder-path: func(path: string) -> bool;
+    // The placeholder file's path for `folder`; none if invalid.
+    export file-store-placeholder-path: func(folder: string) -> option<string>;
+    // Creates the folder `name` inside `parent` (`none` for the top level).
+    export file-store-create-folder: func(state: file-store-state, parent: option<string>, name: string, context: file-operation-context) -> file-store-response;
+    // The reason creating the folder `name` inside `parent` would be rejected, if it would.
+    export file-store-create-folder-error: func(state: file-store-state, parent: option<string>, name: string, context: file-operation-context) -> option<string>;
+    // Top level plus every folder; `excluded-folder` and its descendants are left out.
+    export file-store-move-targets: func(state: file-store-state, excluded-folder: option<string>) -> list<move-target>;
+    // Where `source-path` lands when moved into `folder` (`none` = top level); `none` if invalid.
+    export file-store-move-destination: func(source-path: string, folder: option<string>) -> option<string>;
+    // The next numbered sibling to try after `rejected` was reported as taken (keeps the folder); none if invalid.
+    export file-store-name-after-collision: func(rejected: string) -> option<string>;
+    // The reason renaming/moving a file to `to-path` would be rejected, if it would.
+    export file-store-rename-error: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> option<string>;
+    // The reason renaming/moving the folder `from-path` to `to-path` would be rejected, if it would.
+    export file-store-folder-move-error: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> option<string>;
+    // The confirmation text for deleting a folder; none if it does not exist.
+    export file-store-folder-delete-summary: func(state: file-store-state, folder: string, shares: share-overview) -> option<folder-delete-summary>;
+    // The Share dialog's facts about a folder; none if it does not exist.
+    export file-store-folder-share-info: func(state: file-store-state, shares: share-overview, folder: string) -> option<folder-share-info>;
+    // Encodes a folder as a static link payload; none if the folder does not exist.
+    export file-store-folder-static-share: func(state: file-store-state, folder: string) -> option<folder-static-share>;
+    // Decodes the part after `#share-folder=`; none if it is not a valid folder snapshot.
+    export decode-folder-share-suffix: func(suffix: string) -> option<folder-snapshot>;
+    // The file a shared-folder viewer opens first (first in tree order); none if the folder holds no file.
+    export shared-folder-first-file: func(snapshot: folder-snapshot) -> option<string>;
+    // The read-only file list of a shared folder, rooted at it (no Demo row, no share markers).
+    export shared-folder-view: func(snapshot: folder-snapshot, active: string, expanded: list<string>) -> file-tree-view-response;
+    // Copies a shared folder into the store as a new top-level folder (`Name 2` on a clash); `file-ids` are the new files' ids in snapshot order.
+    export file-store-import-shared-folder: func(state: file-store-state, snapshot: folder-snapshot, file-ids: list<string>, context: file-operation-context) -> file-store-response;
+    // The folder and every folder above it, outermost first (what to expand to show it).
+    export file-store-folders-to-reveal: func(path: string) -> list<string>;
+    // The bin as a sorted list of leaf names and original locations.
+    export file-store-bin-entries: func(state: file-store-state) -> list<bin-entry>;
+    export file-store-create-file: func(state: file-store-state, folder: option<string>, name: string, content: string, context: file-operation-context) -> file-store-response;
+    // The reason creating the file `name` inside `folder` would be rejected, if it would.
+    export file-store-create-file-error: func(state: file-store-state, folder: option<string>, name: string, context: file-operation-context) -> option<string>;
+    export file-store-duplicate-file: func(state: file-store-state, source: string, context: file-operation-context) -> file-store-response;
+    export file-store-rename-file: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> file-store-response;
+    export file-store-delete-file: func(state: file-store-state, path: string, context: file-operation-context) -> file-store-response;
+    export file-store-restore-file: func(state: file-store-state, bin-key: string, context: file-operation-context) -> file-store-response;
+    export file-store-move-folder: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> folder-move-response;
+    export file-store-delete-folder: func(state: file-store-state, folder: string, context: file-operation-context) -> file-store-response;
+    export file-store-tree: func(state: file-store-state) -> file-tree-response;
+    export file-store-tree-view: func(state: file-store-state, expanded: list<string>, demo-file-names: list<string>, shares: share-overview, query: string) -> file-tree-view-response;
+    export file-store-active-label: func(active: string, demo-file-names: list<string>) -> file-active-label;
 }

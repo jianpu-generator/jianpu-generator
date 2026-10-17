@@ -1,0 +1,188 @@
+/* Full-screen file browser: header / toolbar / scrolling tree. */
+
+.file-browser {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: var(--editor-bg);
+  color: var(--text);
+  outline: none;
+}
+
+.file-browser-header,
+.file-browser-toolbar {
+  flex: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.file-browser-toolbar {
+  background: var(--surface);
+}
+
+.file-browser-header-inner,
+.file-browser-toolbar-inner,
+.file-browser-body-inner {
+  width: 100%;
+  max-width: 56rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+.file-browser-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: 3.25rem;
+}
+
+.file-browser-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.file-browser-where {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.file-browser-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.file-browser-close:hover {
+  background: var(--preview-bg);
+  color: var(--text);
+}
+
+.file-browser-toolbar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.6rem;
+}
+
+.file-browser-search {
+  position: relative;
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.file-browser-search svg {
+  position: absolute;
+  left: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.file-browser-search input {
+  width: 100%;
+  padding: 0.45rem 0.6rem 0.45rem 2rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--editor-bg);
+  color: inherit;
+  font: inherit;
+  /* 16px keeps iOS from zooming the page when the input is focused. */
+  font-size: 16px;
+}
+
+.file-browser-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.file-browser-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--editor-bg);
+  color: inherit;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.file-browser-btn:hover:not(:disabled) {
+  background: var(--preview-bg);
+}
+
+.file-browser-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.file-browser-btn--primary,
+.file-browser-btn--primary:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.file-browser-btn svg {
+  flex: none;
+  width: 0.9em;
+  height: 0.9em;
+}
+
+.file-browser-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.file-browser-body-inner {
+  padding-block: 0.5rem 2rem;
+}
+
+.file-browser-hint {
+  margin: 0;
+  padding: 1.5rem 0.35rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+/* Rows get more room than they had in the dropdown. */
+.file-browser .file-tab-name,
+.file-browser .file-tree-folder {
+  font-size: 0.8rem;
+  padding-block: 0.4rem;
+}
+
+@media (max-width: 600px) {
+  .file-browser .file-tab-name,
+  .file-browser .file-tree-folder {
+    padding-block: 0.65rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Folder menus are portaled to the body; keep them above the browser. */
+.export-menu-list.folder-row-menu {
+  z-index: 1100;
+}
