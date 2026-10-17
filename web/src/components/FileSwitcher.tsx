@@ -147,10 +147,7 @@ export function FileSwitcher({
           creatingFolder={creatingFolder}
           importing={importing}
           onNewFile={() => newFilePrompt.open(activeLabel.folderPath)}
-          onNewFolder={() => {
-            setFilesOpen(false)
-            newFolderPrompt.open(activeLabel.folderPath)
-          }}
+          onNewFolder={() => newFolderPrompt.open(activeLabel.folderPath)}
           onImportFile={
             onImportFile
               ? (file) => {

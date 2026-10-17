@@ -6,7 +6,7 @@ import type { FolderShares } from './useFolderShares'
 interface FolderRowActionsInput {
   folderShares: FolderShares
   onImportFile?: (file: File, folder?: string) => void
-  /** Closes the file list drawer/menu. */
+  /** Closes the file browser, for actions that finish rather than prompt. */
   closeList: () => void
   openFolderDialog: (dialog: FolderDialogState) => void
   openFolderShare: (target: FolderShareTarget) => void
@@ -27,22 +27,15 @@ export function useFolderRowActions({
   openNewFile,
   openNewFolder,
 }: FolderRowActionsInput): FolderActions {
-  const dialog = (kind: FolderDialogState['kind']) => (folder: string) => {
-    // Renaming keeps the file browser open underneath, so the user lands back
-    // in the tree afterwards.
-    if (kind !== 'rename') closeList()
+  // Prompts keep the file browser open underneath, so the user lands back in
+  // the tree afterwards.
+  const dialog = (kind: FolderDialogState['kind']) => (folder: string) =>
     openFolderDialog({ kind, folder })
-  }
-  const share = (tab: FolderShareTarget['tab']) => (folder: string) => {
-    closeList()
+  const share = (tab: FolderShareTarget['tab']) => (folder: string) =>
     openFolderShare({ folder, tab })
-  }
   return {
     onNewFileHere: openNewFile,
-    onNewFolderHere: (folder) => {
-      closeList()
-      openNewFolder(folder)
-    },
+    onNewFolderHere: openNewFolder,
     onImportHere: (folder, file) => {
       onImportFile?.(file, folder)
       closeList()
