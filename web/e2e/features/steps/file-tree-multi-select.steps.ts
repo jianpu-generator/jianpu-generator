@@ -27,14 +27,17 @@ When('I start selecting files', async ({ page }) => {
     .click()
 })
 
+// The click lands on the label's position; the checkbox's row-wide overlay is
+// what receives it, so Playwright's "intercepts pointer events" check is
+// skipped on purpose.
 When('I tick the file {string}', async ({ page }, name: string) => {
-  await fileLabel(page, name).click()
+  await fileLabel(page, name).click({ force: true })
 })
 
 When('I tick the folder {string}', async ({ page }, name: string) => {
   await page
     .locator('.file-tree-name', { hasText: new RegExp(`^${name}$`) })
-    .click()
+    .click({ force: true })
 })
 
 When(
