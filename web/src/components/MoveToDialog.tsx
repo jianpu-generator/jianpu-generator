@@ -10,8 +10,13 @@ export interface MoveToDialogProps {
   onOpenChange: (open: boolean) => void
   /** Full path of the file being moved. */
   path: string
+  /** What the hint calls the thing being moved; defaults to the file's name. */
+  subject?: string
   /** Folder currently holding the file (`undefined` at the top level). */
   currentFolder: string | undefined
+  /** Whether the thing being moved sits in one folder that is not a valid
+   * choice (false for a selection spread over several folders). */
+  hasCurrentFolder?: boolean
   /** The picker's choices, computed in Rust. */
   targets: MoveTarget[]
   /** Where `path` lands in the folder (`undefined` = top level), from Rust. */
@@ -27,7 +32,9 @@ export function MoveToDialog({
   open,
   onOpenChange,
   path,
+  subject,
   currentFolder,
+  hasCurrentFolder = true,
   targets,
   destination,
   moveError,
@@ -45,7 +52,7 @@ export function MoveToDialog({
     ? destination(selected === '' ? undefined : selected)
     : undefined
   const error = target === undefined ? undefined : moveError(target)
-  const isCurrent = selected === (currentFolder ?? '')
+  const isCurrent = hasCurrentFolder && selected === (currentFolder ?? '')
   const canConfirm = target !== undefined && error === undefined && !isCurrent
 
   return (
@@ -61,7 +68,7 @@ export function MoveToDialog({
           </div>
           <div className="file-dialog-body">
             <p className="file-dialog-hint">
-              {`Move ${displayFileName(path)} into:`}
+              {`Move ${subject ?? displayFileName(path)} into:`}
             </p>
             <div className="move-targets">
               {targets.map((folder) => (
@@ -74,7 +81,7 @@ export function MoveToDialog({
                   onClick={() => setSelected(folder.path)}
                 >
                   <span className="move-target-name">{folder.name}</span>
-                  {folder.path === (currentFolder ?? '') ? (
+                  {hasCurrentFolder && folder.path === (currentFolder ?? '') ? (
                     <span className="move-target-current">current</span>
                   ) : null}
                 </button>

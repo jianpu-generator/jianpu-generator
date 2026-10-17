@@ -52,6 +52,7 @@ fn folders_are_collapsed_by_default_and_show_recursive_file_counts() {
         demo_file_names: &strings(&["01.jianpu", "02.jianpu"]),
         shares: &ShareOverview::default(),
         query: "",
+        selected: &[],
     });
     assert_eq!(
         render(&rows),
@@ -72,6 +73,7 @@ fn an_expanded_folder_shows_its_children_and_remembers_nothing_else() {
         demo_file_names: &[],
         shares: &ShareOverview::default(),
         query: "",
+        selected: &[],
     });
     assert_eq!(
         render(&rows),
@@ -93,6 +95,7 @@ fn ancestors_of_the_active_file_are_open_even_when_not_expanded() {
         demo_file_names: &[],
         shares: &ShareOverview::default(),
         query: "",
+        selected: &[],
     });
     assert_eq!(
         render(&rows),
@@ -116,6 +119,7 @@ fn an_expanded_empty_folder_gets_a_hint_row() {
         demo_file_names: &[],
         shares: &ShareOverview::default(),
         query: "",
+        selected: &[],
     });
     assert_eq!(rows[0].kind, TreeViewRowKind::Folder);
     assert_eq!(rows[1].kind, TreeViewRowKind::EmptyFolderHint);
@@ -131,6 +135,7 @@ fn demo_is_last_collapsed_by_default_and_opens_by_key_or_active_file() {
         demo_file_names: &demo,
         shares: &ShareOverview::default(),
         query: "",
+        selected: &[],
     });
     assert_eq!(
         &render(&opened)[3..],
@@ -144,6 +149,7 @@ fn demo_is_last_collapsed_by_default_and_opens_by_key_or_active_file() {
         demo_file_names: &demo,
         shares: &ShareOverview::default(),
         query: "",
+        selected: &[],
     });
     assert_eq!(
         &render(&active_demo)[3..],
@@ -191,6 +197,7 @@ fn rows_inside_a_shared_folder_carry_the_marker_and_the_via_tag() {
         demo_file_names: &[],
         shares: &shares,
         query: "",
+        selected: &[],
     });
     let shared_info = |name: &str| {
         let row = rows.iter().find(|row| row.name == name).unwrap();
@@ -216,6 +223,7 @@ fn searched(query: &str) -> Vec<String> {
         demo_file_names: &strings(&["01-scale.jianpu", "02-rests.jianpu"]),
         shares: &ShareOverview::default(),
         query,
+        selected: &[],
     }))
 }
 

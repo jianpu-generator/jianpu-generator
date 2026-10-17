@@ -68,6 +68,7 @@ pub fn shared_folder_view(
         demo_file_names: &[],
         shares: &ShareOverview::default(),
         query: "",
+        selected: &[],
     }))
 }
 

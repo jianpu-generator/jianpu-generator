@@ -54,6 +54,8 @@ export default function App() {
     handleDelete,
     handleMoveFolder,
     handleDeleteFolder,
+    handleMoveSelection,
+    handleDeleteSelection,
     handleRestore,
     sharedPreview,
     syncedShareViewerActive,
@@ -222,6 +224,8 @@ export default function App() {
         onDelete={handleDelete}
         onMoveFolder={handleMoveFolder}
         onDeleteFolder={handleDeleteFolder}
+        onMoveSelection={handleMoveSelection}
+        onDeleteSelection={handleDeleteSelection}
         onOpenStorageSettings={() => setStorageSettingsOpen(true)}
         saveStatus={saveStatus}
         saveLabel={saveLabel}

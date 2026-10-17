@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { type FileStoreState, mergeBackendResult } from '../fileStore'
+import type { SelectionMove, SelectionUnit } from '../jianpuWasm'
 import type { StorageBackend } from '../storage/types'
 
 export interface FileOpError {
@@ -116,6 +117,47 @@ export function useFileOperations(
     [runFileOp, backend],
   )
 
+  /** Applies a move plan from Rust one move after the other, each starting
+   * from the store the previous one produced. */
+  const handleMoveSelection = useCallback(
+    (moves: SelectionMove[]) =>
+      runFileOp(
+        'Could not move the selection',
+        (pending) =>
+          setRenamingFileName(pending ? (moves[0]?.fromPath ?? null) : null),
+        async (base) => {
+          let state = base
+          for (const move of moves) {
+            state = move.isFolder
+              ? await backend.moveFolder(state, move.fromPath, move.toPath)
+              : await backend.renameFile(state, move.fromPath, move.toPath)
+          }
+          return state
+        },
+      ),
+    [runFileOp, backend],
+  )
+
+  /** Moves each unit to the bin, one after the other. */
+  const handleDeleteSelection = useCallback(
+    (units: SelectionUnit[]) =>
+      runFileOp(
+        'Could not delete the selection',
+        (pending) =>
+          setDeletingFileName(pending ? (units[0]?.path ?? null) : null),
+        async (base) => {
+          let state = base
+          for (const unit of units) {
+            state = unit.isFolder
+              ? await backend.deleteFolder(state, unit.path)
+              : await backend.deleteFile(state, unit.path)
+          }
+          return state
+        },
+      ),
+    [runFileOp, backend],
+  )
+
   const handleRestore = useCallback(
     (name: string) =>
       runFileOp(
@@ -142,6 +184,8 @@ export function useFileOperations(
     handleDelete,
     handleMoveFolder,
     handleDeleteFolder,
+    handleMoveSelection,
+    handleDeleteSelection,
     handleRestore,
   }
 }

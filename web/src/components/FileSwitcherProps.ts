@@ -1,6 +1,7 @@
 import type { FileStoreState } from '../fileStore'
 import type { FolderShares } from '../hooks/useFolderShares'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
+import type { SelectionMove, SelectionUnit } from '../jianpuWasm'
 import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
 
 export interface FileSwitcherProps {
@@ -23,6 +24,10 @@ export interface FileSwitcherProps {
   /** Renames/moves a whole folder (Rust has already vetted the path). */
   onMoveFolder: (from: string, to: string) => void
   onDeleteFolder: (folder: string) => void
+  /** Applies the moves of a selection plan from Rust, one after the other. */
+  onMoveSelection: (moves: SelectionMove[]) => void
+  /** Moves the units of a selection (files and whole folders) to the bin. */
+  onDeleteSelection: (units: SelectionUnit[]) => void
   onOpenStorageSettings: () => void
   saveStatus: DisplaySaveStatus
   saveLabel: string | null

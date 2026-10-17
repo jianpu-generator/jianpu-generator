@@ -186,3 +186,126 @@
 .export-menu-list.folder-row-menu {
   z-index: 1100;
 }
+
+/* Select mode: the bar under the toolbar, and clickable, checkable rows. */
+
+.file-browser-selection {
+  flex: none;
+  background: var(--selection-bg, #eff6ff);
+  border-bottom: 1px solid var(--border);
+}
+
+.file-browser-selection-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  max-width: 56rem;
+  margin-inline: auto;
+  padding: 0.5rem 1rem;
+}
+
+.file-browser-selection-count {
+  margin-right: auto;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.file-browser-btn--danger {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.file-browser-btn--danger:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.file-tree-row--selecting {
+  position: relative;
+  cursor: pointer;
+}
+
+.file-tree-row--selecting:hover,
+.file-tree-row--selecting:focus-within {
+  background: var(--preview-bg);
+  color: var(--text);
+}
+
+.file-tree-row--checked,
+.file-tree-row--checked:hover {
+  background: var(--selection-bg, #eff6ff);
+  color: var(--text);
+}
+
+.file-tree-row--checked:hover {
+  background: var(--selection-hover-bg, #dbeafe);
+}
+
+/* The checkbox is the row's one button: its ::after covers the whole row, so
+ * a click anywhere toggles it, and the folder chevron sits above it. */
+.file-tree-check {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-inline: 0.25rem 0.35rem;
+  padding: 0;
+  border: 1.5px solid var(--muted);
+  border-radius: 4px;
+  background: var(--editor-bg);
+  color: #fff;
+  cursor: pointer;
+}
+
+.file-tree-check::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+}
+
+.file-tree-check:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.file-tree-check[data-state="checked"],
+.file-tree-check[data-state="indeterminate"] {
+  border-color: var(--selection-accent, #2563eb);
+  background: var(--selection-accent, #2563eb);
+}
+
+.file-tree-check-indicator {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.file-tree-folder--selecting {
+  cursor: pointer;
+}
+
+.file-tree-folder--selecting:hover {
+  background: transparent;
+}
+
+.file-tree-chevron {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.file-tree-chevron:hover {
+  background: var(--border);
+}

@@ -56,6 +56,7 @@ wit_bindgen::generate!({
 
 struct Component;
 
+mod guest_file_selection;
 mod guest_file_store;
 mod guest_folder_create;
 mod guest_folder_share;
@@ -79,6 +80,7 @@ mod svg_conversion;
 mod svg_flatten;
 
 use diagnostics_conversion::*;
+use guest_file_selection::*;
 use guest_file_store::*;
 use guest_folder_create::*;
 use guest_folder_share::*;

@@ -1,5 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import {
+  CheckIcon,
   Cross1Icon,
   FilePlusIcon,
   MagnifyingGlassIcon,
@@ -7,6 +8,7 @@ import {
 } from '@radix-ui/react-icons'
 import { type ReactNode, useRef, useState } from 'react'
 import { displayFileName } from '../fileStore'
+import type { FileSelection } from '../hooks/useFileSelection'
 import type { FileTreeViewRow } from '../jianpuWasm'
 import './file-browser.css'
 import { FileTreeList, type FileTreeListProps } from './FileTreeList'
@@ -35,6 +37,10 @@ export interface FileBrowserModalProps {
   onNewFile: () => void
   onNewFolder: () => void
   onImportFile?: (file: File) => void
+  /** The multi-select: the Select button, the checkboxes and Escape. */
+  selection: FileSelection
+  /** The bar (with its dialogs) shown while `selection.selecting`. */
+  selectionBar: ReactNode
 }
 
 /** The full-screen file browser opened by the file switcher's trigger
@@ -57,6 +63,8 @@ export function FileBrowserModal({
   onNewFile,
   onNewFolder,
   onImportFile,
+  selection,
+  selectionBar,
 }: FileBrowserModalProps) {
   const searchRef = useRef<HTMLInputElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -85,10 +93,14 @@ export function FileBrowserModal({
             )
           }}
           onEscapeKeyDown={(event) => {
-            // The first Escape clears the search; the next closes the browser.
+            // The first Escape clears the search, the next leaves select mode;
+            // the one after closes the browser.
             if (query !== '') {
               event.preventDefault()
               onQueryChange('')
+            } else if (selection.selecting) {
+              event.preventDefault()
+              selection.stop()
             }
           }}
         >
@@ -123,36 +135,48 @@ export function FileBrowserModal({
                   onChange={(event) => onQueryChange(event.target.value)}
                 />
               </label>
-              <div className="file-browser-actions">
-                <button
-                  type="button"
-                  className="file-browser-btn file-browser-btn--primary"
-                  disabled={creating}
-                  onClick={onNewFile}
-                >
-                  <PlusIcon aria-hidden="true" />
-                  <SpinnerLabel pending={creating} label="New file" />
-                </button>
-                <button
-                  type="button"
-                  className="file-browser-btn"
-                  disabled={creatingFolder}
-                  onClick={onNewFolder}
-                >
-                  <FilePlusIcon aria-hidden="true" />
-                  <SpinnerLabel pending={creatingFolder} label="New folder" />
-                </button>
-                {onImportFile ? (
-                  <ImportButton
+              {selection.selecting ? null : (
+                <div className="file-browser-actions">
+                  <button
+                    type="button"
+                    className="file-browser-btn file-browser-btn--primary"
+                    disabled={creating}
+                    onClick={onNewFile}
+                  >
+                    <PlusIcon aria-hidden="true" />
+                    <SpinnerLabel pending={creating} label="New file" />
+                  </button>
+                  <button
+                    type="button"
                     className="file-browser-btn"
-                    disabled={isLoadingCloud}
-                    importing={importing}
-                    onImportFile={onImportFile}
-                  />
-                ) : null}
-              </div>
+                    disabled={creatingFolder}
+                    onClick={onNewFolder}
+                  >
+                    <FilePlusIcon aria-hidden="true" />
+                    <SpinnerLabel pending={creatingFolder} label="New folder" />
+                  </button>
+                  {onImportFile ? (
+                    <ImportButton
+                      className="file-browser-btn"
+                      disabled={isLoadingCloud}
+                      importing={importing}
+                      onImportFile={onImportFile}
+                    />
+                  ) : null}
+                  <button
+                    type="button"
+                    className="file-browser-btn"
+                    disabled={isLoadingCloud || storeIsEmpty}
+                    onClick={selection.start}
+                  >
+                    <CheckIcon aria-hidden="true" />
+                    Select
+                  </button>
+                </div>
+              )}
             </div>
           </div>
+          {selection.selecting ? selectionBar : null}
           <div className="file-browser-body" ref={bodyRef}>
             <div className="file-browser-body-inner">
               {isLoadingCloud ? (
@@ -167,7 +191,13 @@ export function FileBrowserModal({
                 <p className="file-browser-hint">{`No files match “${query.trim()}”.`}</p>
               ) : null}
               <ResponsiveMenuContainerContext.Provider value={menuContainer}>
-                <FileTreeList rows={rows} {...treeProps} />
+                <FileTreeList
+                  rows={rows}
+                  {...treeProps}
+                  onToggleSelect={
+                    selection.selecting ? selection.toggle : undefined
+                  }
+                />
               </ResponsiveMenuContainerContext.Provider>
             </div>
           </div>

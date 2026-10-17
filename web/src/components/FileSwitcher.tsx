@@ -1,41 +1,29 @@
-import {
-  ArchiveIcon,
-  CopyIcon,
-  DotsHorizontalIcon,
-  FilePlusIcon,
-  GearIcon,
-  Link2Icon,
-  MoveIcon,
-  Pencil1Icon,
-  PlusIcon,
-  TrashIcon,
-} from '@radix-ui/react-icons'
 import { useState } from 'react'
-import { fileContent, isReadOnlyFile, sortedUserFileNames } from '../fileStore'
+import { fileContent, sortedUserFileNames } from '../fileStore'
 import {
   fileMoveTargets,
   moveDestination,
   renameError,
 } from '../fileStoreQueries'
 import { useExpandedFolders } from '../hooks/useExpandedFolders'
+import { useFileSelection } from '../hooks/useFileSelection'
 import { useFileTreeView } from '../hooks/useFileTreeView'
 import { useFolderRowActions } from '../hooks/useFolderRowActions'
 import { useNewFilePrompt } from '../hooks/useNewFilePrompt'
 import { useNewFolderPrompt } from '../hooks/useNewFolderPrompt'
 import { useFileStaticShareLink } from '../hooks/useStaticShareLink'
+import { FileActionsMenu } from './FileActionsMenu'
 import { FileBrowserModal } from './FileBrowserModal'
+import { FileSelectionBar } from './FileSelectionBar'
 import type { FileSwitcherProps } from './FileSwitcherProps'
 import { FileSwitcherTrigger } from './FileSwitcherTrigger'
 import { type FolderDialogState, FolderDialogs } from './FolderDialogs'
 import { FolderShareModal, type FolderShareTarget } from './FolderShareModal'
-import { ImportButton } from './ImportButton'
 import { MoveToDialog } from './MoveToDialog'
 import { NewEntryDialog } from './NewEntryDialog'
 import { RenameFileDialog } from './RenameFileDialog'
-import { ResponsiveMenu } from './ResponsiveMenu'
 import { SaveStatusBadge } from './SaveStatusBadge'
 import { ShareModal } from './ShareModal'
-import { SpinnerLabel } from './SpinnerLabel'
 
 export function FileSwitcher({
   store,
@@ -48,6 +36,8 @@ export function FileSwitcher({
   onDelete,
   onMoveFolder,
   onDeleteFolder,
+  onMoveSelection,
+  onDeleteSelection,
   onOpenStorageSettings,
   saveStatus,
   saveLabel,
@@ -82,16 +72,17 @@ export function FileSwitcher({
     toggle: toggleFolder,
     expand: expandFolders,
   } = useExpandedFolders()
+  const selection = useFileSelection(store)
   const { rows, activeLabel } = useFileTreeView(
     store,
     expanded,
     triggerLabel,
     folderShares.overview,
     query,
+    selection.selected,
   )
   const listRenameError = (from: string, to: string) =>
     renameError(store, from, to)
-  const [actionsOpen, setActionsOpen] = useState(false)
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
@@ -138,6 +129,7 @@ export function FileSwitcher({
           onOpenChange={(open) => {
             setFilesOpen(open)
             if (open) setQuery('')
+            else selection.stop()
           }}
           trigger={
             <FileSwitcherTrigger
@@ -167,6 +159,19 @@ export function FileSwitcher({
                 }
               : undefined
           }
+          selection={selection}
+          selectionBar={
+            <FileSelectionBar
+              store={store}
+              selection={selection}
+              shares={folderShares.overview}
+              onRename={onRename}
+              onMoveFolder={onMoveFolder}
+              onMoveSelection={onMoveSelection}
+              onDeleteSelection={onDeleteSelection}
+              expandFolders={expandFolders}
+            />
+          }
           treeProps={{
             renamingName,
             onToggleFolder: toggleFolder,
@@ -183,164 +188,28 @@ export function FileSwitcher({
           }}
         />
       </div>
-      <div className="export-menu">
-        <ResponsiveMenu.Root open={actionsOpen} onOpenChange={setActionsOpen}>
-          <ResponsiveMenu.Trigger asChild>
-            <button
-              type="button"
-              className="preview-export-btn"
-              aria-label="File actions"
-            >
-              <DotsHorizontalIcon aria-hidden="true" />
-            </button>
-          </ResponsiveMenu.Trigger>
-          <ResponsiveMenu.Content
-            className="export-menu-list"
-            align="end"
-            sideOffset={4}
-            title="File actions"
-          >
-            <button
-              type="button"
-              role="menuitem"
-              className="export-menu-item"
-              disabled={creating}
-              onClick={() => {
-                setActionsOpen(false)
-                newFilePrompt.open(activeLabel.folderPath)
-              }}
-            >
-              <PlusIcon aria-hidden="true" />
-              <SpinnerLabel pending={creating} label="New" />
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="export-menu-item"
-              disabled={creatingFolder}
-              onClick={() => {
-                setActionsOpen(false)
-                newFolderPrompt.open(activeLabel.folderPath)
-              }}
-            >
-              <FilePlusIcon aria-hidden="true" />
-              <SpinnerLabel pending={creatingFolder} label="New folder" />
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="export-menu-item"
-              disabled={duplicating}
-              onClick={async () => {
-                await onDuplicate()
-                setActionsOpen(false)
-              }}
-            >
-              <CopyIcon aria-hidden="true" />
-              <SpinnerLabel pending={duplicating} label="Duplicate" />
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="export-menu-item"
-              disabled={
-                isReadOnlyFile(store.active) || renamingName === store.active
-              }
-              onClick={() => {
-                setActionsOpen(false)
-                setRenameOpen(true)
-              }}
-            >
-              <Pencil1Icon aria-hidden="true" />
-              <SpinnerLabel
-                pending={renamingName === store.active}
-                label="Rename"
-              />
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="export-menu-item"
-              disabled={isReadOnlyFile(store.active)}
-              onClick={() => {
-                setActionsOpen(false)
-                setMoveOpen(true)
-              }}
-            >
-              <MoveIcon aria-hidden="true" />
-              Move to…
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="export-menu-item"
-              data-testid="share-button"
-              onClick={() => {
-                setActionsOpen(false)
-                setShareModalOpen(true)
-              }}
-            >
-              <Link2Icon aria-hidden="true" />
-              Share
-            </button>
-            {onImportFile ? (
-              <ImportButton
-                disabled={isLoadingCloud}
-                importing={importing}
-                onImportFile={(file) => {
-                  onImportFile(file)
-                  setActionsOpen(false)
-                }}
-              />
-            ) : null}
-            <button
-              type="button"
-              role="menuitem"
-              className="export-menu-item export-menu-item--danger"
-              disabled={
-                isReadOnlyFile(store.active) || deletingName === store.active
-              }
-              onClick={async () => {
-                await onDelete(store.active)
-                setActionsOpen(false)
-              }}
-            >
-              <TrashIcon aria-hidden="true" />
-              <SpinnerLabel
-                pending={deletingName === store.active}
-                label="Delete"
-              />
-            </button>
-            {binNames.length > 0 ? (
-              <button
-                type="button"
-                role="menuitem"
-                className="export-menu-item file-tab-bar-bin-trigger"
-                aria-haspopup="dialog"
-                onClick={() => {
-                  setActionsOpen(false)
-                  onOpenBin()
-                }}
-              >
-                <ArchiveIcon aria-hidden="true" />
-                {`Bin (${binNames.length})`}
-              </button>
-            ) : null}
-            <button
-              type="button"
-              role="menuitem"
-              className="export-menu-item"
-              onClick={() => {
-                setActionsOpen(false)
-                onOpenStorageSettings()
-              }}
-            >
-              <GearIcon aria-hidden="true" />
-              Storage…
-            </button>
-          </ResponsiveMenu.Content>
-        </ResponsiveMenu.Root>
-      </div>
+      <FileActionsMenu
+        activePath={store.active}
+        folderPath={activeLabel.folderPath}
+        creating={creating}
+        creatingFolder={creatingFolder}
+        duplicating={duplicating}
+        importing={importing}
+        isLoadingCloud={isLoadingCloud}
+        renamingName={renamingName}
+        deletingName={deletingName}
+        binNames={binNames}
+        onImportFile={onImportFile ? (file) => onImportFile(file) : undefined}
+        onNewFile={newFilePrompt.open}
+        onNewFolder={newFolderPrompt.open}
+        onDuplicate={onDuplicate}
+        onRename={() => setRenameOpen(true)}
+        onMove={() => setMoveOpen(true)}
+        onShare={() => setShareModalOpen(true)}
+        onDelete={onDelete}
+        onOpenBin={onOpenBin}
+        onOpenStorageSettings={onOpenStorageSettings}
+      />
       <RenameFileDialog
         open={renameOpen}
         onOpenChange={setRenameOpen}

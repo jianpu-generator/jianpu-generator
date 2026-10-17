@@ -378,7 +378,7 @@ impl Guest for Component {
         file_store_move_folder(state: FileStoreState, from_path: String, to_path: String, context: FileOperationContext) -> FolderMoveResponse;
         file_store_delete_folder(state: FileStoreState, folder: String, context: FileOperationContext) -> FileStoreResponse;
         file_store_tree(state: FileStoreState) -> FileTreeResponse;
-        file_store_tree_view(state: FileStoreState, expanded: Vec<String>, demo_file_names: Vec<String>, shares: ShareOverview, query: String) -> FileTreeViewResponse;
+        file_store_tree_view(state: FileStoreState, expanded: Vec<String>, demo_file_names: Vec<String>, shares: ShareOverview, query: String, selected: Vec<String>) -> FileTreeViewResponse; file_store_selection_all(state: FileStoreState) -> Vec<String>; file_store_selection_toggle(state: FileStoreState, selected: Vec<String>, key: String) -> Vec<String>; file_store_selection_units(state: FileStoreState, selected: Vec<String>) -> Vec<SelectionUnit>; file_store_selection_move_plan(state: FileStoreState, selected: Vec<String>, folder: Option<String>, context: FileOperationContext) -> SelectionMovePlan; file_store_selection_delete_summary(state: FileStoreState, selected: Vec<String>, shares: ShareOverview) -> SelectionDeleteSummary;
         file_store_active_label(active: String, demo_file_names: Vec<String>) -> FileActiveLabel;
         outbox_enqueue(queue: Queue, file_id: String, message: Message, message_id: String, now_ms: u64) -> Queue;
         outbox_begin_send(queue: Queue, now_ms: u64) -> BeginSend;
