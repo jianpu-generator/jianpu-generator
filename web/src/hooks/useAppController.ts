@@ -37,7 +37,6 @@ export function useAppController() {
     refreshSaveStatus,
   } = useStorageBackend()
   const [editorCollapsed, setEditorCollapsed] = useState(false)
-
   useUrlFileSync(store, setStore, isLoadingCloud)
 
   const {
@@ -56,6 +55,8 @@ export function useAppController() {
     handleDelete,
     handleMoveFolder,
     handleDeleteFolder,
+    handleMoveSelection,
+    handleDeleteSelection,
     handleRestore,
   } = useFileOperations(store, setStore, backend)
 
@@ -257,7 +258,6 @@ export function useAppController() {
   )
 
   const noPartsSelected = computeNoPartsSelected(parts, visibility)
-
   return {
     store,
     setStore,
@@ -287,6 +287,8 @@ export function useAppController() {
     handleDelete,
     handleMoveFolder,
     handleDeleteFolder,
+    handleMoveSelection,
+    handleDeleteSelection,
     handleRestore,
     sharedPreview,
     syncedShareViewerActive,

@@ -4,6 +4,7 @@ import type { FolderShares } from '../hooks/useFolderShares'
 import type { SharedFolderViewer } from '../hooks/useSharedFolderViewer'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SyncedShareViewerStatus } from '../hooks/useSyncedShareViewer'
+import type { SelectionMove, SelectionUnit } from '../jianpuWasm'
 import type { SharePayload } from '../shareUrl'
 import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
 import type { SyncedShareFailure } from '../syncedShare/errors'
@@ -95,6 +96,8 @@ interface AppHeaderProps {
   onDelete: (name: string) => void
   onMoveFolder: (from: string, to: string) => void
   onDeleteFolder: (folder: string) => void
+  onMoveSelection: (moves: SelectionMove[]) => void
+  onDeleteSelection: (units: SelectionUnit[]) => void
   onOpenStorageSettings: () => void
   saveStatus: DisplaySaveStatus
   saveLabel: string | null
@@ -165,6 +168,8 @@ export function AppHeader({
   onDelete,
   onMoveFolder,
   onDeleteFolder,
+  onMoveSelection,
+  onDeleteSelection,
   onOpenStorageSettings,
   saveStatus,
   saveLabel,
@@ -300,6 +305,8 @@ export function AppHeader({
             onDelete={onDelete}
             onMoveFolder={onMoveFolder}
             onDeleteFolder={onDeleteFolder}
+            onMoveSelection={onMoveSelection}
+            onDeleteSelection={onDeleteSelection}
             onOpenStorageSettings={onOpenStorageSettings}
             saveStatus={saveStatus}
             saveLabel={saveLabel}

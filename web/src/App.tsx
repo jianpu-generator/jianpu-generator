@@ -54,6 +54,8 @@ export default function App() {
     handleDelete,
     handleMoveFolder,
     handleDeleteFolder,
+    handleMoveSelection,
+    handleDeleteSelection,
     handleRestore,
     sharedPreview,
     syncedShareViewerActive,
@@ -163,7 +165,6 @@ export default function App() {
     noPartsSelected,
   } = useAppController()
   const previewInteractive = wasm.status === 'ready'
-
   const handleAccountSignOut = useCallback(() => {
     syncedShare.onDisconnectGithub()
     if (preference.backend === 'cloud') void switchBackend({ kind: 'local' })
@@ -182,7 +183,6 @@ export default function App() {
     stopMeasurePlayback,
     forceSave,
   })
-
   return (
     <div className="app">
       <AssetLoadingBanner
@@ -222,6 +222,8 @@ export default function App() {
         onDelete={handleDelete}
         onMoveFolder={handleMoveFolder}
         onDeleteFolder={handleDeleteFolder}
+        onMoveSelection={handleMoveSelection}
+        onDeleteSelection={handleDeleteSelection}
         onOpenStorageSettings={() => setStorageSettingsOpen(true)}
         saveStatus={saveStatus}
         saveLabel={saveLabel}
