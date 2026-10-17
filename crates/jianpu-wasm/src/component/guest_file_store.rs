@@ -245,6 +245,10 @@ pub(super) fn view_row(row: tree::TreeViewRow) -> FileTreeViewRow {
         is_active: row.is_active,
         share_id: row.share_id,
         shared_via: row.shared_via.map(Into::into),
+        name_match: row.name_match.map(|found| NameMatch {
+            start: u32::try_from(found.start).unwrap_or(u32::MAX),
+            end: u32::try_from(found.end).unwrap_or(u32::MAX),
+        }),
     }
 }
 

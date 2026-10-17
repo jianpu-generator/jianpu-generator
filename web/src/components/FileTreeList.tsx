@@ -7,6 +7,7 @@ import type { CSSProperties } from 'react'
 import { displayFileName } from '../fileStore'
 import type { FileTreeViewRow } from '../jianpuWasm'
 import { FileTabName } from './FileTabName'
+import { HighlightedName } from './HighlightedName'
 import { type FolderActions, FolderRowMenu } from './FolderRowMenu'
 
 function FolderGlyph() {
@@ -91,7 +92,9 @@ export function FileTreeList({
                     <ChevronRightIcon aria-hidden="true" />
                   )}
                   <FolderGlyph />
-                  <span className="file-tree-name">{row.name}</span>
+                  <span className="file-tree-name">
+                    <HighlightedName text={row.name} match={row.nameMatch} />
+                  </span>
                   {row.shareId ? (
                     <Link2Icon
                       className="file-tree-share-marker"
@@ -146,12 +149,20 @@ export function FileTreeList({
                       if (!row.isActive) onSelect(row.key)
                     }}
                   >
-                    {displayFileName(row.name)}
+                    <HighlightedName
+                      text={displayFileName(row.name)}
+                      match={row.nameMatch}
+                    />
                   </button>
                 ) : (
                   <FileTabName
                     name={row.key}
-                    label={displayFileName(row.name)}
+                    label={
+                      <HighlightedName
+                        text={displayFileName(row.name)}
+                        match={row.nameMatch}
+                      />
+                    }
                     active={row.isActive}
                     onSelect={onSelect}
                     onRename={onRename ?? (() => {})}

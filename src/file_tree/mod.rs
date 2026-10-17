@@ -47,7 +47,8 @@ pub use store_state::{DemoFile, FileOperationContext, FileStoreError, FileStoreS
 pub use tree::{FileNode, FileTree, FileTreeError, FolderContents, FolderNode, TreeRow};
 pub use unique_name::{path_after_collision, unique_folder_path, unique_path};
 pub use view::{
-    active_label, ActiveLabel, TreeViewInput, TreeViewRow, TreeViewRowKind, DEMO_EXPANSION_KEY,
+    active_label, ActiveLabel, NameMatch, TreeViewInput, TreeViewRow, TreeViewRowKind,
+    DEMO_EXPANSION_KEY,
 };
 
 #[cfg(test)]

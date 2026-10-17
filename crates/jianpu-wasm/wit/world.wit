@@ -1622,6 +1622,14 @@ world jianpu-wasm {
         share-id: option<string>,
         // The innermost shared folder the row lies inside.
         shared-via: option<shared-via>,
+        // The part of the displayed name the search query matched.
+        name-match: option<name-match>,
+    }
+
+    // A half-open range of UTF-16 code units in a row's displayed name (no `.jianpu`).
+    record name-match {
+        start: u32,
+        end: u32,
     }
 
     // A shared folder (path and own name) with its share id.

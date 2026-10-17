@@ -259,3 +259,35 @@ fn demo_files_are_searched_too() {
 fn a_query_matching_nothing_leaves_no_rows() {
     assert_eq!(searched("zzz"), Vec::<String>::new());
 }
+
+#[test]
+fn a_matching_row_reports_where_the_query_occurs_in_its_displayed_name() {
+    let rows = tree().view_rows(&TreeViewInput {
+        active: "Scratch.jianpu",
+        expanded: &[],
+        demo_file_names: &[],
+        shares: &ShareOverview::default(),
+        query: " JOY ",
+    });
+    assert!(rows.iter().all(|row| row.name_match.is_none()));
+
+    let rows = tree().view_rows(&TreeViewInput {
+        active: "Scratch.jianpu",
+        expanded: &[],
+        demo_file_names: &[],
+        shares: &ShareOverview::default(),
+        query: "COME",
+    });
+    let matches: Vec<_> = rows
+        .iter()
+        .map(|row| (row.name.as_str(), row.name_match))
+        .collect();
+    assert_eq!(
+        matches,
+        vec![
+            ("Hymns", None),
+            ("Advent", None),
+            ("O Come.jianpu", Some(NameMatch { start: 2, end: 6 })),
+        ]
+    );
+}
