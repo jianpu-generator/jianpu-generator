@@ -27,6 +27,13 @@ function editorHasFocus() {
  * immediately-following keyboard shortcuts. Retries the click, and falls
  * back to focusing the editor's input node directly, until focus lands. */
 export async function focusEditor(page: Page) {
+  // The file browser is a full-screen modal; a scenario that opened it to
+  // pick or check a file may have left it open over the editor.
+  const browser = page.getByTestId('file-browser')
+  if (await browser.isVisible()) {
+    await page.keyboard.press('Escape')
+    await browser.waitFor({ state: 'hidden' })
+  }
   for (let attempt = 0; attempt < 10; attempt++) {
     await page.click('.monaco-editor .view-lines')
     if (await page.evaluate(editorHasFocus)) return

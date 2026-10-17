@@ -225,7 +225,10 @@ Then(
     }
     await openFileList(page)
     await expect(
-      page.getByRole('menu').getByRole('button', { name: prefix }).first(),
+      page
+        .getByTestId('file-browser')
+        .getByRole('button', { name: prefix })
+        .first(),
     ).toBeVisible({ timeout: 15_000 })
   },
 )
