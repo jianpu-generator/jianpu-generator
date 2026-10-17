@@ -10,8 +10,8 @@ import type { CSSProperties } from 'react'
 import { displayFileName } from '../fileStore'
 import type { CheckState, FileTreeViewRow } from '../jianpuWasm'
 import { FileTabName } from './FileTabName'
-import { HighlightedName } from './HighlightedName'
 import { type FolderActions, FolderRowMenu } from './FolderRowMenu'
+import { HighlightedName } from './HighlightedName'
 
 function FolderGlyph() {
   return (

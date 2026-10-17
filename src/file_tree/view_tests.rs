@@ -276,6 +276,7 @@ fn a_matching_row_reports_where_the_query_occurs_in_its_displayed_name() {
         demo_file_names: &[],
         shares: &ShareOverview::default(),
         query: " JOY ",
+        selected: &[],
     });
     assert!(rows.iter().all(|row| row.name_match.is_none()));
 
@@ -285,6 +286,7 @@ fn a_matching_row_reports_where_the_query_occurs_in_its_displayed_name() {
         demo_file_names: &[],
         shares: &ShareOverview::default(),
         query: "COME",
+        selected: &[],
     });
     let matches: Vec<_> = rows
         .iter()
