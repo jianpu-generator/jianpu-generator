@@ -165,7 +165,6 @@ export default function App() {
     noPartsSelected,
   } = useAppController()
   const previewInteractive = wasm.status === 'ready'
-
   const handleAccountSignOut = useCallback(() => {
     syncedShare.onDisconnectGithub()
     if (preference.backend === 'cloud') void switchBackend({ kind: 'local' })
@@ -184,7 +183,6 @@ export default function App() {
     stopMeasurePlayback,
     forceSave,
   })
-
   return (
     <div className="app">
       <AssetLoadingBanner
