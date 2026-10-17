@@ -92,6 +92,15 @@ export function FileBrowserModal({
                 ?.scrollIntoView({ block: 'center' }),
             )
           }}
+          onInteractOutside={(event) => {
+            // The prompts opened from the tree (rename, move, delete, new
+            // folder) are separate dialogs, so Radix sees a click or focus
+            // inside them as outside this one. They sit on top of the
+            // browser, which must stay open underneath.
+            const target = event.target
+            if (target instanceof Element && target.closest('[role="dialog"]'))
+              event.preventDefault()
+          }}
           onEscapeKeyDown={(event) => {
             // The first Escape clears the search, the next leaves select mode;
             // the one after closes the browser.

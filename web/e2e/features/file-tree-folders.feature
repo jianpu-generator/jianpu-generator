@@ -36,6 +36,41 @@ Feature: Folder rows have their own actions menu, folders can be deleted to the 
     Then the file tree shows the folder "Psalms" nested 2 levels deep
     And the file tree shows the empty folder hint
 
+  Scenario: The file browser stays open behind the New folder here prompt
+    When the file tree app loads
+    And I open the file tree list
+    And I choose "New folder here" from the actions menu of the folder "Empty"
+    Then the new folder dialog is open
+    And the file browser is open
+    When I name the new folder "Psalms"
+    Then the file browser is open
+    And the file tree shows the folder "Psalms" nested 2 levels deep
+
+  Scenario: The file browser stays open behind the Move prompt
+    When the file tree app loads
+    And I open the file tree list
+    And I choose "Move to…" from the actions menu of the folder "Hymns"
+    Then the file browser is open
+    When I cancel the move dialog
+    Then the file browser is open
+
+  Scenario: The file browser stays open behind the Delete folder prompt
+    When the file tree app loads
+    And I open the file tree list
+    And I choose "Delete folder" from the actions menu of the folder "Hymns"
+    Then the file browser is open
+    When I confirm the delete folder dialog
+    Then the file browser is open
+    And the file tree does not show the folder "Hymns"
+
+  Scenario: The file browser stays open behind the Share folder dialog
+    When the file tree app loads
+    And I open the share dialog of the folder "Hymns"
+    Then the share dialog is titled 'Share folder "Hymns"'
+    And the file browser is open
+    When I close the share dialog
+    Then the file browser is open
+
   Scenario: Import here puts the recovered file inside that folder
     When the file tree app loads
     And I export the active file as a PDF

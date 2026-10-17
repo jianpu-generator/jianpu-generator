@@ -56,6 +56,16 @@ Feature: Creating, nesting and moving files and folders from the file actions me
     And the file tree shows the empty folder hint
     And the file switcher toolbar button shows the folder prefix "Hymns /" and the file name "Amazing"
 
+  Scenario: The New folder button keeps the file browser open behind the prompt
+    When the file tree app loads
+    And I open the file tree list
+    And I click "New folder" in the file tree list
+    Then the new folder dialog is open
+    And the file browser is open
+    When I name the new folder "Psalms"
+    Then the file browser is open
+    And the file tree shows the folder "Psalms" with a count of 0
+
   Scenario: A taken folder name is rejected
     When the file tree app loads
     And I choose "New folder" from the file actions menu

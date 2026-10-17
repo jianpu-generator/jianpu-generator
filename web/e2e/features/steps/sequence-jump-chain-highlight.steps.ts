@@ -92,6 +92,19 @@ When(
     await expect(sequenceToolbarButtons(page)).toHaveCount(4, {
       timeout: 15_000,
     })
+    // The toolbar can render before Monaco mounts (it comes from the worker's
+    // parse); a drag before then selects nothing in the editor.
+    await page.waitForFunction(
+      () =>
+        (
+          window as unknown as { monaco?: typeof import('monaco-editor') }
+        ).monaco?.editor
+          .getEditors()[0]
+          ?.getModel()
+          ?.getLineCount() === 18,
+      undefined,
+      { timeout: 30_000 },
+    )
   },
 )
 
