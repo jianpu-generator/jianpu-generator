@@ -1,5 +1,7 @@
 #[path = "main/check_command.rs"]
 mod check_command;
+#[path = "main/chord_lyrics.rs"]
+mod chord_lyrics;
 #[path = "main/demo_source.rs"]
 mod demo_source;
 #[path = "main/integration.rs"]
