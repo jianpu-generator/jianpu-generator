@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 import {
   DEFAULT_CLOUD_FILE_CONTENT,
   renameCloudFile,
@@ -264,14 +264,37 @@ When('the viewer resizes to a phone screen', async () => {
   await viewer().setViewportSize({ width: 390, height: 800 })
 })
 
-Then("the viewer's import button is fully inside the screen", async () => {
-  const button = viewer().locator('.shared-preview-import-btn')
-  await expect(button).toBeVisible()
-  const box = await button.boundingBox()
+async function expectFullyInsideScreen(locator: Locator) {
+  await expect(locator).toBeVisible()
+  const box = await locator.boundingBox()
   const width = viewer().viewportSize()?.width ?? 0
   expect(box).not.toBeNull()
   expect(box?.x ?? -1).toBeGreaterThanOrEqual(0)
   expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width)
+}
+
+Then("the viewer's export button is fully inside the screen", async () => {
+  await expectFullyInsideScreen(
+    viewer().getByRole('button', { name: 'Export', exact: true }),
+  )
+})
+
+Then("the viewer's folder picker is fully inside the screen", async () => {
+  await expectFullyInsideScreen(viewer().getByTestId('shared-folder-switcher'))
+})
+
+Then("the viewer's import button is after the export button", async () => {
+  const exportBox = await viewer()
+    .getByRole('button', { name: 'Export', exact: true })
+    .boundingBox()
+  const importBox = await viewer()
+    .locator('.shared-preview-import-btn')
+    .boundingBox()
+  expect(exportBox).not.toBeNull()
+  expect(importBox).not.toBeNull()
+  expect(importBox?.x ?? 0).toBeGreaterThan(
+    (exportBox?.x ?? 0) + (exportBox?.width ?? 0),
+  )
 })
 
 Then(
