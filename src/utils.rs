@@ -59,6 +59,7 @@ pub fn tokenize_lyrics(content: &str, base_offset: usize) -> Vec<Syllable> {
             result.push(Syllable {
                 text: "-".to_string(),
                 held: false,
+                bracketed: false,
                 span: syllable.span,
             });
         } else {
@@ -93,6 +94,7 @@ fn tokenize_lyrics_raw(content: &str, base_offset: usize) -> Vec<Syllable> {
             raw.push(Syllable {
                 text: trimmed,
                 held: false,
+                bracketed: false,
                 span: Span::new(base_offset + start, base_offset + current_latin_end),
             });
         }
@@ -112,6 +114,7 @@ fn tokenize_lyrics_raw(content: &str, base_offset: usize) -> Vec<Syllable> {
             raw.push(Syllable {
                 text: c.to_string(),
                 held: false,
+                bracketed: false,
                 span: Span::new(base_offset + idx, base_offset + char_end),
             });
         } else if c == '-' {
@@ -120,6 +123,7 @@ fn tokenize_lyrics_raw(content: &str, base_offset: usize) -> Vec<Syllable> {
                 raw.push(Syllable {
                     text: "-".to_string(),
                     held: false,
+                    bracketed: false,
                     span: Span::new(base_offset + idx, base_offset + char_end),
                 });
             } else {

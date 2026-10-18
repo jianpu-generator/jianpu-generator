@@ -13,6 +13,7 @@ mod keyword_enum;
 pub mod ast;
 #[cfg(feature = "midi")]
 mod audio_source;
+mod chord_lyric_placement;
 #[cfg(feature = "cli")]
 pub mod cli;
 pub mod combiner;

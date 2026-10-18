@@ -5,7 +5,7 @@ use crate::compiler::types::{
 use crate::grid_layout::types::Header;
 use crate::render_config::RenderConfig;
 
-fn no_header() -> Header {
+pub(super) fn no_header() -> Header {
     Header {
         title: None,
         subtitle: None,
@@ -22,7 +22,7 @@ fn no_header() -> Header {
     }
 }
 
-fn test_render_config() -> RenderConfig {
+pub(super) fn test_render_config() -> RenderConfig {
     RenderConfig {
         row_height: 24,
         max_measures_per_system: 28,

@@ -182,6 +182,10 @@ pub struct Syllable {
     pub text: String,
     /// True if `-` follows this syllable in the lyrics section.
     pub held: bool,
+    /// True if this syllable was written inside `( )` / `（ ）` in a lyric
+    /// line under a chord part; `text` is then the bracket's inner token
+    /// (e.g. `陪` or the rest `0_`) without the brackets.
+    pub bracketed: bool,
     /// Source byte range of this syllable's own token, absolute within the
     /// whole document — lets the SVG preview map a clicked lyric
     /// syllable back to its source text, mirroring how `ParsedNote::event_span`

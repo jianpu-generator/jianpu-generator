@@ -86,12 +86,38 @@ impl RecoverableError {
         }
     }
 
-    pub fn lyrics_no_notes_track(span: Span, abbrev: &str) -> Self {
+    pub fn lyrics_bracket_not_one_syllable(span: Span, found: usize) -> Self {
         Self {
             span,
-            kind: RecoverableErrorKind::LyricsNoNotesTrack {
-                abbrev: abbrev.to_string(),
-            },
+            kind: RecoverableErrorKind::LyricsBracketNotOneSyllable { found },
+        }
+    }
+
+    pub fn lyrics_bracket_count_mismatch(span: Span, brackets: usize, attacks: usize) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::LyricsBracketCountMismatch { brackets, attacks },
+        }
+    }
+
+    pub fn lyrics_bracket_missing_before_beat_one(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::LyricsBracketMissingBeforeBeatOne,
+        }
+    }
+
+    pub fn lyrics_bracket_unclosed(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::LyricsBracketUnclosed,
+        }
+    }
+
+    pub fn lyrics_bracket_unmatched(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::LyricsBracketUnmatched,
         }
     }
 

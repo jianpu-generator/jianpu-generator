@@ -19,6 +19,8 @@ mod tests_playback_cursor;
 #[path = "tests_lyrics_only_part.rs"]
 mod tests_lyrics_only_part;
 
+#[path = "tests_chord_lyric_click_targets.rs"]
+mod tests_chord_lyric_click_targets;
 #[path = "tests_lyric_click_targets.rs"]
 mod tests_lyric_click_targets;
 

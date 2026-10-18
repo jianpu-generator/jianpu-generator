@@ -1,3 +1,4 @@
+use crate::chord_lyric_placement::place_chord_syllables;
 use crate::compiler::visible_part_indices;
 use crate::error::IrrecoverableError;
 use crate::lyric_slots::measure_lyric_slots;
@@ -83,16 +84,40 @@ pub fn list_lyric_spans_from_source(
                 continue;
             };
             let measure_slots = measure_lyric_slots(&lyrics.target_events, state.entering_tied);
-            spans.extend(measure_slots.slots.iter().zip(&lyrics.syllables).map(
-                |(slot, syllable)| LyricSourceSpan {
-                    source_part_index: part_idx,
-                    part_abbreviation: part_row.name().cloned(),
-                    note_id: state.next_note_id + slot.event_index,
-                    measure_index,
-                    start: syllable.span.start,
-                    end: syllable.span.end,
-                },
-            ));
+            let placements: Vec<(usize, usize)> = if lyrics.targets_chords {
+                place_chord_syllables(
+                    &lyrics.target_events,
+                    &lyrics.syllables,
+                    part_row.slice().resolution_multiplier,
+                )
+                .iter()
+                .map(|placed| (placed.syllable_index, placed.note_id(state.next_note_id)))
+                .collect()
+            } else {
+                measure_slots
+                    .slots
+                    .iter()
+                    .enumerate()
+                    .map(|(syllable_index, slot)| {
+                        (syllable_index, state.next_note_id + slot.event_index)
+                    })
+                    .collect()
+            };
+            spans.extend(
+                placements
+                    .into_iter()
+                    .filter_map(|(syllable_index, note_id)| {
+                        let syllable = lyrics.syllables.get(syllable_index)?;
+                        Some(LyricSourceSpan {
+                            source_part_index: part_idx,
+                            part_abbreviation: part_row.name().cloned(),
+                            note_id,
+                            measure_index,
+                            start: syllable.span.start,
+                            end: syllable.span.end,
+                        })
+                    }),
+            );
             state.next_note_id += lyrics.target_events.len();
             state.entering_tied = measure_slots.exits_tied;
         }

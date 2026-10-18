@@ -6,6 +6,7 @@ use crate::desugar::SourceLine;
 use crate::error::{
     Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned,
 };
+use crate::parser::lyrics::tokenize_bracketed_lyrics;
 use crate::parser::score::token_parser;
 use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics};
 
@@ -68,33 +69,36 @@ fn process_lyrics_column_line(
         is_implicit_fill,
         ..
     } = line;
-    let lyrics_parse_error = if line.is_empty() {
+    let mut lyrics_parse_error = if line.is_empty() {
         Some(RecoverableError::lyrics_line_empty(line_span))
     } else {
         None
     };
-    let chords_target = ctx
+    let is_chords_target = ctx
         .declarations
         .get(track_index)
         .and_then(|decl| match decl.kind {
             PartKind::Lyrics { target_part_index } => ctx.declarations.get(target_part_index),
             _ => None,
         })
-        .filter(|target| target.kind == PartKind::Chords);
-    // Treat empty lines as `_`: no syllables for this measure. Chords take no
-    // lyrics, so a lyric part targeting one never carries syllables.
-    let syllables = if line.is_empty() || line == "_" || chords_target.is_some() {
+        .is_some_and(|target| target.kind == PartKind::Chords);
+    // Treat empty lines as `_`: no syllables for this measure.
+    let syllables = if line.is_empty() || line == "_" {
         Vec::new()
+    } else if is_chords_target {
+        // Under a chord part, `( … )` items carry the timing (see
+        // `grouper::lyrics_pairing`). The first bracket mistake becomes the
+        // measure's lyric error, which also suppresses the bracket tally there
+        // (it would only repeat the same problem); any others are reported
+        // document-wide.
+        let bracketed = tokenize_bracketed_lyrics(line, line_span.start);
+        let mut errors = bracketed.errors.into_iter();
+        lyrics_parse_error = errors.next();
+        ctx.extra_document_errors.extend(errors);
+        bracketed.syllables
     } else {
         tokenize_lyrics(line, line_span.start)
     };
-    if let (Some(target), false) = (chords_target, is_implicit_fill) {
-        ctx.extra_document_errors
-            .push(RecoverableError::lyrics_no_notes_track(
-                line_span,
-                &target.abbreviation,
-            ));
-    }
 
     let acc = ctx.accumulators.get_mut(track_index).ok_or_else(|| {
         invariant(
