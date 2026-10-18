@@ -30,10 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.89.0
+      - uses: jdx/mise-action@v2
         with:
-          components: rustfmt, clippy
-          targets: wasm32-unknown-unknown
+          install_args: rust
       - uses: Swatinem/rust-cache@v2
 
       - name: cargo-fmt
@@ -63,10 +62,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.89.0
-      - uses: taiki-e/install-action@v2
+      - uses: jdx/mise-action@v2
         with:
-          tool: sqruff@0.29.3
+          install_args: github:quarylabs/sqruff
       - name: sqruff
         run: |
           files=$(git ls-files 'live-share-worker/migrations/**/*.sql' 'crates/live-share-worker/queries/**/*.sql')
@@ -76,21 +74,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/cache@v4
         with:
-          version: 10.12.1
-      - uses: actions/setup-node@v4
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+      - uses: jdx/mise-action@v2
         with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
-      - uses: dtolnay/rust-toolchain@1.89.0
-        with:
-          targets: wasm32-unknown-unknown
+          install_args: rust node pnpm cargo:cargo-component
       - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-component
 
       - name: Install dependencies
         working-directory: web
@@ -126,26 +118,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.89.0
+      - uses: jdx/mise-action@v2
         with:
-          targets: wasm32-unknown-unknown
+          install_args: rust node pnpm cargo:worker-build
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: e2e-worker
-      - uses: pnpm/action-setup@v4
+      - uses: actions/cache@v4
         with:
-          version: 10.12.1
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
       - name: Install live-share-worker dependencies
         working-directory: crates/live-share-worker
         run: pnpm install --frozen-lockfile
       - name: Build live-share-worker
         working-directory: crates/live-share-worker
-        run: cargo install worker-build --version 0.8.6 --locked && worker-build --release
+        run: worker-build --release
       - uses: actions/upload-artifact@v4
         with:
           name: live-share-worker-build
@@ -163,21 +152,15 @@ jobs:
         shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/cache@v4
         with:
-          version: 10.12.1
-      - uses: actions/setup-node@v4
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+      - uses: jdx/mise-action@v2
         with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
-      - uses: dtolnay/rust-toolchain@1.89.0
-        with:
-          targets: wasm32-unknown-unknown
+          install_args: rust node pnpm cargo:cargo-component
       - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-component
 
       - name: Install dependencies
         working-directory: web
