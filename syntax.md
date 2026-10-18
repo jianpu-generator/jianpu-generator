@@ -670,6 +670,29 @@ time=4/4 key=C4 bpm=120
 - `lyrics[X]` where `X` is unknown, declared later, a `percussion` part or another lyric part is a `parts_lyrics_invalid_target` error; the lyric part is dropped.
 - A `follow[X]` part never copies lyrics from `X`; give it its own `lyrics[...]` part.
 
+#### Lyrics under a chord part (`lyrics[X]` where `X` is a `chords` part)
+
+Chords are sparse (one attack per chord, `-` only extends), so a chord part's lyrics are **not** paired one-syllable-per-note. Instead the lyric line carries its own timing: each chord attack is paired with one **bracketed item**, and any syllables written outside brackets flow freely between them.
+
+```jianpu-pending
+# parts
+c = chords
+l = lyrics[c]
+
+# score
+[c] 1 -- 7
+[l] (0_) 只剩下鋼琴 （陪）我
+```
+
+- A **bracketed item** is `( … )` or the full-width `（ … ）`; both are accepted on input, and both always render as ASCII `( … )`. It holds exactly one syllable or one rest (`0_`, `0`, … written as in a notes line). Several syllables in one bracket (`（陪我）`) is an error.
+- A rest in brackets is written out and rendered like any other bracketed item; it takes the duration it names and pushes what follows later.
+- **Tally**: in each measure the number of bracketed items must equal the number of chord *attacks*. A chord rest (`0`) and a `-` extension are not attacks. A mismatch is an error, not a warning.
+- **Pairing**: the Nth bracketed item sits at the beat of the Nth chord attack, and the chord symbol is drawn above it.
+- **Unbracketed syllables** (tokenised as in [Lyrics syntax](#lyrics-syntax)) are spread **evenly** between the neighbouring bracketed items; those after the last bracketed item spread evenly up to the bar line. They are not tallied.
+- Unbracketed syllables may precede the first bracketed item only when the first chord attack is **not** on beat 1 (the chord line starts with a rest); they then spread evenly from the bar start. Otherwise they are an error; use a leading `(0_)` to delay the first syllable instead.
+- **Layout**: the lyric row decides the measure's width (there are normally more syllables than chord attacks); the chord row adapts to it.
+- The `_` no-lyrics marker still means zero syllables for the measure, and skips the tally.
+
 #### Migrating from positional lyric lines
 
 Earlier versions attached a bare line to the `[Key]` line above it. That form is no longer supported (a bare line is a `score_line_missing_key_prefix` error). Run `jianpu migrate-lyrics <file>...` (or pipe a source through it on stdin) to rewrite a file: it adds one `lyrics[...]` part per verse position a part used (`Melody lyrics [Mv1]` for one verse, `Melody verse 1 [Mv1]`, `Melody verse 2 [Mv2]`, … for several) and prefixes each bare line with its key. `scripts/migrate-lyrics-d1.py` does the same for the `docs` and `files` tables of the production D1 database.
