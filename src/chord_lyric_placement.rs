@@ -13,9 +13,7 @@
 
 use crate::ast::grouped::NoteEvent;
 use crate::ast::parsed::Syllable;
-use crate::error::Span;
 use crate::lyric_slots::{chord_attacks, ChordAttack};
-use crate::parser::score::timed_parser::{parse_duration_suffixes, NoteHead};
 
 /// What a placed syllable is attached to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -82,7 +80,6 @@ struct MeasureLine<'a> {
     /// Indices into `syllables` of the bracketed items, in order.
     bracket_indices: Vec<usize>,
     measure_end: u32,
-    multiplier: u32,
 }
 
 impl MeasureLine<'_> {
@@ -130,16 +127,6 @@ impl MeasureLine<'_> {
         let next_bracket = self.bracket_indices.get(ordinal + 1).copied();
         let run_end_column =
             next_bracket.map_or(self.measure_end, |_| self.bracket_column(ordinal + 1));
-        let pushed = column
-            + self.syllables.get(bracket_index).map_or(0, |syllable| {
-                rest_duration(&syllable.text) * self.multiplier
-            });
-        // A rest that would swallow the whole gap pushes nothing.
-        let run_start = if pushed < run_end_column {
-            pushed
-        } else {
-            column
-        };
         let run_len = next_bracket.unwrap_or(self.syllables.len()) - bracket_index - 1;
         std::iter::once(Located {
             syllable_index: bracket_index,
@@ -147,7 +134,7 @@ impl MeasureLine<'_> {
             chord_event: self.attack_of(ordinal).map(|attack| attack.event_index),
         })
         .chain(
-            spread(run_start, run_end_column, run_len, false)
+            spread(column, run_end_column, run_len, false)
                 .into_iter()
                 .enumerate()
                 .map(|(offset, column)| Located {
@@ -161,12 +148,10 @@ impl MeasureLine<'_> {
 }
 
 /// Places every syllable of `syllables` (a chord-lyric line, in order).
-/// `events` are the chord part's measure events; `multiplier` is the measure's
-/// resolution multiplier (needed to scale a rest bracket's named duration).
+/// `events` are the chord part's measure events.
 pub(crate) fn place_chord_syllables(
     events: &[NoteEvent],
     syllables: &[Syllable],
-    multiplier: u32,
 ) -> Vec<PlacedSyllable> {
     let line = MeasureLine {
         syllables,
@@ -178,7 +163,6 @@ pub(crate) fn place_chord_syllables(
             .map(|(index, _)| index)
             .collect(),
         measure_end: events.iter().map(NoteEvent::duration).sum(),
-        multiplier,
     };
     let mut located: Vec<Located> = line
         .pickup()
@@ -226,18 +210,6 @@ fn spread(start: u32, end: u32, count: usize, lead_in: bool) -> Vec<u32> {
             start + u32::try_from(rounded).unwrap_or(0)
         })
         .collect()
-}
-
-/// The duration a rest bracket (`0`, `0_`, `0=`, `0-`, `0.` ...) names, in
-/// unscaled columns, read by the notes parser's own duration rules. `0` for a
-/// bracket that isn't a rest.
-fn rest_duration(text: &str) -> u32 {
-    let chars: Vec<char> = text.chars().collect();
-    if chars.first() != Some(&'0') {
-        return 0;
-    }
-    parse_duration_suffixes::<NoteHead>(&chars, 0, 1, true, &Span::new(0, text.len()))
-        .map_or(0, |parsed| parsed.duration)
 }
 
 #[cfg(test)]

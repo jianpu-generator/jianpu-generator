@@ -29,7 +29,7 @@ pub(super) fn compile_part_slice(
     tuplet_spans: &mut Vec<TupletSpan>,
 ) -> PartSliceResult {
     if let Some(lyrics) = &slice.lyrics {
-        return compile_lyrics_slice(lyrics, slice.resolution_multiplier, &input);
+        return compile_lyrics_slice(lyrics, &input);
     }
     let mut elements: Vec<ColumnElement> = Vec::new();
     let mut beam_buf: Vec<BeamEntry> = Vec::new();
@@ -97,37 +97,29 @@ pub(super) fn compile_part_slice(
 /// beams or tuplets of its own, and its note ids count the target's events the
 /// same way the target's own compile does, so `(part, note_id)` of a syllable
 /// names the note it is sung on.
-fn compile_lyrics_slice(
-    lyrics: &LyricsSlice,
-    resolution_multiplier: u32,
-    input: &PartSliceInput,
-) -> PartSliceResult {
+fn compile_lyrics_slice(lyrics: &LyricsSlice, input: &PartSliceInput) -> PartSliceResult {
     let measure_slots = measure_lyric_slots(&lyrics.target_events, input.prev_tie);
     let syllable_elements: Vec<ColumnElement> = if lyrics.targets_chords {
         // Under a chord part the line places itself: brackets at the chord
         // attacks, other syllables spread between (see `chord_lyric_placement`).
-        place_chord_syllables(
-            &lyrics.target_events,
-            &lyrics.syllables,
-            resolution_multiplier,
-        )
-        .into_iter()
-        .filter_map(|placed| {
-            let syllable = lyrics.syllables.get(placed.syllable_index)?;
-            Some(ColumnElement {
-                column: placed.column,
-                content: ElementContent::Lyric {
-                    text: if syllable.bracketed {
-                        format!("({})", syllable.text)
-                    } else {
-                        syllable.text.clone()
+        place_chord_syllables(&lyrics.target_events, &lyrics.syllables)
+            .into_iter()
+            .filter_map(|placed| {
+                let syllable = lyrics.syllables.get(placed.syllable_index)?;
+                Some(ColumnElement {
+                    column: placed.column,
+                    content: ElementContent::Lyric {
+                        text: if syllable.bracketed {
+                            format!("({})", syllable.text)
+                        } else {
+                            syllable.text.clone()
+                        },
+                        note_id: placed.note_id(input.next_note_id),
                     },
-                    note_id: placed.note_id(input.next_note_id),
-                },
-                note_id: None,
+                    note_id: None,
+                })
             })
-        })
-        .collect()
+            .collect()
     } else {
         measure_slots
             .slots

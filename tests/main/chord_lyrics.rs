@@ -78,17 +78,17 @@ fn assert_one_error(output: &jianpu_generator::RenderOutput) {
 
 #[test]
 fn happy_path_compiles_cleanly_and_renders_brackets_as_ascii() {
-    let output = render("1 -- 7", "(0_) 只剩下鋼琴 （陪）我");
+    let output = render("1 -- 7", "(~) 只剩下鋼琴 （陪）我");
     assert_no_diagnostics(&output);
     let svg = output.svgs.concat();
-    assert!(svg.contains("(0_)"), "rest bracket must be drawn");
+    assert!(svg.contains("(~)"), "bracket must be drawn");
     assert!(svg.contains("(陪)"), "full-width bracket must render ASCII");
     assert!(!svg.contains('（') && !svg.contains('）'));
 }
 
 #[test]
 fn ascii_brackets_are_accepted() {
-    let output = render("1 -- 7", "(0_) 只剩下鋼琴 (陪) 我");
+    let output = render("1 -- 7", "(~) 只剩下鋼琴 (陪) 我");
     assert_no_diagnostics(&output);
     assert!(output.svgs.concat().contains("(陪)"));
 }
@@ -129,7 +129,7 @@ fn chord_rest_is_not_an_attack_so_matching_brackets_are_fine() {
 #[test]
 fn every_syllable_gets_a_source_span_and_a_distinct_note_id() {
     let spans = jianpu_generator::lyric_spans::list_lyric_spans_from_source(
-        &source("1 - 4 -", "(0_) 只剩下 (陪) 我"),
+        &source("1 - 4 -", "(~) 只剩下 (陪) 我"),
         "test.jianpu",
         None,
     )
