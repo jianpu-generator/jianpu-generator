@@ -37,7 +37,7 @@ jobs:
       # to the wasm bundle `cf` expects.
       - uses: jdx/mise-action@v2
         with:
-          install_args: rust node pnpm cargo:worker-build
+          install_args: rust node pnpm cargo-binstall cargo:worker-build
 
       - name: Build worker
         working-directory: crates/live-share-worker
