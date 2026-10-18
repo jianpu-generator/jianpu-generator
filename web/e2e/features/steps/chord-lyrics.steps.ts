@@ -111,3 +111,26 @@ Then(
     expect(boxes.chord.y).toBeLessThan(boxes.bracket.y)
   },
 )
+
+Then(
+  'the chord-lyrics preview draws {int} rest glyph with {int} underline',
+  async ({ page }, rests: number, underlines: number) => {
+    const counts = await page.evaluate(() => {
+      const count = (variant: string) =>
+        document.querySelectorAll(
+          `.preview-page svg [data-variant="${variant}"]`,
+        ).length
+      // Underlines are the preview's horizontal, 1pt-stroke lines (the
+      // preview draws lines without a data-variant).
+      const underlines = Array.from(
+        document.querySelectorAll('.preview-page svg line'),
+      ).filter(
+        (line) =>
+          line.getAttribute('y1') === line.getAttribute('y2') &&
+          line.getAttribute('stroke-width') === '1',
+      ).length
+      return { rests: count('rest'), underlines }
+    })
+    expect(counts).toEqual({ rests, underlines })
+  },
+)

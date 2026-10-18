@@ -11,7 +11,9 @@ Feature: Lyrics under a chord part
     Given a chord-lyrics score with chords "1 -- 7" and lyrics "(0_) 只剩下鋼琴 （陪）我"
     When the chord-lyrics score is rendered
     Then the chord-lyrics score has no error
-    And the chord-lyrics preview shows "(0_)"
+    And the chord-lyrics preview shows "(0)"
+    And the chord-lyrics preview does not show "(0_)"
+    And the chord-lyrics preview draws 1 rest glyph with 1 underline
     And the chord-lyrics preview shows "(陪)"
     And the chord "7" is drawn above the bracket "(陪)"
 

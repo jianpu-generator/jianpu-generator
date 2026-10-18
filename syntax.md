@@ -685,7 +685,7 @@ l = lyrics[c]
 ```
 
 - A **bracketed item** is `( … )` or the full-width `（ … ）`; both are accepted on input, and both always render as ASCII `( … )`. It holds exactly one syllable or one rest (`0_`, `0`, … written as in a notes line). Several syllables in one bracket (`（陪我）`) is an error.
-- A rest in brackets is written out and rendered like any other bracketed item; it takes the duration it names and pushes what follows later.
+- A rest in brackets is drawn exactly like the same rest in a notes line (a `0` with its underlines, dots or dashes: `0_`, `0=`, `0.`, `0-`, …) wrapped in ASCII brackets, not as the literal text `(0_)`. It takes the duration it names and pushes what follows later.
 - **Tally**: in each measure the number of bracketed items must equal the number of chord *attacks*. A chord rest (`0`) and a `-` extension are not attacks. A mismatch is an error, not a warning.
 - **Pairing**: the Nth bracketed item sits at the beat of the Nth chord attack, and the chord symbol is drawn above it.
 - **Unbracketed syllables** (tokenised as in [Lyrics syntax](#lyrics-syntax)) are spread **evenly** between the neighbouring bracketed items; those after the last bracketed item spread evenly up to the bar line. They are not tallied.
