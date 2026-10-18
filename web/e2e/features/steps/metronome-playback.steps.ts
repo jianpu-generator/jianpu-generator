@@ -30,6 +30,14 @@ Then('the metronome toggle is on', async ({ page }) => {
   )
 })
 
+Then('the metronome toggle is disabled', async ({ page }) => {
+  await expect(page.getByTestId('metronome-toggle')).toBeDisabled()
+})
+
+Then('the metronome toggle is enabled again', async ({ page }) => {
+  await expect(page.getByTestId('metronome-toggle')).toBeEnabled()
+})
+
 When('I click the metronome toggle', async ({ page }) => {
   await page.getByTestId('metronome-toggle').click()
 })

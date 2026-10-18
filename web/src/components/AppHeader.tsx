@@ -253,7 +253,9 @@ export function AppHeader({
       {audioAvailable && (
         <MetronomeToggleButton
           enabled={metronomeEnabled}
-          disabled={measureAudioGenerating || !soundfontReady}
+          disabled={
+            measureAudioGenerating || measureAudioPlaying || !soundfontReady
+          }
           onChange={onMetronomeEnabledChange}
         />
       )}

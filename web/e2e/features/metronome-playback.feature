@@ -16,4 +16,6 @@ Feature: Metronome during playback
     When I click the metronome toggle
     And I click the Play All button
     Then the Play All button shows the playing state
+    And the metronome toggle is disabled
     And the Play All button eventually stops showing the playing state
+    And the metronome toggle is enabled again
