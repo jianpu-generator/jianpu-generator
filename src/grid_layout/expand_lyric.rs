@@ -1,13 +1,15 @@
 //! Lyric verse row expansion — split out of `expand.rs` to keep it under the
 //! max-file-lines lint.
 
-use crate::compiler::types::{BarLineKind, ElementContent, MeasureBlock, MULTI_MEASURE_REST_WIDTH};
+use crate::compiler::types::{
+    BarLineKind, ElementContent, LyricRest, MeasureBlock, MULTI_MEASURE_REST_WIDTH,
+};
 use crate::coordinate_resolver::LyricFontSizes;
 use crate::grid_layout::layout::{
     block_column_width, lyric_row_height, LyricSizing, LABEL_COLS, MUSIC_START_COL,
 };
 use crate::grid_layout::types::{
-    GridContent, GridElement, GridRow, HAlign, MeasureColumnLayout, VAlign,
+    GridContent, GridElement, GridRow, HAlign, LyricRestGlyph, MeasureColumnLayout, VAlign,
 };
 
 pub(crate) struct LyricPartParams<'a> {
@@ -89,6 +91,22 @@ fn push_leading_bar_line(row: &mut GridRow, part_idx: usize, bar_height: f32) {
     });
 }
 
+/// A rest bracket's underlines hang under its `0` exactly as they do under a
+/// notes-line rest's: the first one `0.075 * base` below the bottom of the
+/// note-head band (`base` plus the notes' vertical padding, centred on the
+/// row), each further one `0.15 * base` lower (see `note_part_sub_row_heights`).
+fn lyric_rest_glyph(rest: &LyricRest, params: &LyricPartParams<'_>) -> LyricRestGlyph {
+    let head_half = (params.base + params.lyric_sizing.notes_vertical_padding_pt) / 2.0;
+    LyricRestGlyph {
+        dotted: rest.dotted,
+        double_dotted: rest.double_dotted,
+        underline_y_offsets_pt: (0..rest.underline_count)
+            .map(|level| head_half + params.base * (0.075 + 0.15 * level as f32))
+            .collect(),
+        dash_offsets: rest.dash_offsets.clone(),
+    }
+}
+
 pub(crate) fn expand_lyric_part(system: &[MeasureBlock], params: &LyricPartParams<'_>) -> GridRow {
     let part_idx = params.part_idx;
     let column_count = params.column_count;
@@ -114,7 +132,11 @@ pub(crate) fn expand_lyric_part(system: &[MeasureBlock], params: &LyricPartParam
         if let Some(part_row) = block.rows.get(part_idx) {
             for el in &part_row.elements {
                 match &el.content {
-                    ElementContent::Lyric { text, note_id } => {
+                    ElementContent::Lyric {
+                        text,
+                        note_id,
+                        rest,
+                    } => {
                         row.elements.push(GridElement {
                             column: MUSIC_START_COL + measure_col_offset + el.column,
                             column_span: 1,
@@ -124,6 +146,7 @@ pub(crate) fn expand_lyric_part(system: &[MeasureBlock], params: &LyricPartParam
                                 text: text.clone(),
                                 source_part_index: part_row.source_part_index,
                                 note_id: *note_id,
+                                rest: rest.as_ref().map(|rest| lyric_rest_glyph(rest, params)),
                             },
                         });
                     }

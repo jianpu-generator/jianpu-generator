@@ -1,5 +1,7 @@
 use super::beam::{flush_beam_buffer, BeamEntry};
+use super::lyric_rest::lyric_rest;
 use super::part_slice_unit::{compile_unit, CompiledUnit, PartState};
+use super::rest_shape::{rest_dash_offsets, rest_underline_count};
 use super::slur_chains::{extend_note_chains, PendingSlurOpen, SlurChainContext, SlurKey};
 use super::timed_unit::TimedUnit;
 use super::tuplet_spans::{finish_tuplet_spans, record_tuplet_tag, TupletSpanContext};
@@ -114,15 +116,20 @@ fn compile_lyrics_slice(
         .into_iter()
         .filter_map(|placed| {
             let syllable = lyrics.syllables.get(placed.syllable_index)?;
+            let rest = syllable
+                .bracketed
+                .then(|| lyric_rest(&syllable.text, resolution_multiplier))
+                .flatten();
             Some(ColumnElement {
                 column: placed.column,
                 content: ElementContent::Lyric {
-                    text: if syllable.bracketed {
-                        format!("({})", syllable.text)
-                    } else {
-                        syllable.text.clone()
+                    text: match (&rest, syllable.bracketed) {
+                        (Some(_), _) => "(0)".to_string(),
+                        (None, true) => format!("({})", syllable.text),
+                        (None, false) => syllable.text.clone(),
                     },
                     note_id: placed.note_id(input.next_note_id),
+                    rest,
                 },
                 note_id: None,
             })
@@ -138,6 +145,7 @@ fn compile_lyrics_slice(
                 content: ElementContent::Lyric {
                     text: syllable.text.clone(),
                     note_id: input.next_note_id + slot.event_index,
+                    rest: None,
                 },
                 note_id: None,
             })
@@ -289,13 +297,7 @@ fn compile_rest(
     note_id: usize,
 ) {
     let multiplier = state.multiplier;
-    let underline_count = if rest.duration == multiplier {
-        2
-    } else if rest.duration == 2 * multiplier {
-        1
-    } else {
-        0
-    };
+    let underline_count = rest_underline_count(rest.duration, multiplier);
 
     if underline_count == 0 {
         flush_beam_buffer(state.beam_buf, state.elements);
@@ -346,21 +348,11 @@ fn compile_rest(
         });
     }
 
-    // See the matching comment in `part_slice_unit::compile_unit`: a dotted (or
-    // double-dotted) rest's own written duration is one full dotted beat, so its
-    // `-.`/`-..` extensions land on 6-/7-quarter-beat boundaries rather than the
-    // 4-quarter-beat ones a plain `-` uses.
-    let beat = if rest.double_dotted {
-        7 * multiplier
-    } else if rest.dotted {
-        6 * multiplier
-    } else {
-        4 * multiplier
-    };
     let rest_col = *state.col;
-    for dash_col in (rest_col + beat..rest_col + rest.duration).step_by(beat as usize) {
+    for dash_offset in rest_dash_offsets(rest.duration, rest.dotted, rest.double_dotted, multiplier)
+    {
         state.elements.push(ColumnElement {
-            column: dash_col,
+            column: rest_col + dash_offset,
             content: ElementContent::NoteDash {
                 dotted: rest.dotted,
                 double_dotted: rest.double_dotted,

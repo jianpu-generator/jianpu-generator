@@ -81,7 +81,14 @@ fn happy_path_compiles_cleanly_and_renders_brackets_as_ascii() {
     let output = render("1 -- 7", "(0_) 只剩下鋼琴 （陪）我");
     assert_no_diagnostics(&output);
     let svg = output.svgs.concat();
-    assert!(svg.contains("(0_)"), "rest bracket must be drawn");
+    assert!(
+        !svg.contains("(0_)"),
+        "rest bracket is drawn as a rest glyph, not literal text"
+    );
+    assert!(
+        svg.contains("data-variant=\"rest\""),
+        "rest bracket must be drawn"
+    );
     assert!(svg.contains("(陪)"), "full-width bracket must render ASCII");
     assert!(!svg.contains('（') && !svg.contains('）'));
 }

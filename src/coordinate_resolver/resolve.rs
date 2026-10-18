@@ -10,6 +10,7 @@ use super::content_conversion::grid_to_absolute;
 use super::directive_line_conversion::DirectiveLineFontSizes;
 use super::flush_left::{flush_left_padding, is_flush_left_glyph};
 use super::highlights::{resolve_error_highlights, resolve_measure_highlights};
+use super::lyric_rest::resolve_lyric_rest;
 use super::post_arc_conversion::to_post_arc_content;
 use super::rest_run::{resolve_implicit_fill_rest, resolve_multi_measure_rest};
 use super::span_marking::resolve_span_marking;
@@ -273,7 +274,17 @@ fn resolve_page(
         row_tops.push(row_y);
         let geometry = row.column_geometry(usable_width, part_label_width_pt);
         for el in &row.elements {
-            if let Some(element) = resolve_row_element(el, row, row_y, &geometry, row_config)? {
+            if matches!(el.content, GridContent::LyricSyllable { rest: Some(_), .. }) {
+                // Lyric elements are always centred vertically in their row.
+                elements.extend(resolve_lyric_rest(
+                    el,
+                    row_y + row.height_pt * 0.5,
+                    &geometry,
+                    row_config,
+                ));
+            } else if let Some(element) =
+                resolve_row_element(el, row, row_y, &geometry, row_config)?
+            {
                 elements.push(element);
             }
         }

@@ -127,6 +127,7 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
                     content: ElementContent::Lyric {
                         text: "la".to_string(),
                         note_id: 0,
+                        rest: None,
                     },
                     note_id: None,
                 }],

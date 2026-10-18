@@ -2,6 +2,8 @@ pub mod types;
 pub use types::*;
 
 mod beam;
+mod lyric_rest;
+mod rest_shape;
 
 mod part_slice;
 use part_slice::{compile_part_slice, PartSliceInput};
@@ -292,6 +294,8 @@ mod tests_blank_lyric_rows;
 mod tests_directive_mid_score;
 #[cfg(test)]
 mod tests_implicit_fill_rest;
+#[cfg(test)]
+mod tests_lyric_rest;
 #[cfg(test)]
 mod tests_lyrics_and_diagnostics;
 #[cfg(test)]

@@ -56,3 +56,14 @@ fn rest_duration_reads_notes_line_suffixes() {
 fn rest_duration_of_a_syllable_is_zero() {
     assert_eq!(rest_duration("陪"), 0);
 }
+
+#[test]
+fn parse_rest_bracket_reads_dots_like_a_notes_line() {
+    let dotted = parse_rest_bracket("0_.").expect("a rest");
+    assert_eq!(dotted.duration, 3);
+    assert!(dotted.dotted && !dotted.double_dotted);
+    let double = parse_rest_bracket("0..").expect("a rest");
+    assert_eq!(double.duration, 7);
+    assert!(double.double_dotted);
+    assert_eq!(parse_rest_bracket("陪"), None);
+}

@@ -164,6 +164,10 @@ pub enum ElementContent {
         /// with `source_part_index` to give each syllable a click target
         /// distinct from its note's (see `renderer::new_types::Tag::Lyric`).
         note_id: usize,
+        /// `Some` when the item is a rest bracket (`(0_)`): the layout then
+        /// draws `(`, the notes-line rest and `)` instead of `text` (which
+        /// stays the plain `(0)` the column is sized and clicked by).
+        rest: Option<LyricRest>,
     },
     /// A lyric part's full text line, adurational and not tied to any note,
     /// rendered as a single left-aligned block spanning the whole measure
@@ -174,6 +178,18 @@ pub enum ElementContent {
     LyricLine {
         text: String,
     },
+}
+
+/// How a rest bracket in a chord-lyric line is drawn: the same shape a rest
+/// has in a notes line (see `compiler::rest_shape`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LyricRest {
+    pub dotted: bool,
+    pub double_dotted: bool,
+    /// Underlines under the `0` (0, 1 or 2).
+    pub underline_count: u32,
+    /// Column offsets, from the rest's column, of the dashes extending it.
+    pub dash_offsets: Vec<u32>,
 }
 
 /// The full logical extent of one slur or tie arc across measures.

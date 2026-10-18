@@ -74,6 +74,7 @@ fn to_post_arc_text_content(content: &GridContent) -> Option<PostArcGridContent>
             text,
             source_part_index,
             note_id,
+            ..
         } => Some(PostArcGridContent::LyricSyllable {
             text: text.clone(),
             source_part_index: *source_part_index,

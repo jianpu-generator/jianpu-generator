@@ -105,6 +105,20 @@ pub struct GridRow {
 mod geometry;
 pub use geometry::ColumnGeometry;
 
+/// A rest bracket in a chord-lyric line, as the resolver draws it: the rest's
+/// own glyph, dots, underlines and dashes (like a notes-line rest) between
+/// ASCII brackets.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LyricRestGlyph {
+    pub dotted: bool,
+    pub double_dotted: bool,
+    /// Vertical offset, from the row's centre, of each underline (level 0
+    /// first) — the offsets the note-head band gives a notes-line rest's.
+    pub underline_y_offsets_pt: Vec<f32>,
+    /// Column offsets, from the rest's column, of its dashes.
+    pub dash_offsets: Vec<u32>,
+}
+
 #[derive(Debug, Clone)]
 pub struct GridElement {
     pub column: u32,
@@ -214,6 +228,9 @@ pub enum GridContent {
         text: String,
         source_part_index: usize,
         note_id: usize,
+        /// `Some` for a rest bracket: the resolver draws `(`, the rest and
+        /// `)` rather than `text` (see [`LyricRestGlyph`]).
+        rest: Option<LyricRestGlyph>,
     },
     /// One verse's full text line for a standalone `lyrics` part, rendered as
     /// a single left-aligned block spanning the whole measure (via

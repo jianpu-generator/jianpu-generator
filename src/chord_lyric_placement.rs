@@ -228,16 +228,35 @@ fn spread(start: u32, end: u32, count: usize, lead_in: bool) -> Vec<u32> {
         .collect()
 }
 
-/// The duration a rest bracket (`0`, `0_`, `0=`, `0-`, `0.` ...) names, in
-/// unscaled columns, read by the notes parser's own duration rules. `0` for a
-/// bracket that isn't a rest.
-fn rest_duration(text: &str) -> u32 {
+/// What a rest bracket (`0`, `0_`, `0=`, `0-`, `0.` ...) names, read by the
+/// notes parser's own duration rules. `duration` is in unscaled columns.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct RestBracket {
+    pub(crate) duration: u32,
+    pub(crate) dotted: bool,
+    pub(crate) double_dotted: bool,
+}
+
+/// Parses a bracketed item as a rest (`0` followed by the notes line's
+/// duration suffixes); `None` for an ordinary syllable.
+pub(crate) fn parse_rest_bracket(text: &str) -> Option<RestBracket> {
     let chars: Vec<char> = text.chars().collect();
     if chars.first() != Some(&'0') {
-        return 0;
+        return None;
     }
     parse_duration_suffixes::<NoteHead>(&chars, 0, 1, true, &Span::new(0, text.len()))
-        .map_or(0, |parsed| parsed.duration)
+        .ok()
+        .map(|parsed| RestBracket {
+            duration: parsed.duration,
+            dotted: parsed.dotted,
+            double_dotted: parsed.double_dotted,
+        })
+}
+
+/// The duration a rest bracket names, in unscaled columns; `0` for a bracket
+/// that isn't a rest.
+fn rest_duration(text: &str) -> u32 {
+    parse_rest_bracket(text).map_or(0, |rest| rest.duration)
 }
 
 #[cfg(test)]
