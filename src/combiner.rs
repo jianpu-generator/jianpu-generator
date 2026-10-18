@@ -199,6 +199,7 @@ fn build_part_rows(
                                     .measures
                                     .get(measure_idx)
                                     .map_or_else(Vec::new, |measure| measure.notes.events.clone()),
+                                targets_chords: target.kind == PartKind::Chords,
                                 syllables: measure.paired_lyrics.clone(),
                             }
                         })

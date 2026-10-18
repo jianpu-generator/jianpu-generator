@@ -116,6 +116,9 @@ pub struct LyricsSlice {
     pub target_name: String,
     /// The target's events this measure, which fix where syllables sit.
     pub target_events: Vec<NoteEvent>,
+    /// The target is a `chords` part: syllables are then placed by
+    /// `chord_lyric_placement` instead of one per note slot.
+    pub targets_chords: bool,
     /// Tie-aware syllables, one per lyric slot of `target_events` (see
     /// `lyric_slots::measure_lyric_slots`); empty for no lyrics (`_`). Under a
     /// chord target there are no such slots: these are the line's syllables

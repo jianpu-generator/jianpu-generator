@@ -77,7 +77,6 @@ fn assert_one_error(output: &jianpu_generator::RenderOutput) {
 }
 
 #[test]
-#[ignore = "pending: bracketed lyrics are not laid out or drawn yet (task 5/6)"]
 fn happy_path_compiles_cleanly_and_renders_brackets_as_ascii() {
     let output = render("1 -- 7", "(0_) 只剩下鋼琴 （陪）我");
     assert_no_diagnostics(&output);
@@ -88,7 +87,6 @@ fn happy_path_compiles_cleanly_and_renders_brackets_as_ascii() {
 }
 
 #[test]
-#[ignore = "pending: bracketed lyrics are not laid out or drawn yet (task 5/6)"]
 fn ascii_brackets_are_accepted() {
     let output = render("1 -- 7", "(0_) 只剩下鋼琴 (陪) 我");
     assert_no_diagnostics(&output);
@@ -126,4 +124,41 @@ fn chord_rest_is_not_an_attack_so_extra_bracket_is_an_error() {
 #[test]
 fn chord_rest_is_not_an_attack_so_matching_brackets_are_fine() {
     assert_no_diagnostics(&render("1 0 4 -", "(a) (b)"));
+}
+
+#[test]
+fn every_syllable_gets_a_source_span_and_a_distinct_note_id() {
+    let spans = jianpu_generator::lyric_spans::list_lyric_spans_from_source(
+        &source("1 - 4 -", "(0_) 只剩下 (陪) 我"),
+        "test.jianpu",
+        None,
+    )
+    .unwrap_or_else(|err| panic!("{}", err.message()))
+    .spans;
+    assert_eq!(spans.len(), 6);
+    let mut ids: Vec<usize> = spans.iter().map(|span| span.note_id).collect();
+    ids.sort_unstable();
+    ids.dedup();
+    assert_eq!(ids.len(), 6, "click targets are keyed by note id");
+}
+
+#[test]
+fn bracketed_syllables_share_their_chords_note_ids() {
+    let spans = jianpu_generator::lyric_spans::list_lyric_spans_from_source(
+        &source("1 - 4 -", "(啦) 啦 (啦)"),
+        "test.jianpu",
+        None,
+    )
+    .unwrap_or_else(|err| panic!("{}", err.message()))
+    .spans;
+    let bracketed_ids: Vec<usize> = spans.iter().map(|span| span.note_id).collect();
+    // Chord events are note ids 0 and 1; the middle syllable is floating.
+    assert_eq!(bracketed_ids.first(), Some(&0));
+    assert_eq!(bracketed_ids.last(), Some(&1));
+}
+
+#[test]
+fn lyrics_with_many_syllables_between_chords_compile_cleanly() {
+    let output = render("1 - 4 -", "(a) b c d e f g (h) i j");
+    assert_no_diagnostics(&output);
 }

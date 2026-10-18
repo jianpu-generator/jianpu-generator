@@ -120,9 +120,33 @@ fn compute_global_resolution_multipliers(tracks: &[ParsedTrack]) -> Vec<u32> {
                     }
                     ParsedMeasureSlot::EmptyNote { .. } => None,
                 })
+                .chain(chord_lyrics_multiplier(tracks, slot_index))
                 .fold(1, crate::tuplet::lcm)
         })
         .collect()
+}
+
+/// The multiplier measure `slot_index` needs for lyric lines under a chord part:
+/// room for their unbracketed syllables between chord attacks (see
+/// `chord_lyric_placement`). `None` when no such line has any.
+fn chord_lyrics_multiplier(tracks: &[ParsedTrack], slot_index: usize) -> Option<u32> {
+    tracks
+        .iter()
+        .filter_map(|track| match track {
+            ParsedTrack::Timed(part) => match part.kind {
+                PartKind::Lyrics { target_part_index }
+                    if matches!(
+                        tracks.get(target_part_index),
+                        Some(ParsedTrack::Timed(target)) if target.kind == PartKind::Chords
+                    ) =>
+                {
+                    part.lyrics.as_ref()?.measure_syllables.get(slot_index)
+                }
+                _ => None,
+            },
+        })
+        .map(|syllables| crate::chord_lyric_placement::unbracketed_resolution_multiplier(syllables))
+        .reduce(crate::tuplet::lcm)
 }
 
 /// The thirteen `TextStyle` fields of `Metadata`, resolved separately from
