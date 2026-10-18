@@ -1,4 +1,5 @@
 use super::*;
+use crate::error::Span;
 
 fn syllable(text: &str, bracketed: bool) -> Syllable {
     Syllable {
@@ -20,7 +21,7 @@ fn multiplier_is_one_without_unbracketed_syllables() {
 #[test]
 fn multiplier_leaves_room_for_every_unbracketed_syllable() {
     let line = [
-        syllable("0_", true),
+        syllable("~", true),
         syllable("a", false),
         syllable("b", false),
         syllable("c", false),
@@ -41,18 +42,4 @@ fn spread_lead_in_starts_at_the_bar_start() {
 #[test]
 fn spread_of_nothing_is_empty() {
     assert_eq!(spread(0, 8, 0, false), Vec::<u32>::new());
-}
-
-#[test]
-fn rest_duration_reads_notes_line_suffixes() {
-    assert_eq!(rest_duration("0"), 4);
-    assert_eq!(rest_duration("0_"), 2);
-    assert_eq!(rest_duration("0="), 1);
-    assert_eq!(rest_duration("0-"), 8);
-    assert_eq!(rest_duration("0."), 6);
-}
-
-#[test]
-fn rest_duration_of_a_syllable_is_zero() {
-    assert_eq!(rest_duration("陪"), 0);
 }

@@ -85,14 +85,10 @@ pub fn list_lyric_spans_from_source(
             };
             let measure_slots = measure_lyric_slots(&lyrics.target_events, state.entering_tied);
             let placements: Vec<(usize, usize)> = if lyrics.targets_chords {
-                place_chord_syllables(
-                    &lyrics.target_events,
-                    &lyrics.syllables,
-                    part_row.slice().resolution_multiplier,
-                )
-                .iter()
-                .map(|placed| (placed.syllable_index, placed.note_id(state.next_note_id)))
-                .collect()
+                place_chord_syllables(&lyrics.target_events, &lyrics.syllables)
+                    .iter()
+                    .map(|placed| (placed.syllable_index, placed.note_id(state.next_note_id)))
+                    .collect()
             } else {
                 measure_slots
                     .slots

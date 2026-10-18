@@ -681,15 +681,14 @@ l = lyrics[c]
 
 # score
 [c] 1 -- 7
-[l] (0_) 只剩下鋼琴 （陪）我
+[l] (~) 只剩下鋼琴 （陪）我
 ```
 
-- A **bracketed item** is `( … )` or the full-width `（ … ）`; both are accepted on input, and both always render as ASCII `( … )`. It holds exactly one syllable or one rest (`0_`, `0`, … written as in a notes line). Several syllables in one bracket (`（陪我）`) is an error.
-- A rest in brackets is written out and rendered like any other bracketed item; it takes the duration it names and pushes what follows later.
+- A **bracketed item** is `( … )` or the full-width `（ … ）`; both are accepted on input, and both always render as ASCII `( … )`. It holds exactly one syllable. Several syllables in one bracket (`（陪我）`) is an error.
 - **Tally**: in each measure the number of bracketed items must equal the number of chord *attacks*. A chord rest (`0`) and a `-` extension are not attacks. A mismatch is an error, not a warning.
 - **Pairing**: the Nth bracketed item sits at the beat of the Nth chord attack, and the chord symbol is drawn above it.
 - **Unbracketed syllables** (tokenised as in [Lyrics syntax](#lyrics-syntax)) are spread **evenly** between the neighbouring bracketed items; those after the last bracketed item spread evenly up to the bar line. They are not tallied.
-- Unbracketed syllables may precede the first bracketed item only when the first chord attack is **not** on beat 1 (the chord line starts with a rest); they then spread evenly from the bar start. Otherwise they are an error; use a leading `(0_)` to delay the first syllable instead.
+- Unbracketed syllables may precede the first bracketed item only when the first chord attack is **not** on beat 1 (the chord line starts with a rest); they then spread evenly from the bar start. Otherwise they are an error.
 - **Layout**: the lyric row decides the measure's width (there are normally more syllables than chord attacks); the chord row adapts to it.
 - The `_` no-lyrics marker still means zero syllables for the measure, and skips the tally.
 

@@ -14,12 +14,12 @@ fn messages(lyrics: &BracketedLyrics) -> Vec<String> {
 
 #[test]
 fn ascii_and_full_width_brackets_are_tokenised_as_bracketed() {
-    let lyrics = tokenize_bracketed_lyrics("(0_) 只剩 （陪）我", 0);
+    let lyrics = tokenize_bracketed_lyrics("(~) 只剩 （陪）我", 0);
     assert!(lyrics.errors.is_empty());
     assert_eq!(
         texts(&lyrics),
         vec![
-            ("0_".to_string(), true),
+            ("~".to_string(), true),
             ("只".to_string(), false),
             ("剩".to_string(), false),
             ("陪".to_string(), true),

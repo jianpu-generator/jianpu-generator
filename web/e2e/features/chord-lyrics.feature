@@ -8,15 +8,15 @@ Feature: Lyrics under a chord part
   # HANDOFF-chord-lyrics.md).
 
   Scenario: Brackets pair with chord attacks and the chord sits above its bracket
-    Given a chord-lyrics score with chords "1 -- 7" and lyrics "(0_) 只剩下鋼琴 （陪）我"
+    Given a chord-lyrics score with chords "1 -- 7" and lyrics "(~) 只剩下鋼琴 （陪）我"
     When the chord-lyrics score is rendered
     Then the chord-lyrics score has no error
-    And the chord-lyrics preview shows "(0_)"
+    And the chord-lyrics preview shows "(~)"
     And the chord-lyrics preview shows "(陪)"
     And the chord "7" is drawn above the bracket "(陪)"
 
   Scenario: Full-width brackets are drawn as ASCII brackets
-    Given a chord-lyrics score with chords "1 -- 7" and lyrics "(0_) 只剩下鋼琴 （陪）我"
+    Given a chord-lyrics score with chords "1 -- 7" and lyrics "(~) 只剩下鋼琴 （陪）我"
     When the chord-lyrics score is rendered
     Then the chord-lyrics preview shows "(陪)"
     And the chord-lyrics preview does not show "（"
