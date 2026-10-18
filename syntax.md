@@ -674,7 +674,7 @@ time=4/4 key=C4 bpm=120
 
 Chords are sparse (one attack per chord, `-` only extends), so a chord part's lyrics are **not** paired one-syllable-per-note. Instead the lyric line carries its own timing: each chord attack is paired with one **bracketed item**, and any syllables written outside brackets flow freely between them.
 
-```jianpu-pending
+```jianpu
 # parts
 c = chords
 l = lyrics[c]
