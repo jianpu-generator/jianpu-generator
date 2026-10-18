@@ -235,11 +235,18 @@ pub(crate) fn compute_all_lyric_click_targets(
                     // used to widen each syllable's `column_end` to its
                     // note's full written span rather than the single column
                     // the syllable text itself sits in.
+                    //
+                    // Not for a chord-targeting lyric row: the lyric line
+                    // carries its own timing there, so a bracketed syllable
+                    // widened to its chord's whole span would overlap the
+                    // unbracketed syllables spread inside that span. Every
+                    // syllable keeps its own single-column box instead.
                     let note_max_cols: HashMap<usize, u32> = owner_note_row_indices
                         .get(part_idx)
                         .copied()
                         .flatten()
                         .and_then(|note_idx| block.rows.get(note_idx))
+                        .filter(|note_row| !is_chord_only_row(note_row))
                         .map(|note_row| {
                             group_elements_by_note_id(&note_row.elements)
                                 .into_iter()
