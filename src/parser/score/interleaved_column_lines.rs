@@ -6,6 +6,7 @@ use crate::desugar::SourceLine;
 use crate::error::{
     Diagnostic, IrrecoverableError, IrrecoverableErrorKind, RecoverableError, Span, Spanned,
 };
+use crate::parser::lyrics::tokenize_bracketed_lyrics;
 use crate::parser::score::token_parser;
 use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics};
 
@@ -88,6 +89,12 @@ fn process_lyrics_column_line(
     } else {
         tokenize_lyrics(line, line_span.start)
     };
+    // Task 4 will pair the bracketed syllables with chord attacks; until then
+    // only the bracket mistakes are reported and the syllables stay unused.
+    if chords_target.is_some() && !line.is_empty() && line != "_" {
+        ctx.extra_document_errors
+            .extend(tokenize_bracketed_lyrics(line, line_span.start).errors);
+    }
     if let (Some(target), false) = (chords_target, is_implicit_fill) {
         ctx.extra_document_errors
             .push(RecoverableError::lyrics_no_notes_track(

@@ -68,6 +68,12 @@ pub enum RecoverableErrorKind {
     LyricsLineEmpty,
     /// A lyrics slot has no paired notes track — lyrics are skipped.
     LyricsNoNotesTrack { abbrev: String },
+    /// A bracketed lyric item holds zero or several syllables instead of exactly one.
+    LyricsBracketNotOneSyllable { found: usize },
+    /// A lyric bracket `(` / `（` has no closing bracket.
+    LyricsBracketUnclosed,
+    /// A closing lyric bracket `)` / `）` has no opening bracket.
+    LyricsBracketUnmatched,
     /// A part has a different number of measures than the first part.
     PartMeasureCountMismatch {
         part: String,
@@ -157,6 +163,9 @@ impl RecoverableErrorKind {
             Self::SectionMissing { section } => format!("missing {} section", section.header()),
             Self::LyricsLineEmpty => "lyrics line cannot be empty; use '_' for no lyrics".to_string(),
             Self::LyricsNoNotesTrack { abbrev } => format!("lyrics line for '{abbrev}' has no matching notes track"),
+            Self::LyricsBracketNotOneSyllable { found } => format!("a lyric bracket must hold exactly one syllable or rest, found {found}"),
+            Self::LyricsBracketUnclosed => "lyric bracket is never closed".to_string(),
+            Self::LyricsBracketUnmatched => "closing lyric bracket has no opening bracket".to_string(),
             Self::PartMeasureCountMismatch { part, got, expected } => format!("part {part:?} has {got} measures but the first part has {expected}; all parts must have the same number of measures"),
             Self::ExtensionNoPrecedingEvent { chord_track: true } => "chord extension '-' with no preceding event; '-' ignored".to_string(),
             Self::ExtensionNoPrecedingEvent { chord_track: false } => "extension '-' without a preceding note or rest; '-' ignored".to_string(),

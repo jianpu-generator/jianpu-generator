@@ -83,6 +83,7 @@ fn pair_lyrics_to_notes(
             paired.push(Syllable {
                 text: String::new(),
                 held: false,
+                bracketed: false,
                 span: Span::new(source_span.start, source_span.start),
             });
             underflow_detected = true;

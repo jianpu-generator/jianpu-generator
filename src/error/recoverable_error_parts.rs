@@ -95,6 +95,27 @@ impl RecoverableError {
         }
     }
 
+    pub fn lyrics_bracket_not_one_syllable(span: Span, found: usize) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::LyricsBracketNotOneSyllable { found },
+        }
+    }
+
+    pub fn lyrics_bracket_unclosed(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::LyricsBracketUnclosed,
+        }
+    }
+
+    pub fn lyrics_bracket_unmatched(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::LyricsBracketUnmatched,
+        }
+    }
+
     pub fn parts_first_part_cannot_follow(span: Span) -> Self {
         Self {
             span,
