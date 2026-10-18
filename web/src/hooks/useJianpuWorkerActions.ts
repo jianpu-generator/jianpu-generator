@@ -81,6 +81,8 @@ export function useJianpuWorkerActions({
     playFromCurrentMeasure,
     playNoteSelection,
     playAll,
+    metronomeEnabled,
+    setMetronomeEnabled,
     latestMeasureAudioIdRef,
     measureWavUrlRef,
   } = useMeasureAudioPlayback({
@@ -304,6 +306,8 @@ export function useJianpuWorkerActions({
     playFromCurrentMeasure,
     playNoteSelection,
     playAll,
+    metronomeEnabled,
+    setMetronomeEnabled,
     notifySelection,
     exportPdf,
     exportSplitPdf,

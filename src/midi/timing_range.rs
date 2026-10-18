@@ -1,5 +1,8 @@
-use crate::ast::grouped::Score;
+use crate::ast::grouped::{Score, TimeSignature};
 use crate::ast::parsed::KeyChange;
+use crate::error::IrrecoverableError;
+
+use super::write_midi_with_metronome;
 
 pub fn build_measure_range_score(
     score: &Score,
@@ -17,12 +20,16 @@ pub fn build_measure_range_score(
     };
     let mut accumulated_bpm: Option<u32> = None;
     let mut accumulated_key: Option<KeyChange> = None;
+    let mut accumulated_time_signature: Option<TimeSignature> = None;
     for measure in score.measures.iter().take(start_index) {
         if let Some(bpm) = measure.bpm {
             accumulated_bpm = Some(bpm);
         }
         if let Some(key) = &measure.key {
             accumulated_key = Some(key.clone());
+        }
+        if let Some(time_signature) = &measure.time_signature {
+            accumulated_time_signature = Some(time_signature.clone());
         }
     }
     let count = end_index - start_index + 1;
@@ -40,6 +47,9 @@ pub fn build_measure_range_score(
         if first.key.is_none() {
             first.key = accumulated_key;
         }
+        if first.time_signature.is_none() {
+            first.time_signature = accumulated_time_signature;
+        }
     }
     Some(Score {
         metadata: score.metadata.clone(),
@@ -47,4 +57,25 @@ pub fn build_measure_range_score(
         document_diagnostics: vec![],
         sequence: None,
     })
+}
+
+pub fn write_midi_for_measure_range(
+    score: &Score,
+    start_index: usize,
+    end_index: usize,
+) -> Result<Vec<u8>, IrrecoverableError> {
+    write_midi_for_measure_range_with_metronome(score, start_index, end_index, false)
+}
+
+/// Like [`write_midi_for_measure_range`], with the metronome of [`write_midi_with_metronome`].
+pub fn write_midi_for_measure_range_with_metronome(
+    score: &Score,
+    start_index: usize,
+    end_index: usize,
+    metronome: bool,
+) -> Result<Vec<u8>, IrrecoverableError> {
+    let Some(range_score) = build_measure_range_score(score, start_index, end_index) else {
+        return Ok(Vec::new());
+    };
+    write_midi_with_metronome(&range_score, metronome)
 }

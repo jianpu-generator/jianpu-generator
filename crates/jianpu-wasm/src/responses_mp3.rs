@@ -44,6 +44,7 @@ pub(crate) fn generate_mp3_for_measure_range_response(
         },
         &MeasureRangeAudioOptions {
             enabled_tracks,
+            metronome: false,
             trim,
         },
         &soundfont,

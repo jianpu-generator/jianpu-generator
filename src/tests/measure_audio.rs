@@ -230,6 +230,7 @@ fn write_wav_for_measure_range_from_source_second_measure_uses_context_key() {
         },
         &MeasureRangeAudioOptions {
             enabled_tracks: None,
+            metronome: false,
             trim: None,
         },
         SF2_BYTES,
@@ -253,6 +254,7 @@ fn write_wav_for_measure_range_from_source_returns_riff_wav() {
         },
         &MeasureRangeAudioOptions {
             enabled_tracks: None,
+            metronome: false,
             trim: None,
         },
         SF2_BYTES,
@@ -278,6 +280,7 @@ fn write_wav_for_measure_range_from_source_out_of_range_clamps_to_last_measure()
         },
         &MeasureRangeAudioOptions {
             enabled_tracks: None,
+            metronome: false,
             trim: None,
         },
         SF2_BYTES,

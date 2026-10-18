@@ -58,3 +58,24 @@ export function TrackNextIcon({ className }: PlaybackIconProps) {
     </svg>
   )
 }
+
+export function MetronomeIcon({ className }: PlaybackIconProps) {
+  return (
+    <svg
+      className={className}
+      width="15"
+      height="15"
+      viewBox="0 0 15 15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path d="M4.6 1.75H10.4L12.25 13.25H2.75Z" />
+      <path d="M7.5 10.25L9.6 4.4" />
+    </svg>
+  )
+}

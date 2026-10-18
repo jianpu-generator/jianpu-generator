@@ -13,10 +13,6 @@ import {
 } from './components/SharedViewerNotice'
 import { useAppController } from './hooks/useAppController'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
-import {
-  playFromCurrentMeasureShortcutLabel,
-  shortcutLabel,
-} from './utils/shortcutLabels'
 import './App.css'
 import './file-switcher.css'
 import './preview.css'
@@ -120,6 +116,8 @@ export default function App() {
     playSelectedMeasures,
     playFromCurrentMeasure,
     playAll,
+    metronomeEnabled,
+    setMetronomeEnabled,
     stopMeasurePlayback,
     highlightedDocuments,
     noteSpans,
@@ -206,13 +204,11 @@ export default function App() {
         playSelectedMeasures={playSelectedMeasures}
         playFromCurrentMeasure={playFromCurrentMeasure}
         playAll={playAll}
+        metronomeEnabled={metronomeEnabled}
+        onMetronomeEnabledChange={setMetronomeEnabled}
         notePlaybackSelectionActive={selectedNoteRangePlaybackInfo !== null}
         playNoteSelection={handlePlayNoteSelection}
         stopMeasurePlayback={stopMeasurePlayback}
-        shortcutLabel={shortcutLabel}
-        playFromCurrentMeasureShortcutLabel={
-          playFromCurrentMeasureShortcutLabel
-        }
         store={store}
         onSelect={handleSelect}
         onCreate={handleCreate}

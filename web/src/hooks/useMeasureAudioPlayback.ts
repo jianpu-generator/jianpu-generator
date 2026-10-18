@@ -61,6 +61,9 @@ export function useMeasureAudioPlayback({
   const measureAudioRequestIdRef = useRef(0)
   const latestMeasureAudioIdRef = useRef(0)
   const measureWavUrlRef = useRef<string | null>(null)
+  const [metronomeEnabled, setMetronomeEnabled] = useState(false)
+  const metronomeEnabledRef = useRef(false)
+  metronomeEnabledRef.current = metronomeEnabled
 
   const setNextMeasureWavUrl = useCallback(
     (next: string | null, nextNoteTimings: NoteTiming[] = []) => {
@@ -136,6 +139,7 @@ export function useMeasureAudioPlayback({
         sequenceEntryStartIndex,
         sequenceEntryEndIndex,
         enabledTracks: enabledTracksOverride ?? enabledTracksRef.current,
+        metronome: metronomeEnabledRef.current,
         // Always the part-visibility toggle's own state (never the
         // selection override above) — see `visibleTracks`'s doc comment in
         // `worker/messages.ts`.
@@ -260,6 +264,8 @@ export function useMeasureAudioPlayback({
     playFromCurrentMeasure,
     playNoteSelection,
     playAll,
+    metronomeEnabled,
+    setMetronomeEnabled,
     latestMeasureAudioIdRef,
     measureWavUrlRef,
   }
