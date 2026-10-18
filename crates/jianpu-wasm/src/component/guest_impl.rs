@@ -98,14 +98,6 @@ impl Guest for Component {
         render_svg_with_highlight_range(source, raw_measure_ranges, visibility, raw_instruments)
     }
 
-    fn generate_wav(
-        source: String,
-        enabled_tracks: Option<Vec<String>>,
-        soundfont: Vec<u8>,
-    ) -> GenerateWavResponse {
-        generate_wav(source, enabled_tracks, soundfont)
-    }
-
     fn generate_split_wavs(
         source: String,
         base_name: String,
@@ -152,36 +144,6 @@ impl Guest for Component {
 
     fn generate_split_midis(source: String, base_name: String) -> GenerateSplitMidisResponse {
         generate_split_midis(source, base_name)
-    }
-
-    fn generate_wav_for_measure_range(
-        source: String,
-        start_index: u32,
-        end_index: u32,
-        extend_to_last_occurrence: bool,
-        respect_sequence: bool,
-        sequence_entry_start_index: Option<u32>,
-        sequence_entry_end_index: Option<u32>,
-        enabled_tracks: Option<Vec<String>>,
-        trim_start_s: Option<f64>,
-        trim_end_s: Option<f64>,
-        trim_next_note_start_s: Option<f64>,
-        soundfont: Vec<u8>,
-    ) -> GenerateWavResponse {
-        generate_wav_for_measure_range(
-            source,
-            start_index,
-            end_index,
-            extend_to_last_occurrence,
-            respect_sequence,
-            sequence_entry_start_index,
-            sequence_entry_end_index,
-            enabled_tracks,
-            trim_start_s,
-            trim_end_s,
-            trim_next_note_start_s,
-            soundfont,
-        )
     }
 
     fn generate_mp3_for_measure_range(
@@ -351,6 +313,8 @@ impl Guest for Component {
     }
 
     forward_to_free_functions! {
+        generate_wav(source: String, enabled_tracks: Option<Vec<String>>, metronome: bool, soundfont: Vec<u8>) -> GenerateWavResponse;
+        generate_wav_for_measure_range(source: String, start_index: u32, end_index: u32, extend_to_last_occurrence: bool, respect_sequence: bool, sequence_entry_start_index: Option<u32>, sequence_entry_end_index: Option<u32>, enabled_tracks: Option<Vec<String>>, metronome: bool, trim_start_s: Option<f64>, trim_end_s: Option<f64>, trim_next_note_start_s: Option<f64>, soundfont: Vec<u8>) -> GenerateWavResponse;
         file_store_create_folder(state: FileStoreState, parent: Option<String>, name: String, context: FileOperationContext) -> FileStoreResponse;
         file_store_create_folder_error(state: FileStoreState, parent: Option<String>, name: String, context: FileOperationContext) -> Option<String>;
         file_store_move_targets(state: FileStoreState, excluded_folder: Option<String>) -> Vec<MoveTarget>;

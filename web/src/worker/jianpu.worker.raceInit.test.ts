@@ -132,6 +132,7 @@ const raceMessages: WorkerRequest[] = [
     endMeasureIndex: 0,
     extendToLastOccurrence: false,
     respectSequence: false,
+    metronome: false,
   },
   {
     type: 'renderWithHighlightRange',

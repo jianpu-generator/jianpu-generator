@@ -174,6 +174,10 @@ export interface JianpuWorkerState {
    * one, following any D.C./D.S./`# sequence` repeat structure — the "Play
    * All" button. */
   playAll: () => void
+  /** Whether playback mixes a click on every beat into the audio; sent to
+   * Rust as-is with each play request. */
+  metronomeEnabled: boolean
+  setMetronomeEnabled: (enabled: boolean) => void
   stopMeasurePlayback: () => void
   highlightedDocuments: SvgDocument[]
   measureSpans: MeasureSpan[]

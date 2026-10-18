@@ -137,6 +137,8 @@ export function useJianpuWorker(
     playFromCurrentMeasure: actions.playFromCurrentMeasure,
     playNoteSelection: actions.playNoteSelection,
     playAll: actions.playAll,
+    metronomeEnabled: actions.metronomeEnabled,
+    setMetronomeEnabled: actions.setMetronomeEnabled,
     stopMeasurePlayback: actions.stopMeasurePlayback,
     highlightedDocuments,
     measureSpans,

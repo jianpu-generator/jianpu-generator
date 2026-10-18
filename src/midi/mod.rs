@@ -10,6 +10,7 @@ pub use crate::ast::parsed::JianPuPitch;
 mod channel_volume;
 mod chord_voicing;
 mod event_processing;
+mod metronome;
 mod midi_notes;
 mod navigation;
 mod timing;
@@ -178,6 +179,7 @@ impl TieState {
 fn write_program_change_preamble(
     score: &Score,
     part_channels: &[PartChannelAssignment],
+    metronome: bool,
     raw: &mut Vec<RawEvent>,
 ) {
     for assignment in part_channels {
@@ -230,9 +232,9 @@ fn write_program_change_preamble(
             .iter()
             .any(|r| r.slice().kind == PartKind::Percussion)
     });
-    if has_percussion {
-        // Percussion parts share channel 9; per-part channel volume (CC7) isn't
-        // meaningful on a shared channel without a per-note-velocity refactor, so it's
+    if has_percussion || metronome {
+        // Percussion parts and the metronome share channel 9; per-part channel volume (CC7)
+        // isn't meaningful on a shared channel without a per-note-velocity refactor, so it's
         // skipped here. Exactly one Standard Kit program change covers all of them.
         raw.push(RawEvent {
             tick: 0,
@@ -245,13 +247,23 @@ fn write_program_change_preamble(
 }
 
 pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
+    write_midi_with_metronome(score, false)
+}
+
+/// Like [`write_midi`], but when `metronome` is `true` also writes a click on every beat
+/// (accented on the first beat of each measure) to the percussion channel.
+pub fn write_midi_with_metronome(
+    score: &Score,
+    metronome: bool,
+) -> Result<Vec<u8>, IrrecoverableError> {
     let mut raw: Vec<RawEvent> = Vec::new();
     let part_channels = build_part_channel_assignments(&score.measures);
-    write_program_change_preamble(score, &part_channels, &mut raw);
+    write_program_change_preamble(score, &part_channels, metronome, &mut raw);
 
     let mut current_tick: u32 = 0;
     let mut tie_state = TieState::default();
     let mut active_key = default_active_key();
+    let mut measure_start_ticks = vec![current_tick];
 
     for measure in &score.measures {
         current_tick = process_measure(
@@ -262,6 +274,14 @@ pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
             &mut active_key,
             &part_channels,
         )?;
+        measure_start_ticks.push(current_tick);
+    }
+
+    if metronome {
+        raw.extend(metronome::metronome_events(
+            &score.measures,
+            &measure_start_ticks,
+        ));
     }
 
     tie_state.flush(&mut raw, current_tick);
@@ -271,21 +291,11 @@ pub fn write_midi(score: &Score) -> Result<Vec<u8>, IrrecoverableError> {
     write_smf(track)
 }
 
-pub fn write_midi_for_measure_range(
-    score: &Score,
-    start_index: usize,
-    end_index: usize,
-) -> Result<Vec<u8>, IrrecoverableError> {
-    let Some(range_score) = build_measure_range_score(score, start_index, end_index) else {
-        return Ok(Vec::new());
-    };
-    write_midi(&range_score)
-}
-
 pub use timing::{
     build_measure_range_score, measure_start_times_seconds, note_timings_seconds,
     note_timings_seconds_for_literal_range, note_timings_seconds_for_range, NoteTiming,
 };
+pub use timing_range::{write_midi_for_measure_range, write_midi_for_measure_range_with_metronome};
 
 pub(crate) fn default_active_key() -> KeyChange {
     KeyChange {
@@ -382,5 +392,7 @@ mod channel_volume_tests;
 mod percussion_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_metronome;
 #[cfg(test)]
 mod tests_part_channel_assignment;

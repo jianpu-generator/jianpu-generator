@@ -41,11 +41,13 @@ use super::*;
 pub(super) fn generate_wav(
     source: String,
     enabled_tracks: Option<Vec<String>>,
+    metronome: bool,
     soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
     generate_wav_response_to_wit(crate::responses::generate_wav_response(
         &source,
         enabled_tracks.as_deref(),
+        metronome,
         soundfont,
     ))
 }
@@ -156,6 +158,7 @@ pub(super) fn generate_wav_for_measure_range(
     sequence_entry_start_index: Option<u32>,
     sequence_entry_end_index: Option<u32>,
     enabled_tracks: Option<Vec<String>>,
+    metronome: bool,
     trim_start_s: Option<f64>,
     trim_end_s: Option<f64>,
     trim_next_note_start_s: Option<f64>,
@@ -172,6 +175,7 @@ pub(super) fn generate_wav_for_measure_range(
             sequence_entry_end_index.map(|v| v as usize),
         ),
         enabled_tracks.as_deref(),
+        metronome,
         crate::trim_window(trim_start_s, trim_end_s, trim_next_note_start_s),
         soundfont,
     ))

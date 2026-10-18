@@ -6,6 +6,7 @@ use crate::{apply_track_filter, compile};
 ///
 /// When `enabled_tracks` is `None`, all parts are included.
 /// When `Some(tracks)` is empty, no parts are included.
+/// When `metronome` is `true`, a click sounds on every beat.
 #[cfg(feature = "wav")]
 pub fn write_wav_from_source_filtered(
     source: &str,
@@ -13,11 +14,12 @@ pub fn write_wav_from_source_filtered(
     enabled_tracks: Option<&[String]>,
     sf2_bytes: &[u8],
     instruments: &[InstrumentInfo],
+    metronome: bool,
 ) -> Result<Vec<u8>, IrrecoverableError> {
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     let score = crate::midi::expand_navigation(&score)?;
-    let midi_bytes = crate::midi::write_midi(&score)?;
+    let midi_bytes = crate::midi::write_midi_with_metronome(&score, metronome)?;
     crate::wav::write_wav(&midi_bytes, sf2_bytes, None)
 }
 
@@ -80,6 +82,8 @@ pub struct MeasureRangeSelection {
 #[cfg(feature = "wav")]
 pub struct MeasureRangeAudioOptions<'a> {
     pub enabled_tracks: Option<&'a [String]>,
+    /// Whether a click sounds on every beat (see [`crate::midi::write_midi_with_metronome`]).
+    pub metronome: bool,
     /// When `Some`, narrows the returned clip down to that elapsed-seconds
     /// window (plus a short release tail, sample-accurately faded at the
     /// cut points — see [`crate::wav::TrimWindow`]) instead of playing the
@@ -113,7 +117,12 @@ pub fn write_wav_for_measure_range_from_source(
         selection.respect_sequence,
         selection.sequence_entry_range.clone(),
     )?;
-    let midi_bytes = crate::midi::write_midi_for_measure_range(&score, start, end)?;
+    let midi_bytes = crate::midi::write_midi_for_measure_range_with_metronome(
+        &score,
+        start,
+        end,
+        options.metronome,
+    )?;
     crate::wav::write_wav(&midi_bytes, sf2_bytes, options.trim)
 }
 

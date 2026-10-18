@@ -17,10 +17,8 @@ import { useUrlFileSync } from './useUrlFileSync'
 import { useWasmLoader } from './useWasmLoader'
 import { noPartsSelected as computeNoPartsSelected } from './workerHelpers'
 
-/** Wires together every hook `App` needs — storage backend, file ops, the
- * jianpu worker, part/section/note selection, and panel state — into the one
- * flat object `App`'s JSX renders from. Split out of `App` itself to keep
- * that component under its line-count cap. */
+/** Wires every hook `App` needs into the one flat object its JSX renders
+ * from. Split out of `App` to keep it under the line-count cap. */
 export function useAppController() {
   const {
     store,
@@ -59,7 +57,6 @@ export function useAppController() {
     handleDeleteSelection,
     handleRestore,
   } = useFileOperations(store, setStore, backend)
-
   const {
     sharedPreview,
     sharedFolder,
@@ -77,7 +74,6 @@ export function useAppController() {
   )
   const fileId = sharedFolder?.fileId ?? fileIdForName(store, store.active)
   useDocumentTitle(store.active)
-
   const editorRef = useRef<EditorHandle>(null)
   const selectedSequenceRangeRef = useRef<{
     start: number
@@ -154,6 +150,8 @@ export function useAppController() {
     playFromCurrentMeasure,
     playNoteSelection,
     playAll,
+    metronomeEnabled,
+    setMetronomeEnabled,
     stopMeasurePlayback,
     highlightedDocuments,
     noteSpans,
@@ -353,6 +351,8 @@ export function useAppController() {
     playSelectedMeasures,
     playFromCurrentMeasure,
     playAll,
+    metronomeEnabled,
+    setMetronomeEnabled,
     stopMeasurePlayback,
     highlightedDocuments,
     noteSpans,

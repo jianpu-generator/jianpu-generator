@@ -108,6 +108,8 @@ export type WorkerRequest =
       sequenceEntryStartIndex?: number
       sequenceEntryEndIndex?: number
       enabledTracks?: string[]
+      /** Whether a click sounds on every beat of the generated clip. */
+      metronome: boolean
       /**
        * The part-visibility toggle's current state — unlike `enabledTracks`
        * (which "play selection" overrides down to just the range-selected

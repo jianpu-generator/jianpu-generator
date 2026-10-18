@@ -1014,7 +1014,7 @@ world jianpu-wasm {
     }
 
     // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
-    export generate-wav: func(source: string, enabled-tracks: option<list<string>>, soundfont: list<u8>) -> generate-wav-response;
+    export generate-wav: func(source: string, enabled-tracks: option<list<string>>, metronome: bool, soundfont: list<u8>) -> generate-wav-response;
 
     // Phase 3, group 6 of PLAN-wit-bindgen-migration.md. Plain scalar params
     // (not wrapped in a record), matching group 3/4's convention for
@@ -1028,7 +1028,7 @@ world jianpu-wasm {
     // from the `wasm-bindgen` boundary (gated on `wasm-bindgen-boundary`) and
     // had to be ungated the same way group 5 ungated `types_export.rs`/
     // `responses_*.rs` — see PLAN-wit-bindgen-migration.md's Status section.
-    export generate-wav-for-measure-range: func(source: string, start-index: u32, end-index: u32, extend-to-last-occurrence: bool, respect-sequence: bool, sequence-entry-start-index: option<u32>, sequence-entry-end-index: option<u32>, enabled-tracks: option<list<string>>, trim-start-s: option<f64>, trim-end-s: option<f64>, trim-next-note-start-s: option<f64>, soundfont: list<u8>) -> generate-wav-response;
+    export generate-wav-for-measure-range: func(source: string, start-index: u32, end-index: u32, extend-to-last-occurrence: bool, respect-sequence: bool, sequence-entry-start-index: option<u32>, sequence-entry-end-index: option<u32>, enabled-tracks: option<list<string>>, metronome: bool, trim-start-s: option<f64>, trim-end-s: option<f64>, trim-next-note-start-s: option<f64>, soundfont: list<u8>) -> generate-wav-response;
 
     // Phase 3, group 6 of PLAN-wit-bindgen-migration.md.
     export generate-instrument-preview-wav: func(program-number: u8, soundfont: list<u8>) -> generate-wav-response;

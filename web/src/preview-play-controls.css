@@ -9,7 +9,8 @@
 
 .play-measure-btn,
 .play-from-measure-btn,
-.play-all-btn {
+.play-all-btn,
+.metronome-toggle-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -33,15 +34,24 @@
 
 .play-measure-btn:disabled,
 .play-from-measure-btn:disabled,
-.play-all-btn:disabled {
+.play-all-btn:disabled,
+.metronome-toggle-btn:disabled {
   opacity: 0.4;
   cursor: default;
 }
 
 .play-measure-btn:not(:disabled):hover,
 .play-from-measure-btn:not(:disabled):hover,
-.play-all-btn:not(:disabled):hover {
+.play-all-btn:not(:disabled):hover,
+.metronome-toggle-btn:not(:disabled):hover {
   background: #f0f0f0;
+}
+
+.metronome-toggle-btn--on,
+.metronome-toggle-btn--on:not(:disabled):hover {
+  background: #e6efff;
+  border-color: #2f6fe4;
+  color: #1b4fb0;
 }
 
 .play-measure-tooltip {

@@ -8,8 +8,13 @@ import type { SelectionMove, SelectionUnit } from '../jianpuWasm'
 import type { SharePayload } from '../shareUrl'
 import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
 import type { SyncedShareFailure } from '../syncedShare/errors'
+import {
+  playFromCurrentMeasureShortcutLabel,
+  shortcutLabel,
+} from '../utils/shortcutLabels'
 import { ExportControls } from './ExportControls'
 import { FileSwitcher } from './FileSwitcher'
+import { MetronomeToggleButton } from './MetronomeToggleButton'
 import { PlayAllButton } from './PlayAllButton'
 import { PlayFromCurrentMeasureButton } from './PlayFromCurrentMeasureButton'
 import { PlayMeasureButton } from './PlayMeasureButton'
@@ -75,6 +80,8 @@ interface AppHeaderProps {
   playSelectedMeasures: () => void
   playFromCurrentMeasure: () => void
   playAll: () => void
+  metronomeEnabled: boolean
+  onMetronomeEnabledChange: (enabled: boolean) => void
   /** True while a note range-select (see `useNoteSelection`) is active; when
    * set, `PlayMeasureButton` plays only the selected parts, muted elsewhere,
    * over the selection's measure range instead of the measure(s) under the
@@ -82,8 +89,6 @@ interface AppHeaderProps {
   notePlaybackSelectionActive: boolean
   playNoteSelection: () => void
   stopMeasurePlayback: () => void
-  shortcutLabel: string
-  playFromCurrentMeasureShortcutLabel: string
   store: FileStoreState
   onSelect: (name: string) => void
   onCreate: (folder: string | undefined, name: string) => void
@@ -154,11 +159,11 @@ export function AppHeader({
   playSelectedMeasures,
   playFromCurrentMeasure,
   playAll,
+  metronomeEnabled,
+  onMetronomeEnabledChange,
   notePlaybackSelectionActive,
   playNoteSelection,
   stopMeasurePlayback,
-  shortcutLabel,
-  playFromCurrentMeasureShortcutLabel,
   store,
   onSelect,
   onCreate,
@@ -244,6 +249,15 @@ export function AppHeader({
             }
           />
         )
+      )}
+      {audioAvailable && (
+        <MetronomeToggleButton
+          enabled={metronomeEnabled}
+          disabled={
+            measureAudioGenerating || measureAudioPlaying || !soundfontReady
+          }
+          onChange={onMetronomeEnabledChange}
+        />
       )}
       {audioAvailable && (
         <PlayMeasureButton

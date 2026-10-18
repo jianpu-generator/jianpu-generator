@@ -17,9 +17,17 @@ use crate::types::{
 pub(crate) fn generate_wav_response(
     source: &str,
     enabled_tracks: Option<&[String]>,
+    metronome: bool,
     soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
-    match write_wav_from_source_filtered(source, "input.jianpu", enabled_tracks, &soundfont, &[]) {
+    match write_wav_from_source_filtered(
+        source,
+        "input.jianpu",
+        enabled_tracks,
+        &soundfont,
+        &[],
+        metronome,
+    ) {
         Ok(wav) => GenerateWavResponse::Ok { wav },
         Err(e) => GenerateWavResponse::Err {
             diagnostics: vec![diagnostic_from_error(&e)],
@@ -36,6 +44,7 @@ pub(crate) fn generate_wav_for_measure_range_response(
     respect_sequence: bool,
     sequence_entry_range: Option<std::ops::RangeInclusive<usize>>,
     enabled_tracks: Option<&[String]>,
+    metronome: bool,
     trim: Option<wav::TrimWindow>,
     soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
@@ -50,6 +59,7 @@ pub(crate) fn generate_wav_for_measure_range_response(
         },
         &MeasureRangeAudioOptions {
             enabled_tracks,
+            metronome,
             trim,
         },
         &soundfont,

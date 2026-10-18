@@ -55,6 +55,7 @@ export function handleGenerateAudio(
   const wavResult = jianpuWasm().generateWav(
     msg.source,
     msg.enabledTracks,
+    false,
     loadedSoundfont,
   )
   if (wavResult.tag === 'ok') {
@@ -150,6 +151,7 @@ export function handleGenerateMeasureRangeAudio(
     msg.sequenceEntryStartIndex,
     msg.sequenceEntryEndIndex,
     msg.enabledTracks,
+    msg.metronome,
     trim?.start,
     trim?.end,
     trim?.nextNoteStart,
