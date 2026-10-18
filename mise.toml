@@ -1,0 +1,16 @@
+# Single source of truth for the toolchain, used locally and by CI
+# (`jdx/mise-action`). Run `mise install` once after cloning.
+
+[tools]
+rust = { version = "1.89.0", components = "rustfmt,clippy", targets = "wasm32-unknown-unknown" }
+node = "22"
+pnpm = "10.12.1"
+python = "3"
+jq = "latest"
+cargo-binstall = "latest"
+just = "latest"
+lefthook = "latest"
+prek = "latest"
+"cargo:cargo-component" = "0.21.1"
+"github:quarylabs/sqruff" = "0.29.3"
+"cargo:worker-build" = "0.8.6"

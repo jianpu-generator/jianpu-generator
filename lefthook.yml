@@ -55,15 +55,8 @@ pre-commit:
             glob: "{live-share-worker/migrations/**/*.sql,crates/live-share-worker/queries/**/*.sql}"
             # Lint-only, not `sqruff fix`: fix reflows this SQL's
             # intentionally column-aligned trailing comments (see .sqruff).
-            # `sqruff` is installed via `cargo install sqruff --locked
-            # --version 0.29.3` (see AGENTS.md); skip with a clear message
-            # rather than failing the commit if it isn't on PATH.
-            run: |
-              if ! command -v sqruff >/dev/null 2>&1; then
-                echo "sqruff not installed, skipping SQL lint (cargo install sqruff --locked --version 0.29.3)"
-                exit 0
-              fi
-              sqruff lint {staged_files}
+            # `sqruff` is pinned in mise.toml (run `mise install`).
+            run: sqruff lint {staged_files}
 
           - name: live-share-worker-wasm-check
             # Confirms the Rust Synced Share worker (`crates/live-share-worker`,
@@ -79,12 +72,7 @@ pre-commit:
             # work for a CI workflow once actual deployment is being wired
             # (task 11/12), not built here.
             glob: "crates/live-share-worker/**"
-            run: |
-              if ! rustup target list --installed 2>/dev/null | grep -q wasm32-unknown-unknown; then
-                echo "wasm32-unknown-unknown target not installed, skipping (rustup target add wasm32-unknown-unknown)"
-                exit 0
-              fi
-              cargo check --target wasm32-unknown-unknown -p live-share-worker
+            run: cargo check --target wasm32-unknown-unknown -p live-share-worker
 
           - name: syntax-md-examples
             glob: "{syntax.md,src/parser/**,src/desugar.rs}"

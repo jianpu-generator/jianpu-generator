@@ -42,24 +42,18 @@ To run local dev, use `mprocs -c dekit.yaml`.
 
 ## Local tooling
 
-- `sqruff` (SQL linter/formatter, used by the pre-commit `sqruff` job on
-  `live-share-worker/migrations/**/*.sql` and
-  `crates/live-share-worker/queries/**/*.sql` — see `.sqruff`): install with
-  `cargo install sqruff --locked --version 0.29.3`. Pinned because
-  `sqruff` 0.34.1 fails to compile from crates.io as of this writing (a
-  `PathBuf == str` type error in `sqruff-cli-lib`), and newer releases
-  require a rustc version ahead of this repo's. The pre-commit job skips
-  with a message rather than failing if `sqruff` isn't on `PATH`.
-- `worker-build` (Cloudflare's build tool that compiles a `workers-rs`
-  crate — `crates/live-share-worker` — to the wasm bundle `cf`
-  expects, per `crates/live-share-worker/wrangler.config.ts`'s `build.command`):
-  install with `cargo install worker-build`. Only needed to actually build
-  the deployable bundle (e.g. via `cf dev`/`deploy`, or running
-  `worker-build` directly to sanity-check the cf config) — the
-  pre-commit `live-share-worker-wasm-check` job doesn't need it, since it
-  only runs `cargo check --target wasm32-unknown-unknown`, and skips with a
-  message rather than failing if the `wasm32-unknown-unknown` target isn't
-  installed (`rustup target add wasm32-unknown-unknown`).
+The whole toolchain is pinned in `mise.toml` and shared with CI
+(`jdx/mise-action`). After cloning, run `mise install` and then
+`lefthook install` (activate mise in your shell, or prefix commands with
+`mise exec --`). To change a tool version, edit `mise.toml` — CI picks it up.
+
+It provides Rust 1.89.0 (with `rustfmt`, `clippy` and the
+`wasm32-unknown-unknown` target), Node, pnpm, `cargo-component`,
+`worker-build` (compiles `crates/live-share-worker` to the wasm bundle `cf`
+expects), `sqruff` (SQL linter used by the pre-commit `sqruff` job — see
+`.sqruff`), `lefthook`, `prek`, `just` and `jq`. `sqruff` is pinned to 0.29.3
+because 0.34.1 fails to compile from crates.io (a `PathBuf == str` type error
+in `sqruff-cli-lib`) and newer releases require a rustc ahead of this repo's.
 
 ## Staging D1
 
