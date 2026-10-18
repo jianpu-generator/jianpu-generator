@@ -117,7 +117,10 @@ pub struct LyricsSlice {
     /// The target's events this measure, which fix where syllables sit.
     pub target_events: Vec<NoteEvent>,
     /// Tie-aware syllables, one per lyric slot of `target_events` (see
-    /// `lyric_slots::measure_lyric_slots`); empty for no lyrics (`_`).
+    /// `lyric_slots::measure_lyric_slots`); empty for no lyrics (`_`). Under a
+    /// chord target there are no such slots: these are the line's syllables
+    /// whole, in order, bracketed ones (`Syllable::bracketed`) tallied 1:1 with
+    /// the target's `lyric_slots::chord_attacks` by the grouper.
     pub syllables: Vec<Syllable>,
 }
 

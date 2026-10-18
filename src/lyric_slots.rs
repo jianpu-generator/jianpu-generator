@@ -61,3 +61,34 @@ pub(crate) fn measure_lyric_slots(events: &[NoteEvent], entering_tied: bool) -> 
         end_column: column,
     }
 }
+
+/// One chord attack of a measure: a `Chord` event. A chord rest (`0`, a
+/// `Rest` event) and a `-` extension (folded into the previous chord's
+/// duration) are not attacks. Under a chord part the Nth bracketed lyric item
+/// sits at the Nth attack, so the grouper's tally, the compiler's placement
+/// and the lyric source spans all read attacks from here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ChordAttack {
+    /// Index of the chord within the measure's events (and its note id offset).
+    pub(crate) event_index: usize,
+    /// Measure-relative column the chord starts at.
+    pub(crate) column: u32,
+}
+
+pub(crate) fn chord_attacks(events: &[NoteEvent]) -> Vec<ChordAttack> {
+    events
+        .iter()
+        .enumerate()
+        .scan(0, |column, (event_index, event)| {
+            let start = *column;
+            *column += event.duration();
+            Some((event_index, event, start))
+        })
+        .filter_map(|(event_index, event, column)| {
+            matches!(event, NoteEvent::Chord(_)).then_some(ChordAttack {
+                event_index,
+                column,
+            })
+        })
+        .collect()
+}

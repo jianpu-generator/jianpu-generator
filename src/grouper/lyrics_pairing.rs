@@ -1,7 +1,7 @@
 use crate::ast::grouped::{GroupedMeasure, NoteEvent, Notes};
 use crate::ast::parsed::{ParsedLyrics, Syllable};
 use crate::error::{RecoverableError, Span, Warning};
-use crate::lyric_slots::measure_lyric_slots;
+use crate::lyric_slots::{chord_attacks, measure_lyric_slots};
 
 /// Builds a lyric part's grouped measures by pairing each measure's raw
 /// syllables to the lyric slots of its target's notes (tie-aware). Underflow is
@@ -15,6 +15,7 @@ pub(super) fn pair_lyrics_measures(
     lyrics: ParsedLyrics,
     lyric_errors: &[Option<RecoverableError>],
     part_name: &str,
+    targets_chords: bool,
 ) -> Vec<GroupedMeasure> {
     let lyric_line_count = lyrics.measure_syllables.len();
     let mut prev_tie_to_next = false;
@@ -27,13 +28,26 @@ pub(super) fn pair_lyrics_measures(
             let lyrics_span = Span::new(start, end);
             let target = target_measures.get(index);
             let events = target.map_or(&[][..], |measure| measure.notes.events.as_slice());
-            let (paired, warning, next_tie_to_next) = pair_lyrics_to_notes(
-                events,
-                &raw_syllables,
-                &lyrics_span,
-                prev_tie_to_next,
-                part_name,
-            );
+            let line_error = lyric_errors.get(index).cloned().flatten();
+            let (paired, warning, tally_error, next_tie_to_next) = if targets_chords {
+                // Chords hold no ties, and a line with a bracket mistake is
+                // already an error: tallying it would only repeat the problem.
+                let tally_error = if line_error.is_some() {
+                    None
+                } else {
+                    tally_chord_lyrics(events, &raw_syllables, lyrics_span)
+                };
+                (raw_syllables, None, tally_error, false)
+            } else {
+                let (paired, warning, tied) = pair_lyrics_to_notes(
+                    events,
+                    &raw_syllables,
+                    &lyrics_span,
+                    prev_tie_to_next,
+                    part_name,
+                );
+                (paired, warning, None, tied)
+            };
             prev_tie_to_next = next_tie_to_next;
             let count_mismatch = target.is_none().then(|| {
                 Warning::new(
@@ -53,7 +67,7 @@ pub(super) fn pair_lyrics_measures(
                 dotted_eighth_errors: Vec::new(),
                 chord_errors: Vec::new(),
                 lex_error: None,
-                lyrics_parse_error: lyric_errors.get(index).cloned().flatten(),
+                lyrics_parse_error: line_error.or(tally_error),
                 extension_no_preceding_event_error: None,
                 resolution_multiplier: target.map_or(1, |measure| measure.resolution_multiplier),
                 beat_group_size: target.map_or(4, |measure| measure.beat_group_size),
@@ -112,4 +126,39 @@ fn pair_lyrics_to_notes(
     };
 
     (paired, error, prev_tie_to_next)
+}
+
+/// Under a chord part the line's syllables are kept whole (bracketed and
+/// unbracketed, in order); this only validates them: bracketed items must tally
+/// 1:1 with the measure's chord attacks, and unbracketed syllables may lead the
+/// line only when the first attack is not on beat 1. A bracketed rest (`0_`)
+/// is an ordinary bracketed item here: it consumes the Nth attack's slot, and
+/// the duration it names is for layout to read from its text. `_` (no
+/// syllables) skips the tally.
+fn tally_chord_lyrics(
+    events: &[NoteEvent],
+    syllables: &[Syllable],
+    source_span: Span,
+) -> Option<RecoverableError> {
+    if syllables.is_empty() {
+        return None;
+    }
+    let attacks = chord_attacks(events);
+    let brackets = syllables
+        .iter()
+        .filter(|syllable| syllable.bracketed)
+        .count();
+    if brackets != attacks.len() {
+        return Some(RecoverableError::lyrics_bracket_count_mismatch(
+            source_span,
+            brackets,
+            attacks.len(),
+        ));
+    }
+    let leads_unbracketed = syllables
+        .first()
+        .is_some_and(|syllable| !syllable.bracketed);
+    let first_attack_on_beat_one = attacks.first().is_some_and(|attack| attack.column == 0);
+    (leads_unbracketed && first_attack_on_beat_one)
+        .then(|| RecoverableError::lyrics_bracket_missing_before_beat_one(source_span))
 }

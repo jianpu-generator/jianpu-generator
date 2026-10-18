@@ -2,6 +2,7 @@ use super::{
     align_empty_note_measures, pair_lyrics_measures, GroupedPart, IrrecoverableError,
     ParsedMeasureSlot, ParsedTimedTrack, PartGrouper, PerMeasureErrors,
 };
+use crate::ast::parsed::PartKind;
 use crate::tuplet::apply_resolution_multiplier;
 
 /// `global_resolution_multipliers[i]` is the tuplet-rescale multiplier every part must
@@ -79,6 +80,7 @@ pub(in crate::grouper) fn group_lyrics_track(
             lyrics,
             &part.per_measure_lyrics_errors,
             &part.abbreviation,
+            target.kind == PartKind::Chords,
         ),
         None => Vec::new(),
     };

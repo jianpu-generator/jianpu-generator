@@ -2,7 +2,7 @@
 //! "Lyrics under a chord part" in `syntax.md`. Each chord attack pairs with one
 //! bracketed lyric item; unbracketed syllables flow between brackets.
 //!
-//! Every test here is `#[ignore]`d until the feature lands (tasks 3-6 of
+//! The tests that need layout/rendering stay `#[ignore]`d until it lands (tasks 5-6 of
 //! `HANDOFF-chord-lyrics.md`): the pre-commit hook runs `cargo test
 //! --workspace`, so failing tests cannot be committed un-ignored. Un-ignore
 //! them as the feature is implemented; run with `cargo test chord_lyrics --
@@ -77,7 +77,7 @@ fn assert_one_error(output: &jianpu_generator::RenderOutput) {
 }
 
 #[test]
-#[ignore = "pending: lyrics under a chord part is not implemented yet"]
+#[ignore = "pending: bracketed lyrics are not laid out or drawn yet (task 5/6)"]
 fn happy_path_compiles_cleanly_and_renders_brackets_as_ascii() {
     let output = render("1 -- 7", "(0_) 只剩下鋼琴 （陪）我");
     assert_no_diagnostics(&output);
@@ -88,7 +88,7 @@ fn happy_path_compiles_cleanly_and_renders_brackets_as_ascii() {
 }
 
 #[test]
-#[ignore = "pending: lyrics under a chord part is not implemented yet"]
+#[ignore = "pending: bracketed lyrics are not laid out or drawn yet (task 5/6)"]
 fn ascii_brackets_are_accepted() {
     let output = render("1 -- 7", "(0_) 只剩下鋼琴 (陪) 我");
     assert_no_diagnostics(&output);
@@ -96,40 +96,34 @@ fn ascii_brackets_are_accepted() {
 }
 
 #[test]
-#[ignore = "pending: lyrics under a chord part is not implemented yet"]
 fn unbracketed_run_before_first_bracket_is_allowed_when_first_attack_is_not_on_beat_one() {
     let output = render("0 1 - -", "我 (愛) 你");
     assert_no_diagnostics(&output);
 }
 
 #[test]
-#[ignore = "pending: lyrics under a chord part is not implemented yet"]
 fn error_when_bracket_count_differs_from_chord_attack_count() {
     // Two attacks (1 and 4) but one bracket.
     assert_one_error(&render("1 - 4 -", "(啦) 啦啦"));
 }
 
 #[test]
-#[ignore = "pending: lyrics under a chord part is not implemented yet"]
 fn error_when_a_bracket_holds_several_syllables() {
     assert_one_error(&render("1 - - -", "（陪我）"));
 }
 
 #[test]
-#[ignore = "pending: lyrics under a chord part is not implemented yet"]
 fn error_when_unbracketed_run_precedes_a_beat_one_attack() {
     assert_one_error(&render("1 - - -", "啦 (啦)"));
 }
 
 #[test]
-#[ignore = "pending: lyrics under a chord part is not implemented yet"]
 fn chord_rest_is_not_an_attack_so_extra_bracket_is_an_error() {
     // Attacks: 1 and 4 (the `0` rest is not one); three brackets is too many.
     assert_one_error(&render("1 0 4 -", "(a) (b) (c)"));
 }
 
 #[test]
-#[ignore = "pending: lyrics under a chord part is not implemented yet"]
 fn chord_rest_is_not_an_attack_so_matching_brackets_are_fine() {
     assert_no_diagnostics(&render("1 0 4 -", "(a) (b)"));
 }
