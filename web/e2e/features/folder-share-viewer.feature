@@ -128,7 +128,7 @@ Feature: Viewing and importing a shared folder
     Then the viewer's page URL has no share hash
     And the viewer's folder list has the folder "Static"
 
-  Scenario: The folder banner keeps its Import button on screen on a phone
+  Scenario: On a phone the folder picker and export stay on screen, ahead of the banner's Import button
     Given a cloud file named "ViewEight/song.jianpu" titled "Phone Song" is seeded for the signed-in account
     And the cloud app is open
     When I open the share dialog of the folder "ViewEight"
@@ -136,13 +136,16 @@ Feature: Viewing and importing a shared folder
     And I start sync in the share dialog
     Then the share dialog shows a synced link
     When a viewer opens the synced link of the share dialog on a phone
-    Then the viewer's import button is fully inside the screen
+    Then the viewer's folder picker is fully inside the screen
+    And the viewer's export button is fully inside the screen
+    And the viewer's import button is after the export button
 
-  Scenario: A single synced file's banner keeps its Import button on screen on a phone
+  Scenario: On a phone a single synced file's export stays on screen, ahead of the banner's Import button
     Given the owner is signed in with GitHub as "e2e-test-user"
     And the file store is seeded with the synced score
     When the owner loads the app and clicks "Sync"
     Then the synced link is copied
     When a viewer opens the copied sync link in a new page
     And the viewer resizes to a phone screen
-    Then the viewer's import button is fully inside the screen
+    Then the viewer's export button is fully inside the screen
+    And the viewer's import button is after the export button
