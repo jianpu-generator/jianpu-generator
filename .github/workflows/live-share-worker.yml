@@ -33,23 +33,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      # `worker-build` (pinned in mise.toml) compiles this `workers-rs` crate
+      # to the wasm bundle `cf` expects.
+      - uses: jdx/mise-action@v2
         with:
-          targets: wasm32-unknown-unknown
-
-      # Per AGENTS.md's "Local tooling" section: `worker-build` compiles
-      # this `workers-rs` crate to the wasm bundle `cf` expects.
-      - name: Install worker-build
-        run: cargo install worker-build --locked
+          install_args: rust node pnpm cargo-binstall cargo:worker-build
 
       - name: Build worker
         working-directory: crates/live-share-worker
         run: worker-build --release
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-          package_json_file: crates/live-share-worker/package.json
 
       - name: Install cf
         working-directory: crates/live-share-worker
