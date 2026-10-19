@@ -18,6 +18,8 @@ mod note_highlight_identity;
 mod note_highlight_identity_playback;
 #[path = "main/orphan_lyric_row.rs"]
 mod orphan_lyric_row;
+#[path = "main/part_stream_round_trip.rs"]
+mod part_stream_round_trip;
 #[path = "main/recoverable_directive_errors.rs"]
 mod recoverable_directive_errors;
 #[path = "main/span_part_abbreviation.rs"]

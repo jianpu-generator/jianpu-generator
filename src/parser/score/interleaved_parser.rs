@@ -20,6 +20,7 @@ use crate::desugar::SourceLine;
 use crate::parser::score::measure_group::collect_groups;
 use accumulators::{build_parse_result, build_slot_actions, init_accumulators};
 use beat_padding::{beats_per_measure, validate_and_pad_group_lines};
+pub(crate) use beat_padding::{can_implicitly_pad, timed_beats};
 use column_lines::process_padded_columns;
 pub(crate) use directives::directive_keyword_spans;
 use directives::split_directive;
@@ -203,6 +204,48 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         per_group_desugar_errors,
         abbreviation_references,
     ))
+}
+
+#[derive(Clone, Copy)]
+struct TimeSignature {
+    numerator: u8,
+    denominator: u8,
+}
+
+/// Beat capacity (in quarter-beats) of each desugared measure group, tracking
+/// `time=` across groups exactly like [`parse`] does: a group's own directive
+/// line takes effect for that group, and the last time signature carries on.
+pub(crate) fn measure_capacities(groups: &[Vec<SourceLine>], base_offset: usize) -> Vec<u32> {
+    groups
+        .iter()
+        .scan(
+            TimeSignature {
+                numerator: 4,
+                denominator: 4,
+            },
+            |time, group| {
+                let (directive_events, _, _) = split_directive(group, base_offset);
+                if let Some(changed) =
+                    directive_events
+                        .iter()
+                        .rev()
+                        .find_map(|event| match event.value {
+                            ScoreEvent::TimeSignatureChange {
+                                numerator,
+                                denominator,
+                            } => Some(TimeSignature {
+                                numerator,
+                                denominator,
+                            }),
+                            _ => None,
+                        })
+                {
+                    *time = changed;
+                }
+                Some(beats_per_measure(time.numerator, time.denominator))
+            },
+        )
+        .collect()
 }
 
 fn process_bar_group(

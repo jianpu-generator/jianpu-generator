@@ -12,7 +12,7 @@ pub(super) fn beats_per_measure(num: u8, den: u8) -> u32 {
     (num as u32) * (16 / den as u32)
 }
 
-fn timed_beats(event: &ScoreEvent) -> u32 {
+pub(crate) fn timed_beats(event: &ScoreEvent) -> u32 {
     match event {
         ScoreEvent::Note(n) => n.duration,
         ScoreEvent::Chord(c) => c.duration,
@@ -124,7 +124,7 @@ fn extending_last_crosses_half_bar(events: &[Spanned<ScoreEvent>], deficit: u32)
 
 /// Implicit trailing `-` extensions apply only when earlier content fills whole beats
 /// and the last note/rest is at least a quarter note (duration >= 4).
-fn can_implicitly_pad(events: &[Spanned<ScoreEvent>], deficit: u32) -> bool {
+pub(crate) fn can_implicitly_pad(events: &[Spanned<ScoreEvent>], deficit: u32) -> bool {
     if deficit % 4 != 0 {
         return false;
     }
