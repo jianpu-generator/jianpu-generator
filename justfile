@@ -35,3 +35,24 @@ dev-worker:
 [private]
 dev-web:
     cd web && pnpm dev
+
+# Model-checks every TLA+ spec under specs/ (see specs/README.md): each
+# `<Module>.cfg` or `<Module>.<variant>.cfg` runs against its `<Module>.tla`.
+# Needs Java (`mise install`); the pinned TLC jar is downloaded into target/
+# once.
+tla:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    jar=target/tla/tla2tools.jar
+    if [ ! -f "$jar" ]; then
+        mkdir -p target/tla
+        curl -fsSL -o "$jar" https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla2tools.jar
+    fi
+    echo "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88  $jar" | shasum -a 256 -c --quiet -
+    for cfg in specs/*/*.cfg; do
+        name=$(basename "$cfg" .cfg)
+        echo "== $cfg"
+        java -XX:+UseParallelGC -cp "$jar" tlc2.TLC -workers auto -deadlock -cleanup \
+            -metadir "target/tla/states/$name" \
+            -config "$cfg" "$(dirname "$cfg")/${name%%.*}.tla"
+    done
