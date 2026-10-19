@@ -4,7 +4,7 @@
 //
 // Algorithm: run the full suite, then keep re-running only the tests still
 // failing (`playwright test --last-failed`) until the same failing set shows
-// up 3 passes in a row. --last-failed only re-executes tests that were
+// up 3 passes in a row (2 when scoped with --grep; see --stable-streak). --last-failed only re-executes tests that were
 // already failing, so the failing *count* can never grow from one pass to
 // the next — but its *membership* can still shuffle indefinitely (e.g. two
 // independently-flaky tests where exactly one fails each pass, alternating)
@@ -24,7 +24,7 @@
 // recorded passes for the current code and run everything fresh (the fresh
 // passes are still recorded for the next invocation).
 //
-// Usage: resolve-e2e-flakes [--no-pass-cache] [-- <playwright test args...>]
+// Usage: resolve-e2e-flakes [--no-pass-cache] [--stable-streak n] [--max-passes n] [-- <playwright test args...>]
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import {
@@ -36,12 +36,17 @@ import {
 } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { Command } from 'commander'
+import { startWebServers, stopWebServers } from './e2e-web-servers.ts'
 
 const LAST_RUN_FILE = join('test-results', '.last-run.json')
 const PASS_CACHE_DIR = '.e2e-pass-cache'
 const PASS_CACHE_REPORTER = './scripts/e2e-pass-cache-reporter.ts'
-const STABLE_STREAK_TO_CONFIRM = 3
-const MAX_PASSES = 15
+const DEFAULT_STABLE_STREAK = 3
+// A run scoped with --grep is typically red-first iteration on a handful of
+// tests, where each extra confirmation pass is pure latency: 2 identical
+// passes is enough evidence there. Override either way with --stable-streak.
+const DEFAULT_SCOPED_STABLE_STREAK = 2
+const DEFAULT_MAX_PASSES = 15
 // Written into LAST_RUN_FILE before every pass, so a file still carrying it
 // afterwards is one Playwright never rewrote — i.e. the pass never got as far
 // as running tests — rather than a genuine (possibly stale) result.
@@ -66,6 +71,8 @@ interface JsonReportSuite {
 
 interface CliOptions {
   passCache: boolean
+  stableStreak?: number
+  maxPasses: number
 }
 
 function fail(message: string): never {
@@ -232,6 +239,17 @@ function parseCli(): { options: CliOptions; playwrightArgs: string[] } {
       '--no-pass-cache',
       'discard the passes recorded for the current code and run every test fresh',
     )
+    .option(
+      '--stable-streak <n>',
+      `identical failing passes in a row that confirm a genuine failure (default ${DEFAULT_STABLE_STREAK}, or ${DEFAULT_SCOPED_STABLE_STREAK} when scoped with --grep); 1 stops after the first pass`,
+      (value) => Number.parseInt(value, 10),
+    )
+    .option(
+      '--max-passes <n>',
+      'give up after this many passes',
+      (value) => Number.parseInt(value, 10),
+      DEFAULT_MAX_PASSES,
+    )
     .argument(
       '[playwright-args...]',
       'extra `playwright test` args for the first pass (e.g. --grep), after a `--`',
@@ -246,13 +264,25 @@ function parseCli(): { options: CliOptions; playwrightArgs: string[] } {
   }
 }
 
-function main(): void {
+async function main(): Promise<void> {
   // Playwright args (e.g. --grep) scope only the first pass; --last-failed
   // reruns are already scoped to that pass's failures, so they don't need
   // repeating.
   const { options, playwrightArgs } = parseCli()
 
+  const stableStreak =
+    options.stableStreak ??
+    (playwrightArgs.some((arg) => /^(--grep|-g)(=|$)/.test(arg))
+      ? DEFAULT_SCOPED_STABLE_STREAK
+      : DEFAULT_STABLE_STREAK)
+
   spawnSync('pnpm', ['exec', 'bddgen'], { stdio: 'inherit' })
+
+  const servers = await startWebServers()
+  process.on('exit', () => stopWebServers(servers))
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.on(signal, () => process.exit(130))
+  }
 
   const passCache = openPassCache(codeFingerprint(), {
     fresh: !options.passCache,
@@ -287,14 +317,14 @@ function main(): void {
   const history = [failing]
 
   for (let pass = 2; failing.size > 0; pass++) {
-    const last3 = history.slice(-STABLE_STREAK_TO_CONFIRM)
+    const last3 = history.slice(-stableStreak)
     if (
-      last3.length === STABLE_STREAK_TO_CONFIRM &&
+      last3.length === stableStreak &&
       last3.every((s) => setsEqual(s, failing))
     ) {
       const flaky = [...everFailed].filter((id) => !failing.has(id))
       console.error(
-        `e2e: ${failing.size} test(s) failed ${STABLE_STREAK_TO_CONFIRM} passes in a row — genuine failures, not flakes:\n` +
+        `e2e: ${failing.size} test(s) failed ${stableStreak} passes in a row — genuine failures, not flakes:\n` +
           [...failing].join('\n'),
       )
       if (flaky.length > 0) {
@@ -305,9 +335,9 @@ function main(): void {
       process.exit(1)
     }
 
-    if (pass > MAX_PASSES) {
+    if (pass > options.maxPasses) {
       console.error(
-        `e2e: failing set didn't settle into 3 identical passes within ${MAX_PASSES} passes — its membership keeps ` +
+        `e2e: failing set didn't settle into ${stableStreak} identical passes within ${options.maxPasses} passes — its membership keeps ` +
           `shuffling (likely multiple independently-flaky tests). Treating the current set as failing rather than ` +
           `looping forever:\n${[...failing].join('\n')}`,
       )
@@ -331,4 +361,4 @@ function main(): void {
   console.error('e2e: all tests passed (after resolving flakes).')
 }
 
-main()
+await main()
