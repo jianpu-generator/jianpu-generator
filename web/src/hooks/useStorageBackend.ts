@@ -324,11 +324,13 @@ export function useStorageBackend(): UseStorageBackendResult {
   // flight, including for `localBackend`, which never has a pending save.
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {
+      // The live outbox, not `outboxSnapshot`, which lags a just-handed-over save.
+      const cloud = backend.kind === 'cloud' ? (backend as CloudBackend) : null
       if (
         shouldWarnBeforeUnload(
           backend.kind,
           debouncedSave.isPending() || handingOverRef.current > 0,
-          outboxSnapshot !== null && hasUnsyncedWork(outboxSnapshot),
+          cloud !== null && hasUnsyncedWork(cloud.outbox().snapshot()),
         )
       ) {
         event.preventDefault()
@@ -336,7 +338,7 @@ export function useStorageBackend(): UseStorageBackendResult {
     }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
-  }, [backend, debouncedSave, outboxSnapshot])
+  }, [backend, debouncedSave])
 
   const forceSave = useCallback(() => {
     debouncedSave.cancel()
