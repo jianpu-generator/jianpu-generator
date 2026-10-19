@@ -44,10 +44,20 @@ pub fn encode_queue(queue: &Queue) -> Vec<StoredRecord> {
         .collect()
 }
 
-/// Decodes records written by `encode_queue`, ignoring keys it does not own.
-/// Interrupted work is recovered: every `in_flight` is cleared and `Waiting`
-/// lanes become `Draining`. No owned records at all yields an empty queue.
+/// Decodes records written by `encode_queue`, recovering interrupted work:
+/// every `in_flight` is cleared and `Waiting` lanes become `Draining`. Only a
+/// tab taking over as the sender may recover; any other reader would cancel
+/// a send still in progress (see `decode_stored_queue`).
 pub fn decode_queue(records: &[StoredRecord]) -> Result<Queue, DecodeError> {
+    decode_stored_queue(records).map(|queue| Queue {
+        lanes: queue.lanes.into_iter().map(recover_lane).collect(),
+        ..queue
+    })
+}
+
+/// Decodes records written by `encode_queue` exactly as stored, ignoring
+/// keys it does not own. No owned records at all yields an empty queue.
+pub fn decode_stored_queue(records: &[StoredRecord]) -> Result<Queue, DecodeError> {
     let version_record = records.iter().find(|record| record.key == VERSION_KEY);
     let lane_records = records
         .iter()
@@ -85,7 +95,7 @@ pub fn decode_queue(records: &[StoredRecord]) -> Result<Queue, DecodeError> {
             if lane_key(&lane.file_id) != record.key {
                 return Err(corrupt(&record.key));
             }
-            Ok(recover_lane(lane))
+            Ok(lane)
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(Queue { lanes, revisions })

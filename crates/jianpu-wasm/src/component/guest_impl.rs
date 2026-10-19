@@ -369,6 +369,7 @@ impl Guest for Component {
         outbox_record_revision(queue: Queue, file_id: String, revision: i64) -> Queue;
         outbox_encode_queue(queue: Queue) -> Vec<StoredRecord>;
         outbox_decode_queue(records: Vec<StoredRecord>) -> Result<Queue, DecodeError>;
+        outbox_decode_stored_queue(records: Vec<StoredRecord>) -> Result<Queue, DecodeError>;
         outbox_summarize(queue: Queue, now_ms: u64) -> QueueSummary;
         outbox_record_sent(queue_before: Queue, existing: Vec<StoredRecord>, file_id: String, message_id: String, revision: i64, now_ms: u64) -> HistoryWrite;
         outbox_history_rows(queue: Queue, sent_records: Vec<StoredRecord>, file_names: Vec<FileName>, filter: HistoryFilter, now_ms: u64) -> Vec<HistoryRow>;

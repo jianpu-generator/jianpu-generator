@@ -1,8 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { instantiate } from '../../../../crates/jianpu-wasm/pkg-component/jianpu_wasm.js'
-import { type SendRequest, setWasmRoot } from '../../jianpuWasm'
+import {
+  type SendRequest,
+  type SendResult,
+  setWasmRoot,
+} from '../../jianpuWasm'
 import { createMemoryOutboxStore } from './memoryOutboxStore'
+import { serialLock } from './outboxLock'
 import { createOutboxLooper, type OutboxChangeChannel } from './outboxLooper'
 
 beforeAll(async () => {
@@ -46,6 +51,7 @@ describe('outbox looper across tabs', () => {
       }),
       now: () => 1_000_000,
       random: () => 0,
+      withStoreLock: serialLock(),
     }
     const leader = createOutboxLooper({
       ...shared,
@@ -80,4 +86,76 @@ describe('outbox looper across tabs', () => {
     expect(sent.map((request) => request.fileId)).toEqual(['file-a'])
     expect(leader.snapshot().summary.hasUnsynced).toBe(false)
   })
+
+  // Found by the TLA+ model (specs/outbox-tabs): the leader persisted its
+  // stale in-memory lane over the follower's newer save.
+  it('keeps a save queued from a follower tab while the leader is sending the previous one', async () => {
+    const store = createMemoryOutboxStore()
+    const [leaderChannel, followerChannel] = linkedChannels()
+    const sent: SendRequest[] = []
+    const pendingReplies: Array<() => void> = []
+    const shared = {
+      store,
+      createScheduler: () => ({
+        wakeAt: () => undefined,
+        wakeNow: () => undefined,
+        dispose: () => undefined,
+      }),
+      now: () => 1_000_000,
+      random: () => 0,
+      withStoreLock: serialLock(),
+    }
+    const leader = createOutboxLooper({
+      ...shared,
+      changes: leaderChannel,
+      sendMessage: vi.fn(
+        (request: SendRequest) =>
+          new Promise<SendResult>((resolve) => {
+            sent.push(request)
+            pendingReplies.push(() =>
+              resolve({ tag: 'ok', val: { revision: BigInt(sent.length) } }),
+            )
+          }),
+      ),
+      runAsLeader: (task) => {
+        const controller = new AbortController()
+        void task(controller.signal)
+        return () => controller.abort()
+      },
+    })
+    const follower = createOutboxLooper({
+      ...shared,
+      changes: followerChannel,
+      sendMessage: vi.fn(),
+      runAsLeader: () => () => undefined,
+    })
+    await leader.start()
+    await follower.start()
+    await settle()
+
+    await follower.enqueue('file-a', {
+      tag: 'save-content',
+      val: { content: 'first' },
+    })
+    await settle()
+    expect(sent.map(contentOf)).toEqual(['first'])
+
+    await follower.enqueue('file-a', {
+      tag: 'save-content',
+      val: { content: 'second' },
+    })
+    pendingReplies.shift()?.()
+    await settle()
+    pendingReplies.shift()?.()
+    await settle()
+    await leader.whenIdle()
+
+    expect(sent.map(contentOf)).toEqual(['first', 'second'])
+  })
 })
+
+function contentOf(request: SendRequest): string | undefined {
+  return request.message.tag === 'save-content'
+    ? request.message.val.content
+    : undefined
+}

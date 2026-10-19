@@ -1,4 +1,4 @@
-use cloud_outbox::codec::{decode_queue, encode_queue};
+use cloud_outbox::codec::{decode_queue, decode_stored_queue, encode_queue};
 use cloud_outbox::types::*;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
@@ -116,6 +116,17 @@ fn in_flight_is_cleared_and_waiting_becomes_draining() -> TestResult {
             lane("b", LaneStatus::Draining, None),
         ],
     )
+}
+
+#[test]
+fn decoding_as_stored_keeps_in_flight_and_waiting() -> TestResult {
+    let original = queue(vec![
+        lane("a", LaneStatus::Draining, Some("m1")),
+        lane("b", LaneStatus::Waiting { retry_at_ms: 50 }, None),
+    ]);
+    let decoded =
+        decode_stored_queue(&encode_queue(&original)).map_err(|error| format!("{error:?}"))?;
+    expect_eq!(decoded, original)
 }
 
 #[test]

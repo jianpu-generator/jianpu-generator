@@ -72,6 +72,13 @@ pub(super) fn outbox_decode_queue(records: Vec<StoredRecord>) -> Result<Queue, D
         .map_err(Into::into)
 }
 
+pub(super) fn outbox_decode_stored_queue(records: Vec<StoredRecord>) -> Result<Queue, DecodeError> {
+    let records: Vec<_> = records.into_iter().map(Into::into).collect();
+    codec::decode_stored_queue(&records)
+        .map(Into::into)
+        .map_err(Into::into)
+}
+
 pub(super) fn outbox_summarize(queue: Queue, now_ms: u64) -> QueueSummary {
     summary::summarize(&queue.into(), now_ms).into()
 }
