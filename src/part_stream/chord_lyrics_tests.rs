@@ -120,13 +120,24 @@ fn more_brackets_than_chord_attacks_is_an_error_on_that_measure() {
 }
 
 #[test]
-fn leading_unbracketed_syllables_need_a_rest_on_beat_one() {
-    let result = apply_part_stream(TWO_MEASURES, "W", "天 (空) | 我 （在）想 你");
-    assert_eq!(errors(&result).len(), 1);
-    assert!(errors(&result)[0]
-        .1
-        .contains("put the first syllable in a bracket"));
-    assert_eq!(errors(&result)[0].0, Span::new(0, 9));
+fn an_unbracketed_first_syllable_takes_a_beat_one_chord_attack() {
+    let result = apply_part_stream(TWO_MEASURES, "W", "天 空 好 (藍) | 我 （在）想 你");
+    assert_eq!(errors(&result), vec![]);
+}
+
+#[test]
+fn an_unbracketed_first_syllable_on_beat_one_counts_toward_the_chord_attacks() {
+    let result = apply_part_stream(TWO_MEASURES, "W", "天 (空) (好) | 我 （在）想 你");
+    assert_eq!(
+        errors(&result),
+        vec![(
+            Span::new(0, 15),
+            "lyrics under a chord part need at most one bracketed item per chord attack, \
+             found 2 bracketed items for 2 chord attacks; \
+             the unbracketed first syllable already takes the beat-1 chord"
+                .to_string()
+        )]
+    );
 }
 
 #[test]

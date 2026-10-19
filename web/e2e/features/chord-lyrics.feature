@@ -42,7 +42,14 @@ Feature: Lyrics under a chord part
     When the chord-lyrics score is rendered
     Then the chord-lyrics score has an error
 
-  Scenario: An unbracketed run before a beat-1 chord attack is an error
+  Scenario: An unbracketed first syllable takes a beat-1 chord attack
+    Given a chord-lyrics score with chords "6 - 5 -" and lyrics "天 空 (好) 藍"
+    When the chord-lyrics score is rendered
+    Then the chord-lyrics score has no error
+    And the chord "6" is drawn above the lyric "天"
+    And the chord "5" is drawn above the bracket "(好)"
+
+  Scenario: An unbracketed first syllable on beat 1 counts toward the chord attacks
     Given a chord-lyrics score with chords "1 - - -" and lyrics "啦 (啦)"
     When the chord-lyrics score is rendered
     Then the chord-lyrics score has an error

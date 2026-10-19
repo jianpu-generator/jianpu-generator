@@ -1,5 +1,6 @@
 use crate::ast::grouped::{GroupedMeasure, NoteEvent, Notes};
 use crate::ast::parsed::{ParsedLyrics, Syllable};
+use crate::chord_lyric_placement::chord_lyric_tally_error;
 use crate::error::{RecoverableError, Span, Warning};
 use crate::lyric_slots::{chord_attacks, measure_lyric_slots};
 
@@ -129,35 +130,18 @@ fn pair_lyrics_to_notes(
 }
 
 /// Under a chord part the line's syllables are kept whole (bracketed and
-/// unbracketed, in order); this only validates them: bracketed items must number
-/// at most the measure's chord attacks (the Nth bracketed item takes the Nth
-/// attack; trailing attacks may go without), and unbracketed syllables may
-/// lead the line only when the first attack is not on beat 1. `_` (no
-/// syllables) skips the tally.
+/// unbracketed, in order); this only validates them (see
+/// `chord_lyric_placement::chord_lyric_tally_error`).
 fn tally_chord_lyrics(
     events: &[NoteEvent],
     syllables: &[Syllable],
     source_span: Span,
 ) -> Option<RecoverableError> {
-    if syllables.is_empty() {
-        return None;
-    }
     let attacks = chord_attacks(events);
-    let brackets = syllables
-        .iter()
-        .filter(|syllable| syllable.bracketed)
-        .count();
-    if brackets > attacks.len() {
-        return Some(RecoverableError::lyrics_bracket_count_mismatch(
-            source_span,
-            brackets,
-            attacks.len(),
-        ));
-    }
-    let leads_unbracketed = syllables
-        .first()
-        .is_some_and(|syllable| !syllable.bracketed);
-    let first_attack_on_beat_one = attacks.first().is_some_and(|attack| attack.column == 0);
-    (leads_unbracketed && first_attack_on_beat_one)
-        .then(|| RecoverableError::lyrics_bracket_missing_before_beat_one(source_span))
+    chord_lyric_tally_error(
+        syllables,
+        attacks.len(),
+        attacks.first().is_some_and(|attack| attack.column == 0),
+        source_span,
+    )
 }
