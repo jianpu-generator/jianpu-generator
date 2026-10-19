@@ -33,6 +33,12 @@ Given('the cloud is unreachable', async ({ page }) => {
   await page.clock.install()
   await gotoCloudApp(page)
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
+  // The editor opens on the demo file before the cloud file list arrives;
+  // cutting the worker off before then aborts that load and the seeded
+  // files never appear.
+  await expect(
+    fileSwitcherTrigger(page).locator('.file-tab-bar-spinner'),
+  ).toHaveCount(0, { timeout: 15_000 })
   await page.route(WORKER_ROUTES, (route) =>
     // The share-status lookup the owner hook fires for every newly active
     // cloud file is unrelated to the outbox, yet raises a full-screen
