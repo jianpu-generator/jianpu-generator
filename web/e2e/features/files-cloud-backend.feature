@@ -22,11 +22,28 @@ Feature: File operations on the cloud (D1) storage backend
   Scenario: Deleting a file moves it to the bin and it survives reload
     Given a cloud file named "todelete.jianpu" is seeded for the signed-in account
     When the app loads the cloud-backed file list
-    And I delete the active file
+    And I choose Delete from the file actions menu of the active file
+    And I confirm the delete file dialog
     Then the file list no longer shows "todelete"
     And the bin shows "todelete"
     When I reload the page and reopen the file list
     Then the bin shows "todelete" after reload
+
+  Scenario: Delete asks for confirmation before moving the file to the bin
+    Given a cloud file named "askfirst.jianpu" is seeded for the signed-in account
+    When the app loads the cloud-backed file list
+    And I choose Delete from the file actions menu of the active file
+    Then the delete file dialog is titled 'Delete file "askfirst.jianpu"?'
+    When I cancel the delete file dialog
+    Then the file list still shows "askfirst"
+
+  Scenario: Cancelling the delete file dialog keeps the file
+    Given a cloud file named "keepme.jianpu" is seeded for the signed-in account
+    When the app loads the cloud-backed file list
+    And I choose Delete from the file actions menu of the active file
+    And I cancel the delete file dialog
+    Then the file list still shows "keepme"
+    And the bin does not show "keepme"
 
   Scenario: Duplicating a file creates a second cloud-backed file with the same content
     Given a cloud file named "source.jianpu" with content "1 2 3" is seeded for the signed-in account
