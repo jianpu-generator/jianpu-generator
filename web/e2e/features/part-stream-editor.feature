@@ -59,11 +59,31 @@ Feature: Part stream editor
     When I apply the part stream
     Then the main editor source is the shifted lyrics source
 
-  Scenario: A lyric part bound to a chords part is listed but disabled with a reason
+  Scenario: A lyric part bound to a chords part marks its measures with barlines
     Given the chord-bound lyrics fixture is loaded instead
+    When I open the part stream editor for part "C"
+    Then the original part stream is:
+      """
+      (a) b c (d) |
+      (e) f
+      """
+    When I replace the edited part stream with "(a) b c | (d) e f"
+    Then the part stream footer says "2 measures changed"
+    When I apply the part stream
+    Then the main editor source is the shifted chord-bound lyrics source
+
+  Scenario: Too many brackets for a measure's chord attacks disables Apply
+    Given the chord-bound lyrics fixture is loaded instead
+    When I open the part stream editor for part "C"
+    And I replace the edited part stream with "(a) (b) (c) | (e) f"
+    Then the edited part stream has an error marker
+    And the part stream Apply button is disabled
+
+  Scenario: A chord-bound lyric part whose source breaks the bracket tally is disabled with a reason
+    Given the over-bracketed chord lyrics fixture is loaded instead
     When I open the part stream picker
     Then the part stream picker row for part "C" is disabled
-    And the part stream picker row for part "C" explains "chords part"
+    And the part stream picker row for part "C" explains "3 bracketed items for 2 chord attacks"
     And the part stream picker row for part "H" is enabled
 
   Scenario: Apply is undoable from the main editor

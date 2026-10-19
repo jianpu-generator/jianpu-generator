@@ -7,7 +7,7 @@ use crate::parser::score::timed_parser::{GroupStack, TimedLexToken};
 
 use super::diagnostics::{
     error_at, forbidden_character_errors, inline_directive_errors, placeholder_offsets,
-    stream_diagnostic,
+    stream_diagnostic, AllowedMarkers,
 };
 use super::editable::TimedGrammar;
 use super::timing::{normalize_whitespace, rest_fill, timed_layout, TimedCluster};
@@ -64,7 +64,13 @@ pub(super) fn split_timed_stream(
     grammar: TimedGrammar,
     capacities: &[u32],
 ) -> SplitStream {
-    let mut diagnostics = forbidden_character_errors(stream, grammar.is_follow);
+    let mut diagnostics = forbidden_character_errors(
+        stream,
+        AllowedMarkers {
+            placeholder: grammar.is_follow,
+            barlines: false,
+        },
+    );
     let placeholders = if grammar.is_follow {
         placeholder_offsets(stream)
     } else {

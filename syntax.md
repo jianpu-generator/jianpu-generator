@@ -853,7 +853,7 @@ H:  3 4 5 6
 
 - The content is the part's normal line grammar (notes, chords, percussion or lyrics), without the `[Abbrev]` prefix.
 - Whitespace and newlines are insignificant; measures are inferred from beat counts, using the time signature in effect at each measure (past the last measure, the last one's).
-- `|` is an error anywhere — there are no barlines.
+- `|` is an error anywhere — there are no barlines (except in a lyric stream under a chords part, see [Lyric streams under a chords part](#lyric-streams-under-a-chords-part)).
 - Directives are hidden and never move. Inline directive tokens (`bpm=N`, `1=C4`, `N/N`, …) in a stream are errors; change them on the measure's directive line instead.
 - Implicit trailing padding is spelled out: a measure written `1 2` in 4/4 shows as `1 2 - -`.
 - A measure the part doesn't write shows as rests that fill it (`0 0 0 0` in 4/4).
@@ -870,6 +870,33 @@ H:  3 4 5 6
 
 A lyric stream is cut into measures by its target's **lyric slots**: each measure takes as many syllables as its target has notes that aren't the continuation of a tie (ties carry across barlines). `-` held syllables count as syllables. A measure whose target has no slots takes nothing. If the stream runs out partway through a measure, that measure keeps what it has (a warning; it shows the usual lyrics-underflow warning after Apply). Syllables left over after the last slot are an error — a lyric stream can't add measures.
 
+### Lyric streams under a chords part
+
+A lyric part bound to a `chords` part (or a `follow` of one) has no lyric slots to cut by — its unbracketed syllables flow freely (see [Lyrics under a chord part](#lyrics-under-a-chord-part-lyricsx-where-x-is-a-chords-part)) — so its stream marks every measure boundary with `|`. The editor shows one measure per line, each ended by `|`:
+
+```jianpu
+# parts
+c = chords
+l = lyrics[c]
+
+# score
+[c] 1 - 4 -
+[l] (天) 空 好 (藍)
+
+[c] 0 5 - -
+[l] 我 （在）想 你
+```
+
+```
+(天) 空 好 (藍) |
+我 （在）想 你
+```
+
+- Each `|` ends a measure; a trailing `|` at the end of the stream doesn't open another one. Moving a `|` moves syllables between the neighbouring measures.
+- A measure the part doesn't write shows as `_`. An empty measure (`| |`) is an error; write `_` for a measure without lyrics.
+- Each measure is checked like a lyric line under a chord part: bracket mistakes, more bracketed items than the measure's chord attacks, and unbracketed syllables before the first bracket when the first chord attack is on beat 1 are errors in the stream.
+- More measures than the score has are an error (a lyric stream can't add measures). Fewer is a warning: the measures after the stream's end lose their lyrics on Apply.
+
 ### Applying a longer or shorter stream
 
 - **Shorter** (e.g. after deleting a note): the rest of the last measure is filled with rests, and later measures drop this part's line. A follow part writes explicit rests there instead (dropping the line would make it copy its target); a lyric part just drops its lines. A group whose only data line is this part keeps that line as a rest fill (`_` for lyrics) rather than becoming empty.
@@ -879,11 +906,9 @@ Apply is refused while the stream has any error; warnings don't block it.
 
 ### Which parts can be edited
 
-`notes`, `chords`, `percussion` and `follow[X]` parts, and lyric parts whose target is a `notes` part (or a `follow` of one). A part is listed but disabled, with the reason, when:
-
-- it is a lyric part bound to a `chords` or `percussion` part;
+`notes`, `chords`, `percussion` and `follow[X]` parts, and lyric parts whose target is a `notes` or `chords` part (or a `follow` of one). A part is listed but disabled, with the reason, when:
 - any of its measures has too many beats, too few beats that can't be implicitly padded, an inline directive, or a tuplet together with `-` (explicit, or implicit padding in a tuplet measure);
-- it is a lyric part with a syllable/note count mismatch in any measure other than a `_` one;
+- it is a lyric part under a notes part with a syllable/note count mismatch in any measure other than a `_` one, or a lyric part under a chords part with a bracket error in any measure;
 - its own stream wouldn't split back into exactly the same measures (so applying an untouched stream never changes the source);
 - the score has a structural error (a section that doesn't parse, no declared parts, or a measure group error such as an unknown `[Abbrev]`) — then every part is disabled.
 

@@ -6,17 +6,26 @@ use crate::error::{Diagnostic, Span, Spanned};
 use super::timing::is_inline_directive;
 use super::{StreamDiagnostic, StreamDiagnosticSeverity, FOLLOW_PLACEHOLDER};
 
-/// `|` anywhere, and `@` unless the stream belongs to a follow part.
+/// Which of the characters a part stream otherwise forbids it allows.
+#[derive(Debug, Clone, Copy, Default)]
+pub(super) struct AllowedMarkers {
+    /// `@`: only in a follow part's stream.
+    pub(super) placeholder: bool,
+    /// `|`: only in a chord-bound lyric stream, where it separates measures.
+    pub(super) barlines: bool,
+}
+
+/// `|` and `@`, unless `allowed`.
 pub(super) fn forbidden_character_errors(
     stream: &str,
-    allows_placeholder: bool,
+    allowed: AllowedMarkers,
 ) -> Vec<StreamDiagnostic> {
     stream
         .char_indices()
         .filter_map(|(offset, character)| {
             let message = match character {
-                '|' => "barlines are not allowed in a part stream; measures are inferred from beat counts",
-                '@' if !allows_placeholder => "`@` is only allowed in follow parts",
+                '|' if !allowed.barlines => "barlines are not allowed in a part stream; measures are inferred from beat counts",
+                '@' if !allowed.placeholder => "`@` is only allowed in follow parts",
                 _ => return None,
             };
             Some(error_at(Span::new(offset, offset + 1), message))

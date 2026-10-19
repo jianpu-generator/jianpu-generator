@@ -5,15 +5,18 @@
 //! - [`extract_part_stream`] turns the part's per-measure lines into one
 //!   stream of **measure chunks** (implicit trailing padding materialized as
 //!   explicit `-`, unwritten measures shown as rests, as `@` for a follow
-//!   part, or as `_` for a lyric part).
+//!   part, or as `_` for a lyric part; a chords part's lyric stream ends
+//!   each measure with `|`).
 //! - [`apply_part_stream`] re-bars an edited stream by each measure's beat
-//!   capacity (a lyric stream: by its target's lyric slots) and rewrites only
+//!   capacity (a lyric stream: by its target's lyric slots, or at its `|`s
+//!   under a chords part) and rewrites only
 //!   the measures whose chunk changed; every other line (other parts,
 //!   directives, comments) stays byte-for-byte.
 //! - [`list_streamable_parts`] lists every declared part with the reason it
 //!   can't be stream-edited, if any.
 
 mod apply;
+mod chord_lyrics;
 mod diagnostics;
 mod document;
 mod editable;
@@ -138,7 +141,7 @@ pub fn extract_part_stream(
     let document = ScoreDocument::load(source)?;
     let index = find_part(&document, abbreviation)?;
     let part = editable_part(&document, index)?;
-    Ok(join_chunks(&part.chunks))
+    Ok(part.grammar.join(&part.chunks))
 }
 
 /// Re-bars `stream` into `abbreviation`'s measures and rewrites the measures
