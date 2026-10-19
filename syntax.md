@@ -823,6 +823,72 @@ Measure 2: A plays `1 - - -`, B plays `1 2 3 4`.
 
 ---
 
+## Part stream editor
+
+The web editor's **Edit part as stream** button edits **one part** of the `# score` as a single continuous stream: no measure groups, no barlines, no directives. Inserting or deleting a note shifts every later note across the following barlines. The stream is written back into the measure-grouped source only on **Apply**, and only the measures whose content changed are rewritten — every other line (other parts, directives, comments) stays byte-for-byte.
+
+```jianpu
+# parts
+Melody [M] = notes
+Harmony [H] = follow[M]
+
+# score
+time=4/4
+[M] 1 2
+[H] 3 4 5 6
+
+[M] 5 6 7 1'
+```
+
+Streams of this score (the editor puts each measure on its own line when it opens the stream; the line breaks are just whitespace and aren't re-flowed as you edit):
+
+```
+M:  1 2 - -
+    5 6 7 1'
+H:  3 4 5 6
+    @
+```
+
+### Stream syntax
+
+- The content is the part's normal line grammar (notes, chords, percussion or lyrics), without the `[Abbrev]` prefix.
+- Whitespace and newlines are insignificant; measures are inferred from beat counts, using the time signature in effect at each measure (past the last measure, the last one's).
+- `|` is an error anywhere — there are no barlines.
+- Directives are hidden and never move. Inline directive tokens (`bpm=N`, `1=C4`, `N/N`, …) in a stream are errors; change them on the measure's directive line instead.
+- Implicit trailing padding is spelled out: a measure written `1 2` in 4/4 shows as `1 2 - -`.
+- A measure the part doesn't write shows as rests that fill it (`0 0 0 0` in 4/4).
+- A note together with its `-` extensions can't cross a barline (error: *crosses the barline of measure N; split it with a tie (`~`)*). Write `1 2 3 4~ 4 5 6` rather than `1 2 3 4 - 5 6`.
+- A tuplet `N:{…}` can't cross a barline either, and a measure can't contain both a tuplet and a `-` extension (the stream would be re-barred differently than the measure renders).
+- An opening `(` or `N:{` right before a measure's first note belongs to that measure; `)`, `}` and `~` stay with the measure before.
+- Bare `_` / `=` keep their usual meaning (repeat the last note/chord) in notes, chords and percussion streams.
+
+**`@` — follow placeholder (`follow[X]` parts only).** One `@` stands for one whole measure the part doesn't write, so it copies `X` there. `@` must start a measure and nothing else may share its measure; `@` in a non-follow part, or past the end of the score, is an error.
+
+**`_` — no-lyrics measure (lyric parts only).** As on a lyric line, `_` is one whole measure with no lyrics.
+
+### Lyric streams
+
+A lyric stream is cut into measures by its target's **lyric slots**: each measure takes as many syllables as its target has notes that aren't the continuation of a tie (ties carry across barlines). `-` held syllables count as syllables. A measure whose target has no slots takes nothing. If the stream runs out partway through a measure, that measure keeps what it has (a warning; it shows the usual lyrics-underflow warning after Apply). Syllables left over after the last slot are an error — a lyric stream can't add measures.
+
+### Applying a longer or shorter stream
+
+- **Shorter** (e.g. after deleting a note): the rest of the last measure is filled with rests, and later measures drop this part's line. A follow part writes explicit rests there instead (dropping the line would make it copy its target); a lyric part just drops its lines. A group whose only data line is this part keeps that line as a rest fill (`_` for lyrics) rather than becoming empty.
+- **Longer**: each extra measure is appended to the end of the `# score` as a new group holding only this part's line. Lyric streams can't add measures.
+
+Apply is refused while the stream has any error; warnings don't block it.
+
+### Which parts can be edited
+
+`notes`, `chords`, `percussion` and `follow[X]` parts, and lyric parts whose target is a `notes` part (or a `follow` of one). A part is listed but disabled, with the reason, when:
+
+- it is a lyric part bound to a `chords` or `percussion` part;
+- any of its measures has too many beats, too few beats that can't be implicitly padded, an inline directive, or a tuplet together with `-` (explicit, or implicit padding in a tuplet measure);
+- it is a lyric part with a syllable/note count mismatch in any measure other than a `_` one;
+- its own stream wouldn't split back into exactly the same measures (so applying an untouched stream never changes the source);
+- the score has a structural error (a section that doesn't parse, no declared parts, or a measure group error such as an unknown `[Abbrev]`) — then every part is disabled.
+
+---
+
 ## Quick reference — special line forms
 
 | Whole line | Column | Meaning |

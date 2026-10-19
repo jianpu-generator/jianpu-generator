@@ -980,6 +980,71 @@ world jianpu-wasm {
 
     export format-score: func(source: string) -> string;
 
+    // ==================== part stream editing ====================
+    // `jianpu_generator::part_stream`: edit one part of the `# score` as a
+    // single stream (no barlines, no directives), then apply it back.
+
+    // `part_stream::StreamablePartKind`.
+    enum streamable-part-kind {
+        notes,
+        chords,
+        percussion,
+        follow,
+        lyrics,
+    }
+
+    // `part_stream::StreamablePart`: one part picker row; `none` reason = selectable.
+    record streamable-part {
+        abbreviation: string,
+        display-name: string,
+        kind: streamable-part-kind,
+        ineligible-reason: option<string>,
+    }
+
+    // `part_stream::PartStream`. `measure-starts` are UTF-8 byte offsets in
+    // `text` where each measure's chunk starts (index = measure index).
+    record part-stream {
+        text: string,
+        measure-starts: list<u32>,
+    }
+
+    // `part_stream::PartStreamError`, each case carrying its single field.
+    variant part-stream-error {
+        source-does-not-parse(string),
+        unknown-part(string),
+        ineligible(string),
+    }
+
+    // Why a stream could not be extracted, with Rust's human-readable `message`.
+    record part-stream-failure {
+        reason: part-stream-error,
+        message: string,
+    }
+
+    variant extract-part-stream-response {
+        ok(part-stream),
+        err(part-stream-failure),
+    }
+
+    // `part_stream::PartStreamApplyResult`. `diagnostics` are
+    // `StreamDiagnostic`s (same shape as `diagnostic`), spanned in UTF-8
+    // byte offsets of the *edited stream*, not the source. `source` is
+    // `none` while any error-severity diagnostic exists.
+    record part-stream-apply-result {
+        source: option<string>,
+        diagnostics: list<diagnostic>,
+        measure-starts: list<u32>,
+        changed-measure-count: u32,
+    }
+
+    // Every declared part, in declaration order, with why it can't be stream-edited (if any).
+    export list-streamable-parts: func(source: string) -> list<streamable-part>;
+    // The part's measures as one stream, one measure chunk per measure.
+    export extract-part-stream: func(source: string, abbreviation: string) -> extract-part-stream-response;
+    // Re-bars `edited-stream` into the part's measures; pure, so the
+    // editor calls it on every keystroke and uses `source` only on Apply.
+    export apply-part-stream: func(source: string, abbreviation: string, edited-stream: string) -> part-stream-apply-result;
+
     // The editor's pitch drawer (see `pitch_description::describe_selection`):
     // what a selection covering exactly one note/chord means in letter names,
     // or `none` for any other selection (several notes, a rest, a caret).

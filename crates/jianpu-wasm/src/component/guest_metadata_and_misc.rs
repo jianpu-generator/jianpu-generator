@@ -57,6 +57,92 @@ pub(super) fn shift_part_octave(source: String, abbreviation: String, delta: i32
     jianpu_generator::source_edit::shift_part_octave(&source, &abbreviation, delta as i8)
 }
 
+pub(super) fn list_streamable_parts(source: String) -> Vec<StreamablePart> {
+    jianpu_generator::part_stream::list_streamable_parts(&source)
+        .into_iter()
+        .map(|part| StreamablePart {
+            abbreviation: part.abbreviation,
+            display_name: part.display_name,
+            kind: streamable_part_kind_to_wit(part.kind),
+            ineligible_reason: part.ineligible_reason,
+        })
+        .collect()
+}
+
+pub(super) fn extract_part_stream(
+    source: String,
+    abbreviation: String,
+) -> ExtractPartStreamResponse {
+    use jianpu_generator::part_stream;
+    match part_stream::extract_part_stream(&source, &abbreviation) {
+        Ok(stream) => ExtractPartStreamResponse::Ok(PartStream {
+            text: stream.text,
+            measure_starts: offsets_to_wit(&stream.measure_starts),
+        }),
+        Err(error) => ExtractPartStreamResponse::Err(PartStreamFailure {
+            message: error.describe(),
+            reason: match error {
+                part_stream::PartStreamError::SourceDoesNotParse { message } => {
+                    PartStreamError::SourceDoesNotParse(message)
+                }
+                part_stream::PartStreamError::UnknownPart { abbreviation } => {
+                    PartStreamError::UnknownPart(abbreviation)
+                }
+                part_stream::PartStreamError::Ineligible { reason } => {
+                    PartStreamError::Ineligible(reason)
+                }
+            },
+        }),
+    }
+}
+
+pub(super) fn apply_part_stream(
+    source: String,
+    abbreviation: String,
+    edited_stream: String,
+) -> PartStreamApplyResult {
+    use jianpu_generator::part_stream::StreamDiagnosticSeverity;
+    let result =
+        jianpu_generator::part_stream::apply_part_stream(&source, &abbreviation, &edited_stream);
+    PartStreamApplyResult {
+        source: result.source,
+        diagnostics: result
+            .diagnostics
+            .into_iter()
+            .map(|diagnostic| Diagnostic {
+                severity: match diagnostic.severity {
+                    StreamDiagnosticSeverity::Error => DiagnosticSeverity::Error,
+                    StreamDiagnosticSeverity::Warning => DiagnosticSeverity::Warning,
+                },
+                message: diagnostic.message,
+                span: Span {
+                    start: diagnostic.span.start as u32,
+                    end: diagnostic.span.end as u32,
+                },
+            })
+            .collect(),
+        measure_starts: offsets_to_wit(&result.measure_starts),
+        changed_measure_count: result.changed_measure_count as u32,
+    }
+}
+
+fn streamable_part_kind_to_wit(
+    kind: jianpu_generator::part_stream::StreamablePartKind,
+) -> StreamablePartKind {
+    use jianpu_generator::part_stream::StreamablePartKind as Kind;
+    match kind {
+        Kind::Notes => StreamablePartKind::Notes,
+        Kind::Chords => StreamablePartKind::Chords,
+        Kind::Percussion => StreamablePartKind::Percussion,
+        Kind::Follow => StreamablePartKind::Follow,
+        Kind::Lyrics => StreamablePartKind::Lyrics,
+    }
+}
+
+fn offsets_to_wit(offsets: &[usize]) -> Vec<u32> {
+    offsets.iter().map(|&offset| offset as u32).collect()
+}
+
 pub(super) fn shift_range_octave(
     source: String,
     ranges: Vec<ByteRange>,

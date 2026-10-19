@@ -118,6 +118,16 @@ export function createEditorImperativeHandle(
       const [firstSelection] = selections
       if (firstSelection) ed.revealRangeInCenter(firstSelection)
     },
+    replaceContent(newSource: string) {
+      const ed = editorRef.current
+      const model = ed?.getModel()
+      if (!ed || !model) return
+      ed.pushUndoStop()
+      ed.executeEdits('replaceContent', [
+        { range: model.getFullModelRange(), text: newSource },
+      ])
+      ed.pushUndoStop()
+    },
     setSelectionByLines(startLine: number, endLine: number) {
       const ed = editorRef.current
       if (!ed) return

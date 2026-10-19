@@ -104,3 +104,5 @@ export!(Component);
 mod tests_outbox;
 #[cfg(test)]
 mod tests_outbox_history;
+#[cfg(test)]
+mod tests_part_stream;

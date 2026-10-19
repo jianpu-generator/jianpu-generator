@@ -51,7 +51,7 @@ pub(crate) fn apply_resolution_multiplier(
 
 /// The `TupletInfo` tag of a note/chord/rest/percussion-hit event, or `None` for events
 /// with no such tag (including non-note events like `BpmChange`).
-fn tuplet_of(event: &ScoreEvent) -> Option<TupletInfo> {
+pub(crate) fn tuplet_of(event: &ScoreEvent) -> Option<TupletInfo> {
     match event {
         ScoreEvent::Note(n) => n.tuplet,
         ScoreEvent::Chord(c) => c.tuplet,
