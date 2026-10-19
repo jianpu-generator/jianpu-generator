@@ -66,6 +66,11 @@ export interface EditorHandle {
     newSource: string,
     ranges: Array<{ start: number; end: number }>,
   ) => void
+  /** Replace the entire model content with `newSource` as one undo step
+   * (an edit operation on the model, not a `value` swap), so Ctrl+Z in the
+   * editor restores the previous source. Used by the part stream editor's
+   * Apply. */
+  replaceContent: (newSource: string) => void
   /** Select a range of lines by 1-indexed line numbers and reveal the start. */
   setSelectionByLines: (startLine: number, endLine: number) => void
   /**

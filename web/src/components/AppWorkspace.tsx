@@ -1,5 +1,5 @@
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { AlignLeft, ChevronDown, ChevronUp } from 'lucide-react'
+import { AlignLeft, ChevronDown, ChevronUp, ListMusic } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { MOBILE_BREAKPOINT_QUERY, useMediaQuery } from '../hooks/useMediaQuery'
 import { useSelectionPitchDescription } from '../hooks/useSelectionPitchDescription'
@@ -11,6 +11,7 @@ import { EditorToolbarButton } from './EditorToolbarButton'
 import { EditPartsModal } from './EditPartsModal'
 import { PitchDrawer } from './PitchDrawer'
 import { Preview } from './Preview'
+import { PartStreamModal } from './partStream/PartStreamModal'
 import { SlurIcon } from './SlurIcon'
 import { TieIcon } from './TieIcon'
 
@@ -93,6 +94,7 @@ export function AppWorkspace({
     EditorSelection[] | null
   >(null)
   const [previewSelectionPending, setPreviewSelectionPending] = useState(false)
+  const [partStreamOpen, setPartStreamOpen] = useState(false)
   const describedSelection = useSelectionPitchDescription(
     // Synced/shared views never mount the editor, so its selection never
     // reports in; fall back to the preview's own note selection there.
@@ -151,6 +153,11 @@ export function AppWorkspace({
                       label="Format score"
                       icon={<AlignLeft size={14} aria-hidden="true" />}
                       onClick={handleFormatScore}
+                    />
+                    <EditorToolbarButton
+                      label="Edit part as stream"
+                      icon={<ListMusic size={14} aria-hidden="true" />}
+                      onClick={() => setPartStreamOpen(true)}
                     />
                     <EditorToolbarButton
                       label="Octave up"
@@ -246,6 +253,14 @@ export function AppWorkspace({
               previewPercussion={previewPercussion}
               stopPreviewInstrument={stopPreviewInstrument}
               previewAudioPlaying={previewAudioPlaying}
+            />
+            <PartStreamModal
+              open={partStreamOpen}
+              onOpenChange={setPartStreamOpen}
+              source={source}
+              onApply={(newSource) =>
+                editorRef.current?.replaceContent(newSource)
+              }
             />
             <EditMetadataModal
               open={editMetadataOpen}
