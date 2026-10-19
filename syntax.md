@@ -685,10 +685,21 @@ l = lyrics[c]
 ```
 
 - A **bracketed item** is `( … )` or the full-width `（ … ）`; both are accepted on input, and both always render as ASCII `( … )`. It holds exactly one syllable. Several syllables in one bracket (`（陪我）`) is an error.
-- **Tally**: in each measure the number of bracketed items must not exceed the number of chord *attacks*. A chord rest (`0`) and a `-` extension are not attacks. More brackets than attacks is an error, not a warning; fewer is fine, and the trailing attacks simply have no bracketed item.
+- **Tally**: in each measure the number of bracketed items must not exceed the number of chord *attacks*. A chord rest (`0`) and a `-` extension are not attacks. More brackets than attacks is an error, not a warning; fewer is fine, and the trailing attacks simply have no bracketed item. An unbracketed first syllable that takes a beat-1 chord (see below) counts as one of the bracketed items.
 - **Pairing**: the Nth bracketed item sits at the beat of the Nth chord attack (so with fewer brackets than attacks, the first attacks are the ones paired), and the chord symbol is drawn above it.
 - **Unbracketed syllables** (tokenised as in [Lyrics syntax](#lyrics-syntax)) are spread **evenly** between the neighbouring bracketed items; those after the last bracketed item spread evenly up to the bar line. They are not tallied.
-- Unbracketed syllables may precede the first bracketed item only when the first chord attack is **not** on beat 1 (the chord line starts with a rest); they then spread evenly from the bar start. Otherwise they are an error.
+- **Unbracketed first syllable**: when the first chord attack is on beat 1, an unbracketed first syllable takes that attack as if it were bracketed (it is drawn without brackets), and the following unbracketed syllables spread after it. When the first chord attack is **not** on beat 1 (the chord line starts with a rest), the unbracketed syllables before the first bracketed item are a pickup instead, spread evenly from the bar start. Here `天` sits under the `6` chord and `(好)` under the `5`:
+
+```jianpu
+# parts
+c = chords
+l = lyrics[c]
+
+# score
+[c] 6 - 5 -
+[l] 天 空 (好) 藍
+```
+
 - **Layout**: the lyric row decides the measure's width (there are normally more syllables than chord attacks); the chord row adapts to it.
 - The `_` no-lyrics marker still means zero syllables for the measure, and skips the tally.
 
@@ -894,7 +905,7 @@ l = lyrics[c]
 
 - Each `|` ends a measure; a trailing `|` at the end of the stream doesn't open another one. Moving a `|` moves syllables between the neighbouring measures.
 - A measure the part doesn't write shows as `_`. An empty measure (`| |`) is an error; write `_` for a measure without lyrics.
-- Each measure is checked like a lyric line under a chord part: bracket mistakes, more bracketed items than the measure's chord attacks, and unbracketed syllables before the first bracket when the first chord attack is on beat 1 are errors in the stream.
+- Each measure is checked like a lyric line under a chord part: bracket mistakes and more bracketed items than the measure's chord attacks (counting an unbracketed first syllable on a beat-1 chord) are errors in the stream.
 - More measures than the score has are an error (a lyric stream can't add measures). Fewer is a warning: the measures after the stream's end lose their lyrics on Apply.
 
 ### Applying a longer or shorter stream

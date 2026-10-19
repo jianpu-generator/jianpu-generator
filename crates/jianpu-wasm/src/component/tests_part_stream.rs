@@ -11,7 +11,7 @@ Chanted [C] = lyrics[H]
 [M] 1 2 3 4
 [W] 你 好 世 界
 [H] 1 4 5 1
-[C] la la la la
+[C] (la) (la) (la) (la) (la)
 
 [M] 5 6 7 1
 [W] 一 二 三 四
@@ -45,7 +45,7 @@ fn lists_eligible_and_ineligible_parts() {
             "W Words StreamablePartKind::Lyrics None",
             "H Harmony StreamablePartKind::Chords None",
             "C Chanted StreamablePartKind::Lyrics \
-             Some(\"its stream would not parse: lyrics before the first bracket are only allowed when the first chord attack is not on beat 1; put the first syllable in a bracket\")",
+             Some(\"its stream would not parse: lyrics under a chord part need at most one bracketed item per chord attack, found 5 bracketed items for 4 chord attacks\")",
         ]
     );
 }
@@ -84,7 +84,7 @@ fn extracting_an_ineligible_part_fails_with_its_reason() {
     assert!(matches!(failure.reason, PartStreamError::Ineligible(_)));
     assert_eq!(
         failure.message,
-        "its stream would not parse: lyrics before the first bracket are only allowed when the first chord attack is not on beat 1; put the first syllable in a bracket"
+        "its stream would not parse: lyrics under a chord part need at most one bracketed item per chord attack, found 5 bracketed items for 4 chord attacks"
     );
 }
 

@@ -93,17 +93,19 @@ impl RecoverableError {
         }
     }
 
-    pub fn lyrics_bracket_count_mismatch(span: Span, brackets: usize, attacks: usize) -> Self {
+    pub fn lyrics_bracket_count_mismatch(
+        span: Span,
+        brackets: usize,
+        attacks: usize,
+        first_syllable_takes_beat_one: bool,
+    ) -> Self {
         Self {
             span,
-            kind: RecoverableErrorKind::LyricsBracketCountMismatch { brackets, attacks },
-        }
-    }
-
-    pub fn lyrics_bracket_missing_before_beat_one(span: Span) -> Self {
-        Self {
-            span,
-            kind: RecoverableErrorKind::LyricsBracketMissingBeforeBeatOne,
+            kind: RecoverableErrorKind::LyricsBracketCountMismatch {
+                brackets,
+                attacks,
+                first_syllable_takes_beat_one,
+            },
         }
     }
 

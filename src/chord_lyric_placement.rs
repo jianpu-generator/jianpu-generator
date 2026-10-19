@@ -1,9 +1,11 @@
 //! Where the syllables of a lyric line under a chord part sit in the measure;
 //! see "Lyrics under a chord part" in `syntax.md`.
 //!
-//! The Nth bracketed entry sits at the column of the Nth chord attack (so the
-//! chord symbol is drawn above it); unbracketed syllables spread over the span
-//! between neighbouring brackets. `compile_lyrics_slice`, the lyric source
+//! The Nth chord-bound entry sits at the column of the Nth chord attack (so the
+//! chord symbol is drawn above it); the other syllables spread over the span
+//! between neighbouring chord-bound entries. A chord-bound entry is a bracketed
+//! one, or an unbracketed first syllable when the first attack is on beat 1
+//! (see `chord_bound_indices`). `compile_lyrics_slice`, the lyric source
 //! spans and the grouper's tally all read the attacks from
 //! `lyric_slots::chord_attacks`, so they cannot disagree.
 //!
@@ -13,12 +15,13 @@
 
 use crate::ast::grouped::NoteEvent;
 use crate::ast::parsed::Syllable;
+use crate::error::{RecoverableError, Span};
 use crate::lyric_slots::{chord_attacks, ChordAttack};
 
 /// What a placed syllable is attached to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SyllableAnchor {
-    /// A bracketed entry, sung on the chord at this event index.
+    /// A chord-bound entry, sung on the chord at this event index.
     Chord { event_index: usize },
     /// An unbracketed syllable; `ordinal` counts the measure's unbracketed
     /// syllables from 0.
@@ -53,6 +56,55 @@ impl PlacedSyllable {
     }
 }
 
+/// Whether the line's unbracketed first syllable takes the first chord attack:
+/// it does when that attack is on beat 1, since nothing could precede it.
+fn first_syllable_takes_beat_one(syllables: &[Syllable], first_attack_on_beat_one: bool) -> bool {
+    first_attack_on_beat_one
+        && syllables
+            .first()
+            .is_some_and(|syllable| !syllable.bracketed)
+}
+
+/// Indices into `syllables` of the entries paired with chord attacks, in
+/// order: every bracketed one, plus an unbracketed first syllable when the
+/// first attack is on beat 1.
+fn chord_bound_indices(syllables: &[Syllable], first_attack_on_beat_one: bool) -> Vec<usize> {
+    let implicit_first = first_syllable_takes_beat_one(syllables, first_attack_on_beat_one);
+    syllables
+        .iter()
+        .enumerate()
+        .filter(|(index, syllable)| syllable.bracketed || (implicit_first && *index == 0))
+        .map(|(index, _)| index)
+        .collect()
+}
+
+/// Validates a chord-lyric line against its measure's chord attacks: the
+/// chord-bound entries (see `chord_bound_indices`) must number at most
+/// `attack_count` (the Nth takes the Nth attack; trailing attacks may go
+/// without). `_` (no syllables) passes. The grouper and the part stream editor
+/// both run this tally.
+pub(crate) fn chord_lyric_tally_error(
+    syllables: &[Syllable],
+    attack_count: usize,
+    first_attack_on_beat_one: bool,
+    span: Span,
+) -> Option<RecoverableError> {
+    let first_syllable_takes_beat_one =
+        first_syllable_takes_beat_one(syllables, first_attack_on_beat_one);
+    let brackets = syllables
+        .iter()
+        .filter(|syllable| syllable.bracketed)
+        .count();
+    (brackets + usize::from(first_syllable_takes_beat_one) > attack_count).then(|| {
+        RecoverableError::lyrics_bracket_count_mismatch(
+            span,
+            brackets,
+            attack_count,
+            first_syllable_takes_beat_one,
+        )
+    })
+}
+
 /// The resolution multiplier a measure's lyric line needs so every gap between
 /// chord attacks has room for its unbracketed syllables: `u + 1` for `u`
 /// unbracketed syllables, `1` when there are none.
@@ -77,7 +129,7 @@ struct Located {
 struct MeasureLine<'a> {
     syllables: &'a [Syllable],
     attacks: Vec<ChordAttack>,
-    /// Indices into `syllables` of the bracketed items, in order.
+    /// Indices into `syllables` of the chord-bound entries, in order.
     bracket_indices: Vec<usize>,
     measure_end: u32,
 }
@@ -96,8 +148,8 @@ impl MeasureLine<'_> {
             .map_or(0, |attack| attack.column)
     }
 
-    /// Unbracketed syllables before the first bracket, spread from the bar
-    /// start up to the first bracket's attack.
+    /// Unbracketed syllables before the first chord-bound entry, spread from
+    /// the bar start up to its attack (only when that attack is past beat 1).
     fn pickup(&self) -> Vec<Located> {
         let first_bracket = self
             .bracket_indices
@@ -153,15 +205,12 @@ pub(crate) fn place_chord_syllables(
     events: &[NoteEvent],
     syllables: &[Syllable],
 ) -> Vec<PlacedSyllable> {
+    let attacks = chord_attacks(events);
+    let first_attack_on_beat_one = attacks.first().is_some_and(|attack| attack.column == 0);
     let line = MeasureLine {
         syllables,
-        attacks: chord_attacks(events),
-        bracket_indices: syllables
-            .iter()
-            .enumerate()
-            .filter(|(_, syllable)| syllable.bracketed)
-            .map(|(index, _)| index)
-            .collect(),
+        attacks,
+        bracket_indices: chord_bound_indices(syllables, first_attack_on_beat_one),
         measure_end: events.iter().map(NoteEvent::duration).sum(),
     };
     let mut located: Vec<Located> = line

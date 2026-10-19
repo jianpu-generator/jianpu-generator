@@ -6,6 +6,7 @@
 use itertools::Itertools;
 
 use crate::ast::parsed::{ScoreEvent, Syllable};
+use crate::chord_lyric_placement::chord_lyric_tally_error;
 use crate::error::{RecoverableError, Span};
 use crate::parser::lyrics::bracketed::tokenize_bracketed_lyrics;
 use crate::parser::score::interleaved_parser::padded_measure_events;
@@ -221,22 +222,7 @@ fn tally_error(
     attacks: MeasureChordAttacks,
     span: Span,
 ) -> Option<RecoverableError> {
-    let brackets = syllables
-        .iter()
-        .filter(|syllable| syllable.bracketed)
-        .count();
-    if brackets > attacks.count {
-        return Some(RecoverableError::lyrics_bracket_count_mismatch(
-            span,
-            brackets,
-            attacks.count,
-        ));
-    }
-    let leads_unbracketed = syllables
-        .first()
-        .is_some_and(|syllable| !syllable.bracketed);
-    (leads_unbracketed && attacks.first_on_beat_one)
-        .then(|| RecoverableError::lyrics_bracket_missing_before_beat_one(span))
+    chord_lyric_tally_error(syllables, attacks.count, attacks.first_on_beat_one, span)
 }
 
 #[cfg(test)]

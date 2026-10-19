@@ -80,34 +80,45 @@ Then(
   },
 )
 
+async function expectChordAbove(
+  page: import('@playwright/test').Page,
+  chord: string,
+  lyric: string,
+) {
+  const boxes = await page.evaluate(
+    ({ chord, lyric }) => {
+      const texts = Array.from(
+        document.querySelectorAll('.preview-page svg text'),
+      )
+      const box = (el: Element | undefined) => {
+        if (!el) return null
+        const r = el.getBoundingClientRect()
+        return { x: r.x, y: r.y, width: r.width, height: r.height }
+      }
+      return {
+        chord: box(texts.find((t) => t.textContent?.trim() === chord)),
+        lyric: box(texts.find((t) => t.textContent?.includes(lyric))),
+      }
+    },
+    { chord, lyric },
+  )
+  expect(boxes.chord, `chord ${chord} not drawn`).not.toBeNull()
+  expect(boxes.lyric, `lyric ${lyric} not drawn`).not.toBeNull()
+  if (!boxes.chord || !boxes.lyric) return
+  const chordCenter = boxes.chord.x + boxes.chord.width / 2
+  expect(chordCenter).toBeGreaterThanOrEqual(boxes.lyric.x - 2)
+  expect(chordCenter).toBeLessThanOrEqual(boxes.lyric.x + boxes.lyric.width + 2)
+  expect(boxes.chord.y).toBeLessThan(boxes.lyric.y)
+}
+
 Then(
   'the chord {string} is drawn above the bracket {string}',
-  async ({ page }, chord: string, bracket: string) => {
-    const boxes = await page.evaluate(
-      ({ chord, bracket }) => {
-        const texts = Array.from(
-          document.querySelectorAll('.preview-page svg text'),
-        )
-        const box = (el: Element | undefined) => {
-          if (!el) return null
-          const r = el.getBoundingClientRect()
-          return { x: r.x, y: r.y, width: r.width, height: r.height }
-        }
-        return {
-          chord: box(texts.find((t) => t.textContent?.trim() === chord)),
-          bracket: box(texts.find((t) => t.textContent?.includes(bracket))),
-        }
-      },
-      { chord, bracket },
-    )
-    expect(boxes.chord, `chord ${chord} not drawn`).not.toBeNull()
-    expect(boxes.bracket, `bracket ${bracket} not drawn`).not.toBeNull()
-    if (!boxes.chord || !boxes.bracket) return
-    const chordCenter = boxes.chord.x + boxes.chord.width / 2
-    expect(chordCenter).toBeGreaterThanOrEqual(boxes.bracket.x - 2)
-    expect(chordCenter).toBeLessThanOrEqual(
-      boxes.bracket.x + boxes.bracket.width + 2,
-    )
-    expect(boxes.chord.y).toBeLessThan(boxes.bracket.y)
-  },
+  async ({ page }, chord: string, bracket: string) =>
+    expectChordAbove(page, chord, bracket),
+)
+
+Then(
+  'the chord {string} is drawn above the lyric {string}',
+  async ({ page }, chord: string, lyric: string) =>
+    expectChordAbove(page, chord, lyric),
 )
