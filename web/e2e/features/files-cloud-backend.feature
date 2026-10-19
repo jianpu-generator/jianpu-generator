@@ -34,7 +34,8 @@ Feature: File operations on the cloud (D1) storage backend
     When the app loads the cloud-backed file list
     And I choose Delete from the file actions menu of the active file
     Then the delete file dialog is titled 'Delete file "askfirst.jianpu"?'
-    And the file list still shows "askfirst"
+    When I cancel the delete file dialog
+    Then the file list still shows "askfirst"
 
   Scenario: Cancelling the delete file dialog keeps the file
     Given a cloud file named "keepme.jianpu" is seeded for the signed-in account
