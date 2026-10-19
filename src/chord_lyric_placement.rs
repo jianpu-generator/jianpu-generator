@@ -83,8 +83,8 @@ struct MeasureLine<'a> {
 }
 
 impl MeasureLine<'_> {
-    /// A mismatched tally is already an error; extra brackets just reuse the
-    /// last attack rather than panic.
+    /// Extra brackets are already an error; they just reuse the last attack
+    /// rather than panic.
     fn attack_of(&self, bracket_ordinal: usize) -> Option<&ChordAttack> {
         self.attacks
             .get(bracket_ordinal)
