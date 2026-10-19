@@ -243,6 +243,22 @@ impl Guest for Component {
         shift_part_octave(source, abbreviation, delta)
     }
 
+    fn list_streamable_parts(source: String) -> Vec<StreamablePart> {
+        list_streamable_parts(source)
+    }
+
+    fn extract_part_stream(source: String, abbreviation: String) -> ExtractPartStreamResponse {
+        extract_part_stream(source, abbreviation)
+    }
+
+    fn apply_part_stream(
+        source: String,
+        abbreviation: String,
+        edited_stream: String,
+    ) -> PartStreamApplyResult {
+        apply_part_stream(source, abbreviation, edited_stream)
+    }
+
     fn shift_range_octave(source: String, ranges: Vec<ByteRange>, delta: i32) -> RangeEditResponse {
         shift_range_octave(source, ranges, delta)
     }

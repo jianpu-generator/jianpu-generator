@@ -71,7 +71,8 @@ pub enum PartStreamError {
 }
 
 impl PartStreamError {
-    fn describe(&self) -> String {
+    /// A human-readable explanation, for the part picker and the stream editor.
+    pub fn describe(&self) -> String {
         match self {
             Self::SourceDoesNotParse { message } => format!("the score does not parse: {message}"),
             Self::UnknownPart { abbreviation } => format!("no part [{abbreviation}] is declared"),

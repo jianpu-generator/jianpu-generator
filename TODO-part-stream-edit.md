@@ -15,7 +15,7 @@ All phases land as separate commits in **one PR**.
 
 - [x] Phase 1 — Rust core: extract / split / apply for `notes`, `chords`, `percussion` parts
 - [x] Phase 2 — Rust: `follow[X]` parts (`@` placeholder) and notes-bound lyric parts
-- [ ] Phase 3 — Wasm/WIT exports
+- [x] Phase 3 — Wasm/WIT exports
 - [ ] Phase 4 — Web: part picker modal, editable diff view, Apply, markers, e2e
 - [ ] Phase 5 — Docs (`syntax.md`, `ARCHITECTURE.md`) and PR
 
