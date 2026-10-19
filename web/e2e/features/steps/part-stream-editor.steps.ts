@@ -177,22 +177,6 @@ Then('the edited part stream is {string}', async ({ page }, text: string) => {
   await expect.poll(() => editorValue(page, 'modified')).toBe(text)
 })
 
-Then(
-  'the edited part stream shows measure markers {string}',
-  async ({ page }, numbers: string) => {
-    const expected = numbers.split(' ').map((number) => `𝄀${number}`)
-    await expect
-      .poll(() =>
-        page
-          .locator(
-            '[data-testid="part-stream-editor"] .editor.modified .part-stream-measure-marker',
-          )
-          .allTextContents(),
-      )
-      .toEqual(expected)
-  },
-)
-
 Then('the part stream footer says {string}', async ({ page }, text: string) => {
   await expect(page.getByTestId('part-stream-footer')).toContainText(text)
 })
@@ -247,6 +231,29 @@ When('I press Escape in the part stream editor', async ({ page }) => {
 When('I click Cancel in the part stream editor', async ({ page }) => {
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
 })
+
+When('I resize the window to a phone screen', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 })
+})
+
+When('I toggle the part stream diff layout', async ({ page }) => {
+  await page.getByTestId('part-stream-layout-toggle').click()
+})
+
+Then(
+  'the part stream diff is shown {}',
+  async ({ page }, layout: 'side by side' | 'inline') => {
+    const diffEditor = page.locator(
+      '[data-testid="part-stream-editor"] .monaco-diff-editor',
+    )
+    // Monaco sets `side-by-side` on the diff editor root only in that layout.
+    if (layout === 'side by side') {
+      await expect(diffEditor).toHaveClass(/\bside-by-side\b/)
+    } else {
+      await expect(diffEditor).not.toHaveClass(/\bside-by-side\b/)
+    }
+  },
+)
 
 Then('the part stream editor is closed', async ({ page }) => {
   await expect(page.getByTestId('part-stream-modal')).toBeHidden()

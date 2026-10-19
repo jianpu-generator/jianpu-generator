@@ -12,7 +12,8 @@ import {
 } from '../../monacoJianpuLanguage'
 import { buildDiagnosticMarkers } from '../editorDiagnosticViewZones'
 import { EDITOR_THEME } from '../editorTheme'
-import { measureMarkerDecorations } from './partStreamMarkers'
+import '../FileDialogs.css'
+import { usePartStreamDiffLayout } from './usePartStreamDiffLayout'
 
 const MARKER_OWNER = 'part-stream'
 
@@ -29,7 +30,6 @@ interface PartStreamDiffEditorProps {
 interface MountedEditor {
   modified: editor.IStandaloneCodeEditor
   monacoApi: Monaco
-  measureMarkers: editor.IEditorDecorationsCollection
 }
 
 function changedMeasuresLabel(count: number): string {
@@ -38,8 +38,8 @@ function changedMeasuresLabel(count: number): string {
 
 /**
  * The extracted stream (read-only) beside an editable copy. Every edit is
- * handed to Rust's `applyPartStream`, whose diagnostics, measure starts and
- * changed-measure count are rendered as is; its `source` is what Apply
+ * handed to Rust's `applyPartStream`, whose diagnostics and changed-measure
+ * count are rendered as is; its `source` is what Apply
  * writes back. Nothing is written until Apply.
  */
 export function PartStreamDiffEditor({
@@ -52,6 +52,7 @@ export function PartStreamDiffEditor({
   const [editedText, setEditedText] = useState(stream.text)
   const [mounted, setMounted] = useState<MountedEditor | null>(null)
   const mountedRef = useRef<MountedEditor | null>(null)
+  const { layout, toggle: toggleLayout } = usePartStreamDiffLayout()
   const result = useMemo(
     () => jianpuWasm().applyPartStream(source, part.abbreviation, editedText),
     [source, part.abbreviation, editedText],
@@ -66,14 +67,7 @@ export function PartStreamDiffEditor({
       MARKER_OWNER,
       buildDiagnosticMarkers(model, mounted.monacoApi, result.diagnostics),
     )
-    mounted.measureMarkers.set(
-      measureMarkerDecorations(
-        mounted.monacoApi,
-        editedText,
-        result.measureStarts,
-      ),
-    )
-  }, [mounted, result, editedText])
+  }, [mounted, result])
 
   useEffect(
     () => () => {
@@ -101,6 +95,9 @@ export function PartStreamDiffEditor({
           options={{
             readOnly: false,
             originalEditable: false,
+            renderSideBySide: layout === 'side-by-side',
+            // Otherwise Monaco forces inline below ~900px, overriding the toggle.
+            useInlineViewWhenSpaceIsLimited: false,
             wordWrap: 'on',
             diffWordWrap: 'on',
             minimap: { enabled: false },
@@ -111,14 +108,6 @@ export function PartStreamDiffEditor({
             scrollBeyondLastLine: false,
           }}
           onMount={(diffEditor, monacoApi) => {
-            const original = diffEditor.getOriginalEditor()
-            original.createDecorationsCollection(
-              measureMarkerDecorations(
-                monacoApi,
-                stream.text,
-                stream.measureStarts,
-              ),
-            )
             const modified = diffEditor.getModifiedEditor()
             modified.onDidChangeModelContent(() => {
               const model = modified.getModel()
@@ -127,11 +116,7 @@ export function PartStreamDiffEditor({
                 model.getValue(monacoApi.editor.EndOfLinePreference.LF),
               )
             })
-            const editorState: MountedEditor = {
-              modified,
-              monacoApi,
-              measureMarkers: modified.createDecorationsCollection(),
-            }
+            const editorState: MountedEditor = { modified, monacoApi }
             mountedRef.current = editorState
             setMounted(editorState)
             modified.focus()
@@ -145,12 +130,24 @@ export function PartStreamDiffEditor({
             ` · ${errorCount} ${errorCount === 1 ? 'error' : 'errors'}`}
         </span>
         <div className="part-stream-editor__actions">
-          <button type="button" onClick={onCancel}>
+          <button
+            type="button"
+            className="file-dialog-button"
+            data-testid="part-stream-layout-toggle"
+            onClick={toggleLayout}
+          >
+            {layout === 'inline' ? 'Side by side' : 'Inline'}
+          </button>
+          <button
+            type="button"
+            className="file-dialog-button"
+            onClick={onCancel}
+          >
             Cancel
           </button>
           <button
             type="button"
-            className="part-stream-editor__apply"
+            className="file-dialog-button file-dialog-button--primary"
             disabled={!canApply}
             onClick={() => {
               if (appliedSource !== undefined) onApply(appliedSource)

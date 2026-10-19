@@ -9,10 +9,8 @@ Feature: Part stream editor
   Scenario: Shifting a note forward re-bars every later measure
     When I open the part stream editor for part "M"
     Then the original part stream is "1 2 3 4 5 6 7 1"
-    And the edited part stream shows measure markers "1 2"
     When I replace the edited part stream with "0 1 2 3 4 5 6 7 1"
     Then the part stream footer says "3 measures changed"
-    And the edited part stream shows measure markers "1 2 3"
     And the part stream Apply button is enabled
     When I apply the part stream
     Then the part stream editor is closed
@@ -73,3 +71,21 @@ Feature: Part stream editor
     And I click Cancel in the part stream editor
     Then the part stream editor is closed
     And the main editor source is the original fixture source
+
+  Scenario: The diff layout can be toggled and the choice is remembered
+    When I open the part stream editor for part "M"
+    Then the part stream diff is shown side by side
+    When I toggle the part stream diff layout
+    Then the part stream diff is shown inline
+    When I replace the edited part stream with "0 1 2 3 4 5 6 7 1"
+    Then the part stream footer says "3 measures changed"
+    When I click Cancel in the part stream editor
+    And I open the part stream editor for part "M"
+    Then the part stream diff is shown inline
+
+  Scenario: The diff is inline by default on a phone screen
+    When I resize the window to a phone screen
+    And I open the part stream editor for part "M"
+    Then the part stream diff is shown inline
+    When I toggle the part stream diff layout
+    Then the part stream diff is shown side by side

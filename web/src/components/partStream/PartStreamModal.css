@@ -111,6 +111,7 @@
 .part-stream-editor__footer {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
   padding: 10px 16px;
@@ -121,10 +122,4 @@
 .part-stream-editor__actions {
   display: flex;
   gap: 8px;
-}
-
-.part-stream-measure-marker {
-  color: #a0a0a0;
-  font-size: 0.75em;
-  margin-right: 2px;
 }
