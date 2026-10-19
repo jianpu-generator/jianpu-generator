@@ -129,11 +129,10 @@ fn pair_lyrics_to_notes(
 }
 
 /// Under a chord part the line's syllables are kept whole (bracketed and
-/// unbracketed, in order); this only validates them: bracketed items must tally
-/// 1:1 with the measure's chord attacks, and unbracketed syllables may lead the
-/// line only when the first attack is not on beat 1. A bracketed rest (`0_`)
-/// is an ordinary bracketed item here: it consumes the Nth attack's slot, and
-/// the duration it names is for layout to read from its text. `_` (no
+/// unbracketed, in order); this only validates them: bracketed items must number
+/// at most the measure's chord attacks (the Nth bracketed item takes the Nth
+/// attack; trailing attacks may go without), and unbracketed syllables may
+/// lead the line only when the first attack is not on beat 1. `_` (no
 /// syllables) skips the tally.
 fn tally_chord_lyrics(
     events: &[NoteEvent],
@@ -148,7 +147,7 @@ fn tally_chord_lyrics(
         .iter()
         .filter(|syllable| syllable.bracketed)
         .count();
-    if brackets != attacks.len() {
+    if brackets > attacks.len() {
         return Some(RecoverableError::lyrics_bracket_count_mismatch(
             source_span,
             brackets,

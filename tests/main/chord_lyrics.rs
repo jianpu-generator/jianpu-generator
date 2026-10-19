@@ -100,9 +100,15 @@ fn unbracketed_run_before_first_bracket_is_allowed_when_first_attack_is_not_on_b
 }
 
 #[test]
-fn error_when_bracket_count_differs_from_chord_attack_count() {
+fn fewer_brackets_than_chord_attacks_is_allowed() {
     // Two attacks (1 and 4) but one bracket.
-    assert_one_error(&render("1 - 4 -", "(啦) 啦啦"));
+    assert_no_diagnostics(&render("1 - 4 -", "(啦) 啦啦"));
+}
+
+#[test]
+fn error_when_brackets_outnumber_chord_attacks() {
+    // Two attacks (1 and 4) but three brackets.
+    assert_one_error(&render("1 - 4 -", "(a) (b) (c)"));
 }
 
 #[test]

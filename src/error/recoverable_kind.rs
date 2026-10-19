@@ -170,7 +170,7 @@ impl RecoverableErrorKind {
             Self::LyricsBracketNotOneSyllable { found } => format!("a lyric bracket must hold exactly one syllable, found {found}"),
             Self::LyricsBracketUnclosed => "lyric bracket is never closed".to_string(),
             Self::LyricsBracketUnmatched => "closing lyric bracket has no opening bracket".to_string(),
-            Self::LyricsBracketCountMismatch { brackets, attacks } => format!("lyrics under a chord part need one bracketed item per chord attack, found {brackets} bracketed item{} for {attacks} chord attack{}", if *brackets == 1 { "" } else { "s" }, if *attacks == 1 { "" } else { "s" }),
+            Self::LyricsBracketCountMismatch { brackets, attacks } => format!("lyrics under a chord part need at most one bracketed item per chord attack, found {brackets} bracketed item{} for {attacks} chord attack{}", if *brackets == 1 { "" } else { "s" }, if *attacks == 1 { "" } else { "s" }),
             Self::LyricsBracketMissingBeforeBeatOne => "lyrics before the first bracket are only allowed when the first chord attack is not on beat 1; put the first syllable in a bracket".to_string(),
             Self::PartMeasureCountMismatch { part, got, expected } => format!("part {part:?} has {got} measures but the first part has {expected}; all parts must have the same number of measures"),
             Self::ExtensionNoPrecedingEvent { chord_track: true } => "chord extension '-' with no preceding event; '-' ignored".to_string(),

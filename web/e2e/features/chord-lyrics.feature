@@ -1,6 +1,6 @@
 Feature: Lyrics under a chord part
   A lyrics part can target a chords part (`l = lyrics[c]`). The lyric line
-  carries its own timing: each chord attack pairs with one bracketed item,
+  carries its own timing: each bracketed item pairs with a chord attack (at most one per attack),
   and unbracketed syllables flow freely between them (see "Lyrics under a
   chord part" in syntax.md).
 
@@ -27,8 +27,13 @@ Feature: Lyrics under a chord part
     When the chord-lyrics score is rendered
     Then the chord-lyrics score has no error
 
-  Scenario: A bracket count that differs from the chord attack count is an error
+  Scenario: Fewer brackets than chord attacks is allowed
     Given a chord-lyrics score with chords "1 - 4 -" and lyrics "(啦) 啦啦"
+    When the chord-lyrics score is rendered
+    Then the chord-lyrics score has no error
+
+  Scenario: More brackets than chord attacks is an error
+    Given a chord-lyrics score with chords "1 - 4 -" and lyrics "(a) (b) (c)"
     When the chord-lyrics score is rendered
     Then the chord-lyrics score has an error
 

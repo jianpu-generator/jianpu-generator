@@ -685,8 +685,8 @@ l = lyrics[c]
 ```
 
 - A **bracketed item** is `( … )` or the full-width `（ … ）`; both are accepted on input, and both always render as ASCII `( … )`. It holds exactly one syllable. Several syllables in one bracket (`（陪我）`) is an error.
-- **Tally**: in each measure the number of bracketed items must equal the number of chord *attacks*. A chord rest (`0`) and a `-` extension are not attacks. A mismatch is an error, not a warning.
-- **Pairing**: the Nth bracketed item sits at the beat of the Nth chord attack, and the chord symbol is drawn above it.
+- **Tally**: in each measure the number of bracketed items must not exceed the number of chord *attacks*. A chord rest (`0`) and a `-` extension are not attacks. More brackets than attacks is an error, not a warning; fewer is fine, and the trailing attacks simply have no bracketed item.
+- **Pairing**: the Nth bracketed item sits at the beat of the Nth chord attack (so with fewer brackets than attacks, the first attacks are the ones paired), and the chord symbol is drawn above it.
 - **Unbracketed syllables** (tokenised as in [Lyrics syntax](#lyrics-syntax)) are spread **evenly** between the neighbouring bracketed items; those after the last bracketed item spread evenly up to the bar line. They are not tallied.
 - Unbracketed syllables may precede the first bracketed item only when the first chord attack is **not** on beat 1 (the chord line starts with a rest); they then spread evenly from the bar start. Otherwise they are an error.
 - **Layout**: the lyric row decides the measure's width (there are normally more syllables than chord attacks); the chord row adapts to it.
