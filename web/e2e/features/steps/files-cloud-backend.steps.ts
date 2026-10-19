@@ -98,13 +98,52 @@ Then('the file list does not show {string}', async ({ page }, name: string) => {
 
 // -- Delete --------------------------------------------------------------
 
-When('I delete the active file', async ({ page }) => {
+When(
+  'I choose Delete from the file actions menu of the active file',
+  async ({ page }) => {
+    await openFileList(page)
+    const tab = fileTabByExactName(page, currentSeededFileDisplayName())
+    await tab.click()
+    await page.waitForSelector('.monaco-editor .view-lines', {
+      timeout: 15_000,
+    })
+    await openFileActions(page)
+    await page.getByRole('menuitem', { name: 'Delete' }).click()
+  },
+)
+
+const deleteFileDialog = (page: import('@playwright/test').Page) =>
+  page.getByRole('dialog', { name: /^Delete file/ })
+
+Then(
+  'the delete file dialog is titled {string}',
+  async ({ page }, title: string) => {
+    await expect(deleteFileDialog(page)).toContainText(title)
+  },
+)
+
+When('I confirm the delete file dialog', async ({ page }) => {
+  await deleteFileDialog(page)
+    .getByRole('button', { name: 'Move to bin' })
+    .click()
+})
+
+When('I cancel the delete file dialog', async ({ page }) => {
+  await deleteFileDialog(page).getByRole('button', { name: 'Cancel' }).click()
+  await expect(deleteFileDialog(page)).toHaveCount(0)
+})
+
+Then('the file list still shows {string}', async ({ page }, name: string) => {
   await openFileList(page)
-  const tab = fileTabByExactName(page, currentSeededFileDisplayName())
-  await tab.click()
-  await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
+  await expect(fileTabByExactName(page, name)).toHaveCount(1)
+})
+
+Then('the bin does not show {string}', async ({ page }, name: string) => {
+  // The "Bin (N)" menu item only exists while the bin holds something.
   await openFileActions(page)
-  await page.getByRole('menuitem', { name: 'Delete' }).click()
+  if ((await page.locator('.file-tab-bar-bin-trigger').count()) === 0) return
+  await openBin(page)
+  await expect(binItemNamed(page, name)).toHaveCount(0)
 })
 
 Then(

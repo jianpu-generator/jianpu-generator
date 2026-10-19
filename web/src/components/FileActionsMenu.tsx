@@ -12,6 +12,7 @@ import {
 } from '@radix-ui/react-icons'
 import { useState } from 'react'
 import { isReadOnlyFile } from '../fileStore'
+import { DeleteFileDialog } from './DeleteFileDialog'
 import { ImportButton } from './ImportButton'
 import { ResponsiveMenu } from './ResponsiveMenu'
 import { SpinnerLabel } from './SpinnerLabel'
@@ -66,6 +67,7 @@ export function FileActionsMenu({
   onOpenStorageSettings,
 }: FileActionsMenuProps) {
   const [actionsOpen, setActionsOpen] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   return (
     <div className="export-menu">
       <ResponsiveMenu.Root open={actionsOpen} onOpenChange={setActionsOpen}>
@@ -180,9 +182,9 @@ export function FileActionsMenu({
             role="menuitem"
             className="export-menu-item export-menu-item--danger"
             disabled={isReadOnlyFile(activePath) || deletingName === activePath}
-            onClick={async () => {
-              await onDelete(activePath)
+            onClick={() => {
               setActionsOpen(false)
+              setConfirmingDelete(true)
             }}
           >
             <TrashIcon aria-hidden="true" />
@@ -220,6 +222,12 @@ export function FileActionsMenu({
           </button>
         </ResponsiveMenu.Content>
       </ResponsiveMenu.Root>
+      <DeleteFileDialog
+        open={confirmingDelete}
+        onOpenChange={setConfirmingDelete}
+        file={activePath}
+        onConfirm={onDelete}
+      />
     </div>
   )
 }
