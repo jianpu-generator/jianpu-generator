@@ -31,7 +31,14 @@ Given('the cloud is unreachable', async ({ page }) => {
   // A fake clock lets "the cloud is reachable again" jump past the outbox's
   // retry delay instead of waiting it out.
   await page.clock.install()
+  // The editor shows a demo file before the cloud listing arrives, so wait
+  // for the listing itself: blocking the worker before it is sent would
+  // leave the account's files out of the file list.
+  const listed = page.waitForResponse(
+    (response) => matchWorkerRoute('/files/list', response.url()) !== null,
+  )
   await gotoCloudApp(page)
+  await listed
   await page.waitForSelector('.monaco-editor .view-lines', { timeout: 15_000 })
   await page.route(WORKER_ROUTES, (route) =>
     // The share-status lookup the owner hook fires for every newly active
