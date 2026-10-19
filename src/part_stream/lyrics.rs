@@ -9,7 +9,7 @@ use crate::parser::score::timed_parser::GroupStack;
 use crate::parser::score::token_parser::parse_notes_line;
 use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics, LyricTieState};
 
-use super::diagnostics::{error_at, forbidden_character_errors, warning_at};
+use super::diagnostics::{error_at, forbidden_character_errors, warning_at, AllowedMarkers};
 use super::document::ScoreDocument;
 use super::split::SplitStream;
 use super::timing::normalize_whitespace;
@@ -87,7 +87,7 @@ pub(super) fn extract_lyric_chunks(
 /// Cuts a lyric stream into measures by `slot_counts`. Lyric streams can't
 /// add measures: syllables left after the last slot are an error.
 pub(super) fn split_lyric_stream(stream: &str, slot_counts: &[usize]) -> SplitStream {
-    let mut diagnostics = forbidden_character_errors(stream, false);
+    let mut diagnostics = forbidden_character_errors(stream, AllowedMarkers::default());
     let syllables = tokenize_lyrics(stream, 0);
     let mut chunks = Vec::new();
     let mut measure_starts = Vec::new();

@@ -214,20 +214,6 @@ Words [W] = lyrics[A]
 }
 
 #[test]
-fn lyrics_under_a_chords_part_are_ineligible() {
-    let source = r"# parts
-Harmony [H] = chords
-Words [W] = lyrics[H]
-
-# score
-[H] 1 4 5 1
-[W] (a) (b) (c) (d)
-";
-    let reason = ineligible_reason(source, "W").unwrap();
-    assert!(reason.contains("chords part"), "{reason}");
-}
-
-#[test]
 fn a_lyric_tally_mismatch_makes_the_part_ineligible_except_for_underscore() {
     let mismatched = TWO_MEASURES.replace("[W] e f g h", "[W] e f g");
     let reason = ineligible_reason(&mismatched, "W").unwrap();

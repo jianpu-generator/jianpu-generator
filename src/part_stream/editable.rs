@@ -2,12 +2,18 @@
 
 use crate::ast::parsed::{PartDecl, PartKind};
 
+use super::chord_lyrics::{
+    chord_attacks_per_measure, extract_chord_lyric_chunks, join_chord_lyric_chunks,
+    split_chord_lyric_stream, MeasureChordAttacks,
+};
 use super::document::ScoreDocument;
 use super::extract::extract_timed_chunks;
 use super::lyrics::{extract_lyric_chunks, lyric_slot_counts, split_lyric_stream};
 use super::split::{split_timed_stream, SplitStream};
 use super::timing::{rest_fill, TimedLineKind};
-use super::{join_chunks, PartStreamError, StreamDiagnosticSeverity, NO_LYRICS_MEASURE};
+use super::{
+    join_chunks, PartStream, PartStreamError, StreamDiagnosticSeverity, NO_LYRICS_MEASURE,
+};
 
 /// A notes / chords / percussion stream; a follow part's may also hold `@`.
 #[derive(Debug, Clone, Copy)]
@@ -24,6 +30,11 @@ pub(super) enum StreamGrammar {
     Lyrics {
         slot_counts: Vec<usize>,
     },
+    /// A lyric part over a chords part: measures are separated by `|`, and
+    /// measure `m`'s bracketed items are tallied against `attacks[m]`.
+    ChordLyrics {
+        attacks: Vec<MeasureChordAttacks>,
+    },
 }
 
 impl StreamGrammar {
@@ -31,6 +42,14 @@ impl StreamGrammar {
         match self {
             Self::Timed { grammar } => split_timed_stream(stream, *grammar, &document.capacities()),
             Self::Lyrics { slot_counts } => split_lyric_stream(stream, slot_counts),
+            Self::ChordLyrics { attacks } => split_chord_lyric_stream(stream, attacks),
+        }
+    }
+
+    pub(super) fn join(&self, chunks: &[String]) -> PartStream {
+        match self {
+            Self::ChordLyrics { .. } => join_chord_lyric_chunks(chunks),
+            Self::Timed { .. } | Self::Lyrics { .. } => join_chunks(chunks),
         }
     }
 
@@ -42,7 +61,7 @@ impl StreamGrammar {
     pub(super) fn empty_measure(&self, capacity: u32) -> String {
         match self {
             Self::Timed { .. } => rest_fill(capacity),
-            Self::Lyrics { .. } => NO_LYRICS_MEASURE.to_string(),
+            Self::Lyrics { .. } | Self::ChordLyrics { .. } => NO_LYRICS_MEASURE.to_string(),
         }
     }
 }
@@ -76,9 +95,10 @@ pub(super) fn editable_part(
     let chunks = match &grammar {
         StreamGrammar::Timed { grammar } => extract_timed_chunks(document, index, *grammar),
         StreamGrammar::Lyrics { slot_counts } => extract_lyric_chunks(document, index, slot_counts),
+        StreamGrammar::ChordLyrics { .. } => Ok(extract_chord_lyric_chunks(document, index)),
     }
     .map_err(ineligible)?;
-    let resplit = grammar.split(&join_chunks(&chunks).text, document);
+    let resplit = grammar.split(&grammar.join(&chunks).text, document);
     if let Some(error) = resplit
         .diagnostics
         .iter()
@@ -126,11 +146,11 @@ fn stream_grammar(
         Some(PartKind::Notes) => lyric_slot_counts(document, target_part_index)
             .map(|slot_counts| StreamGrammar::Lyrics { slot_counts })
             .map_err(ineligible),
-        Some(PartKind::Chords) => Err(ineligible(
-            "lyrics under a chords part cannot be edited as a stream",
-        )),
+        Some(PartKind::Chords) => chord_attacks_per_measure(document, target_part_index)
+            .map(|attacks| StreamGrammar::ChordLyrics { attacks })
+            .map_err(ineligible),
         _ => Err(ineligible(
-            "only lyrics under a notes part can be edited as a stream",
+            "only lyrics under a notes or chords part can be edited as a stream",
         )),
     }
 }

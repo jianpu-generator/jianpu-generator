@@ -70,8 +70,32 @@ Harmony [H] = chords
 Chant [C] = lyrics[H]
 
 # score
-[H] 1 4 5 1
-[C] (a) (b) (c) (d)
+[H] 1 - 4 -
+[C] (a) b c (d)
+
+[H] 5 - - -
+[C] (e) f
+`
+
+const SHIFTED_CHORD_BOUND_LYRICS_SOURCE = `# parts
+Harmony [H] = chords
+Chant [C] = lyrics[H]
+
+# score
+[H] 1 - 4 -
+[C] (a) b c
+
+[H] 5 - - -
+[C] (d) e f
+`
+
+const OVER_BRACKETED_CHORD_LYRICS_SOURCE = `# parts
+Harmony [H] = chords
+Chant [C] = lyrics[H]
+
+# score
+[H] 1 - 4 -
+[C] (a) (b) (c)
 `
 
 const EXPECTED_SOURCES: Record<string, string> = {
@@ -79,6 +103,7 @@ const EXPECTED_SOURCES: Record<string, string> = {
   'shifted melody': SHIFTED_MELODY_SOURCE,
   'shortened melody': SHORTENED_MELODY_SOURCE,
   'shifted lyrics': SHIFTED_LYRICS_SOURCE,
+  'shifted chord-bound lyrics': SHIFTED_CHORD_BOUND_LYRICS_SOURCE,
 }
 
 async function loadSource(page: Page, source: string) {
@@ -126,6 +151,13 @@ Given('the part stream editor fixture is loaded', async ({ page }) => {
 Given('the chord-bound lyrics fixture is loaded instead', async ({ page }) => {
   await loadSource(page, CHORD_BOUND_LYRICS_SOURCE)
 })
+
+Given(
+  'the over-bracketed chord lyrics fixture is loaded instead',
+  async ({ page }) => {
+    await loadSource(page, OVER_BRACKETED_CHORD_LYRICS_SOURCE)
+  },
+)
 
 When('I open the part stream picker', async ({ page }) => {
   await page.click('.editor-toolbar-button[aria-label="Edit part as stream"]')

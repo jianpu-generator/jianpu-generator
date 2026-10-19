@@ -45,7 +45,7 @@ fn lists_eligible_and_ineligible_parts() {
             "W Words StreamablePartKind::Lyrics None",
             "H Harmony StreamablePartKind::Chords None",
             "C Chanted StreamablePartKind::Lyrics \
-             Some(\"lyrics under a chords part cannot be edited as a stream\")",
+             Some(\"its stream would not parse: lyrics before the first bracket are only allowed when the first chord attack is not on beat 1; put the first syllable in a bracket\")",
         ]
     );
 }
@@ -84,7 +84,7 @@ fn extracting_an_ineligible_part_fails_with_its_reason() {
     assert!(matches!(failure.reason, PartStreamError::Ineligible(_)));
     assert_eq!(
         failure.message,
-        "lyrics under a chords part cannot be edited as a stream"
+        "its stream would not parse: lyrics before the first bracket are only allowed when the first chord attack is not on beat 1; put the first syllable in a bracket"
     );
 }
 
