@@ -1,13 +1,17 @@
 //! Stream → measure chunks, re-barred by each measure's beat capacity.
 
-use crate::ast::parsed::ScoreEvent;
-use crate::error::{Diagnostic, Span, Spanned};
+use itertools::Itertools;
+
+use crate::error::{Span, Spanned};
 use crate::parser::score::timed_parser::{GroupStack, TimedLexToken};
 
-use super::timing::{
-    is_inline_directive, normalize_whitespace, rest_fill, timed_layout, TimedCluster, TimedLineKind,
+use super::diagnostics::{
+    error_at, forbidden_character_errors, inline_directive_errors, placeholder_offsets,
+    stream_diagnostic,
 };
-use super::{StreamDiagnostic, StreamDiagnosticSeverity};
+use super::editable::TimedGrammar;
+use super::timing::{normalize_whitespace, rest_fill, timed_layout, TimedCluster};
+use super::{StreamDiagnostic, FOLLOW_PLACEHOLDER};
 
 /// Capacity used past the last measure group when no capacity is known at all.
 const DEFAULT_CAPACITY: u32 = 16;
@@ -24,6 +28,8 @@ pub(super) struct SplitStream {
 struct MeasureCut {
     cluster_index: usize,
     offset: usize,
+    /// The measure is a follow part's `@`: it holds no clusters.
+    is_placeholder: bool,
 }
 
 struct Layout {
@@ -32,23 +38,40 @@ struct Layout {
     trailing_rest: u32,
 }
 
+/// One thing that takes up time in the stream, in stream order.
+#[derive(Clone, Copy)]
+enum StreamItem<'a> {
+    Cluster {
+        index: usize,
+        cluster: &'a TimedCluster,
+    },
+    Placeholder {
+        offset: usize,
+    },
+}
+
+impl StreamItem<'_> {
+    fn start(&self) -> usize {
+        match self {
+            Self::Cluster { cluster, .. } => cluster.start,
+            Self::Placeholder { offset } => *offset,
+        }
+    }
+}
+
 pub(super) fn split_timed_stream(
     stream: &str,
-    kind: TimedLineKind,
+    grammar: TimedGrammar,
     capacities: &[u32],
 ) -> SplitStream {
-    let mut diagnostics = forbidden_character_errors(stream);
-    let sanitized: String = stream
-        .chars()
-        .map(|character| {
-            if matches!(character, '|' | '@') {
-                ' '
-            } else {
-                character
-            }
-        })
-        .collect();
-    let parsed = match kind.parse(&sanitized, &mut GroupStack::default()) {
+    let mut diagnostics = forbidden_character_errors(stream, grammar.is_follow);
+    let placeholders = if grammar.is_follow {
+        placeholder_offsets(stream)
+    } else {
+        Vec::new()
+    };
+    let sanitized = without_forbidden_characters(stream);
+    let parsed = match grammar.kind.parse(&sanitized, &mut GroupStack::default()) {
         Ok(parsed) => parsed,
         Err(error) => {
             let span = error.span().copied().unwrap_or(Span::new(0, stream.len()));
@@ -60,7 +83,7 @@ pub(super) fn split_timed_stream(
             };
         }
     };
-    let tokens = kind.lex(&sanitized).unwrap_or_default();
+    let tokens = grammar.kind.lex(&sanitized).unwrap_or_default();
     diagnostics.extend(
         parsed
             .lex_errors
@@ -79,7 +102,13 @@ pub(super) fn split_timed_stream(
             .unwrap_or(DEFAULT_CAPACITY)
             * timed.multiplier
     };
-    let layout = lay_out(&timed.clusters, &tokens, capacity_of, &mut diagnostics);
+    let layout = lay_out(
+        &timed.clusters,
+        &placeholders,
+        &tokens,
+        capacity_of,
+        &mut diagnostics,
+    );
     let trailing_rest = layout.trailing_rest / timed.multiplier;
     if layout.trailing_rest % timed.multiplier != 0 {
         diagnostics.push(error_at(
@@ -88,27 +117,65 @@ pub(super) fn split_timed_stream(
         ));
     }
     let ranges = measure_ranges(stream, &layout.cuts);
-    let last_index = ranges.len().saturating_sub(1);
-    let chunks = ranges
-        .iter()
-        .enumerate()
-        .map(|(index, range)| {
-            let written =
-                normalize_whitespace(stream.get(range.start..range.end).unwrap_or_default());
-            match (index == last_index, rest_fill(trailing_rest)) {
-                (true, rest) if !rest.is_empty() => format!("{written} {rest}").trim().to_string(),
-                _ => written,
-            }
-        })
-        .collect();
     SplitStream {
-        chunks,
+        chunks: measure_chunks(
+            stream,
+            &ranges,
+            &layout.cuts,
+            trailing_rest,
+            &mut diagnostics,
+        ),
         measure_starts: ranges
             .iter()
             .map(|range| first_non_whitespace(stream, range.start))
             .collect(),
         diagnostics,
     }
+}
+
+/// `|` and `@` become spaces so the line parser never sees them; offsets stay put.
+fn without_forbidden_characters(stream: &str) -> String {
+    stream
+        .chars()
+        .map(|character| {
+            if matches!(character, '|' | '@') {
+                ' '
+            } else {
+                character
+            }
+        })
+        .collect()
+}
+
+/// Each measure's whitespace-normalized chunk; the last one is completed
+/// with `trailing_rest` quarter-beats of rests.
+fn measure_chunks(
+    stream: &str,
+    ranges: &[Span],
+    cuts: &[MeasureCut],
+    trailing_rest: u32,
+    diagnostics: &mut Vec<StreamDiagnostic>,
+) -> Vec<String> {
+    let last_index = ranges.len().saturating_sub(1);
+    ranges
+        .iter()
+        .zip(cuts)
+        .enumerate()
+        .map(|(index, (range, cut))| {
+            let written =
+                normalize_whitespace(stream.get(range.start..range.end).unwrap_or_default());
+            if cut.is_placeholder && written != FOLLOW_PLACEHOLDER {
+                diagnostics.push(error_at(
+                    *range,
+                    "`@` stands for a whole measure; nothing else can share its measure",
+                ));
+            }
+            match (index == last_index, rest_fill(trailing_rest)) {
+                (true, rest) if !rest.is_empty() => format!("{written} {rest}").trim().to_string(),
+                _ => written,
+            }
+        })
+        .collect()
 }
 
 /// The stream range each measure's chunk is cut from; the first one starts
@@ -128,14 +195,49 @@ fn measure_ranges(stream: &str, cuts: &[MeasureCut]) -> Vec<Span> {
 
 fn lay_out(
     clusters: &[TimedCluster],
+    placeholders: &[usize],
     tokens: &[Spanned<TimedLexToken>],
     capacity_of: impl Fn(usize) -> u32,
     diagnostics: &mut Vec<StreamDiagnostic>,
 ) -> Layout {
+    let items = clusters
+        .iter()
+        .enumerate()
+        .map(|(index, cluster)| StreamItem::Cluster { index, cluster })
+        .merge_by(
+            placeholders
+                .iter()
+                .map(|&offset| StreamItem::Placeholder { offset }),
+            |left, right| left.start() <= right.start(),
+        );
     let mut cuts: Vec<MeasureCut> = Vec::new();
     let mut filled = 0;
-    for (index, cluster) in clusters.iter().enumerate() {
+    let mut next_cluster_index = 0;
+    for stream_item in items {
         let starts_measure = cuts.is_empty() || filled >= capacity_of(cuts.len() - 1);
+        let (index, cluster) = match stream_item {
+            StreamItem::Placeholder { offset } => {
+                if starts_measure {
+                    cuts.push(MeasureCut {
+                        cluster_index: next_cluster_index,
+                        offset,
+                        is_placeholder: true,
+                    });
+                    filled = capacity_of(cuts.len() - 1);
+                } else {
+                    diagnostics.push(error_at(
+                        Span::new(offset, offset + FOLLOW_PLACEHOLDER.len()),
+                        format!(
+                            "`@` stands for a whole measure, but it starts partway through measure {}",
+                            cuts.len()
+                        ),
+                    ));
+                }
+                continue;
+            }
+            StreamItem::Cluster { index, cluster } => (index, cluster),
+        };
+        next_cluster_index = index + 1;
         if starts_measure {
             if let Some(error) = tuplet_crossing_error(clusters, index, cuts.len()) {
                 diagnostics.push(error);
@@ -143,6 +245,7 @@ fn lay_out(
             cuts.push(MeasureCut {
                 cluster_index: index,
                 offset: cut_offset(cluster.start, tokens),
+                is_placeholder: false,
             });
             filled = 0;
         }
@@ -236,52 +339,6 @@ fn cut_offset(cluster_start: usize, tokens: &[Spanned<TimedLexToken>]) -> usize 
         })
         .last()
         .map_or(cluster_start, |token| token.span.start)
-}
-
-fn forbidden_character_errors(stream: &str) -> Vec<StreamDiagnostic> {
-    stream
-        .char_indices()
-        .filter_map(|(offset, character)| {
-            let message = match character {
-                '|' => "barlines are not allowed in a part stream; measures are inferred from beat counts",
-                '@' => "`@` is only allowed in follow parts",
-                _ => return None,
-            };
-            Some(error_at(Span::new(offset, offset + 1), message))
-        })
-        .collect()
-}
-
-fn inline_directive_errors(events: &[Spanned<ScoreEvent>]) -> Vec<StreamDiagnostic> {
-    events
-        .iter()
-        .filter(|event| is_inline_directive(&event.value))
-        .map(|event| {
-            error_at(
-                event.span,
-                "directives are not allowed in a part stream; put them on the measure's directive line",
-            )
-        })
-        .collect()
-}
-
-fn stream_diagnostic(diagnostic: &Diagnostic) -> StreamDiagnostic {
-    StreamDiagnostic {
-        span: diagnostic.span(),
-        message: diagnostic.message(),
-        severity: match diagnostic {
-            Diagnostic::Warning(_) => StreamDiagnosticSeverity::Warning,
-            Diagnostic::Error(_) => StreamDiagnosticSeverity::Error,
-        },
-    }
-}
-
-fn error_at(span: Span, message: impl Into<String>) -> StreamDiagnostic {
-    StreamDiagnostic {
-        span,
-        message: message.into(),
-        severity: StreamDiagnosticSeverity::Error,
-    }
 }
 
 fn first_non_whitespace(stream: &str, from: usize) -> usize {

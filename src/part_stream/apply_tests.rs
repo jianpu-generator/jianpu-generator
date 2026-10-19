@@ -1,3 +1,4 @@
+use crate::error::Span;
 use crate::part_stream::{apply_part_stream, extract_part_stream, PartStreamApplyResult};
 
 const MELODY_AND_BASS: &str = r"# parts
@@ -197,4 +198,97 @@ fn an_ineligible_part_is_refused() {
     assert_eq!(result.source, None);
     assert_eq!(result.diagnostics.len(), 1);
     assert!(result.diagnostics[0].message.contains("no part [X]"));
+}
+
+const FOLLOWING: &str = r"# parts
+Soprano [S] = notes
+Alto [A] = follow[S]
+
+# score
+[S] 1 2 3 4
+
+[S] 5 6 7 1
+[A] 3 4 5 6
+
+[S] 1 1 1 1
+";
+
+#[test]
+fn a_follow_part_shows_unwritten_measures_as_placeholders_and_round_trips() {
+    let stream = extract_part_stream(FOLLOWING, "A").unwrap();
+    assert_eq!(stream.text, "@ 3 4 5 6 @");
+    assert_eq!(stream.measure_starts, vec![0, 2, 10]);
+    let result = apply_part_stream(FOLLOWING, "A", &stream.text);
+    assert_eq!(result.changed_measure_count, 0);
+    assert_eq!(result.measure_starts, stream.measure_starts);
+    assert_eq!(result.source.as_deref(), Some(FOLLOWING));
+}
+
+#[test]
+fn a_placeholder_removes_the_follow_parts_line() {
+    let result = apply_part_stream(FOLLOWING, "A", "@ @ @");
+    assert_eq!(result.changed_measure_count, 1);
+    assert!(applied(result).contains("[S] 5 6 7 1\n\n[S] 1 1 1 1\n"));
+}
+
+#[test]
+fn writing_over_a_placeholder_inserts_the_follow_parts_line() {
+    let result = apply_part_stream(FOLLOWING, "A", "@ 3 4 5 6 2 2 2 2");
+    assert_eq!(result.changed_measure_count, 1);
+    assert!(applied(result).ends_with("[S] 1 1 1 1\n[A] 2 2 2 2\n"));
+}
+
+#[test]
+fn a_shorter_follow_stream_writes_explicit_rests() {
+    let result = apply_part_stream(FOLLOWING, "A", "@ 3 4");
+    assert_eq!(result.changed_measure_count, 2);
+    let source = applied(result);
+    assert!(
+        source.ends_with("[S] 5 6 7 1\n[A] 3 4 0 0\n\n[S] 1 1 1 1\n[A] 0 0 0 0\n"),
+        "{source}"
+    );
+}
+
+#[test]
+fn a_placeholder_partway_through_a_measure_is_an_error() {
+    let result = apply_part_stream(FOLLOWING, "A", "@ 3 4 @ 5 6 @");
+    assert_eq!(result.source, None);
+    assert_eq!(result.diagnostics.len(), 1);
+    assert_eq!(result.diagnostics[0].span, Span::new(6, 7));
+    assert!(result.diagnostics[0]
+        .message
+        .contains("partway through measure 2"));
+}
+
+#[test]
+fn a_placeholder_cannot_add_a_measure() {
+    let result = apply_part_stream(FOLLOWING, "A", "@ 3 4 5 6 @ @");
+    assert_eq!(result.source, None);
+    assert_eq!(result.diagnostics.len(), 1);
+    assert_eq!(result.diagnostics[0].span, Span::new(12, 13));
+}
+
+#[test]
+fn a_placeholder_on_a_groups_only_line_writes_rests() {
+    let source = r"# parts
+Soprano [S] = notes
+Alto [A] = follow[S]
+
+# score
+[S] 1 2 3 4
+
+[A] 5 6 7 1
+";
+    let result = apply_part_stream(source, "A", "@ @");
+    assert!(applied(result).ends_with("[S] 1 2 3 4\n\n[A] 0 0 0 0\n"));
+}
+
+#[test]
+fn a_placeholder_in_a_non_follow_part_is_an_error() {
+    let result = apply_part_stream(FOLLOWING, "S", "1 2 3 4 @");
+    assert_eq!(result.source, None);
+    assert_eq!(result.diagnostics[0].span, Span::new(8, 9));
+    assert!(result.diagnostics[0]
+        .message
+        .contains("only allowed in follow parts"));
 }

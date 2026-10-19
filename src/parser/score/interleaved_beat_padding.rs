@@ -242,6 +242,30 @@ pub(super) fn validate_and_pad_beats(
     line_span: Span,
 ) -> Result<PaddedBeats, IrrecoverableError> {
     let multiplier = crate::tuplet::resolution_multiplier_of(&events);
+    let padded = pad_beats(events, expected, line_span);
+    if padded.beat_overflow_error.is_some() {
+        return Ok(padded);
+    }
+    let dotted_eighth_errors =
+        crate::grouping::validate_measure_grouping(&padded.events, time_num, time_den, multiplier)?;
+    Ok(PaddedBeats {
+        dotted_eighth_errors,
+        ..padded
+    })
+}
+
+/// One measure line's events as the parser lays them out against `expected`
+/// quarter-beats: truncated at a beat overflow, or padded to fill a deficit.
+/// Unlike [`validate_and_pad_beats`] it skips the beat-grouping checks.
+pub(crate) fn padded_measure_events(
+    events: Vec<Spanned<ScoreEvent>>,
+    expected: u32,
+) -> Vec<Spanned<ScoreEvent>> {
+    pad_beats(events, expected, Span::new(0, 0)).events
+}
+
+fn pad_beats(events: Vec<Spanned<ScoreEvent>>, expected: u32, line_span: Span) -> PaddedBeats {
+    let multiplier = crate::tuplet::resolution_multiplier_of(&events);
     let expected_rescaled = expected * multiplier;
     let rescaled = crate::tuplet::apply_resolution_multiplier(events.clone(), multiplier);
 
@@ -259,7 +283,7 @@ pub(super) fn validate_and_pad_beats(
         }
     }
 
-    let (mut events, overflow_error) = match truncate_at {
+    let (events, overflow_error) = match truncate_at {
         Some(i) => {
             let error = Warning::new(
                 line_span,
@@ -274,31 +298,24 @@ pub(super) fn validate_and_pad_beats(
     };
 
     if overflow_error.is_some() {
-        return Ok(PaddedBeats {
+        return PaddedBeats {
             events,
             beat_overflow_error: overflow_error,
             dotted_eighth_errors: vec![],
-        });
+        };
     }
 
     if total_rescaled < expected_rescaled {
         let deficit_written = (expected_rescaled - total_rescaled) / multiplier;
         let total_written = expected - deficit_written;
-        let padded = pad_incomplete_measure(events, expected, total_written, line_span);
-        if padded.beat_overflow_error.is_some() {
-            return Ok(padded);
-        }
-        events = padded.events;
+        return pad_incomplete_measure(events, expected, total_written, line_span);
     }
 
-    let dotted_eighth_errors =
-        crate::grouping::validate_measure_grouping(&events, time_num, time_den, multiplier)?;
-
-    Ok(PaddedBeats {
+    PaddedBeats {
         events,
         beat_overflow_error: None,
-        dotted_eighth_errors,
-    })
+        dotted_eighth_errors: vec![],
+    }
 }
 
 fn implicit_source_line(offset: usize) -> SourceLine {

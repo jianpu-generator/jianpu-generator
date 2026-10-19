@@ -4,18 +4,21 @@ use crate::parser::score::interleaved_parser::can_implicitly_pad;
 use crate::parser::score::timed_parser::GroupStack;
 
 use super::document::ScoreDocument;
+use super::editable::TimedGrammar;
 use super::timing::{
     is_inline_directive, normalize_whitespace, rest_fill, timed_layout, TimedLineKind,
 };
+use super::FOLLOW_PLACEHOLDER;
 
 /// One measure chunk per measure of the part at `part_index`: a written
 /// measure's content with its implicit trailing padding spelled out as `-`,
-/// or a rest fill for a measure the part doesn't write. `Err` explains why
-/// the part can't be stream-edited.
+/// or — for a measure the part doesn't write — a rest fill, or `@` for a
+/// follow part (it copies its target there). `Err` explains why the part
+/// can't be stream-edited.
 pub(super) fn extract_timed_chunks(
     document: &ScoreDocument,
     part_index: usize,
-    kind: TimedLineKind,
+    grammar: TimedGrammar,
 ) -> Result<Vec<String>, String> {
     let mut stack = GroupStack::default();
     document
@@ -23,8 +26,9 @@ pub(super) fn extract_timed_chunks(
         .iter()
         .enumerate()
         .map(|(index, measure)| match measure.written_line(part_index) {
+            None if grammar.is_follow => Ok(FOLLOW_PLACEHOLDER.to_string()),
             None => Ok(rest_fill(measure.capacity)),
-            Some(line) => written_chunk(&line.content, measure.capacity, kind, &mut stack)
+            Some(line) => written_chunk(&line.content, measure.capacity, grammar.kind, &mut stack)
                 .map_err(|problem| format!("measure {} {problem}", index + 1)),
         })
         .collect()

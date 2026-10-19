@@ -20,7 +20,7 @@ use crate::desugar::SourceLine;
 use crate::parser::score::measure_group::collect_groups;
 use accumulators::{build_parse_result, build_slot_actions, init_accumulators};
 use beat_padding::{beats_per_measure, validate_and_pad_group_lines};
-pub(crate) use beat_padding::{can_implicitly_pad, timed_beats};
+pub(crate) use beat_padding::{can_implicitly_pad, padded_measure_events, timed_beats};
 use column_lines::process_padded_columns;
 pub(crate) use directives::directive_keyword_spans;
 use directives::split_directive;

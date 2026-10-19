@@ -4,11 +4,12 @@ use std::path::{Path, PathBuf};
 
 use jianpu_generator::part_stream::{
     apply_part_stream, extract_part_stream, list_streamable_parts, StreamDiagnosticSeverity,
+    StreamablePartKind,
 };
 
-/// Fewer than this many round-tripped parts means file discovery or
-/// eligibility silently broke.
-const MINIMUM_CHECKED_PART_COUNT: usize = 20;
+/// Fewer than this many round-tripped parts (notes, chords, percussion,
+/// follow and lyric parts) means file discovery or eligibility silently broke.
+const MINIMUM_CHECKED_PART_COUNT: usize = 35;
 
 fn repository_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -77,6 +78,7 @@ fn every_eligible_part_in_the_repository_round_trips_unchanged() {
     let files = corpus();
     assert!(!files.is_empty(), "no .jianpu files found");
     let mut checked_part_count = 0;
+    let mut checked_kinds = Vec::new();
     let mut failures = Vec::new();
     for path in &files {
         let source =
@@ -86,6 +88,7 @@ fn every_eligible_part_in_the_repository_round_trips_unchanged() {
                 continue;
             }
             checked_part_count += 1;
+            checked_kinds.push(part.kind);
             if let Some(failure) = round_trip_failure(&source, &part.abbreviation) {
                 failures.push(format!(
                     "{} [{}]: {failure}",
@@ -108,4 +111,10 @@ fn every_eligible_part_in_the_repository_round_trips_unchanged() {
         checked_part_count >= MINIMUM_CHECKED_PART_COUNT,
         "only {checked_part_count} parts were eligible"
     );
+    for kind in [StreamablePartKind::Follow, StreamablePartKind::Lyrics] {
+        assert!(
+            checked_kinds.contains(&kind),
+            "no {kind:?} part was round-tripped"
+        );
+    }
 }

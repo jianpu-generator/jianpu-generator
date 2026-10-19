@@ -121,10 +121,10 @@ Echo [E] = follow[M]
         summary,
         vec![
             ("M", StreamablePartKind::Notes, true),
-            ("W", StreamablePartKind::Lyrics, false),
+            ("W", StreamablePartKind::Lyrics, true),
             ("H", StreamablePartKind::Chords, true),
             ("D", StreamablePartKind::Percussion, true),
-            ("E", StreamablePartKind::Follow, false),
+            ("E", StreamablePartKind::Follow, true),
         ]
     );
     assert_eq!(parts[0].display_name, "Melody");

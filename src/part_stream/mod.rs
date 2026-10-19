@@ -4,23 +4,33 @@
 //!
 //! - [`extract_part_stream`] turns the part's per-measure lines into one
 //!   stream of **measure chunks** (implicit trailing padding materialized as
-//!   explicit `-`, unwritten measures shown as rests).
+//!   explicit `-`, unwritten measures shown as rests, as `@` for a follow
+//!   part, or as `_` for a lyric part).
 //! - [`apply_part_stream`] re-bars an edited stream by each measure's beat
-//!   capacity and rewrites only the measures whose chunk changed; every other
-//!   line (other parts, directives, comments) stays byte-for-byte.
+//!   capacity (a lyric stream: by its target's lyric slots) and rewrites only
+//!   the measures whose chunk changed; every other line (other parts,
+//!   directives, comments) stays byte-for-byte.
 //! - [`list_streamable_parts`] lists every declared part with the reason it
 //!   can't be stream-edited, if any.
 
 mod apply;
+mod diagnostics;
 mod document;
+mod editable;
 mod extract;
+mod lyrics;
 mod split;
 mod timing;
 
 use crate::ast::parsed::{PartDecl, PartKind};
 use crate::error::Span;
 use document::ScoreDocument;
-use timing::TimedLineKind;
+use editable::editable_part;
+
+/// A follow part's measure that it doesn't write, so it copies its target.
+const FOLLOW_PLACEHOLDER: &str = "@";
+/// A lyric part's measure without lyrics.
+const NO_LYRICS_MEASURE: &str = "_";
 
 /// What kind of line a streamable part writes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -137,13 +147,6 @@ pub fn apply_part_stream(source: &str, abbreviation: &str, stream: &str) -> Part
     apply::apply(source, abbreviation, stream)
 }
 
-/// A part that passed every eligibility check, with its original chunks.
-struct EditablePart {
-    index: usize,
-    kind: TimedLineKind,
-    chunks: Vec<String>,
-}
-
 fn streamable_kind(declaration: &PartDecl) -> StreamablePartKind {
     match (declaration.kind, &declaration.follow_target) {
         (PartKind::Lyrics { .. }, _) => StreamablePartKind::Lyrics,
@@ -164,80 +167,14 @@ fn find_part(document: &ScoreDocument, abbreviation: &str) -> Result<usize, Part
         })
 }
 
-fn ineligible(reason: impl Into<String>) -> PartStreamError {
-    PartStreamError::Ineligible {
-        reason: reason.into(),
-    }
-}
-
-fn unsupported_kind_reason(document: &ScoreDocument, declaration: &PartDecl) -> Option<String> {
-    match declaration.kind {
-        PartKind::Lyrics { target_part_index } => {
-            let bound_to_chords = document
-                .declarations
-                .get(target_part_index)
-                .is_some_and(|target| target.kind == PartKind::Chords);
-            Some(if bound_to_chords {
-                "lyrics under a chords part cannot be edited as a stream".to_string()
-            } else {
-                "lyric parts cannot be edited as a stream yet".to_string()
-            })
-        }
-        _ if declaration.follow_target.is_some() => {
-            Some("follow parts cannot be edited as a stream yet".to_string())
-        }
-        _ => None,
-    }
-}
-
-/// Runs every eligibility check on the part at `index`, including a
-/// self-check that its own extracted stream splits back into exactly the
-/// same measure chunks without errors — the guarantee that applying an
-/// untouched stream never changes the source.
-fn editable_part(document: &ScoreDocument, index: usize) -> Result<EditablePart, PartStreamError> {
-    let declaration = document
-        .declarations
-        .get(index)
-        .ok_or_else(|| ineligible("no such part"))?;
-    if let Some(reason) = unsupported_kind_reason(document, declaration) {
-        return Err(ineligible(reason));
-    }
-    let kind = TimedLineKind::of(declaration.kind)
-        .ok_or_else(|| ineligible("this kind of part cannot be edited as a stream"))?;
-    let chunks = extract::extract_timed_chunks(document, index, kind).map_err(ineligible)?;
-    let resplit =
-        split::split_timed_stream(&join_chunks(&chunks).text, kind, &document.capacities());
-    if let Some(error) = resplit
-        .diagnostics
-        .iter()
-        .find(|diagnostic| diagnostic.severity == StreamDiagnosticSeverity::Error)
-    {
-        return Err(ineligible(format!(
-            "its stream would not parse: {}",
-            error.message
-        )));
-    }
-    if let Some(measure) = (0..chunks.len().max(resplit.chunks.len()))
-        .find(|&measure| chunks.get(measure) != resplit.chunks.get(measure))
-    {
-        return Err(ineligible(format!(
-            "measure {} would not keep its content when re-barred",
-            measure + 1
-        )));
-    }
-    Ok(EditablePart {
-        index,
-        kind,
-        chunks,
-    })
-}
-
 /// Joins measure chunks into a stream, a newline after every 4th measure.
+/// An empty chunk (a lyric measure with no slots) adds no separator: it
+/// starts right where the previous chunk ends.
 fn join_chunks(chunks: &[String]) -> PartStream {
     let mut text = String::new();
     let mut measure_starts = Vec::with_capacity(chunks.len());
     for (index, chunk) in chunks.iter().enumerate() {
-        if index > 0 {
+        if !text.is_empty() && !chunk.is_empty() {
             text.push(if index % 4 == 0 { '\n' } else { ' ' });
         }
         measure_starts.push(text.len());

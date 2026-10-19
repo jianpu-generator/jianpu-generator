@@ -32,6 +32,9 @@ impl ScoreLine {
 pub(super) struct ScoreMeasure {
     /// Beat capacity in quarter-beats.
     pub(super) capacity: u32,
+    /// Every declared part's desugared content in this measure, by
+    /// declaration index: follow-copies and implicit fills resolved.
+    pub(super) resolved_contents: Vec<String>,
     pub(super) data_lines: Vec<ScoreLine>,
     /// End of the group's last physical line.
     pub(super) end: usize,
@@ -76,8 +79,15 @@ impl ScoreDocument {
         let measures = groups
             .iter()
             .zip(measure_capacities(&desugared, score_offset))
-            .map(|(group, capacity)| ScoreMeasure {
+            .zip(&desugared)
+            .map(|((group, capacity), resolved)| ScoreMeasure {
                 capacity,
+                resolved_contents: resolved
+                    .get(directive_line_count(group)..)
+                    .unwrap_or(&[])
+                    .iter()
+                    .map(|line| line.content.clone())
+                    .collect(),
                 data_lines: group
                     .get(directive_line_count(group)..)
                     .unwrap_or(&[])

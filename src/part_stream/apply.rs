@@ -4,12 +4,12 @@ use itertools::Itertools;
 
 use crate::error::Span;
 
+use super::diagnostics::{error_at, has_error};
 use super::document::{ScoreDocument, ScoreLine, ScoreMeasure};
-use super::split::split_timed_stream;
-use super::timing::rest_fill;
+use super::editable::{editable_part, EditablePart};
 use super::{
-    editable_part, find_part, EditablePart, PartStreamApplyResult, PartStreamError,
-    StreamDiagnostic, StreamDiagnosticSeverity,
+    find_part, PartStreamApplyResult, PartStreamError, StreamDiagnostic, StreamDiagnosticSeverity,
+    FOLLOW_PLACEHOLDER,
 };
 
 /// Replace `span` of the source with `replacement`.
@@ -37,12 +37,23 @@ pub(super) fn apply(source: &str, abbreviation: &str, stream: &str) -> PartStrea
         Ok(loaded) => loaded,
         Err(error) => return refused(&error),
     };
-    let split = split_timed_stream(stream, part.kind, &document.capacities());
-    let has_error = split
-        .diagnostics
-        .iter()
-        .any(|diagnostic| diagnostic.severity == StreamDiagnosticSeverity::Error);
-    if has_error {
+    let mut split = part.grammar.split(stream, &document);
+    split.diagnostics.extend(
+        split
+            .chunks
+            .iter()
+            .zip(&split.measure_starts)
+            .skip(document.measures.len())
+            .filter(|(chunk, _)| chunk.as_str() == FOLLOW_PLACEHOLDER)
+            .map(|(_, &start)| {
+                error_at(
+                    Span::new(start, start + FOLLOW_PLACEHOLDER.len()),
+                    "`@` can't add a measure past the end of the score",
+                )
+            })
+            .collect::<Vec<_>>(),
+    );
+    if has_error(&split.diagnostics) {
         return PartStreamApplyResult {
             source: None,
             diagnostics: split.diagnostics,
@@ -109,6 +120,14 @@ fn refused(error: &PartStreamError) -> PartStreamApplyResult {
     }
 }
 
+/// What a measure's new chunk asks of its source line.
+enum MeasureTarget<'a> {
+    /// Write exactly this content.
+    Write(&'a str),
+    /// Have no line: past the stream's end, or a follow part's `@`.
+    Unwritten,
+}
+
 /// The edit that turns `original` into `edited` in one measure, if any.
 fn measure_edit(
     measure: &ScoreMeasure,
@@ -117,26 +136,39 @@ fn measure_edit(
     original: Option<&String>,
     edited: Option<&String>,
 ) -> Option<SourceEdit> {
+    if edited.is_some() && edited == original {
+        return None;
+    }
+    let empty_measure = part.grammar.empty_measure(measure.capacity);
+    let target = match edited {
+        Some(chunk) if chunk == FOLLOW_PLACEHOLDER => MeasureTarget::Unwritten,
+        Some(chunk) => MeasureTarget::Write(chunk),
+        // An unwritten follow measure copies its target, so a follow part
+        // that stops early writes explicit rests instead.
+        None if part.grammar.is_follow() => MeasureTarget::Write(&empty_measure),
+        None => MeasureTarget::Unwritten,
+    };
     let written = measure.written_line(part.index);
-    match (edited, written) {
-        (Some(chunk), _) if Some(chunk) == original => None,
-        (Some(chunk), Some(line)) => Some(SourceEdit::new(
-            line.content_start,
-            line.content_end(),
-            chunk.clone(),
-        )),
-        (Some(chunk), None) => Some(insert_line(
+    match (target, written) {
+        (MeasureTarget::Write(content), Some(line)) => (line.content != content)
+            .then(|| SourceEdit::new(line.content_start, line.content_end(), content)),
+        (MeasureTarget::Write(content), None) => Some(insert_line(
             measure,
             part.index,
-            &format!("[{key}] {chunk}"),
+            &format!("[{key}] {content}"),
         )),
-        (None, None) => None,
-        (None, Some(line)) if measure.data_lines.len() == 1 => {
-            let rest = rest_fill(measure.capacity);
-            (Some(&rest) != original)
-                .then(|| SourceEdit::new(line.content_start, line.content_end(), rest))
+        (MeasureTarget::Unwritten, None) => None,
+        // Removing a group's only data line would leave it empty.
+        (MeasureTarget::Unwritten, Some(line)) if measure.data_lines.len() == 1 => {
+            (line.content != empty_measure).then(|| {
+                SourceEdit::new(
+                    line.content_start,
+                    line.content_end(),
+                    empty_measure.clone(),
+                )
+            })
         }
-        (None, Some(line)) => Some(remove_line(measure, line)),
+        (MeasureTarget::Unwritten, Some(line)) => Some(remove_line(measure, line)),
     }
 }
 
