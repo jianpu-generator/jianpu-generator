@@ -86,6 +86,18 @@ Feature: Part stream editor
     And the part stream picker row for part "C" explains "3 bracketed items for 2 chord attacks"
     And the part stream picker row for part "H" is enabled
 
+  Scenario: Applying the untouched stream re-bars an overflowing measure
+    Given the overflowing melody fixture is loaded instead
+    When I open the part stream editor for part "M"
+    Then the original part stream is:
+      """
+      1 2 3 4 5
+      6 7 1 2
+      """
+    And the part stream footer says "3 measures changed"
+    When I apply the part stream
+    Then the main editor source is the re-barred melody source
+
   Scenario: Apply is undoable from the main editor
     When I open the part stream editor for part "M"
     And I replace the edited part stream with "0 1 2 3 4 5 6 7 1"

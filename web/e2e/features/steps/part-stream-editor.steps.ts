@@ -98,12 +98,33 @@ Chant [C] = lyrics[H]
 [C] (a) (b) (c)
 `
 
+const OVERFLOWING_MELODY_SOURCE = `# parts
+Melody [M] = notes
+
+# score
+[M] 1 2 3 4 5
+
+[M] 6 7 1 2
+`
+
+const RE_BARRED_MELODY_SOURCE = `# parts
+Melody [M] = notes
+
+# score
+[M] 1 2 3 4
+
+[M] 5 6 7 1
+
+[M] 2 0 0 0
+`
+
 const EXPECTED_SOURCES: Record<string, string> = {
   'original fixture': SOURCE,
   'shifted melody': SHIFTED_MELODY_SOURCE,
   'shortened melody': SHORTENED_MELODY_SOURCE,
   'shifted lyrics': SHIFTED_LYRICS_SOURCE,
   'shifted chord-bound lyrics': SHIFTED_CHORD_BOUND_LYRICS_SOURCE,
+  're-barred melody': RE_BARRED_MELODY_SOURCE,
 }
 
 async function loadSource(page: Page, source: string) {
@@ -150,6 +171,10 @@ Given('the part stream editor fixture is loaded', async ({ page }) => {
 
 Given('the chord-bound lyrics fixture is loaded instead', async ({ page }) => {
   await loadSource(page, CHORD_BOUND_LYRICS_SOURCE)
+})
+
+Given('the overflowing melody fixture is loaded instead', async ({ page }) => {
+  await loadSource(page, OVERFLOWING_MELODY_SOURCE)
 })
 
 Given(
