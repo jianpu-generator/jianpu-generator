@@ -169,11 +169,11 @@ When(
   },
 )
 
-Then('the original part stream is {string}', async ({ page }, text: string) => {
+Then('the original part stream is:', async ({ page }, text: string) => {
   await expect.poll(() => editorValue(page, 'original')).toBe(text)
 })
 
-Then('the edited part stream is {string}', async ({ page }, text: string) => {
+Then('the edited part stream is:', async ({ page }, text: string) => {
   await expect.poll(() => editorValue(page, 'modified')).toBe(text)
 })
 

@@ -8,7 +8,11 @@ Feature: Part stream editor
 
   Scenario: Shifting a note forward re-bars every later measure
     When I open the part stream editor for part "M"
-    Then the original part stream is "1 2 3 4 5 6 7 1"
+    Then the original part stream is:
+      """
+      1 2 3 4
+      5 6 7 1
+      """
     When I replace the edited part stream with "0 1 2 3 4 5 6 7 1"
     Then the part stream footer says "3 measures changed"
     And the part stream Apply button is enabled
@@ -30,14 +34,26 @@ Feature: Part stream editor
 
   Scenario: A follow part shows its copied measures as @ and round-trips unchanged
     When I open the part stream editor for part "A"
-    Then the original part stream is "@ 3 4 5 6"
-    And the edited part stream is "@ 3 4 5 6"
+    Then the original part stream is:
+      """
+      @
+      3 4 5 6
+      """
+    And the edited part stream is:
+      """
+      @
+      3 4 5 6
+      """
     And the part stream footer says "0 measures changed"
     And the part stream Apply button is disabled
 
   Scenario: A lyric part is re-split by its target's notes
     When I open the part stream editor for part "W"
-    Then the original part stream is "a b c d e f g h"
+    Then the original part stream is:
+      """
+      a b c d
+      e f g h
+      """
     When I replace the edited part stream with "z a b c d e f g"
     Then the part stream footer says "2 measures changed"
     When I apply the part stream

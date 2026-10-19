@@ -168,15 +168,15 @@ fn find_part(document: &ScoreDocument, abbreviation: &str) -> Result<usize, Part
         })
 }
 
-/// Joins measure chunks into a stream, a newline after every 4th measure.
-/// An empty chunk (a lyric measure with no slots) adds no separator: it
-/// starts right where the previous chunk ends.
+/// Joins measure chunks into a stream, one measure per line. An empty chunk
+/// (a lyric measure with no slots) adds no separator: it starts right where
+/// the previous chunk ends.
 fn join_chunks(chunks: &[String]) -> PartStream {
     let mut text = String::new();
     let mut measure_starts = Vec::with_capacity(chunks.len());
-    for (index, chunk) in chunks.iter().enumerate() {
+    for chunk in chunks {
         if !text.is_empty() && !chunk.is_empty() {
-            text.push(if index % 4 == 0 { '\n' } else { ' ' });
+            text.push('\n');
         }
         measure_starts.push(text.len());
         text.push_str(chunk);

@@ -26,7 +26,7 @@ time=3/4
 #[test]
 fn materializes_implicit_padding_and_rest_fills_unwritten_measures() {
     let stream = extract_part_stream(TWO_PARTS, "M").unwrap();
-    assert_eq!(stream.text, "1 2 - - 0 0 0 0 5 6 7 1 - -\n2 - -");
+    assert_eq!(stream.text, "1 2 - -\n0 0 0 0\n5 6 7\n1 - -\n2 - -");
     assert_eq!(stream.measure_starts, vec![0, 8, 16, 22, 28]);
 }
 

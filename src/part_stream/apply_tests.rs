@@ -102,7 +102,7 @@ Melody [M] = notes
 ";
     assert_eq!(
         extract_part_stream(source, "M").unwrap().text,
-        "1 2 - - 3 4 - -"
+        "1 2 - -\n3 4 - -"
     );
     let result = apply_part_stream(source, "M", "1 2 - - 3 4 5 -");
     assert_eq!(result.changed_measure_count, 1);
@@ -125,7 +125,7 @@ Bass [B] = notes
 [B] 1 1 1 1
 ";
     let stream = extract_part_stream(source, "M").unwrap();
-    assert_eq!(stream.text, "1 2 3 4 0 0 0 0 0 0 0 0");
+    assert_eq!(stream.text, "1 2 3 4\n0 0 0 0\n0 0 0 0");
     let unchanged = apply_part_stream(source, "M", &stream.text);
     assert_eq!(unchanged.changed_measure_count, 0);
     assert_eq!(unchanged.source.as_deref(), Some(source));
@@ -216,7 +216,7 @@ Alto [A] = follow[S]
 #[test]
 fn a_follow_part_shows_unwritten_measures_as_placeholders_and_round_trips() {
     let stream = extract_part_stream(FOLLOWING, "A").unwrap();
-    assert_eq!(stream.text, "@ 3 4 5 6 @");
+    assert_eq!(stream.text, "@\n3 4 5 6\n@");
     assert_eq!(stream.measure_starts, vec![0, 2, 10]);
     let result = apply_part_stream(FOLLOWING, "A", &stream.text);
     assert_eq!(result.changed_measure_count, 0);

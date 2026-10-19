@@ -840,11 +840,13 @@ time=4/4
 [M] 5 6 7 1'
 ```
 
-Streams of this score (the editor puts a newline after every 4th measure for readability):
+Streams of this score (the editor puts each measure on its own line when it opens the stream; the line breaks are just whitespace and aren't re-flowed as you edit):
 
 ```
-M:  1 2 - - 5 6 7 1'
-H:  3 4 5 6 @
+M:  1 2 - -
+    5 6 7 1'
+H:  3 4 5 6
+    @
 ```
 
 ### Stream syntax

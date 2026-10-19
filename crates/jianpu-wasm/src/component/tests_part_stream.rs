@@ -57,7 +57,7 @@ fn extracts_a_stream_with_byte_offset_measure_starts() {
     else {
         panic!("expected a stream");
     };
-    assert_eq!(stream.text, "你 好 世 界 一 二 三 四");
+    assert_eq!(stream.text, "你 好 世 界\n一 二 三 四");
     assert_eq!(stream.measure_starts, vec![0, 16]);
 }
 

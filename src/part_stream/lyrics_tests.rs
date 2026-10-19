@@ -64,7 +64,7 @@ Words [W] = lyrics[M]
 [M] 3 3 3 3
 ";
     let stream = extract_part_stream(source, "W").unwrap();
-    assert_eq!(stream.text, "你 好 世 界 twin- kle - star up a bove\n_");
+    assert_eq!(stream.text, "你 好 世 界\ntwin- kle - star\nup a bove\n_");
     assert_eq!(stream.measure_starts, vec![0, 16, 33, 42, 43]);
     let result = apply_part_stream(source, "W", &stream.text);
     assert_eq!(result.changed_measure_count, 0);
@@ -118,7 +118,7 @@ Words [W] = lyrics[M]
 ";
     assert_eq!(
         extract_part_stream(source, "W").unwrap().text,
-        "a b c d e f g"
+        "a b c d\ne f g"
     );
     let result = apply_part_stream(source, "W", "x a b c d e f");
     assert!(applied(result).contains("[W] x a b c\n\n[M] 4 5 6 7\n[W] d e f\n"));
@@ -152,7 +152,7 @@ Words [W] = lyrics[M]
 [W] e f g h
 ";
     let stream = extract_part_stream(source, "W").unwrap();
-    assert_eq!(stream.text, "a b c d e f g h");
+    assert_eq!(stream.text, "a b c d\ne f g h");
     assert_eq!(stream.measure_starts, vec![0, 7, 8]);
     let result = apply_part_stream(source, "W", "a b c x e f g");
     assert_eq!(result.changed_measure_count, 2);
@@ -210,7 +210,7 @@ Words [W] = lyrics[A]
 [W] e
 ";
     assert_eq!(ineligible_reason(source, "W"), None);
-    assert_eq!(extract_part_stream(source, "W").unwrap().text, "a b c d e");
+    assert_eq!(extract_part_stream(source, "W").unwrap().text, "a b c d\ne");
 }
 
 #[test]
@@ -238,6 +238,6 @@ fn a_lyric_tally_mismatch_makes_the_part_ineligible_except_for_underscore() {
     assert_eq!(ineligible_reason(&skipped, "W"), None);
     assert_eq!(
         extract_part_stream(&skipped, "W").unwrap().text,
-        "a b c d _"
+        "a b c d\n_"
     );
 }
