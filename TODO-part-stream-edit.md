@@ -17,7 +17,7 @@ All phases land as separate commits in **one PR**.
 - [x] Phase 2 — Rust: `follow[X]` parts (`@` placeholder) and notes-bound lyric parts
 - [x] Phase 3 — Wasm/WIT exports
 - [x] Phase 4 — Web: part picker modal, editable diff view, Apply, markers, e2e
-- [ ] Phase 5 — Docs (`syntax.md`, `ARCHITECTURE.md`) and PR
+- [x] Phase 5 — Docs (`syntax.md`, `ARCHITECTURE.md`) and PR
 
 Tick each box in the same commit that completes the phase.
 
