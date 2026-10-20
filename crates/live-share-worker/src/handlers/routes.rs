@@ -24,6 +24,7 @@ use utoipa::{IntoParams, ToSchema};
 use worker::{Request, Response, RouteContext, Router};
 
 use crate::api_error::ApiError;
+use crate::app_log::RequestMeta;
 
 pub(crate) type HandlerResult<T> = Result<T, ApiError>;
 
@@ -164,6 +165,14 @@ fn respond<R: Reply>(outcome: HandlerResult<R>) -> worker::Result<Response> {
     Ok(response)
 }
 
+fn request_meta(req: &Request) -> RequestMeta {
+    let header = |name: &str| req.headers().get(name).ok().flatten();
+    RequestMeta {
+        origin: header("Origin"),
+        user_agent: header("User-Agent"),
+    }
+}
+
 /// matchit (the worker `Router`'s matcher) spells `{id}` as `:id`.
 fn router_pattern(path: &str) -> String {
     path.replace('{', ":").replace('}', "")
@@ -248,7 +257,7 @@ impl Routes {
     /// has no such route at all (so it answers exactly like any unknown
     /// path), while the spec documents it either way.
     pub(crate) fn post_if<Params, Body, R, F, Fut>(
-        mut self,
+        self,
         served: bool,
         path: &str,
         handler: F,
@@ -258,6 +267,41 @@ impl Routes {
         Body: DeserializeOwned + ToSchema + 'static,
         R: Reply + 'static,
         F: Fn(RouteContext<()>, Params, Body) -> Fut + Copy + 'static,
+        Fut: Future<Output = HandlerResult<R>> + 'static,
+    {
+        self.post_route(served, path, move |ctx, params, body, _request_meta| {
+            handler(ctx, params, body)
+        })
+    }
+
+    /// Like `post`, but the handler also gets the request's `RequestMeta`
+    /// (`Origin` / `User-Agent`), for routes that log it to `app_log`.
+    pub(crate) fn post_with_request_meta<Params, Body, R, F, Fut>(
+        self,
+        path: &str,
+        handler: F,
+    ) -> worker::Result<Self>
+    where
+        Params: DeserializeOwned + IntoParams + 'static,
+        Body: DeserializeOwned + ToSchema + 'static,
+        R: Reply + 'static,
+        F: Fn(RouteContext<()>, Params, Body, RequestMeta) -> Fut + Copy + 'static,
+        Fut: Future<Output = HandlerResult<R>> + 'static,
+    {
+        self.post_route(true, path, handler)
+    }
+
+    fn post_route<Params, Body, R, F, Fut>(
+        mut self,
+        served: bool,
+        path: &str,
+        handler: F,
+    ) -> worker::Result<Self>
+    where
+        Params: DeserializeOwned + IntoParams + 'static,
+        Body: DeserializeOwned + ToSchema + 'static,
+        R: Reply + 'static,
+        F: Fn(RouteContext<()>, Params, Body, RequestMeta) -> Fut + Copy + 'static,
         Fut: Future<Output = HandlerResult<R>> + 'static,
     {
         let names = path_param_names::<Params>(path)?;
@@ -282,9 +326,10 @@ impl Routes {
                         respond(
                             async {
                                 let params = read_path_params(&ctx, &names)?;
+                                let request_meta = request_meta(&req);
                                 let body =
                                     req.json::<Body>().await.map_err(|_| ApiError::BadRequest)?;
-                                handler(ctx, params, body).await
+                                handler(ctx, params, body, request_meta).await
                             }
                             .await,
                         )

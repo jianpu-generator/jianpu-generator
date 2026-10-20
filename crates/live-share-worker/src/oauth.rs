@@ -40,11 +40,19 @@ use base64::Engine;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use worker::wasm_bindgen::JsValue;
-use worker::{Error, Fetch, Headers, Method, Request, RequestInit, Result};
+use worker::{console_error, Error, Fetch, Headers, Method, Request, RequestInit, Result};
 use worker::{RouteContext, Var};
 
 use crate::api_error::ApiError;
+use crate::app_log::{
+    self, AuthEvent, LogEvent, RequestMeta, TokenExchangeFailed, TokenIssued, TokenRevokeFailed,
+    TokenRevoked,
+};
+use crate::db;
 use crate::handlers::routes::{HandlerResult, Json, NoContent, NoPathParams};
+use crate::handlers::D1_BINDING;
+use crate::identity::github::fetch_github_account;
+use crate::identity::hash_token;
 
 const DEFAULT_GITHUB_TOKEN_URL: &str = "https://github.com/login/oauth/access_token";
 
@@ -131,10 +139,14 @@ struct GithubTokenResponse {
 /// its PKCE `code_verifier`) for an access token, using this Worker's own
 /// client secret. See the module doc comment for what this route does and
 /// does not do.
+///
+/// Logs `token_issued` (with the request's `Origin`/`User-Agent`) or
+/// `token_exchange_failed` to `app_log`.
 pub(crate) async fn github_oauth_callback(
     ctx: RouteContext<()>,
     _path: NoPathParams,
     body: GithubOauthCallbackRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<Json<GithubOauthCallbackResponse>> {
     let client_id: Var = ctx.var(CLIENT_ID_BINDING)?;
     let client_secret = ctx.secret(CLIENT_SECRET_BINDING)?;
@@ -144,25 +156,43 @@ pub(crate) async fn github_oauth_callback(
         .unwrap_or_else(|_| DEFAULT_GITHUB_TOKEN_URL.to_string());
     let user_endpoint = crate::identity::github::user_endpoint_from_env(&ctx);
 
-    let token_response = exchange_code_for_token(
+    let token_response = match exchange_code_for_token(
         &token_url,
         &client_id.to_string(),
         &client_secret.to_string(),
         &body,
     )
-    .await?;
+    .await
+    {
+        Ok(token_response) => token_response,
+        Err(error) => {
+            let event = AuthEvent::TokenExchangeFailed(TokenExchangeFailed {
+                reason: error.to_string(),
+            });
+            record_auth_event(&ctx, event, &request_meta).await;
+            return Err(error.into());
+        }
+    };
 
     match token_response.access_token {
         Some(access_token) => {
             // Best-effort only: a failed `GET /user` here must not fail an
             // otherwise-successful sign-in, so `login` degrades to `None`
             // rather than propagating the error.
-            let login = crate::identity::github::fetch_github_login(&user_endpoint, &access_token)
+            let account = fetch_github_account(&user_endpoint, &access_token)
                 .await
                 .ok();
+            let event = AuthEvent::TokenIssued(TokenIssued {
+                token_tag: app_log::token_tag(&hash_token(&access_token)),
+                provider_user_id: account
+                    .as_ref()
+                    .map(|account| account.provider_user_id.clone()),
+                login: account.as_ref().map(|account| account.login.clone()),
+            });
+            record_auth_event(&ctx, event, &request_meta).await;
             Ok(Json(GithubOauthCallbackResponse {
                 access_token,
-                login,
+                login: account.map(|account| account.login),
             }))
         }
         None => {
@@ -170,10 +200,23 @@ pub(crate) async fn github_oauth_callback(
                 .error_description
                 .or(token_response.error)
                 .unwrap_or_else(|| "GitHub did not return an access token".to_string());
+            let event = AuthEvent::TokenExchangeFailed(TokenExchangeFailed {
+                reason: reason.clone(),
+            });
+            record_auth_event(&ctx, event, &request_meta).await;
             Err(ApiError::UpstreamFailed {
                 message: format!("GitHub token exchange failed: {reason}"),
             })
         }
+    }
+}
+
+/// Best-effort `app_log` write for this module's routes: even a missing D1
+/// binding only gets a `console_error!`, never a failed sign-in/sign-out.
+async fn record_auth_event(ctx: &RouteContext<()>, event: AuthEvent, request_meta: &RequestMeta) {
+    match ctx.d1(D1_BINDING) {
+        Ok(db) => db::record_app_log(&db, &LogEvent::Auth(event), None, request_meta).await,
+        Err(error) => console_error!("app_log: no D1 binding to record {event:?}: {error}"),
     }
 }
 
@@ -247,14 +290,25 @@ pub(crate) async fn github_revoke(
     let client_secret = ctx.secret(CLIENT_SECRET_BINDING)?;
     let revocation_url = token_revocation_url_from_env(&ctx, &client_id.to_string());
 
-    match revoke_token(
+    let result = revoke_token(
         &revocation_url,
         &client_id.to_string(),
         &client_secret.to_string(),
         &body.identity_token,
     )
-    .await
-    {
+    .await;
+
+    let token_tag = app_log::token_tag(&hash_token(&body.identity_token));
+    let event = match &result {
+        Ok(()) => AuthEvent::TokenRevoked(TokenRevoked { token_tag }),
+        Err(error) => AuthEvent::TokenRevokeFailed(TokenRevokeFailed {
+            token_tag,
+            reason: error.to_string(),
+        }),
+    };
+    record_auth_event(&ctx, event, &RequestMeta::default()).await;
+
+    match result {
         Ok(()) => Ok(NoContent),
         Err(error) => Err(ApiError::UpstreamFailed {
             message: format!("GitHub token revocation failed: {error}"),
