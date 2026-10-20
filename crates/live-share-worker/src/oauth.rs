@@ -285,6 +285,7 @@ pub(crate) async fn github_revoke(
     ctx: RouteContext<()>,
     _path: NoPathParams,
     body: GithubRevokeRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<NoContent> {
     let client_id: Var = ctx.var(CLIENT_ID_BINDING)?;
     let client_secret = ctx.secret(CLIENT_SECRET_BINDING)?;
@@ -306,7 +307,7 @@ pub(crate) async fn github_revoke(
             reason: error.to_string(),
         }),
     };
-    record_auth_event(&ctx, event, &RequestMeta::default()).await;
+    record_auth_event(&ctx, event, &request_meta).await;
 
     match result {
         Ok(()) => Ok(NoContent),

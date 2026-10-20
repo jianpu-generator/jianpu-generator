@@ -41,6 +41,7 @@ mod shares;
 use worker::{D1Database, RouteContext};
 
 use crate::api_error::ApiError;
+use crate::app_log::RequestMeta;
 use crate::identity::github::GithubIdentityProvider;
 use crate::identity::{resolve_verified_user_id, session_ttl_millis_from_env};
 use crate::oauth;
@@ -58,7 +59,7 @@ pub(crate) const D1_BINDING: &str = "DB";
 pub(crate) fn routes(e2e_reset_enabled: bool) -> worker::Result<Routes> {
     Routes::new()
         .get("/shares/{share_id}", shares::get_share)?
-        .post_with_request_meta("/auth/github/callback", oauth::github_oauth_callback)?
+        .post("/auth/github/callback", oauth::github_oauth_callback)?
         .post("/auth/github/revoke", oauth::github_revoke)?
         .post("/files/list", files::list_files)?
         .post("/files", files::create_file)?
@@ -94,10 +95,17 @@ async fn resolve_files_caller(
     d1: &D1Database,
     ctx: &RouteContext<()>,
     identity_token: &str,
+    request_meta: &RequestMeta,
 ) -> HandlerResult<String> {
     let identity_provider = GithubIdentityProvider::from_env(ctx);
     let session_ttl_millis = session_ttl_millis_from_env(ctx);
-    resolve_verified_user_id(d1, &identity_provider, identity_token, session_ttl_millis)
-        .await?
-        .map_err(ApiError::Unauthorized)
+    resolve_verified_user_id(
+        d1,
+        &identity_provider,
+        identity_token,
+        session_ttl_millis,
+        request_meta,
+    )
+    .await?
+    .map_err(ApiError::Unauthorized)
 }
