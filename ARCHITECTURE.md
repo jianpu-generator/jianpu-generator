@@ -446,6 +446,9 @@ migrations (see "Storage" below), nothing else.
   var's JSON array of GitHub user ids is also its allowlist; it hard-deletes
   those accounts' `files`/`shares` rows (`queries/delete_*_of_provider_users.sql`)
   and is called by `web/e2e/global-setup.ts` before every local e2e run.
+  Second entry point: `#[event(scheduled)] async fn scheduled` in
+  `src/lib.rs`, the daily cron that prunes `app_log` — see "App log
+  (observability)" below.
 - File names are slash paths: `files.name` holds the whole path (`Hymns/Advent/O Come.jianpu`) and `idx_files_owner_name` (unique on `(owner_user_id, name)`) is therefore a uniqueness constraint on the full path; the schema has no length cap or character filter. The worker depends on the root `jianpu-generator` crate (`default-features = false`, same as `crates/jianpu-wasm`), and `files::validate_file_name` runs `file_tree::TreePath::parse` on the name of every `POST /files`, `/files/{id}/rename` and `/files/{id}/restore` before touching D1, so the web app and the worker share one rule set (no empty segments, no `.`/`..`, at most 1024 UTF-8 bytes for the whole path). A violation answers `ApiError::InvalidName` (400). `POST /files/rename-batch` (`{identityToken, moves:[{id,name}]}`, `RenameBatchRequest`) validates every name, then `files::plan_batch_rename` over the current rows decides `Apply`, `AlreadyApplied` (an ack-lost retry succeeds), `NotFound`, `Invalid` or `NamesTaken`; the move itself is one `UPDATE ... json_each(?1)` statement (`queries/rename_files_batch.sql`), atomic by statement semantics and free of D1's per-invocation query limit. Create, rename, restore and batch rename also enforce that a path is not both a file and a folder: the handler loads the owner's live file names (`queries/list_live_file_names.sql`) and `files::find_file_folder_conflict` judges the final state (a batch is evaluated as a whole; `<folder>/.keep` is an ordinary file, so it only conflicts with a file named `<folder>`). A violation answers `ApiError::FileFolderConflict { path }` (409), which the outbox treats as a permanent failure. The check is read-then-write, not atomic, so two concurrent writes can still race past it. `share::to_public_doc` returns only the last path segment as `filename`, so a viewer of one shared file never sees the owner's folder names.
 - Folder shares (`src/folder_share.rs`, pure; handlers in `handlers/shares.rs`; migration `0005_folder_shares.sql`): a `shares` row is either a file share (`file_id`) or a folder share (`folder_prefix`, the folder path without trailing slash), exactly one (CHECK), and now carries its own `owner_user_id` (file shares used to derive it from the file). A folder has at most one row per owner (unique `(owner_user_id, folder_prefix)`), so stop-then-start reuses the `share_id`. The worker still knows nothing about folders as entities: a folder share covers every active, non-binned file whose name starts with `<prefix>/` at read time (matched with `substr`, whole segments, so `Hymns` never covers `Hymns 2/...`; `%`/`_` are literal), so files added, edited, moved in or out and deleted show on the viewer's next load (no push, no polling). Shared folders are read-only for viewers. Routes: `POST /folders/share` (`FolderShareRequest {identityToken, folder}` -> `{shareId}`; `folder` validated with `TreePath` rules plus "no `.keep` segment" -> `invalid_name`; `not_found` when the folder has no active file, a `.keep` placeholder counts; `shared_folder_too_large` (413) over the limits), `/folders/share/stop` (204, or `not_found` if never shared; works on a folder that has since emptied), `/folders/share/status` (`{share: {shareId, ended} | null}`, same shape as the file status). `POST /shares/overview` (`{identityToken}` -> `{files: [{shareId, fileId, name}], folders: [{shareId, folder}]}`, live links only, binned files excluded) is the one read the share UI derives everything from: own-link markers, "shared via <ancestor>" (a `folders` entry that is a path-segment prefix of the file/folder) and the "this folder contains files with their own link" warning. Viewer: `GET /shares/{share_id}` falls through from the file-share view to `get_folder_share_header`; for a folder share `SyncedDoc.folder` (`SharedFolder {name, files: [{path (relative to the shared folder), content, revision}], emptyFolders}`) holds the tree, `filename` repeats the folder name, `content` is `""` and `revision` 0; `.keep` rows are never files, and `emptyFolders` are placeholder folders with no file under them. `folder` is absent (skipped, not `null`) for file shares, ended shares and unknown ids, so those responses are unchanged. A stopped share answers `ended: true` with nothing else; a live folder with no files is an empty live tree (trashing every file does not end the share). Size limit: `folder_share::MAX_SHARED_FOLDER_FILES` (300 files, placeholders included) and `MAX_SHARED_FOLDER_BYTES` (10 MiB of content), checked by `get_folder_files_stats.sql` both when starting and when a viewer loads; over it answers `ApiError::SharedFolderTooLarge`, never a truncated tree. Renames: `POST /files/rename-batch` reads the owner's folder-share prefixes (live or stopped), and `folder_share::plan_prefix_rewrites` treats a prefix as moved when the batch moves every active file under it to one common new folder keeping the rest of each path (a folder rename/move); nested shared folders get their own rewrite, partial moves leave the share alone (it follows the prefix, not file ids). The file renames and `rewrite_folder_share_prefix.sql` updates go out in one D1 `batch` (one transaction), so the link keeps its `share_id`; a rewrite onto a folder that already has its own share hits the unique index and answers `name_taken`.
 - Route list and generated client: `handlers::routes()` is the one list of
@@ -495,7 +498,8 @@ migrations (see "Storage" below), nothing else.
   provider can link into the same `users` table), and `oauth_sessions`
   (`token_hash`, `provider`, `provider_user_id`, `verified_at` — the
   hashed-token verification cache described in "Verification cache + retry
-  policy" below). `live-share-worker/migrations/0004_shares_reference_files.sql`
+  policy" below), and `app_log` (since `0006_app_log.sql`; see "App log
+  (observability)" below). `live-share-worker/migrations/0004_shares_reference_files.sql`
   replaced the old `docs` table (a share's own copy of
   `filename`/`content`/`revision`, pushed by the owner's browser separately
   from autosave — a stale-render race in that push could write one file's
@@ -532,7 +536,9 @@ migrations (see "Storage" below), nothing else.
   (the D1-free retry policy and its UI-surfaceable failure shape, see
   below); `oauth::github_oauth_callback` (the `POST /auth/github/callback`
   handler) / `oauth::github_revoke` (the `POST /auth/github/revoke`
-  handler, see "Account sign-in" below); `db` (crate-private raw D1 query
+  handler, see "Account sign-in" below); `app_log::LogEvent` /
+  `app_log::AuthEvent` / `app_log::Outcome` / `app_log::LogRow` (the typed
+  `app_log` rows, see "App log (observability)" below); `db` (crate-private raw D1 query
   functions, one `.sql` file per query under `queries/`, loaded via
   `include_str!`).
 - Ownership model: a share's `owner_user_id` column (backfilled from the
@@ -721,6 +727,55 @@ consent screen.
   points both at `web/e2e/mock-github-oauth-server.ts` (task 11) so no e2e
   run ever makes a real GitHub API call.
 
+### App log (observability)
+
+An append-only `app_log` D1 table (`live-share-worker/migrations/0006_app_log.sql`)
+that records what the worker did so production behaviour — first of all why
+users get signed out of GitHub after a deploy — can be answered from data. It
+is queried with SQL, by agents and the owner, through the saved queries in
+`crates/live-share-worker/queries/observability/` (see "Debugging production"
+in `CLAUDE.md` for the run command).
+
+- Columns: `at` (ms since epoch), `flow` (`auth` today), `kind` (the event),
+  `outcome` (`ok`/`rejected`/`unavailable`/`error`), `user_id` (when known),
+  `subject` (`token:<token tag>`), `worker_version` (the git SHA `build.rs`
+  embeds as `WORKER_GIT_SHA`), `origin`/`user_agent` (request headers, only
+  on `token_issued`), `detail` (the event payload as JSON). Indexed on `at`,
+  `(flow, kind, at)` and `subject`.
+- Key types (`src/app_log.rs`, pub and D1-free, tested in `tests/app_log.rs`):
+  `app_log::LogEvent` (one row's event, adjacently tagged
+  `{"flow", "event"}`; `LogEvent::Auth(AuthEvent)` is its only variant) /
+  `app_log::AuthEvent` (the token life cycle, adjacently tagged
+  `{"kind", "detail"}`: `TokenIssued`, `TokenExchangeFailed`,
+  `TokenVerified`, `TokenRejected`, `VerificationUnavailable`,
+  `TokenRevoked`, `TokenRevokeFailed`, each wrapping a payload struct of the
+  same name) / `app_log::Outcome` (derived from the variant, never chosen at
+  a call site) / `app_log::LogRow` (`LogEvent::to_row`'s split into the
+  `flow`/`kind`/`outcome`/`subject`/`detail` columns; `LogEvent::try_from(&LogRow)`
+  reassembles it) / `app_log::RequestMeta` (`Origin`/`User-Agent`).
+  Schema-evolution rule: rows must keep decoding for their 30 days, so only
+  add fields, each with `#[serde(default)]`; a changed shape is a new variant.
+- Writes: `db::record_app_log` (`queries/insert_app_log.sql`) is
+  best-effort — a failed insert is reported with `console_error!` and never
+  fails the request. No raw token or full hash is ever stored, only its
+  **token tag**. Where events are logged: `oauth::github_oauth_callback`
+  (`token_issued`/`token_exchange_failed`; registered with
+  `Routes::post_with_request_meta`, which hands the handler a `RequestMeta`
+  read before the body is consumed, and its best-effort `GET /user` is now
+  `identity::github::fetch_github_account`, returning `GithubAccount
+  { provider_user_id, login }`), `oauth::github_revoke`
+  (`token_revoked`/`token_revoke_failed`) and
+  `identity::resolve_verified_user_id` (`token_verified`/`token_rejected`/
+  `verification_unavailable`, on the cache-miss path only, so not once per
+  request).
+- Retention: the `#[event(scheduled)] async fn scheduled` entry point in
+  `src/lib.rs`, fired by the daily cron in `cloudflare.config.ts`
+  (`triggers.scheduled`), deletes rows older than
+  `app_log::APP_LOG_RETENTION_MILLIS` (30 days) via `db::prune_app_log`
+  (`queries/prune_app_log.sql`), `APP_LOG_PRUNE_BATCH_SIZE` (5000) rows per
+  statement and at most `APP_LOG_PRUNE_MAX_BATCHES` (10) statements per run.
+  Locally, `cf dev` fires it on `GET /cdn-cgi/local/scheduled`.
+
 ### D1 query checking
 
 `sqlx`'s "sqlite" feature can't be a normal dependency of this crate — its
@@ -752,6 +807,10 @@ away from the wasm build both times:
 | **IdentityProvider** | The trait (`identity::IdentityProvider`) resolving a request's opaque identity token to an internal `users.id`, with create-on-first-sight `users`/`user_identities` rows. Shared by every authenticated route this worker handles — the cloud storage `/files/*` routes and the Synced Share owner routes nested under them — not specific to either. `identity::github::GithubIdentityProvider` (real `GET /user` verification) is its production implementation, called only on a cache miss/stale entry — see `resolve_verified_user_id`. |
 | **resolve_verified_user_id** | `identity::resolve_verified_user_id`: the hashed-token-cache-then-verify wiring every authenticated route calls instead of ever trusting a client-asserted identity directly — see "Verification cache + retry policy". |
 | **oauth_sessions cache** | The `oauth_sessions` D1 table: a hashed-token (`token_hash`, never the raw token) verification cache with a `verified_at` TTL (`verification::SESSION_TTL_MILLIS`, ≈1hr) checked in app code, so a fresh identity doesn't require re-hitting GitHub on every write. |
+| **app log** | The `app_log` D1 table: an append-only, 30-day record of what the worker did (today: the GitHub token life cycle), written best-effort through `app_log::LogEvent` and read with the saved SQL in `queries/observability/`. Query it before guessing at production behaviour — see "App log (observability)". |
+| **flow** | `app_log.flow`: which part of the system a row is about (`auth` today), the outer tag of `app_log::LogEvent`. New flows are new `LogEvent` variants in the same table, not new tables. |
+| **subject** | `app_log.subject`: what a row is about as a typed tag (`token:<token tag>`), derived from the event, so rows of one token join across kinds (issued → verified → rejected). |
+| **token tag** | `app_log::token_tag`: the first 12 hex chars of a token's SHA-256 hash (`identity::hash_token`). Enough to tell tokens apart in `app_log`, never the token or full hash. |
 | **VerificationFailure** | `verification::VerificationFailure { reason, failed_at, attempts }`: the structured, UI-surfaceable shape a failed (post-retry) verification is reported as — returned as `ApiError::Unauthorized` (a `401` body with `code: "unauthorized"` beside these fields). Never carries the token or its hash, by construction. |
 | **ApiError** | `api_error::ApiError`: the `code`-tagged union every Synced Share worker route answers a failure with; its HTTP status is derived from the variant. `web/` switches on the generated `code` literals (`WorkerRequestError.apiError`), never on raw statuses. |
 | **Worker client** | The typed `openapi-fetch` client for the Synced Share worker (`web/src/syncedShare/workerClient.ts`), generated from the OpenAPI spec that `handlers::routes()` builds from the Rust handlers' own signatures — see "Route list and generated client". |

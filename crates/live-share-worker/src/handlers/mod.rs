@@ -27,10 +27,11 @@
 //! generated from that spec can't drift from what's actually served. Every
 //! failure is an `ApiError` body.
 //!
-//! Helpers below (`D1_BINDING`, `is_unique_constraint_violation`,
-//! `resolve_files_caller`) are private to this module but visible to both
-//! submodules per Rust's ancestor-visibility rule -- no `pub(crate)`
-//! needed.
+//! Helpers below (`is_unique_constraint_violation`, `resolve_files_caller`)
+//! are private to this module but visible to both submodules per Rust's
+//! ancestor-visibility rule -- no `pub(crate)` needed. `D1_BINDING` is
+//! `pub(crate)` since `crate::oauth` (outside this module) and `lib.rs`'s
+//! scheduled handler write `app_log` rows through it too.
 
 mod e2e_reset;
 mod files;
@@ -48,7 +49,7 @@ use routes::{HandlerResult, Routes};
 /// D1 binding name this worker expects in `deploy.json`/`cloudflare.config.ts`. Wiring the
 /// actual binding is task 5 (`TODO-synced-share-rust-d1-migration.md` §4's
 /// "Update `deploy.json`/`cloudflare.config.ts`" bullet) -- out of scope here.
-const D1_BINDING: &str = "DB";
+pub(crate) const D1_BINDING: &str = "DB";
 
 /// Every route, for both serving and the spec. `e2e_reset_enabled` (see
 /// `crate::e2e_reset`) decides only whether `POST /e2e/reset` is served;
@@ -57,7 +58,7 @@ const D1_BINDING: &str = "DB";
 pub(crate) fn routes(e2e_reset_enabled: bool) -> worker::Result<Routes> {
     Routes::new()
         .get("/shares/{share_id}", shares::get_share)?
-        .post("/auth/github/callback", oauth::github_oauth_callback)?
+        .post_with_request_meta("/auth/github/callback", oauth::github_oauth_callback)?
         .post("/auth/github/revoke", oauth::github_revoke)?
         .post("/files/list", files::list_files)?
         .post("/files", files::create_file)?

@@ -1,6 +1,6 @@
 //! Raw D1 queries against the `shares` / `users` / `user_identities` /
-//! `oauth_sessions` / `files` tables, split by table into `shares`, `identity`,
-//! and `files` submodules (re-exported here so every call site keeps using
+//! `oauth_sessions` / `files` / `app_log` tables, split by table into
+//! `shares`, `identity`, `files` and `app_log` submodules (re-exported here so every call site keeps using
 //! the flat `db::function_name` form regardless of which table it hits).
 //! Each query lives in its own file under `queries/`, loaded via
 //! `include_str!` for the actual `D1Database::prepare()` calls -- these
@@ -21,11 +21,13 @@
 //! drift is still uncaught -- but it's an honest, reasonable substitute
 //! given the constraint above, not a silent downgrade.
 
+mod app_log;
 mod e2e_reset;
 mod files;
 mod identity;
 mod shares;
 
+pub(crate) use app_log::*;
 pub(crate) use e2e_reset::*;
 pub(crate) use files::*;
 pub(crate) use identity::*;

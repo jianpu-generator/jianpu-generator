@@ -7,7 +7,7 @@
 // silently overwrites the still-running old one. `web/.env`,
 // `web/.env.local` and `.github/workflows/pages.yml`'s `VITE_SYNCED_SHARE_HOST`
 // point at this worker's `*.workers.dev` host, built from this name.
-import { bindings, defineConfig } from 'cf/config'
+import { bindings, defineConfig, triggers } from 'cf/config'
 import deploy from './deploy.json' with { type: 'json' }
 
 // Local-run overrides, `{ "<var name>": "<value>" }` as JSON in
@@ -28,6 +28,9 @@ export default defineConfig({
     // `worker-build`'s default output layout: a `build/` dir here containing
     // a JS shim entry point plus the compiled `.wasm` module.
     entrypoint: 'build/worker/shim.mjs',
+    // Daily `app_log` prune (the `#[event(scheduled)]` handler in
+    // `src/lib.rs`), at an off-peak, non-round minute.
+    triggers: [triggers.scheduled({ schedule: '17 3 * * *' })],
     env: {
       // D1 binding. The name ("DB") must match `D1_BINDING` in
       // `src/handlers/mod.rs` -- do not rename one without the other.

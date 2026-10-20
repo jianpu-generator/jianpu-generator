@@ -151,6 +151,33 @@ const QUERIES: &[(&str, &str)] = &[
         "rewrite_folder_share_prefix.sql",
         include_str!("../queries/rewrite_folder_share_prefix.sql"),
     ),
+    (
+        "insert_app_log.sql",
+        include_str!("../queries/insert_app_log.sql"),
+    ),
+    (
+        "prune_app_log.sql",
+        include_str!("../queries/prune_app_log.sql"),
+    ),
+    // The saved queries agents run by hand with `d1 execute` (see
+    // `CLAUDE.md`'s "Debugging production"). Never loaded by the worker, but
+    // checked here too so a schema change can't silently break them.
+    (
+        "observability/auth_rejections.sql",
+        include_str!("../queries/observability/auth_rejections.sql"),
+    ),
+    (
+        "observability/auth_by_version.sql",
+        include_str!("../queries/observability/auth_by_version.sql"),
+    ),
+    (
+        "observability/tokens_issued_per_user.sql",
+        include_str!("../queries/observability/tokens_issued_per_user.sql"),
+    ),
+    (
+        "observability/recent.sql",
+        include_str!("../queries/observability/recent.sql"),
+    ),
 ];
 
 #[tokio::test]

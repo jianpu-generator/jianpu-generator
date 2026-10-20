@@ -112,17 +112,27 @@ impl IdentityProvider for GithubIdentityProvider {
     }
 }
 
-/// Calls `GET /user` with `identity_token` and returns just the `login`,
-/// for `oauth::github_oauth_callback`'s best-effort identity-chip response
-/// (task 8) -- a thin, crate-visible wrapper since `GithubUser` and
-/// `fetch_github_user` itself stay private to this module.
-pub(crate) async fn fetch_github_login(
+/// What `oauth::github_oauth_callback` needs from `GET /user`: the `login`
+/// for its best-effort identity-chip response (task 8), and the numeric id
+/// (as `provider_user_id`) for its `app_log` `token_issued` row.
+pub(crate) struct GithubAccount {
+    pub provider_user_id: String,
+    pub login: String,
+}
+
+/// Calls `GET /user` with `identity_token` -- a thin, crate-visible wrapper
+/// since `GithubUser` and `fetch_github_user` itself stay private to this
+/// module.
+pub(crate) async fn fetch_github_account(
     user_endpoint: &str,
     identity_token: &str,
-) -> Result<String> {
+) -> Result<GithubAccount> {
     fetch_github_user(user_endpoint, identity_token)
         .await
-        .map(|user| user.login)
+        .map(|user| GithubAccount {
+            provider_user_id: user.id.to_string(),
+            login: user.login,
+        })
         .map_err(|error| Error::RustError(error.to_string()))
 }
 

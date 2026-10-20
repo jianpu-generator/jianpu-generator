@@ -19,9 +19,13 @@
 //! Build scripts always compile and run for the *host* target, never for
 //! the crate's own `--target`, so this runs unchanged whether the crate
 //! itself is being checked for `wasm32-unknown-unknown` or the host.
+//!
+//! It also emits `WORKER_GIT_SHA` (see `emit_worker_git_sha`), stamped into
+//! every `app_log` row as `worker_version`.
 
 use std::error::Error;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use sqlx::migrate::Migrator;
 use sqlx::sqlite::SqliteConnectOptions;
@@ -29,6 +33,8 @@ use sqlx::{ConnectOptions, Executor};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+    emit_worker_git_sha();
 
     // `live-share-worker/migrations` is a sibling of `crates/`, i.e.
     // `<repo root>/live-share-worker/migrations` -- referenced relatively
@@ -45,7 +51,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let shadow_db_path = manifest_dir.join("shadow.sqlite");
 
     // Rebuild the shadow DB from scratch each time build.rs runs (it only
-    // runs when the migrations actually changed, per the rerun-if-changed
+    // runs when the migrations or git HEAD changed, per the rerun-if-changed
     // directives above), rather than trying to apply migrations
     // incrementally against a possibly-stale file.
     if shadow_db_path.exists() {
@@ -57,6 +63,34 @@ fn main() -> Result<(), Box<dyn Error>> {
         .build()?;
 
     runtime.block_on(migrate_shadow_db(&shadow_db_path, &migrations_dir))
+}
+
+/// Emits `cargo:rustc-env=WORKER_GIT_SHA=<short sha of HEAD>` for
+/// `app_log::WORKER_VERSION`, or `unknown` when git (or the repo) isn't
+/// available. Reruns when HEAD moves: `HEAD` itself changes on a checkout,
+/// the branch ref it points at changes on a commit.
+fn emit_worker_git_sha() {
+    let sha =
+        git_output(&["rev-parse", "--short", "HEAD"]).unwrap_or_else(|| "unknown".to_string());
+    println!("cargo:rustc-env=WORKER_GIT_SHA={sha}");
+
+    let head_ref = git_output(&["symbolic-ref", "--quiet", "HEAD"]);
+    let watched = std::iter::once("HEAD".to_string()).chain(head_ref);
+    for git_path in watched.filter_map(|name| git_output(&["rev-parse", "--git-path", &name])) {
+        if Path::new(&git_path).exists() {
+            println!("cargo:rerun-if-changed={git_path}");
+        }
+    }
+}
+
+/// Runs `git <args>` and returns its trimmed stdout, or `None` on any failure.
+fn git_output(args: &[&str]) -> Option<String> {
+    let output = Command::new("git").args(args).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8(output.stdout).ok()?;
+    Some(text.trim().to_string()).filter(|text| !text.is_empty())
 }
 
 async fn migrate_shadow_db(

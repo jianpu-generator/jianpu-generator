@@ -17,6 +17,9 @@ use worker::{D1Database, Delay, Result, RouteContext};
 
 use sha2::{Digest, Sha256};
 
+use crate::app_log::{
+    self, AuthEvent, LogEvent, RequestMeta, TokenRejected, TokenVerified, VerificationUnavailable,
+};
 use crate::db;
 use crate::verification::{
     retry_with_backoff, session_is_fresh, VerificationFailure, MAX_RETRIES, MAX_TOTAL_WAIT,
@@ -102,7 +105,9 @@ pub(crate) fn session_ttl_millis_from_env(ctx: &RouteContext<()>) -> i64 {
 /// 2. On a cache miss or a stale entry, call `identity_provider`, retrying
 ///    per TODO §0's backoff policy (`MAX_RETRIES`, capped at
 ///    `MAX_TOTAL_WAIT`) before failing closed. On success, refresh/insert
-///    the `oauth_sessions` row and return the resolved `user_id`.
+///    the `oauth_sessions` row and return the resolved `user_id`. Only this
+///    path logs to `app_log` (verified / rejected / unavailable); cache hits
+///    are never logged.
 ///
 /// A rejected token (after retries) is reported as the inner `Err`, never as
 /// a fallback identity -- callers (`handlers.rs`) must reject the write. A
@@ -140,19 +145,40 @@ pub(crate) async fn resolve_verified_user_id(
     )
     .await;
 
+    let token_tag = app_log::token_tag(&token_hash);
     let resolved = match retry_result {
         Ok(resolved) => resolved,
         Err(failure) => match failure.last_error {
             IdentityError::TokenRejected(reason) => {
+                let event = AuthEvent::TokenRejected(TokenRejected {
+                    token_tag,
+                    reason: reason.clone(),
+                    attempts: failure.attempts,
+                });
+                record_auth_event(db, event, None).await;
                 return Ok(Err(VerificationFailure {
                     reason,
                     failed_at: now,
                     attempts: failure.attempts,
-                }))
+                }));
             }
-            IdentityError::Unavailable(error) => return Err(error),
+            IdentityError::Unavailable(error) => {
+                let event = AuthEvent::VerificationUnavailable(VerificationUnavailable {
+                    token_tag,
+                    reason: error.to_string(),
+                    attempts: failure.attempts,
+                });
+                record_auth_event(db, event, None).await;
+                return Err(error);
+            }
         },
     };
+
+    let event = AuthEvent::TokenVerified(TokenVerified {
+        token_tag,
+        provider_user_id: resolved.provider_user_id.clone(),
+    });
+    record_auth_event(db, event, Some(&resolved.user_id)).await;
 
     db::upsert_oauth_session(
         db,
@@ -166,9 +192,17 @@ pub(crate) async fn resolve_verified_user_id(
     Ok(Ok(resolved.user_id))
 }
 
-/// Hashes an identity token for `oauth_sessions.token_hash` -- the raw
-/// token itself must never be persisted (TODO §0).
-fn hash_token(identity_token: &str) -> String {
+/// Logs a cache-miss verification outcome (see `crate::app_log`). These
+/// rows carry no `RequestMeta`: they join to the token's `token_issued` row
+/// by `subject` instead.
+async fn record_auth_event(db: &D1Database, event: AuthEvent, user_id: Option<&str>) {
+    db::record_app_log(db, &LogEvent::Auth(event), user_id, &RequestMeta::default()).await;
+}
+
+/// Hashes an identity token for `oauth_sessions.token_hash` (and, cut down
+/// to an `app_log::token_tag`, for `app_log.subject`) -- the raw token
+/// itself must never be persisted (TODO §0).
+pub(crate) fn hash_token(identity_token: &str) -> String {
     let digest = Sha256::digest(identity_token.as_bytes());
     digest.iter().map(|byte| format!("{byte:02x}")).collect()
 }
