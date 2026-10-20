@@ -66,6 +66,24 @@ impl StreamGrammar {
     }
 }
 
+/// A part's original measure chunks.
+pub(super) struct ExtractedChunks {
+    pub(super) chunks: Vec<String>,
+    /// The first measure whose written beats don't match its time signature.
+    /// Re-barring the stream moves notes across its barline, so the stream
+    /// only round-trips up to it.
+    pub(super) first_misbarred_measure: Option<usize>,
+}
+
+impl ExtractedChunks {
+    fn fitting(chunks: Vec<String>) -> Self {
+        Self {
+            chunks,
+            first_misbarred_measure: None,
+        }
+    }
+}
+
 /// A part that passed every eligibility check, with its original chunks.
 pub(super) struct EditablePart {
     pub(super) index: usize,
@@ -82,7 +100,9 @@ pub(super) fn ineligible(reason: impl Into<String>) -> PartStreamError {
 /// Runs every eligibility check on the part at `index`, including a
 /// self-check that its own extracted stream splits back into exactly the
 /// same measure chunks without errors — the guarantee that applying an
-/// untouched stream never changes the source.
+/// untouched stream never changes the source. A misbarred measure is re-barred
+/// (and every measure after it shifts), so the check stops right before it;
+/// errors from there on show up in the stream editor instead.
 pub(super) fn editable_part(
     document: &ScoreDocument,
     index: usize,
@@ -92,24 +112,37 @@ pub(super) fn editable_part(
         .get(index)
         .ok_or_else(|| ineligible("no such part"))?;
     let grammar = stream_grammar(document, declaration)?;
-    let chunks = match &grammar {
+    let ExtractedChunks {
+        chunks,
+        first_misbarred_measure,
+    } = match &grammar {
         StreamGrammar::Timed { grammar } => extract_timed_chunks(document, index, *grammar),
-        StreamGrammar::Lyrics { slot_counts } => extract_lyric_chunks(document, index, slot_counts),
-        StreamGrammar::ChordLyrics { .. } => Ok(extract_chord_lyric_chunks(document, index)),
+        StreamGrammar::Lyrics { slot_counts } => {
+            extract_lyric_chunks(document, index, slot_counts).map(ExtractedChunks::fitting)
+        }
+        StreamGrammar::ChordLyrics { .. } => Ok(ExtractedChunks::fitting(
+            extract_chord_lyric_chunks(document, index),
+        )),
     }
     .map_err(ineligible)?;
-    let resplit = grammar.split(&grammar.join(&chunks).text, document);
-    if let Some(error) = resplit
-        .diagnostics
-        .iter()
-        .find(|diagnostic| diagnostic.severity == StreamDiagnosticSeverity::Error)
-    {
+    let stream = grammar.join(&chunks);
+    let resplit = grammar.split(&stream.text, document);
+    let checked_text_end = first_misbarred_measure
+        .and_then(|measure| stream.measure_starts.get(measure))
+        .copied()
+        .unwrap_or(stream.text.len());
+    if let Some(error) = resplit.diagnostics.iter().find(|diagnostic| {
+        diagnostic.severity == StreamDiagnosticSeverity::Error
+            && diagnostic.span.start < checked_text_end
+    }) {
         return Err(ineligible(format!(
             "its stream would not parse: {}",
             error.message
         )));
     }
-    if let Some(measure) = (0..chunks.len().max(resplit.chunks.len()))
+    let checked_measure_count =
+        first_misbarred_measure.unwrap_or(chunks.len().max(resplit.chunks.len()));
+    if let Some(measure) = (0..checked_measure_count)
         .find(|&measure| chunks.get(measure) != resplit.chunks.get(measure))
     {
         return Err(ineligible(format!(

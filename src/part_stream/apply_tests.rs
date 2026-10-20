@@ -193,6 +193,94 @@ fn unchanged_measures_keep_comments_and_spacing() {
 }
 
 #[test]
+fn applying_an_untouched_stream_re_bars_an_overflowing_measure() {
+    let source = r"# parts
+Melody [M] = notes
+Bass [B] = notes
+
+# score
+[M] 1 2 3 4 5
+[B] 1 1 1 1
+
+[M] 6 7 1 2
+[B] 1 1 1 1
+";
+    let stream = extract_part_stream(source, "M").unwrap().text;
+    let result = apply_part_stream(source, "M", &stream);
+    assert_eq!(result.changed_measure_count, 3);
+    assert_eq!(
+        applied(result),
+        r"# parts
+Melody [M] = notes
+Bass [B] = notes
+
+# score
+[M] 1 2 3 4
+[B] 1 1 1 1
+
+[M] 5 6 7 1
+[B] 1 1 1 1
+
+[M] 2 0 0 0
+"
+    );
+}
+
+#[test]
+fn applying_an_untouched_stream_re_bars_an_underflowing_measure() {
+    let source = r"# parts
+Melody [M] = notes
+
+# score
+[M] 1 2 3_
+
+[M] 4_ 5 6 7
+";
+    let stream = extract_part_stream(source, "M").unwrap().text;
+    let result = apply_part_stream(source, "M", &stream);
+    assert_eq!(result.changed_measure_count, 2);
+    let source = applied(result);
+    assert!(
+        source.ends_with("[M] 1 2 3_ 4_ 5\n\n[M] 6 7 0 0\n"),
+        "{source}"
+    );
+}
+
+#[test]
+fn measures_before_a_misbarred_one_are_left_alone() {
+    let source = r"# parts
+Melody [M] = notes
+
+# score
+[M]   1  2 3 4   // intro
+
+[M] 5 6 7 1 2
+";
+    let stream = extract_part_stream(source, "M").unwrap().text;
+    let result = apply_part_stream(source, "M", &stream);
+    assert_eq!(result.changed_measure_count, 2);
+    let source = applied(result);
+    assert!(source.contains("[M]   1  2 3 4   // intro\n"), "{source}");
+    assert!(source.ends_with("[M] 5 6 7 1\n\n[M] 2 0 0 0\n"), "{source}");
+}
+
+#[test]
+fn a_note_crossing_a_barline_after_re_barring_is_an_error() {
+    let source = r"# parts
+Melody [M] = notes
+
+# score
+[M] 1 2 3 4_ 5 -
+";
+    let stream = extract_part_stream(source, "M").unwrap().text;
+    let result = apply_part_stream(source, "M", &stream);
+    assert_eq!(result.source, None);
+    assert!(result.diagnostics[0]
+        .message
+        .contains("crosses the barline of measure 1"));
+}
+
+#[test]
 fn an_ineligible_part_is_refused() {
     let result = apply_part_stream(MELODY_AND_BASS, "X", "1 2 3 4");
     assert_eq!(result.source, None);

@@ -54,21 +54,48 @@ fn unknown_part_is_an_error() {
 }
 
 #[test]
-fn beat_overflow_makes_the_part_ineligible() {
+fn beat_overflow_is_kept_as_written() {
     let source = r"# parts
 Melody [M] = notes
 
 # score
-[M] 1 2 3 4 5
+[M] 1 2 3 4   5
+
+[M] 6 7 1 2
 ";
-    let parts = list_streamable_parts(source);
-    let reason = parts[0].ineligible_reason.as_deref().unwrap();
-    assert!(reason.contains("measure 1"), "{reason}");
-    assert!(reason.contains("more beats"), "{reason}");
-    assert!(matches!(
-        extract_part_stream(source, "M"),
-        Err(PartStreamError::Ineligible { .. })
-    ));
+    assert_eq!(list_streamable_parts(source)[0].ineligible_reason, None);
+    assert_eq!(
+        extract_part_stream(source, "M").unwrap().text,
+        "1 2 3 4 5\n6 7 1 2"
+    );
+}
+
+#[test]
+fn unpaddable_beat_underflow_is_kept_as_written() {
+    let source = r"# parts
+Melody [M] = notes
+
+# score
+[M] 1 2 3_
+
+[M] 4_ 5 6 7
+";
+    assert_eq!(list_streamable_parts(source)[0].ineligible_reason, None);
+    assert_eq!(
+        extract_part_stream(source, "M").unwrap().text,
+        "1 2 3_\n4_ 5 6 7"
+    );
+}
+
+#[test]
+fn a_misbarred_measure_whose_re_barring_errors_is_still_eligible() {
+    let source = r"# parts
+Melody [M] = notes
+
+# score
+[M] 1 2 3 4_ 5 -
+";
+    assert_eq!(list_streamable_parts(source)[0].ineligible_reason, None);
 }
 
 #[test]
