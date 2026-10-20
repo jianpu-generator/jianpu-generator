@@ -4,11 +4,13 @@
 -- tokens per user + OAuth App + scope revoked it. No `token_rejected` row
 -- around the sign-out time => the worker never answered 401, so the token
 -- was dropped client-side. `github_says` is GitHub's verbatim reason.
+-- `origin`/`user_agent` are the rejected request's own, falling back to the
+-- sign-in's (rows from before 2026-10-20 only have them on `token_issued`).
 SELECT
     r.subject,
     r.worker_version,
-    i.origin,
-    i.user_agent,
+    COALESCE(r.origin, i.origin) AS origin,
+    COALESCE(r.user_agent, i.user_agent) AS user_agent,
     DATETIME(r.at / 1000, 'unixepoch') AS rejected_at,
     DATETIME(i.at / 1000, 'unixepoch') AS issued_at,
     (

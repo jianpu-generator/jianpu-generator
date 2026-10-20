@@ -739,8 +739,8 @@ in `CLAUDE.md` for the run command).
 - Columns: `at` (ms since epoch), `flow` (`auth` today), `kind` (the event),
   `outcome` (`ok`/`rejected`/`unavailable`/`error`), `user_id` (when known),
   `subject` (`token:<token tag>`), `worker_version` (the git SHA `build.rs`
-  embeds as `WORKER_GIT_SHA`), `origin`/`user_agent` (request headers, only
-  on `token_issued`), `detail` (the event payload as JSON). Indexed on `at`,
+  embeds as `WORKER_GIT_SHA`), `origin`/`user_agent` (request headers, on every
+  request-driven row), `detail` (the event payload as JSON). Indexed on `at`,
   `(flow, kind, at)` and `subject`.
 - Key types (`src/app_log.rs`, pub and D1-free, tested in `tests/app_log.rs`):
   `app_log::LogEvent` (one row's event, adjacently tagged
@@ -759,15 +759,17 @@ in `CLAUDE.md` for the run command).
   best-effort — a failed insert is reported with `console_error!` and never
   fails the request. No raw token or full hash is ever stored, only its
   **token tag**. Where events are logged: `oauth::github_oauth_callback`
-  (`token_issued`/`token_exchange_failed`; registered with
-  `Routes::post_with_request_meta`, which hands the handler a `RequestMeta`
-  read before the body is consumed, and its best-effort `GET /user` is now
-  `identity::github::fetch_github_account`, returning `GithubAccount
+  (`token_issued`/`token_exchange_failed`; its best-effort `GET /user` is
+  now `identity::github::fetch_github_account`, returning `GithubAccount
   { provider_user_id, login }`), `oauth::github_revoke`
   (`token_revoked`/`token_revoke_failed`) and
   `identity::resolve_verified_user_id` (`token_verified`/`token_rejected`/
   `verification_unavailable`, on the cache-miss path only, so not once per
-  request).
+  request). Every row carries its request's `RequestMeta`: `Routes::post`
+  hands each handler one, read before the body is consumed, and the
+  authenticated `/files/*`, `/folders/*` and `/shares/overview` routes pass
+  it to the verifier through `resolve_files_caller`. Only `post_if`'s
+  `/e2e/reset`, which logs nothing, gets none.
 - Retention: the `#[event(scheduled)] async fn scheduled` entry point in
   `src/lib.rs`, fired by the daily cron in `cloudflare.config.ts`
   (`triggers.scheduled`), deletes rows older than

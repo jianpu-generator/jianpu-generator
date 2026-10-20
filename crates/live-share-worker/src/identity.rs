@@ -119,6 +119,7 @@ pub(crate) async fn resolve_verified_user_id(
     identity_provider: &impl IdentityProvider,
     identity_token: &str,
     session_ttl_millis: i64,
+    request_meta: &RequestMeta,
 ) -> Result<Result<String, VerificationFailure>> {
     let token_hash = hash_token(identity_token);
     let now = worker::Date::now().as_millis() as i64;
@@ -155,7 +156,7 @@ pub(crate) async fn resolve_verified_user_id(
                     reason: reason.clone(),
                     attempts: failure.attempts,
                 });
-                record_auth_event(db, event, None).await;
+                record_auth_event(db, event, None, request_meta).await;
                 return Ok(Err(VerificationFailure {
                     reason,
                     failed_at: now,
@@ -168,7 +169,7 @@ pub(crate) async fn resolve_verified_user_id(
                     reason: error.to_string(),
                     attempts: failure.attempts,
                 });
-                record_auth_event(db, event, None).await;
+                record_auth_event(db, event, None, request_meta).await;
                 return Err(error);
             }
         },
@@ -178,7 +179,7 @@ pub(crate) async fn resolve_verified_user_id(
         token_tag,
         provider_user_id: resolved.provider_user_id.clone(),
     });
-    record_auth_event(db, event, Some(&resolved.user_id)).await;
+    record_auth_event(db, event, Some(&resolved.user_id), request_meta).await;
 
     db::upsert_oauth_session(
         db,
@@ -192,11 +193,16 @@ pub(crate) async fn resolve_verified_user_id(
     Ok(Ok(resolved.user_id))
 }
 
-/// Logs a cache-miss verification outcome (see `crate::app_log`). These
-/// rows carry no `RequestMeta`: they join to the token's `token_issued` row
-/// by `subject` instead.
-async fn record_auth_event(db: &D1Database, event: AuthEvent, user_id: Option<&str>) {
-    db::record_app_log(db, &LogEvent::Auth(event), user_id, &RequestMeta::default()).await;
+/// Logs a cache-miss verification outcome (see `crate::app_log`), with the
+/// request's `RequestMeta` so a token issued before logging began (no
+/// `token_issued` row to join to) can still be traced to a device.
+async fn record_auth_event(
+    db: &D1Database,
+    event: AuthEvent,
+    user_id: Option<&str>,
+    request_meta: &RequestMeta,
+) {
+    db::record_app_log(db, &LogEvent::Auth(event), user_id, request_meta).await;
 }
 
 /// Hashes an identity token for `oauth_sessions.token_hash` (and, cut down

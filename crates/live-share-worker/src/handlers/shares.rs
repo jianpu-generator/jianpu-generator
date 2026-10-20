@@ -8,6 +8,7 @@
 use worker::RouteContext;
 
 use crate::api_error::ApiError;
+use crate::app_log::RequestMeta;
 use crate::db;
 use crate::folder_share;
 use crate::protocol::{
@@ -64,9 +65,11 @@ pub(super) async fn start_share(
     ctx: RouteContext<()>,
     path: FileIdPath,
     body: FileShareRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<Json<FileShareResponse>> {
     let d1 = ctx.d1(D1_BINDING)?;
-    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+    let owner_user_id =
+        resolve_files_caller(&d1, &ctx, &body.identity_token, &request_meta).await?;
 
     let is_active_owned_file = db::get_file_by_id(&d1, &path.id, &owner_user_id)
         .await?
@@ -94,9 +97,11 @@ pub(super) async fn stop_share(
     ctx: RouteContext<()>,
     path: FileIdPath,
     body: FileShareRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<NoContent> {
     let d1 = ctx.d1(D1_BINDING)?;
-    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+    let owner_user_id =
+        resolve_files_caller(&d1, &ctx, &body.identity_token, &request_meta).await?;
 
     let now = worker::Date::now().as_millis() as i64;
     if db::end_share(&d1, &path.id, &owner_user_id, now).await? {
@@ -113,9 +118,11 @@ pub(super) async fn share_status(
     ctx: RouteContext<()>,
     path: FileIdPath,
     body: FileShareRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<Json<ShareStatusResponse>> {
     let d1 = ctx.d1(D1_BINDING)?;
-    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+    let owner_user_id =
+        resolve_files_caller(&d1, &ctx, &body.identity_token, &request_meta).await?;
 
     let share = db::get_share_status_by_file(&d1, &path.id, &owner_user_id).await?;
     Ok(Json(ShareStatusResponse { share }))
@@ -133,10 +140,12 @@ pub(super) async fn start_folder_share(
     ctx: RouteContext<()>,
     _path: NoPathParams,
     body: FolderShareRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<Json<FileShareResponse>> {
     let folder = folder_share::validate_folder_path(&body.folder)?;
     let d1 = ctx.d1(D1_BINDING)?;
-    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+    let owner_user_id =
+        resolve_files_caller(&d1, &ctx, &body.identity_token, &request_meta).await?;
 
     let stats = db::get_folder_files_stats(&d1, &owner_user_id, folder.as_str()).await?;
     if stats.file_count == 0 {
@@ -163,10 +172,12 @@ pub(super) async fn stop_folder_share(
     ctx: RouteContext<()>,
     _path: NoPathParams,
     body: FolderShareRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<NoContent> {
     let folder = folder_share::validate_folder_path(&body.folder)?;
     let d1 = ctx.d1(D1_BINDING)?;
-    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+    let owner_user_id =
+        resolve_files_caller(&d1, &ctx, &body.identity_token, &request_meta).await?;
 
     let now = worker::Date::now().as_millis() as i64;
     if db::end_folder_share(&d1, &owner_user_id, folder.as_str(), now).await? {
@@ -181,10 +192,12 @@ pub(super) async fn folder_share_status(
     ctx: RouteContext<()>,
     _path: NoPathParams,
     body: FolderShareRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<Json<ShareStatusResponse>> {
     let folder = folder_share::validate_folder_path(&body.folder)?;
     let d1 = ctx.d1(D1_BINDING)?;
-    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+    let owner_user_id =
+        resolve_files_caller(&d1, &ctx, &body.identity_token, &request_meta).await?;
 
     let share = db::get_folder_share_status(&d1, &owner_user_id, folder.as_str()).await?;
     Ok(Json(ShareStatusResponse { share }))
@@ -196,9 +209,11 @@ pub(super) async fn share_overview(
     ctx: RouteContext<()>,
     _path: NoPathParams,
     body: ShareOverviewRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<Json<ShareOverviewResponse>> {
     let d1 = ctx.d1(D1_BINDING)?;
-    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+    let owner_user_id =
+        resolve_files_caller(&d1, &ctx, &body.identity_token, &request_meta).await?;
 
     let files = db::list_live_file_shares(&d1, &owner_user_id).await?;
     let folders = db::list_live_folder_shares(&d1, &owner_user_id).await?;

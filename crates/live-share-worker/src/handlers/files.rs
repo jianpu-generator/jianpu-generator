@@ -4,6 +4,7 @@
 use worker::RouteContext;
 
 use crate::api_error::ApiError;
+use crate::app_log::RequestMeta;
 use crate::db;
 use crate::files::{self, ContentWriteAttempt, ContentWriteOutcome, PublicFile};
 use crate::folder_share;
@@ -45,9 +46,11 @@ pub(super) async fn list_files(
     ctx: RouteContext<()>,
     _path: NoPathParams,
     body: ListFilesRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<Json<ListFilesResponse>> {
     let d1 = ctx.d1(D1_BINDING)?;
-    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+    let owner_user_id =
+        resolve_files_caller(&d1, &ctx, &body.identity_token, &request_meta).await?;
 
     let stored = db::list_files_by_owner(&d1, &owner_user_id).await?;
     let files = stored.iter().map(files::to_public_file).collect();
@@ -62,10 +65,12 @@ pub(super) async fn create_file(
     ctx: RouteContext<()>,
     _path: NoPathParams,
     body: CreateFileRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<Json<PublicFile>> {
     files::validate_file_name(&body.name)?;
     let d1 = ctx.d1(D1_BINDING)?;
-    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+    let owner_user_id =
+        resolve_files_caller(&d1, &ctx, &body.identity_token, &request_meta).await?;
 
     ensure_no_file_folder_conflict(&d1, &owner_user_id, &proposed_name(&body.id, &body.name))
         .await?;
@@ -101,9 +106,11 @@ pub(super) async fn update_file_content(
     ctx: RouteContext<()>,
     path: FileIdPath,
     body: UpdateFileContentRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<Json<UpdateFileContentResponse>> {
     let d1 = ctx.d1(D1_BINDING)?;
-    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+    let owner_user_id =
+        resolve_files_caller(&d1, &ctx, &body.identity_token, &request_meta).await?;
 
     let now = worker::Date::now().as_millis() as i64;
     let attempt = db::update_file_content(
@@ -140,10 +147,12 @@ pub(super) async fn rename_file(
     ctx: RouteContext<()>,
     path: FileIdPath,
     body: RenameFileRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<NoContent> {
     files::validate_file_name(&body.name)?;
     let d1 = ctx.d1(D1_BINDING)?;
-    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+    let owner_user_id =
+        resolve_files_caller(&d1, &ctx, &body.identity_token, &request_meta).await?;
 
     ensure_no_file_folder_conflict(&d1, &owner_user_id, &proposed_name(&path.id, &body.name))
         .await?;
@@ -167,12 +176,14 @@ pub(super) async fn rename_files_batch(
     ctx: RouteContext<()>,
     _path: NoPathParams,
     body: RenameBatchRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<NoContent> {
     body.moves
         .iter()
         .try_for_each(|rename| files::validate_file_name(&rename.name))?;
     let d1 = ctx.d1(D1_BINDING)?;
-    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+    let owner_user_id =
+        resolve_files_caller(&d1, &ctx, &body.identity_token, &request_meta).await?;
 
     let rows = db::file_names_for_batch(&d1, &owner_user_id, &body.moves).await?;
     match files::plan_batch_rename(&body.moves, &rows) {
@@ -221,9 +232,11 @@ pub(super) async fn delete_file(
     ctx: RouteContext<()>,
     path: FileIdPath,
     body: DeleteFileRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<NoContent> {
     let d1 = ctx.d1(D1_BINDING)?;
-    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+    let owner_user_id =
+        resolve_files_caller(&d1, &ctx, &body.identity_token, &request_meta).await?;
 
     let now = worker::Date::now().as_millis() as i64;
     if db::trash_file(&d1, &path.id, &owner_user_id, now).await? {
@@ -243,10 +256,12 @@ pub(super) async fn restore_file(
     ctx: RouteContext<()>,
     path: FileIdPath,
     body: RestoreFileRequest,
+    request_meta: RequestMeta,
 ) -> HandlerResult<NoContent> {
     files::validate_file_name(&body.name)?;
     let d1 = ctx.d1(D1_BINDING)?;
-    let owner_user_id = resolve_files_caller(&d1, &ctx, &body.identity_token).await?;
+    let owner_user_id =
+        resolve_files_caller(&d1, &ctx, &body.identity_token, &request_meta).await?;
 
     ensure_no_file_folder_conflict(&d1, &owner_user_id, &proposed_name(&path.id, &body.name))
         .await?;

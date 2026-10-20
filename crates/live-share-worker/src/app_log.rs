@@ -148,8 +148,9 @@ impl Outcome {
     }
 }
 
-/// Where a row's request came from. Only captured on `TokenIssued`; other
-/// rows join to it by `subject`.
+/// Where a row's request came from: captured on every request-driven row
+/// (sign-in, verification, revocation); `None` on rows with no request,
+/// such as the scheduled prune.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RequestMeta {
     pub origin: Option<String>,

@@ -237,7 +237,9 @@ impl Routes {
         Ok(self)
     }
 
-    /// A `POST` route with a JSON request body.
+    /// A `POST` route with a JSON request body. The handler also gets the
+    /// request's `RequestMeta` (`Origin` / `User-Agent`), which every row it
+    /// logs to `app_log` carries.
     pub(crate) fn post<Params, Body, R, F, Fut>(
         self,
         path: &str,
@@ -247,15 +249,16 @@ impl Routes {
         Params: DeserializeOwned + IntoParams + 'static,
         Body: DeserializeOwned + ToSchema + 'static,
         R: Reply + 'static,
-        F: Fn(RouteContext<()>, Params, Body) -> Fut + Copy + 'static,
+        F: Fn(RouteContext<()>, Params, Body, RequestMeta) -> Fut + Copy + 'static,
         Fut: Future<Output = HandlerResult<R>> + 'static,
     {
-        self.post_if(true, path, handler)
+        self.post_route(true, path, handler)
     }
 
     /// Like `post`, but only served when `served` -- otherwise the router
     /// has no such route at all (so it answers exactly like any unknown
-    /// path), while the spec documents it either way.
+    /// path), while the spec documents it either way. Its handler logs
+    /// nothing, so it gets no `RequestMeta`.
     pub(crate) fn post_if<Params, Body, R, F, Fut>(
         self,
         served: bool,
@@ -272,23 +275,6 @@ impl Routes {
         self.post_route(served, path, move |ctx, params, body, _request_meta| {
             handler(ctx, params, body)
         })
-    }
-
-    /// Like `post`, but the handler also gets the request's `RequestMeta`
-    /// (`Origin` / `User-Agent`), for routes that log it to `app_log`.
-    pub(crate) fn post_with_request_meta<Params, Body, R, F, Fut>(
-        self,
-        path: &str,
-        handler: F,
-    ) -> worker::Result<Self>
-    where
-        Params: DeserializeOwned + IntoParams + 'static,
-        Body: DeserializeOwned + ToSchema + 'static,
-        R: Reply + 'static,
-        F: Fn(RouteContext<()>, Params, Body, RequestMeta) -> Fut + Copy + 'static,
-        Fut: Future<Output = HandlerResult<R>> + 'static,
-    {
-        self.post_route(true, path, handler)
     }
 
     fn post_route<Params, Body, R, F, Fut>(
