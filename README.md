@@ -1,0 +1,45 @@
+# jianpu-generator
+
+Renders `.jianpu` scores (numbered musical notation) to SVG, PDF and MIDI, with a
+web editor and a Cloudflare worker for synced sharing.
+
+- Input syntax: [`syntax.md`](syntax.md)
+- Rendering pipeline and glossary: [`ARCHITECTURE.md`](ARCHITECTURE.md)
+
+## Setup
+
+The toolchain (Rust, Node, pnpm, just, …) is pinned in [`mise.toml`](mise.toml),
+which CI uses too. Install [mise](https://mise.jdx.dev), then from the repo root:
+
+```sh
+brew install mise   # or see https://mise.jdx.dev/getting-started.html
+mise trust
+mise install
+```
+
+Activate mise in your shell (e.g. `mise activate fish | source` in
+`~/.config/fish/config.fish`) so the pinned versions are on `PATH`, or prefix
+commands with `mise exec --`. Using a system Node instead breaks the `cf` CLI,
+which needs Node ≥ 22.18 to load `cloudflare.config.ts`.
+
+## Common commands
+
+```sh
+cargo run -- generate svg simple.jianpu   # render a score to SVG
+just dev                                  # web app + live-share worker locally
+```
+
+## Production database (D1)
+
+The live-share worker logs auth events to an `app_log` table in its D1
+database (id in
+[`crates/live-share-worker/deploy.json`](crates/live-share-worker/deploy.json)).
+Authenticate once with `pnpm exec cf auth login`, then run a saved query from
+[`crates/live-share-worker/queries/observability/`](crates/live-share-worker/queries/observability/)
+(see "Debugging production" in [`CLAUDE.md`](CLAUDE.md)):
+
+```sh
+cd crates/live-share-worker
+pnpm exec cf d1 query "$(jq -r .d1DatabaseId deploy.json)" \
+  --sql="$(cat queries/observability/auth_rejections.sql)"
+```
