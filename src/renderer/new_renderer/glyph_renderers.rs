@@ -292,6 +292,11 @@ pub(super) fn render_horizontal_line(elem: &AbsoluteElement, width: &f32) -> Vec
     }]
 }
 
+/// Thin enough that stacked underlines (sixteenth notes) stay visibly
+/// separate: the bands sit `row_height * 0.15` apart, so a 1.0 stroke left
+/// the pair reading as one thick line.
+const UNDERLINE_STROKE_WIDTH: f32 = 0.6;
+
 pub(super) fn render_underline(elem: &AbsoluteElement, width: &f32) -> Vec<SvgElement> {
     vec![SvgElement {
         x: elem.x,
@@ -300,7 +305,7 @@ pub(super) fn render_underline(elem: &AbsoluteElement, width: &f32) -> Vec<SvgEl
         kind: SvgKind::Line {
             x2: elem.x + width,
             y2: elem.y,
-            stroke_width: 1.0,
+            stroke_width: UNDERLINE_STROKE_WIDTH,
         },
     }]
 }
