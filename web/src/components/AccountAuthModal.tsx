@@ -11,6 +11,7 @@ import {
   linkButtonStyle,
   useLockoutCountdown,
 } from './accountDialogParts'
+import { SpinnerLabel } from './SpinnerLabel'
 import { bannerStyle, primaryButtonStyle } from './storageSettingsModalStyles'
 
 type Mode = 'sign-in' | 'sign-up'
@@ -180,7 +181,10 @@ export function AccountAuthModal({
           style={primaryButtonStyle}
           disabled={busy || locked}
         >
-          {mode === 'sign-up' ? 'Create account' : 'Sign in'}
+          <SpinnerLabel
+            pending={busy}
+            label={mode === 'sign-up' ? 'Create account' : 'Sign in'}
+          />
         </button>
         {mode === 'sign-up' ? (
           <p style={footnoteStyle}>
