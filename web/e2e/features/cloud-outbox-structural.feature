@@ -1,7 +1,7 @@
 Feature: Cloud outbox structural operations: file create and rename go through the local outbox
 
   Background:
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: B1 A file created while offline appears at once and reaches the server later
     Given the cloud is unreachable

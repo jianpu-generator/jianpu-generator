@@ -5,25 +5,6 @@
  * used to live in preview-toolbar.css but were never wired into any
  * component). */
 
-.account-chip-signin-wrap {
-  position: relative;
-  display: inline-flex;
-}
-
-.account-chip-signin-error {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 10;
-  max-width: 14rem;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: var(--error-bg);
-  color: var(--error);
-  font-size: 0.7rem;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
-}
-
 .account-chip {
   display: inline-flex;
   align-items: center;

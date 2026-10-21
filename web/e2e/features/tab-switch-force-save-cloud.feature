@@ -1,7 +1,7 @@
 Feature: Tab switch force-save via the cloud storage backend
 
   Scenario: Switching the active file tab force-flushes a pending debounced cloud save
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
     And a cloud file named "a.jianpu" is seeded for the signed-in account
     And a cloud file named "b.jianpu" with content "5 6 7 1" is seeded for the signed-in account
     And a fake clock is installed to prevent an autosave race with the tab switch

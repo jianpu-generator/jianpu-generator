@@ -37,7 +37,7 @@ export type FileNameResolver = (fileId: string) => string | undefined
 function apiErrorForStatus(status: number): WorkerSchemas['ApiError'] {
   return status === 400
     ? { code: 'bad_request' }
-    : { code: 'upstream_failed', message: `faked ${status}` }
+    : { code: 'internal', message: `faked ${status}` }
 }
 
 async function handleContentSave(

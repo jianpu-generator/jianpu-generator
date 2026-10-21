@@ -1,6 +1,6 @@
 import type { BrowserContext, Page } from '@playwright/test'
 import { seedCloudFile } from '../../cloudFileHelpers'
-import { DEFAULT_MOCK_GITHUB_LOGIN } from '../../mockGithubIdentity.ts'
+import { DEFAULT_E2E_EMAIL } from '../../e2eAccounts.ts'
 
 export const SYNCED_FILE_BASE_NAME = 'synced-test'
 export const SYNCED_SOURCE = [
@@ -15,7 +15,7 @@ export const SYNCED_SOURCE = [
   '1 2 3 4',
 ].join('\n')
 
-/** Seeds `baseName` as a real cloud file owned by the default mock GitHub
+/** Seeds `baseName` as a real cloud file owned by the default e2e
  * account, under a per-scenario unique name (the scenarios run
  * `fullyParallel` against one shared account, and a live link belongs to
  * exactly one `files` row -- two scenarios seeding the same name would share,
@@ -29,7 +29,7 @@ export async function seedSyncedCloudFile(
   source: string,
 ): Promise<void> {
   const name = `${baseName}-${crypto.randomUUID().slice(0, 8)}.jianpu`
-  const file = await seedCloudFile(DEFAULT_MOCK_GITHUB_LOGIN, name, source)
+  const file = await seedCloudFile(DEFAULT_E2E_EMAIL, name, source)
   syncedShareButtonState.ownerFileName = name
   syncedShareButtonState.ownerFileId = file.id
   await page.addInitScript(() => {

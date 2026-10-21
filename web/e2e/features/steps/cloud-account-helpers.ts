@@ -1,5 +1,5 @@
-import type { Page } from '@playwright/test'
-import { DEFAULT_MOCK_GITHUB_LOGIN } from '../../mockGithubIdentity.ts'
+import type { BrowserContext, Page } from '@playwright/test'
+import { DEFAULT_E2E_EMAIL, signInE2eAccount } from '../../e2eAccounts.ts'
 
 // Shared, non-glue helpers for the cloud (D1) storage backend's e2e
 // coverage -- imported by several `.steps.ts` files across
@@ -10,7 +10,39 @@ import { DEFAULT_MOCK_GITHUB_LOGIN } from '../../mockGithubIdentity.ts'
 // registrations) so plain functions can be imported without pulling in
 // step-registration side effects.
 
-export { DEFAULT_MOCK_GITHUB_LOGIN }
+export { DEFAULT_E2E_EMAIL }
+
+/** The `localStorage` key `web/src/storage/accountAuth.ts` keeps the
+ * signed-in session under -- hardcoded rather than imported, so the
+ * Playwright process never loads the app module and its React imports. */
+export const ACCOUNT_AUTH_STORAGE_KEY = 'jianpu:account-auth:v2'
+
+// The token `seedSignedInSession` seeded most recently, for steps that check
+// what the worker now thinks of the page's session (e.g. after signing out).
+let lastSeededToken: string | null = null
+
+export function lastSeededSessionToken(): string {
+  if (!lastSeededToken) throw new Error('no signed-in session was seeded')
+  return lastSeededToken
+}
+
+/** Signs `email` in with a session of its own and seeds it into every page
+ * `target` opens from now on, the way a browser that signed in earlier
+ * would hold it. Returns the seeded session token. */
+export async function seedSignedInSession(
+  target: Page | BrowserContext,
+  email: string,
+): Promise<string> {
+  const token = await signInE2eAccount(email)
+  lastSeededToken = token
+  await target.addInitScript(
+    ({ key, value }: { key: string; value: string }) => {
+      localStorage.setItem(key, value)
+    },
+    { key: ACCOUNT_AUTH_STORAGE_KEY, value: JSON.stringify({ token, email }) },
+  )
+  return token
+}
 
 /** Seeds the `'cloud'` storage-backend preference (see
  * `useStorageBackend.ts`'s `StorageBackendPreference`) via `addInitScript`

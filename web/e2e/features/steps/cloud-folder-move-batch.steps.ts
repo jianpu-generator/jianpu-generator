@@ -2,9 +2,12 @@ import type { Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 import createClient from 'openapi-fetch'
 import type { paths } from '../../../src/generated/live-share-worker/schema'
-import { CLOUD_WORKER_ORIGIN, workerRouteGlob } from '../../cloudFileHelpers'
-import { syncedShareIdentityTokenFor } from '../../mockGithubIdentity.ts'
-import { currentSignedInLogin } from './cloud-account.steps'
+import {
+  CLOUD_WORKER_ORIGIN,
+  seedTokenFor,
+  workerRouteGlob,
+} from '../../cloudFileHelpers'
+import { currentSignedInEmail } from './cloud-account.steps'
 import { Given, Then, When } from './fixtures'
 
 const worker = createClient<paths>({ baseUrl: CLOUD_WORKER_ORIGIN })
@@ -47,7 +50,7 @@ When('folder moves can reach the cloud again', async ({ page }) => {
 Then(
   '{string} does not exist on the server for the signed-in account',
   async ({}, fileName: string) => {
-    const identityToken = syncedShareIdentityTokenFor(currentSignedInLogin())
+    const identityToken = await seedTokenFor(currentSignedInEmail())
     await expect
       .poll(
         async () => {

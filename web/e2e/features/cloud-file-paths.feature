@@ -1,7 +1,7 @@
 Feature: Cloud files whose names are slash paths keep their folders
 
   Background:
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: A nested cloud file is listed under its folders after load
     Given a cloud file named "CloudPathsA/Advent/O Come.jianpu" is seeded for the signed-in account

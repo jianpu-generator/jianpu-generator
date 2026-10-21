@@ -2,7 +2,6 @@ import type { FileStoreState } from '../fileStore'
 import type { FolderShares } from '../hooks/useFolderShares'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SelectionMove, SelectionUnit } from '../jianpuWasm'
-import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
 
 export interface FileSwitcherProps {
   store: FileStoreState
@@ -63,15 +62,15 @@ export interface FileSwitcherProps {
   canSync: boolean
   isSynced: boolean
   syncedShareLink: string | null
-  /** Whether the dedicated Synced Share GitHub sign-in connection is
-   * present -- see `useSyncedShareOwner.ts`. */
-  isGithubConnected: boolean
-  /** Cached GitHub username for the "Synced as @username" identity row;
-   * `null` until connected. */
-  githubLogin: string | null
+  /** Whether this browser has an account session -- see
+   * `useSyncedShareOwner.ts`. */
+  isSignedIn: boolean
+  /** The signed-in account's email for the "Synced as" identity row;
+   * `null` while signed out. */
+  accountEmail: string | null
   onStartSync: () => Promise<string | null>
   onStopSync: () => void
-  onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
+  onSignIn: () => void
   /** Live links of whole folders and the overview behind the share markers. */
   folderShares: FolderShares
 }

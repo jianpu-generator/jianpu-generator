@@ -1,7 +1,7 @@
 Feature: Conflicting cloud saves in the outbox conflict flow are merged or resolved by the user
 
   Background:
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: D1 A stale tab with no pending edits quietly takes the server version
     Given a cloud file named "outbox-d1.jianpu" is seeded for the signed-in account

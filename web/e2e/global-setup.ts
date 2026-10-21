@@ -2,8 +2,8 @@ import createClient from 'openapi-fetch'
 import type { paths } from '../src/generated/live-share-worker/schema'
 import { CLOUD_WORKER_ORIGIN } from './cloudFileHelpers.ts'
 
-// Wipes the local D1 cloud-backend rows owned by the synthetic e2e accounts
-// (`KNOWN_GITHUB_USER_IDS` in `mockGithubIdentity.ts`) before every run.
+// Wipes the synthetic e2e accounts (`E2E_EMAILS` in `e2eAccounts.ts`) and
+// everything they own from the local D1 before every run.
 //
 // Why this exists: CI never runs this suite, but a local run reuses the
 // same `crates/live-share-worker/.wrangler/e2e-state` D1 dir across every
@@ -37,6 +37,6 @@ export default async function globalSetup() {
     )
   }
   console.log(
-    `e2e reset: deleted ${data.deletedFiles} files and ${data.deletedShares} shares`,
+    `e2e reset: deleted ${data.deletedAccounts} accounts, ${data.deletedFiles} files and ${data.deletedShares} shares`,
   )
 }

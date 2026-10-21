@@ -6,8 +6,10 @@ import type {
   StorageBackendPreference,
   StorageBackendTarget,
 } from '../hooks/useStorageBackend'
+import type { AccountDialog } from '../hooks/useSyncedShareOwner'
 import { withRenamedKey } from '../storage/cloudBackendNaming'
 import type { StorageBackend } from '../storage/types'
+import { AccountDialogs } from './AccountDialogs'
 import { BinModal } from './BinModal'
 import { DownloadRenameModal } from './DownloadRenameModal'
 import { ErrorModal } from './ErrorModal'
@@ -40,6 +42,11 @@ interface AppOverlaysProps {
   pendingDownload: PendingDownload | null
   onConfirmDownload: (filename: string) => void
   onCancelDownload: () => void
+  accountDialog: AccountDialog | null
+  onCloseAccountDialog: () => void
+  /** Opens the account dialog's sign-in form (the storage dialog's
+   * shortcut). */
+  onSignIn: () => void
 }
 
 /** Modals and the hidden test-probe span that sit above the main
@@ -68,6 +75,9 @@ export function AppOverlays({
   pendingDownload,
   onConfirmDownload,
   onCancelDownload,
+  accountDialog,
+  onCloseAccountDialog,
+  onSignIn,
 }: AppOverlaysProps) {
   /** A store that already matches the server is not a user edit, so it must
    * not arm an autosave (which would show "Unsaved" and re-send it). */
@@ -97,7 +107,9 @@ export function AppOverlays({
         store={store}
         setStore={setStore}
         refreshSaveStatus={refreshSaveStatus}
+        onSignIn={onSignIn}
       />
+      <AccountDialogs open={accountDialog} onClose={onCloseAccountDialog} />
       <BinModal
         open={binOpen}
         onOpenChange={setBinOpen}

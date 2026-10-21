@@ -1,7 +1,7 @@
 Feature: Empty folders in the cloud are kept as hidden placeholder files
 
   Background:
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: A new empty folder is stored as a placeholder and survives a reload
     When the app loads the cloud-backed file list

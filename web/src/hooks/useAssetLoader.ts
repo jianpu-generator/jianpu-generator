@@ -121,8 +121,7 @@ export function useAssetLoader(url: string): AssetLoaderState {
     // `StrictMode` runs every effect twice in development -- so without
     // this, every page load downloaded each one twice over, holding
     // several of the browser's six per-host connections for seconds and
-    // starving everything else the page (or a same-origin popup, like the
-    // GitHub sign-in callback) needed to fetch meanwhile.
+    // starving everything else the page needed to fetch meanwhile.
     const controller = new AbortController()
     const { signal } = controller
     const resolvedUrl = resolveAssetUrl(url)

@@ -21,8 +21,6 @@ export interface SharedFolderViewer {
    * read once on load. */
   kind: 'static' | 'synced'
   folderName: string
-  /** The owner's GitHub login (synced links only). */
-  ownerLogin: string | null
   rows: FileTreeViewRow[]
   /** Path of the open file relative to the shared folder; empty if the
    * folder holds no file. */
@@ -48,7 +46,6 @@ export interface SharedFolderViewer {
  */
 export function useSharedFolderViewer(
   syncedFolder: FolderSnapshot | null,
-  syncedOwnerLogin: string | null,
   clearSyncedFolder: () => void,
   store: FileStoreState,
   backend: StorageBackend,
@@ -132,7 +129,6 @@ export function useSharedFolderViewer(
   return {
     kind: staticFolder ? 'static' : 'synced',
     folderName: snapshot.folder,
-    ownerLogin: staticFolder ? null : syncedOwnerLogin,
     rows,
     activePath,
     activeContent:

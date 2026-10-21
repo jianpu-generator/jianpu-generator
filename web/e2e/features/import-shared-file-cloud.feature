@@ -1,7 +1,7 @@
 Feature: Import a shared score via the cloud storage backend
 
   Scenario: Importing a shared score persists via the cloud storage backend
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
     And the cloud storage backend preference is set
     When I navigate to the share URL for "shared-test.jianpu"
     Then the shared-preview banner is visible

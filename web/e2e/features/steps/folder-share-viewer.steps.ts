@@ -3,10 +3,12 @@ import {
   DEFAULT_CLOUD_FILE_CONTENT,
   renameCloudFile,
   seedCloudFile,
+  seedTokenFor,
   trashCloudFile,
 } from '../../cloudFileHelpers'
 import { openFileList } from '../../fileSwitcherHelpers'
-import { currentSignedInLogin } from './cloud-account.steps'
+import { currentSignedInEmail } from './cloud-account.steps'
+import { seedSignedInSession } from './cloud-account-helpers'
 import { Given, Then, When } from './fixtures'
 import { syncedShareButtonState as state } from './synced-share-button-state'
 
@@ -51,24 +53,13 @@ async function openViewer(
     }, options.localFolder)
   }
   if (options.cloudAccount) {
-    await page.addInitScript(
-      ({ login, token }: { login: string; token: string }) => {
-        localStorage.setItem(
-          'jianpu:synced-share-github-auth:v1',
-          JSON.stringify({ token, login }),
-        )
-        localStorage.setItem(
-          'jianpu:storage-backend:v1',
-          JSON.stringify({ backend: 'cloud' }),
-        )
-      },
-      {
-        login: options.cloudAccount,
-        token: (
-          await import('../../mockGithubIdentity.ts')
-        ).syncedShareIdentityTokenFor(options.cloudAccount),
-      },
-    )
+    await seedSignedInSession(page, options.cloudAccount)
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'jianpu:storage-backend:v1',
+        JSON.stringify({ backend: 'cloud' }),
+      )
+    })
   }
   state.viewerPage = page
   await page.goto(url)
@@ -79,7 +70,7 @@ Given(
   'a cloud file named {string} titled {string} is seeded for the signed-in account',
   async ({}, name: string, title: string) => {
     const file = await seedCloudFile(
-      currentSignedInLogin(),
+      currentSignedInEmail(),
       name,
       contentTitled(title),
     )
@@ -117,7 +108,7 @@ When(
   'a cloud viewer opens the synced link of the share dialog',
   async ({ page, browser }) => {
     await openViewer(browser, await syncedLinkOf(page), {
-      cloudAccount: currentSignedInLogin(),
+      cloudAccount: currentSignedInEmail(),
     })
   },
 )
@@ -134,7 +125,7 @@ When(
   'the owner adds the cloud file {string} titled {string}',
   async ({}, name: string, title: string) => {
     const file = await seedCloudFile(
-      currentSignedInLogin(),
+      currentSignedInEmail(),
       name,
       contentTitled(title),
     )
@@ -147,7 +138,7 @@ When(
   async ({}, from: string, to: string) => {
     const id = seededIds.get(from)
     if (!id) throw new Error(`${from} was not seeded`)
-    await renameCloudFile(currentSignedInLogin(), id, to)
+    await renameCloudFile(currentSignedInEmail(), id, to)
   },
 )
 
@@ -155,14 +146,14 @@ When(
   'the owner edits the cloud file {string} to be titled {string}',
   async ({}, name: string, title: string) => {
     // Seeding an existing name overwrites its content.
-    await seedCloudFile(currentSignedInLogin(), name, contentTitled(title))
+    await seedCloudFile(currentSignedInEmail(), name, contentTitled(title))
   },
 )
 
 When('the owner deletes the cloud file {string}', async ({}, name: string) => {
   const id = seededIds.get(name)
   if (!id) throw new Error(`${name} was not seeded`)
-  await trashCloudFile(currentSignedInLogin(), id)
+  await trashCloudFile(currentSignedInEmail(), id)
 })
 
 When('the owner stops sharing the folder', async ({ page }) => {
@@ -200,6 +191,12 @@ When('the viewer discards the folder', async () => {
 
 Then('the viewer banner says {string}', async ({}, text: string) => {
   await expect(viewer().locator('.shared-preview-banner')).toContainText(text)
+})
+
+Then('the viewer banner does not say {string}', async ({}, text: string) => {
+  const banner = viewer().locator('.shared-preview-banner')
+  await expect(banner).toBeVisible()
+  await expect(banner).not.toContainText(text)
 })
 
 Then('the viewer sees no shared folder banner', async () => {
@@ -307,9 +304,7 @@ Then(
             'http://localhost:8797/files/list',
             {
               data: {
-                identityToken: (
-                  await import('../../mockGithubIdentity.ts')
-                ).syncedShareIdentityTokenFor(currentSignedInLogin()),
+                identityToken: await seedTokenFor(currentSignedInEmail()),
               },
             },
           )

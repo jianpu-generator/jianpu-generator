@@ -46,7 +46,7 @@ Given(
       if (contentSaveCount === 1) {
         await fulfillWithApiError(route, 401, {
           code: 'unauthorized',
-          reason: 'GitHub verification failed',
+          reason: 'Your session has ended. Sign in again.',
           failedAt: Date.now(),
           attempts: 3,
         })

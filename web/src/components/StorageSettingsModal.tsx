@@ -1,16 +1,12 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { GitHubLogoIcon, LaptopIcon, UploadIcon } from '@radix-ui/react-icons'
-import { useCallback, useEffect, useState } from 'react'
+import { LaptopIcon, UploadIcon } from '@radix-ui/react-icons'
+import { useEffect, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
 import type {
   StorageBackendPreference,
   StorageBackendTarget,
 } from '../hooks/useStorageBackend'
 import { useAccountAuth } from '../storage/accountAuth'
-import {
-  openSyncedShareGithubSignInPopup,
-  type SyncedShareGithubAuthResult,
-} from '../storage/accountAuthPopup'
 import type { StorageBackend } from '../storage/types'
 import {
   type ConflictResolution,
@@ -54,19 +50,9 @@ export interface StorageSettingsModalProps {
    * the hook's own `runSave`), so the tab bar's "Saved" badge stops showing
    * the conflict's stale error status once resolved. */
   refreshSaveStatus: (syncedStore?: FileStoreState) => void
+  /** Opens the account dialog's sign-in form, on top of this one. */
+  onSignIn: () => void
 }
-
-/** Public "account" GitHub OAuth App client id used for the unified
- * sign-in — the same dedicated, minimally-scoped app (`GET /user` only)
- * `useSyncedShareOwner.ts` uses for Synced Share ownership. Not a secret:
- * it's visible in every authorization request the browser sends. */
-const ACCOUNT_GITHUB_OAUTH_CLIENT_ID =
-  import.meta.env.VITE_SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID ?? ''
-
-type SignInStatus =
-  | { kind: 'idle' }
-  | { kind: 'signing-in' }
-  | { kind: 'failed'; error: string }
 
 export function StorageSettingsModal({
   open,
@@ -78,35 +64,17 @@ export function StorageSettingsModal({
   store,
   setStore,
   refreshSaveStatus,
+  onSignIn,
 }: StorageSettingsModalProps) {
   const [accountAuth] = useAccountAuth()
   const [selectedKind, setSelectedKind] = useState<'local' | 'cloud'>(
     preference.backend,
   )
-  const [signInStatus, setSignInStatus] = useState<SignInStatus>({
-    kind: 'idle',
-  })
 
   useEffect(() => {
     if (!open) return
     setSelectedKind(preference.backend)
-    setSignInStatus({ kind: 'idle' })
   }, [open, preference])
-
-  const handleSignIn = useCallback(() => {
-    setSignInStatus({ kind: 'signing-in' })
-    void openSyncedShareGithubSignInPopup({
-      clientId: ACCOUNT_GITHUB_OAUTH_CLIENT_ID,
-    }).then((result: SyncedShareGithubAuthResult) => {
-      if (result.ok) {
-        setSignInStatus({ kind: 'idle' })
-      } else if (result.reason === 'error') {
-        setSignInStatus({ kind: 'failed', error: result.error })
-      } else {
-        setSignInStatus({ kind: 'idle' })
-      }
-    })
-  }, [])
 
   async function handleSelectLocal() {
     setSelectedKind('local')
@@ -234,7 +202,7 @@ export function StorageSettingsModal({
                 data-testid="account-connected"
               >
                 <p style={statusLineStyle}>
-                  Cloud storage uses <strong>@{accountAuth.login}</strong>
+                  Cloud storage uses <strong>{accountAuth.email}</strong>
                 </p>
                 {selectedKind === 'cloud' && isLoadingCloud ? (
                   <p
@@ -262,24 +230,15 @@ export function StorageSettingsModal({
                 data-testid="account-sign-in"
               >
                 <p style={{ margin: 0, color: '#666' }}>
-                  Sign in with GitHub to enable cloud storage.
+                  Sign in to enable cloud storage.
                 </p>
                 <button
                   type="button"
                   style={primaryButtonStyle}
-                  onClick={handleSignIn}
-                  disabled={signInStatus.kind === 'signing-in'}
+                  onClick={onSignIn}
                 >
-                  <GitHubLogoIcon aria-hidden="true" />{' '}
-                  {signInStatus.kind === 'signing-in'
-                    ? 'Signing in…'
-                    : 'Sign in with GitHub'}
+                  Sign in
                 </button>
-                {signInStatus.kind === 'failed' ? (
-                  <p style={{ color: '#b00020', margin: 0 }}>
-                    {signInStatus.error}
-                  </p>
-                ) : null}
               </div>
             )}
           </div>

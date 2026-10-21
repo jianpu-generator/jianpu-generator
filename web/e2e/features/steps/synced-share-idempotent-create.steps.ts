@@ -1,16 +1,13 @@
 import type { Browser, Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 import { seedCloudFile, workerRouteGlob } from '../../cloudFileHelpers'
+import { DEFAULT_E2E_EMAIL } from '../../e2eAccounts.ts'
 import {
   fileSwitcherTrigger,
   fileTabByExactName,
   openFileList,
 } from '../../fileSwitcherHelpers'
-import {
-  DEFAULT_MOCK_GITHUB_LOGIN,
-  syncedShareIdentityTokenFor,
-} from '../../mockGithubIdentity.ts'
-import { gotoCloudApp } from './cloud-account-helpers'
+import { gotoCloudApp, seedSignedInSession } from './cloud-account-helpers'
 import { AfterScenario, BeforeScenario, Given, Then, When } from './fixtures'
 import { openSyncedTab } from './synced-share-button.steps'
 import { syncedShareButtonState as sharedState } from './synced-share-button-state'
@@ -38,7 +35,7 @@ Given(
   async ({}, name: string) => {
     const displayName = name.replace(/\.jianpu$/, '')
     const file = await seedCloudFile(
-      DEFAULT_MOCK_GITHUB_LOGIN,
+      DEFAULT_E2E_EMAIL,
       `${assignActualName(displayName)}.jianpu`,
       idempotentSharingSource(name),
     )
@@ -122,41 +119,35 @@ async function mockCloudFileListWithForeignFile(
 
 /** Seeds a second browser context's `localStorage` the same way "a cloud
  * file ... is seeded for idempotent sharing" (storage backend) and "the
- * owner is signed in with GitHub as ..." (Synced Share identity) do for
+ * owner is signed in as ..." (account session) do for
  * the main page, then opens the given cloud-backed tab and the share
  * modal's Synced-link tab. `context.addInitScript` (not
  * `page.addInitScript`) so it applies before this context's very first
  * navigation.
  *
- * When `login` is the same account that owns the seeded file, this loads
+ * When `email` is the same account that owns the seeded file, this loads
  * the file through the real cloud backend, same as the owner's own page --
- * a real D1 row, a real `/files/list` fetch. When `login` differs, no real
+ * a real D1 row, a real `/files/list` fetch. When `email` differs, no real
  * account can see another account's row (D1 file ownership is strictly
  * per-owner), so `mockCloudFileListWithForeignFile` above hands this
  * context a synthetic listing carrying the original owner's real file id
  * instead -- see that function's doc comment. */
 async function loadSecondContextOnCloudFile(
   browser: Browser,
-  login: string,
+  email: string,
   tabName: string,
 ): Promise<Page> {
   const context = await browser.newContext()
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-  await context.addInitScript(
-    ({ login, token }: { login: string; token: string }) => {
-      localStorage.setItem(
-        'jianpu:storage-backend:v1',
-        JSON.stringify({ backend: 'cloud' }),
-      )
-      localStorage.setItem(
-        'jianpu:synced-share-github-auth:v1',
-        JSON.stringify({ token, login }),
-      )
-    },
-    { login, token: syncedShareIdentityTokenFor(login) },
-  )
+  await context.addInitScript(() => {
+    localStorage.setItem(
+      'jianpu:storage-backend:v1',
+      JSON.stringify({ backend: 'cloud' }),
+    )
+  })
+  await seedSignedInSession(context, email)
   const page = await context.newPage()
-  if (login !== DEFAULT_MOCK_GITHUB_LOGIN) {
+  if (email !== DEFAULT_E2E_EMAIL) {
     const fileId = state.seededFileIds[tabName]
     if (!fileId) {
       throw new Error(
@@ -178,29 +169,29 @@ async function loadSecondContextOnCloudFile(
 }
 
 When(
-  'a separate browser context loads the same cloud-backed file, signed in as the same GitHub account {string}',
-  async ({ browser }, login: string) => {
+  'a separate browser context loads the same cloud-backed file, signed in as the same account {string}',
+  async ({ browser }, email: string) => {
     if (!state.activeTabName) {
       throw new Error('no cloud-backed tab has been selected yet')
     }
-    await loadSecondContextOnCloudFile(browser, login, state.activeTabName)
+    await loadSecondContextOnCloudFile(browser, email, state.activeTabName)
   },
 )
 
 When(
-  'a separate browser context loads the same cloud-backed file, signed in as a different GitHub account {string}',
-  async ({ browser }, login: string) => {
+  'a separate browser context loads the same cloud-backed file, signed in as a different account {string}',
+  async ({ browser }, email: string) => {
     if (!state.activeTabName) {
       throw new Error('no cloud-backed tab has been selected yet')
     }
-    await loadSecondContextOnCloudFile(browser, login, state.activeTabName)
+    await loadSecondContextOnCloudFile(browser, email, state.activeTabName)
   },
 )
 
 When(
-  'a separate browser context loads the cloud-backed file at its renamed path, signed in as the same GitHub account {string}',
-  async ({ browser }, login: string) => {
-    await loadSecondContextOnCloudFile(browser, login, 'renamed')
+  'a separate browser context loads the cloud-backed file at its renamed path, signed in as the same account {string}',
+  async ({ browser }, email: string) => {
+    await loadSecondContextOnCloudFile(browser, email, 'renamed')
   },
 )
 

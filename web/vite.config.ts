@@ -250,10 +250,10 @@ function serveFontsPlugin(): Plugin {
 const LOCAL_WORKER_HOST = 'localhost:8787'
 
 /**
- * Defaults the Synced Share env vars: the client id from the worker's own
- * `deploy.json`/`cloudflare.config.ts` (exported as `deployConfig.json` by `build:worker-types`),
- * and the host to the deployed worker's -- or, under `vite` dev, to the
- * local `wrangler dev` one. An explicitly set value (e2e's, or a personal
+ * Defaults the Synced Share worker host to the deployed worker's (from its
+ * `deploy.json`/`cloudflare.config.ts`, exported as `deployConfig.json` by
+ * `build:worker-types`) -- or, under `vite` dev, to the local `wrangler dev`
+ * one. An explicitly set value (e2e's, or a personal
  * `.env.local`) still wins.
  */
 function workerDeployConfigPlugin(): Plugin {
@@ -261,7 +261,6 @@ function workerDeployConfigPlugin(): Plugin {
     name: 'worker-deploy-config',
     config(_, { mode, command }) {
       const defaults = {
-        VITE_SYNCED_SHARE_GITHUB_OAUTH_CLIENT_ID: deployConfig.githubClientId,
         VITE_SYNCED_SHARE_HOST:
           command === 'serve' ? LOCAL_WORKER_HOST : deployConfig.workerHost,
       }

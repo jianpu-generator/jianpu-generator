@@ -38,15 +38,14 @@ jobs:
         working-directory: web
         env:
           VITE_BASE_PATH: /jianpu-generator/
-          # The Synced Share worker's client id and host come from its
+          # The Synced Share worker's host comes from its
           # `cloudflare.config.ts` (see `web/vite.config.ts`), not from here.
         run: pnpm build
 
       - name: Add SPA-fallback 404.html
         # GitHub Pages is a static file host with no server-side routing: a
-        # real top-level navigation to a path with no file on disk (e.g.
-        # GitHub's own OAuth redirect landing on
-        # /synced-share/github-callback) gets GitHub Pages' generic 404, and
+        # real top-level navigation to a path with no file on disk gets
+        # GitHub Pages' generic 404, and
         # the app's JS (and thus its client-side router) never loads at all.
         # Copying the *built* index.html (with its real, hashed asset
         # references) to 404.html is GitHub Pages' standard SPA workaround:
@@ -62,16 +61,6 @@ jobs:
 
       - name: Add .nojekyll
         run: touch web/dist/.nojekyll
-
-      - name: Install Playwright Chromium
-        working-directory: web
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Verify GitHub callback route resolves under the GitHub Pages base path
-        working-directory: web
-        run: |
-          pnpm exec bddgen --config=playwright.pages.config.ts
-          pnpm exec playwright test --config=playwright.pages.config.ts
 
       - uses: actions/upload-pages-artifact@v3
         with:

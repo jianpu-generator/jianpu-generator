@@ -1,7 +1,7 @@
 Feature: Resolving a cloud storage save conflict
 
   Background:
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: Overwriting mine saves the in-memory edit through the merge editor
     Given a cloud file named "conflict.jianpu" is seeded for the signed-in account

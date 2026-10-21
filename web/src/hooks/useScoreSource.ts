@@ -77,7 +77,6 @@ export function useScoreSource(
     clearSyncedFolder,
     syncedShareViewerPreview,
     syncedShareViewerStatus,
-    syncedShareViewerOwnerLogin,
     handleImportSyncedShare,
   } = useSyncedShareViewer(
     setEditorCollapsed,
@@ -89,7 +88,6 @@ export function useScoreSource(
 
   const sharedFolder = useSharedFolderViewer(
     syncedFolder,
-    syncedShareViewerOwnerLogin,
     clearSyncedFolder,
     store,
     backend,
@@ -130,20 +128,22 @@ export function useScoreSource(
       sharedFolder,
       viewerStatus: syncedShareViewerStatus,
       viewerFilename: syncedShareViewerPreview?.filename ?? null,
-      viewerOwnerLogin: syncedShareViewerOwnerLogin,
       onImportSyncedShare: handleImportSyncedShare,
       canSync: syncedShareOwner.canSync,
       isSynced: syncedShareOwner.isSynced,
       syncedShareLink: syncedShareOwner.syncedShareLink,
-      isGithubConnected: syncedShareOwner.isGithubConnected,
-      githubLogin: syncedShareOwner.githubLogin,
+      isSignedIn: syncedShareOwner.isSignedIn,
+      accountEmail: syncedShareOwner.accountEmail,
       onStartSync: syncedShareOwner.startSync,
       onStopSync: syncedShareOwner.stopSync,
-      onSignInWithGithub: syncedShareOwner.signInWithGithub,
-      onDisconnectGithub: syncedShareOwner.disconnectGithub,
+      onSignIn: syncedShareOwner.openSignIn,
+      onChangePassword: syncedShareOwner.openChangePassword,
+      onSignOut: syncedShareOwner.signOut,
       syncFailure: syncedShareOwner.syncFailure,
       onDismissSyncFailure: syncedShareOwner.dismissSyncFailure,
       folderShares: syncedShareOwner.folderShares,
+      accountDialog: syncedShareOwner.accountDialog,
+      onCloseAccountDialog: syncedShareOwner.closeAccountDialog,
     },
   }
 }

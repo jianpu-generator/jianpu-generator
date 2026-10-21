@@ -56,11 +56,11 @@ export function FileSwitcher({
   canSync,
   isSynced,
   syncedShareLink,
-  isGithubConnected,
-  githubLogin,
+  isSignedIn,
+  accountEmail,
   onStartSync,
   onStopSync,
-  onSignInWithGithub,
+  onSignIn,
   folderShares,
 }: FileSwitcherProps) {
   const names = sortedUserFileNames(store)
@@ -244,20 +244,20 @@ export function FileSwitcher({
         canSync={canSync}
         isSynced={isSynced}
         syncedShareLink={syncedShareLink}
-        isGithubConnected={isGithubConnected}
-        githubLogin={githubLogin}
+        isSignedIn={isSignedIn}
+        accountEmail={accountEmail}
         onStartSync={onStartSync}
         onStopSync={onStopSync}
-        onSignInWithGithub={onSignInWithGithub}
+        onSignIn={onSignIn}
       />
       <FolderShareModal
         store={store}
         target={shareFolder}
         onClose={() => setShareFolder(null)}
         folderShares={folderShares}
-        isGithubConnected={isGithubConnected}
-        githubLogin={githubLogin}
-        onSignInWithGithub={onSignInWithGithub}
+        isSignedIn={isSignedIn}
+        accountEmail={accountEmail}
+        onSignIn={onSignIn}
       />
     </div>
   )

@@ -1,15 +1,15 @@
 Feature: File-op failure handling for the cloud storage backend
 
   Background:
-    # Dedicated login, not the shared default "e2e-test-user" -- this
+    # Dedicated login, not the shared default "e2e-test-user@jianpu.test" -- this
     # scenario asserts no file named exactly "untitled" exists after a
     # failed create, but "untitled" is also the literal name
     # `files-cloud-backend.feature`'s "Creating a file persists it to the
     # cloud backend" scenario's own "New" click produces. Sharing an
     # account would make that scenario's genuine "untitled" file, created
     # concurrently in another `fullyParallel` worker, leak into this one's
-    # assertion. See `mockGithubIdentity.ts`'s doc comment on this login.
-    Given an account is signed in as "e2e-test-user-create-error"
+    # assertion. See `e2eAccounts.ts`'s comment on this email.
+    Given an account is signed in as "e2e-test-user-create-error@jianpu.test"
 
   Scenario: A create that hits a server error still appears at once and raises no error modal
     Given a cloud file named "existing.jianpu" is seeded for the signed-in account

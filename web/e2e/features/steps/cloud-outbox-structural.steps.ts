@@ -1,7 +1,11 @@
 import { expect, type Page } from '@playwright/test'
 import createClient from 'openapi-fetch'
 import type { paths } from '../../../src/generated/live-share-worker/schema'
-import { CLOUD_WORKER_ORIGIN, matchWorkerRoute } from '../../cloudFileHelpers'
+import {
+  CLOUD_WORKER_ORIGIN,
+  matchWorkerRoute,
+  seedTokenFor,
+} from '../../cloudFileHelpers'
 import {
   fileSwitcherTrigger,
   fileTabByExactName,
@@ -9,10 +13,9 @@ import {
   openFileActions,
   openFileList,
 } from '../../fileSwitcherHelpers'
-import { syncedShareIdentityTokenFor } from '../../mockGithubIdentity.ts'
 import {
   currentSeededFileDisplayName,
-  currentSignedInLogin,
+  currentSignedInEmail,
 } from './cloud-account.steps'
 import { gotoCloudApp } from './cloud-account-helpers'
 import { Given, Then, When } from './fixtures'
@@ -114,7 +117,7 @@ Then(
 Then(
   '{string} exists on the server for the signed-in account',
   async ({}, fileName: string) => {
-    const identityToken = syncedShareIdentityTokenFor(currentSignedInLogin())
+    const identityToken = await seedTokenFor(currentSignedInEmail())
     await expect
       .poll(
         async () => {

@@ -11,7 +11,7 @@ export interface CloudBackendConfig {
    * `/files/*` request body (never as a header/query param — matches this
    * worker's `FileShareRequest` convention). */
   token: string
-  /** The signed-in account's login, which scopes the on-device outbox. */
+  /** The signed-in account's email, which scopes the on-device outbox. */
   account: string
   /** Bare host (no scheme), same shape as `useSyncedShareOwner.ts`'s
    * `VITE_SYNCED_SHARE_HOST` — turned into an origin via
@@ -23,9 +23,9 @@ export interface CloudBackendConfig {
  * Typed detail behind a `'error'`/`'offline'` `SaveStatus`, mirroring
  * `GithubBackendError`'s role for the old GitHub backend. `'conflict'`
  * carries the server's current revision (for `forceOverwrite`/"Discard
- * mine"); `'auth'` is new here (401 -- the account sign-in token was
- * revoked/expired), replacing GitHub's `'rate-limited'` (this worker has no
- * rate limiting of its own, see `TODO-synced-share-rust-d1-migration.md`).
+ * mine"); `'auth'` is new here (401 -- the account session was
+ * signed out or expired), replacing GitHub's `'rate-limited'` (the worker
+ * rate-limits only sign-in and sign-up, never the `/files/*` routes).
  */
 export type CloudBackendError =
   | { kind: 'conflict'; currentRevision: number }

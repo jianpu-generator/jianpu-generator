@@ -1,11 +1,10 @@
 import {
+  clearSeedTokens,
   DEFAULT_CLOUD_FILE_CONTENT,
   seedCloudFile,
 } from '../../cloudFileHelpers'
-import {
-  DEFAULT_MOCK_GITHUB_LOGIN,
-  syncedShareIdentityTokenFor,
-} from '../../mockGithubIdentity.ts'
+import { DEFAULT_E2E_EMAIL } from '../../e2eAccounts.ts'
+import { seedSignedInSession } from './cloud-account-helpers'
 import { BeforeScenario, Given } from './fixtures'
 
 // Shared account sign-in + cloud-file-seeding `Given` steps, used as the
@@ -15,20 +14,20 @@ import { BeforeScenario, Given } from './fixtures'
 // (rather than folded into e.g. `files-cloud-backend.steps.ts`) since it's
 // shared across so many feature files -- mirrors this project's existing
 // convention of a dedicated steps file per reusable concern (compare
-// `synced-share-button.steps.ts`'s "the owner is signed in with GitHub as
+// `synced-share-button.steps.ts`'s "the owner is signed in as
 // {string}").
 //
 // Module-level, not a fixture -- matches every other `.steps.ts` file's
 // established pattern (e.g. `lastSignInPopup` in
-// `synced-share-github-signin.steps.ts`). Tracks whichever login the
+// `synced-share-sign-in.steps.ts`). Tracks whichever email the
 // current scenario's "an account is signed in as ..." step used, so a
 // later "... is seeded for the signed-in account" step in the same
-// scenario seeds under the same identity without every feature file having
-// to repeat the login in both steps.
-let signedInLogin: string = DEFAULT_MOCK_GITHUB_LOGIN
+// scenario seeds under the same account without every feature file having
+// to repeat the email in both steps.
+let signedInEmail: string = DEFAULT_E2E_EMAIL
 
 // The most recently seeded file's *display* name (extension stripped),
-// tracked the same way as `signedInLogin` above. Needed because the shared
+// tracked the same way as `signedInEmail` above. Needed because the shared
 // `e2e-test-user` account is real and persistent across this whole suite
 // run, not a fresh in-memory mock scoped to one scenario like the deleted
 // GitHub backend's tests had -- by the time a scenario's own "the active
@@ -42,35 +41,20 @@ let signedInLogin: string = DEFAULT_MOCK_GITHUB_LOGIN
 let lastSeededFileDisplayName = ''
 
 BeforeScenario(async () => {
-  signedInLogin = DEFAULT_MOCK_GITHUB_LOGIN
+  signedInEmail = DEFAULT_E2E_EMAIL
+  clearSeedTokens()
   lastSeededFileDisplayName = ''
 })
 
 /**
- * Pre-seeds the unified account sign-in (`accountAuth.ts`) -- bypassing the
- * real popup OAuth round trip, which has its own dedicated coverage in
- * `synced-share-github-signin.feature` and this feature's own "Signing in
- * via the popup ..." scenario. The literal `localStorage` key is
- * deliberately hardcoded here rather than imported from `accountAuth.ts`,
- * matching `synced-share-button.steps.ts`'s "the owner is signed in with
- * GitHub as {string}" -- that key is a stable, deliberately-preserved
- * literal (see `accountAuth.ts`'s own doc comment), not an implementation
- * detail that would justify pulling the app module (and its `usehooks-ts`
- * import chain) into the Playwright test process.
+ * Pre-seeds a signed-in session (`accountAuth.ts`), bypassing the account
+ * dialog, which has its own coverage in `account-auth.feature`.
  */
 Given(
   'an account is signed in as {string}',
-  async ({ page }, login: string) => {
-    signedInLogin = login
-    await page.addInitScript(
-      ({ login, token }: { login: string; token: string }) => {
-        localStorage.setItem(
-          'jianpu:synced-share-github-auth:v1',
-          JSON.stringify({ token, login }),
-        )
-      },
-      { login, token: syncedShareIdentityTokenFor(login) },
-    )
+  async ({ page }, email: string) => {
+    signedInEmail = email
+    await seedSignedInSession(page, email)
   },
 )
 
@@ -81,7 +65,7 @@ function trackSeededFileDisplayName(name: string): void {
 Given(
   'a cloud file named {string} is seeded for the signed-in account',
   async ({}, name: string) => {
-    await seedCloudFile(signedInLogin, name)
+    await seedCloudFile(signedInEmail, name)
     trackSeededFileDisplayName(name)
   },
 )
@@ -89,18 +73,18 @@ Given(
 Given(
   'a cloud file named {string} with content {string} is seeded for the signed-in account',
   async ({}, name: string, content: string) => {
-    await seedCloudFile(signedInLogin, name, content)
+    await seedCloudFile(signedInEmail, name, content)
     trackSeededFileDisplayName(name)
   },
 )
 
-/** The login the current scenario's "an account is signed in as ..." step
+/** The email the current scenario's "an account is signed in as ..." step
  * captured -- exported for other `.steps.ts` files that need to seed
  * additional cloud files inline within their own `Given` (e.g. the restore-
  * collision scenario's two-file setup) rather than via the two generic
  * steps above. */
-export function currentSignedInLogin(): string {
-  return signedInLogin
+export function currentSignedInEmail(): string {
+  return signedInEmail
 }
 
 /** The display name (extension stripped) of the most recently seeded file
