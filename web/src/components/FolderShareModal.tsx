@@ -2,7 +2,6 @@ import type { FileStoreState } from '../fileStore'
 import { folderShareInfo } from '../fileStoreQueries'
 import type { FolderShares } from '../hooks/useFolderShares'
 import { useFolderStaticShareLink } from '../hooks/useStaticShareLink'
-import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
 import { ShareModal, type Tab } from './ShareModal'
 
 export interface FolderShareTarget {
@@ -18,9 +17,9 @@ interface FolderShareModalProps {
   target: FolderShareTarget | null
   onClose: () => void
   folderShares: FolderShares
-  isGithubConnected: boolean
-  githubLogin: string | null
-  onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
+  isSignedIn: boolean
+  accountEmail: string | null
+  onSignIn: () => void
 }
 
 /** The Share dialog of one folder: wires `ShareModal` to the owner's share
@@ -31,9 +30,9 @@ export function FolderShareModal({
   target,
   onClose,
   folderShares,
-  isGithubConnected,
-  githubLogin,
-  onSignInWithGithub,
+  isSignedIn,
+  accountEmail,
+  onSignIn,
 }: FolderShareModalProps) {
   const folder = target?.folder ?? null
   const info =
@@ -59,8 +58,8 @@ export function FolderShareModal({
           ? null
           : folderShares.linkFor(info.shareId, info.name)
       }
-      isGithubConnected={isGithubConnected}
-      githubLogin={githubLogin}
+      isSignedIn={isSignedIn}
+      accountEmail={accountEmail}
       onStartSync={() =>
         folder === null
           ? Promise.resolve(null)
@@ -69,7 +68,7 @@ export function FolderShareModal({
       onStopSync={() => {
         if (folder !== null) void folderShares.stopSync(folder)
       }}
-      onSignInWithGithub={onSignInWithGithub}
+      onSignIn={onSignIn}
     />
   )
 }

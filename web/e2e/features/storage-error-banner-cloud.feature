@@ -1,7 +1,7 @@
 Feature: Storage settings error banner for cloud autosave failures
 
   Background:
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: A network-failed autosave shows the offline banner, which clears once a save succeeds
     Given a cloud file named "banner.jianpu" is seeded for the signed-in account

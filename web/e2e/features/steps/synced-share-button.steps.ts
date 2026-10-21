@@ -1,6 +1,9 @@
 import { expect, type Page } from '@playwright/test'
 import { fileSwitcherTrigger, openFileActions } from '../../fileSwitcherHelpers'
-import { syncedShareIdentityTokenFor } from '../../mockGithubIdentity.ts'
+import {
+  ACCOUNT_AUTH_STORAGE_KEY,
+  seedSignedInSession,
+} from './cloud-account-helpers'
 import { AfterScenario, Given, Then, When } from './fixtures'
 import {
   SYNCED_FILE_BASE_NAME,
@@ -16,7 +19,7 @@ import {
  * has opened on top of it, which closes it: two independent Radix
  * `Dialog.Root`s open at once fight over the focus trap, and the newer one
  * wins, so the share modal's `onOpenChange` fires with `false`. Exported for
- * `synced-share-github-signin.steps.ts`, which re-opens the modal after
+ * `synced-share-sign-in.steps.ts`, which re-opens the modal after
  * dismissing that error dialog for the same reason). */
 export async function openSyncedTab(page: Page) {
   const modal = page.getByTestId('share-modal')
@@ -105,37 +108,27 @@ Given('local storage is cleared', async ({ page }) => {
   })
 })
 
-// Pre-seeds a signed-in Synced Share GitHub connection (bypassing the real
-// popup OAuth round trip -- that flow has its own dedicated coverage in
-// synced-share-github-signin.feature) so "Sync" starts a share directly via
-// `POST /files/:id/share`. The same connection signs the cloud backend in,
-// so a seeded cloud file loads too. Must be registered (via
-// `addInitScript`) after any "local storage is cleared" step in the same
-// scenario, which would otherwise wipe it.
-Given(
-  'the owner is signed in with GitHub as {string}',
-  async ({ page }, login: string) => {
-    await page.addInitScript(
-      ({ login, token }: { login: string; token: string }) => {
-        localStorage.setItem(
-          'jianpu:synced-share-github-auth:v1',
-          JSON.stringify({ token, login }),
-        )
-      },
-      { login, token: syncedShareIdentityTokenFor(login) },
-    )
-  },
-)
+// Pre-seeds a signed-in session (bypassing the account dialog -- that flow
+// has its own coverage in account-auth.feature and
+// synced-share-sign-in.feature) so "Sync" starts a share directly via
+// `POST /files/:id/share`. The same session signs the cloud backend in, so
+// a seeded cloud file loads too. Must be registered (via `addInitScript`)
+// after any "local storage is cleared" step in the same scenario, which
+// would otherwise wipe it.
+Given('the owner is signed in as {string}', async ({ page }, email: string) => {
+  await seedSignedInSession(page, email)
+})
 
 /** Waits until the scenario's seeded cloud file (if any) is the one on
  * screen -- until the cloud listing loads the active file is a demo, whose
  * modal shows the cloud-only message rather than "Start Sync". Skipped
  * while signed out: the cloud backend (and so the seeded file) only loads
- * once signed in. Exported for `synced-share-github-signin.steps.ts`. */
+ * once signed in. Exported for `synced-share-sign-in.steps.ts`. */
 export async function waitForSeededSyncedFile(page: Page): Promise<void> {
   if (!state.ownerFileName) return
   const signedIn = await page.evaluate(
-    () => localStorage.getItem('jianpu:synced-share-github-auth:v1') !== null,
+    (key) => localStorage.getItem(key) !== null,
+    ACCOUNT_AUTH_STORAGE_KEY,
   )
   if (!signedIn) return
   await expect(fileSwitcherTrigger(page)).toContainText(
@@ -169,7 +162,7 @@ When(
     await openSyncedTab(page)
     // When disconnected, the Synced-link tab shows its sign-in state
     // instead of a "Start Sync" button (see
-    // synced-share-github-signin.feature) -- this shared step just opens
+    // synced-share-sign-in.feature) -- this shared step just opens
     // the tab in that case and leaves the sign-in flow to the caller.
     const startSync = page.getByTestId('share-modal-start-sync')
     if (await startSync.count()) await startSync.click()

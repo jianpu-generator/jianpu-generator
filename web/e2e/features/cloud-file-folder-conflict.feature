@@ -1,7 +1,7 @@
 Feature: The cloud refuses a path that would be both a file and a folder
 
   Background:
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: Creating a file named like an existing folder is refused
     Given a cloud file named "ConflictA/song.jianpu" is seeded for the signed-in account

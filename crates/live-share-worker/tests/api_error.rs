@@ -3,7 +3,7 @@
 #![allow(clippy::disallowed_macros)]
 
 use live_share_worker::api_error::ApiError;
-use live_share_worker::verification::VerificationFailure;
+use live_share_worker::auth::session::VerificationFailure;
 
 #[test]
 fn serializes_a_unit_variant_as_just_its_code() -> Result<(), serde_json::Error> {
@@ -84,10 +84,32 @@ fn derives_each_status_code_from_the_variant() {
             status: 500,
         },
         StatusCase {
-            error: ApiError::UpstreamFailed {
-                message: "boom".to_string(),
+            error: ApiError::EmailTaken,
+            status: 409,
+        },
+        StatusCase {
+            error: ApiError::InvalidEmail,
+            status: 400,
+        },
+        StatusCase {
+            error: ApiError::WeakPassword {
+                message: "Use at least 12 characters.".to_string(),
             },
-            status: 502,
+            status: 400,
+        },
+        StatusCase {
+            error: ApiError::IncorrectCredentials,
+            status: 401,
+        },
+        StatusCase {
+            error: ApiError::SignInLocked {
+                retry_after_seconds: 60,
+            },
+            status: 429,
+        },
+        StatusCase {
+            error: ApiError::RateLimited,
+            status: 429,
         },
     ];
 
@@ -107,5 +129,18 @@ fn serializes_names_taken_with_the_rejected_destinations() -> Result<(), serde_j
         r#"{"code":"names_taken","names":["A/x"]}"#
     );
     assert_eq!(error.status_code(), 409);
+    Ok(())
+}
+
+#[test]
+fn serializes_a_sign_in_lockout_with_a_camel_case_retry_after() -> Result<(), serde_json::Error> {
+    let error = ApiError::SignInLocked {
+        retry_after_seconds: 900,
+    };
+
+    assert_eq!(
+        serde_json::to_string(&error)?,
+        r#"{"code":"sign_in_locked","retryAfterSeconds":900}"#
+    );
     Ok(())
 }

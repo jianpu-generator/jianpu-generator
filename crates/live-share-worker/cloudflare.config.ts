@@ -12,14 +12,19 @@ import deploy from './deploy.json' with { type: 'json' }
 
 // Local-run overrides, `{ "<var name>": "<value>" }` as JSON in
 // `WORKER_VAR_OVERRIDES` (cf has no `--var` flag): e2e's
-// `web/playwright.config.ts` points the worker's GitHub calls at a mock
-// server with it, and `dekit.yaml` supplies the real client secret. Never set
-// on deploy, so production only ever sees the values declared below.
+// `web/playwright.config.ts` enables the test-only `POST /e2e/reset` route
+// with it. Never set on deploy, so production only ever sees the values
+// declared below.
 const overrides: Record<string, string> = JSON.parse(
   process.env.WORKER_VAR_OVERRIDES ?? '{}',
 )
 
-const CLIENT_SECRET = 'SYNCED_SHARE_GITHUB_CLIENT_SECRET'
+// Local-run override of both sign-in rate limits below, in requests per
+// minute per IP: e2e signs dozens of accounts in from one IP within a
+// minute. Never set on deploy.
+const rateLimitOverride = process.env.RATE_LIMIT_PER_MINUTE_OVERRIDE
+  ? Number(process.env.RATE_LIMIT_PER_MINUTE_OVERRIDE)
+  : undefined
 
 export default defineConfig({
   worker: {
@@ -40,22 +45,24 @@ export default defineConfig({
         name: 'jianpu-live-share',
         id: deploy.d1DatabaseId,
       }),
-      // Not secret: the browser already sends the same client id to build
-      // the authorization URL (see `web/src/storage/syncedShareGithubAuth.ts`).
-      // It is the dedicated Synced Share sign-in OAuth App, separate from
-      // `githubAuth.ts`'s storage-backend app, so this identity-only sign-in
-      // never inherits the storage app's `repo` grant.
-      SYNCED_SHARE_GITHUB_CLIENT_ID: bindings.text(deploy.githubClientId),
+      // Per-IP (`CF-Connecting-IP`) rate limits on `POST /auth/sign-in` and
+      // `POST /auth/sign-up`, on top of the per-email lockout in D1. The
+      // names must match `SIGN_IN_RATE_LIMITER`/`SIGN_UP_RATE_LIMITER` in
+      // `src/handlers/auth.rs`. `namespace` is an id unique within the
+      // Cloudflare account.
+      SIGN_IN_RATE_LIMITER: bindings.rateLimit({
+        namespace: '1001',
+        simple: { limit: rateLimitOverride ?? 20, period: 60 },
+      }),
+      SIGN_UP_RATE_LIMITER: bindings.rateLimit({
+        namespace: '1002',
+        simple: { limit: rateLimitOverride ?? 3, period: 60 },
+      }),
       // The worker never reads it; it is declared so this crate is the
       // single source of deployment config -- `tests/export_openapi.rs`
       // publishes `deploy.json` to
       // `web/src/generated/live-share-worker/deployConfig.json`.
       SYNCED_SHARE_PUBLIC_HOST: bindings.text(deploy.workerHost),
-      // NEVER committed. In production set it once via
-      // `npx wrangler secret put SYNCED_SHARE_GITHUB_CLIENT_SECRET` (cf has
-      // no `secret put` yet); locally `.dev.vars` or an override supplies it.
-      // The name must match `CLIENT_SECRET_BINDING` in `src/oauth.rs`.
-      [CLIENT_SECRET]: bindings.secret(),
       ...Object.fromEntries(
         Object.entries(overrides).map(([name, value]) => [
           name,

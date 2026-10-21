@@ -23,6 +23,7 @@ import {
 } from './outboxSaveBadge'
 import { useCloudOutbox } from './useCloudOutbox'
 import { useCloudStoreLoader } from './useCloudStoreLoader'
+import { useSwitchToCloudOnSignIn } from './useSwitchToCloudOnSignIn'
 
 /**
  * Idle interval at which a changed active file's content is flushed to the
@@ -196,10 +197,8 @@ function displaySaveStatus(status: SaveStatus): SaveStatus {
  * Those calls hit the backend immediately, unlike content edits (see
  * `AUTOSAVE_DEBOUNCE_MS`).
  *
- * `local` vs. `cloud` is an explicit, independent choice from sign-in
- * state: signing in via `accountAuth.ts` never itself switches `preference`
- * — it only makes `'cloud'` selectable (see `StorageSettingsModal.tsx`).
- * The `cloud` backend below is only ever constructed once both `preference`
+ * Signing in switches `preference` to `'cloud'` (see
+ * `useSwitchToCloudOnSignIn.ts`). The `cloud` backend below is only ever constructed once both `preference`
  * asks for it *and* an `accountAuth` token is present; losing either one
  * (switching back to local, or the token being cleared by a disconnect
  * anywhere in the app) falls back to `localBackend` on the very next
@@ -211,6 +210,7 @@ export function useStorageBackend(): UseStorageBackendResult {
     DEFAULT_PREFERENCE,
   )
   const [accountAuth, setAccountAuth] = useAccountAuth()
+  useSwitchToCloudOnSignIn(accountAuth, setPreference)
 
   const [localStore, setLocalStore] = useLocalStorage<FileStoreState>(
     FILE_STORE_KEY,
@@ -225,7 +225,7 @@ export function useStorageBackend(): UseStorageBackendResult {
     if (preference.backend === 'cloud' && accountAuth) {
       return createCloudBackend({
         token: accountAuth.token,
-        account: accountAuth.login,
+        account: accountAuth.email,
         workerHost: import.meta.env.VITE_SYNCED_SHARE_HOST ?? '',
       })
     }

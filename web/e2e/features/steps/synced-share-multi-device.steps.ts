@@ -1,5 +1,6 @@
 import { type BrowserContext, expect, type Page } from '@playwright/test'
 import { seedCloudFile } from '../../cloudFileHelpers'
+import { seedSignedInSession } from './cloud-account-helpers'
 import { AfterScenario, Given, Then, When } from './fixtures'
 import {
   openSyncedTab,
@@ -10,16 +11,11 @@ import {
   SYNCED_SOURCE,
   syncedShareButtonState,
 } from './synced-share-button-state'
-import { mockGithubAuthorizationRedirect } from './synced-share-github-signin.steps'
 
 // Covers one account signed in on several devices at once
-// (synced-share-github-signin.feature's multi-device scenario). Each device
-// is its own isolated browser context -- its own localStorage, so its own
-// sign-in and its own GitHub token, the way two real browsers would be --
-// signing in through the real popup flow against the mock GitHub server,
-// which mints a distinct, revocable token per sign-in (see
-// `mock-github-oauth-server.ts`). Pre-seeded tokens can't be used here:
-// those are deliberately outside the mock's revocation tracking.
+// (synced-share-sign-in.feature's multi-device scenario). Each device is
+// its own isolated browser context -- its own localStorage, so its own
+// session, the way two real browsers would be.
 
 interface Device {
   context: BrowserContext
@@ -27,12 +23,12 @@ interface Device {
 }
 
 const devices = new Map<string, Device>()
-let signedInLogin: string | undefined
+let signedInEmail: string | undefined
 
 AfterScenario(async () => {
   await Promise.all([...devices.values()].map(({ context }) => context.close()))
   devices.clear()
-  signedInLogin = undefined
+  signedInEmail = undefined
 })
 
 function deviceNamed(name: string): Device {
@@ -43,17 +39,17 @@ function deviceNamed(name: string): Device {
 
 Given(
   'the file store is seeded with the synced score for {string}',
-  async ({}, login: string) => {
+  async ({}, email: string) => {
     const name = `${SYNCED_FILE_BASE_NAME}-${crypto.randomUUID().slice(0, 8)}.jianpu`
-    const file = await seedCloudFile(login, name, SYNCED_SOURCE)
+    const file = await seedCloudFile(email, name, SYNCED_SOURCE)
     syncedShareButtonState.ownerFileName = name
     syncedShareButtonState.ownerFileId = file.id
   },
 )
 
 Given(
-  'the owner signs in with GitHub as {string} on device {string}',
-  async ({ browser }, login: string, name: string) => {
+  'the owner signs in as {string} on device {string}',
+  async ({ browser }, email: string, name: string) => {
     const context = await browser.newContext()
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     await context.addInitScript(() => {
@@ -62,20 +58,13 @@ Given(
         JSON.stringify({ backend: 'cloud' }),
       )
     })
-    await mockGithubAuthorizationRedirect(context, login)
+    await seedSignedInSession(context, email)
     const page = await context.newPage()
     devices.set(name, { context, page })
-    signedInLogin = login
+    signedInEmail = email
 
     await page.goto('/')
-    await openSyncedTab(page)
-    await Promise.all([
-      context.waitForEvent('page'),
-      page.getByTestId('share-modal-sign-in-with-github').click(),
-    ])
-    await expect(page.getByTestId('share-modal-identity')).toContainText(
-      `Signed in as @${login}`,
-    )
+    await expect(page.getByTestId('account-chip')).toContainText(email)
   },
 )
 
@@ -106,11 +95,11 @@ When('the owner signs out on device {string}', async ({}, name: string) => {
   await page.keyboard.press('Escape')
   await expect(page.getByTestId('share-modal')).toHaveCount(0)
   await page.getByTestId('account-chip').click()
-  // Sign-out fires its GitHub revocation without awaiting it -- wait for it
-  // here, so later steps on other devices can't race ahead of it.
+  // Sign-out tells the worker without awaiting it -- wait for it here, so
+  // later steps on other devices can't race ahead of it.
   await Promise.all([
     page.waitForResponse((response) =>
-      response.url().includes('/auth/github/revoke'),
+      response.url().endsWith('/auth/sign-out'),
     ),
     page
       .getByTestId('account-popover')
@@ -128,7 +117,7 @@ When(
   },
 )
 
-// A revoked token surfaces as either the Synced Share error dialog (its
+// A rejected session surfaces as either the Synced Share error dialog (its
 // share-status lookup is rejected) or a signed-out share modal (the cloud
 // backend dropped the rejected sign-in first) -- checking for the live
 // share and the identity row catches both.
@@ -140,7 +129,7 @@ Then(
     await openSyncedTab(page)
     await expect(page.getByTestId('share-modal-stop-sync')).toBeVisible()
     await expect(page.getByTestId('share-modal-identity')).toContainText(
-      `@${signedInLogin}`,
+      `${signedInEmail}`,
     )
     await expect(page.getByTestId('synced-share-error-dialog')).toHaveCount(0)
   },

@@ -97,10 +97,10 @@ function formatTimestamp(millis: number): string {
  * timestamp, attempt count, raw HTTP status/body -- deliberately verbose
  * (per §0) so a screenshot of this dialog is directly useful for debugging.
  *
- * The one hard exception: the GitHub OAuth token and its stored hash must
+ * The one hard exception: the session token and its stored hash must
  * never appear here. The primary guarantee is upstream (the worker's
  * `VerificationFailure` response has no such field, see
- * `verification.rs`); every string rendered below additionally passes
+ * `auth/session.rs`); every string rendered below additionally passes
  * through `redactSecrets` as a defensive backstop, in case some other
  * failure path ever carried one.
  */

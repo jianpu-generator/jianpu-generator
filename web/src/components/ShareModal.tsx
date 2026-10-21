@@ -1,8 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { GitHubLogoIcon, Link2Icon, UpdateIcon } from '@radix-ui/react-icons'
+import { Link2Icon, UpdateIcon } from '@radix-ui/react-icons'
 import { useCallback, useEffect, useState } from 'react'
 import type { StaticShareLink } from '../hooks/useStaticShareLink'
-import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
 import { StopSyncControl } from './StopSyncControl'
 import { helpTextStyle, linkFieldStyle, linkRowStyle } from './shareModalStyles'
 import {
@@ -40,27 +39,21 @@ export interface ShareModalProps {
   canSync: boolean
   isSynced: boolean
   syncedShareLink: string | null
-  /** Whether the dedicated Synced Share GitHub sign-in connection is
-   * present -- see `useSyncedShareOwner.ts`. Gates which of the Synced-link
-   * tab's states renders. */
-  isGithubConnected: boolean
-  /** Cached GitHub username for the "Synced as @username" identity row;
-   * `null` until connected. */
-  githubLogin: string | null
+  /** Whether this browser has an account session -- see
+   * `useSyncedShareOwner.ts`. Gates which of the Synced-link tab's states
+   * renders. */
+  isSignedIn: boolean
+  /** The signed-in account's email for the "Synced as" identity row;
+   * `null` while signed out. */
+  accountEmail: string | null
   onStartSync: () => Promise<string | null>
   onStopSync: () => void
-  /** Opens the popup "sign in with GitHub" flow. Never itself starts a
-   * share -- the user must click "Start Sync" again once connected. */
-  onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
+  /** Opens the account dialog on top of this one. Never itself starts a
+   * share -- the user clicks "Start Sync" again once signed in. */
+  onSignIn: () => void
 }
 
 export type Tab = 'static' | 'synced'
-
-type SignInStatus =
-  | { kind: 'idle' }
-  | { kind: 'signing-in' }
-  | { kind: 'done'; login: string }
-  | { kind: 'failed'; error: string }
 
 function countLabel(count: number | undefined, noun: string): string {
   const n = count ?? 0
@@ -97,16 +90,13 @@ export function ShareModal({
   canSync,
   isSynced,
   syncedShareLink,
-  isGithubConnected,
-  githubLogin,
+  isSignedIn,
+  accountEmail,
   onStartSync,
   onStopSync,
-  onSignInWithGithub,
+  onSignIn,
 }: ShareModalProps) {
   const [tab, setTab] = useState<Tab>(initialTab)
-  const [signInStatus, setSignInStatus] = useState<SignInStatus>({
-    kind: 'idle',
-  })
 
   const staticCopy = useCopyLabel('Copy')
   const syncedCopy = useCopyLabel('Copy')
@@ -114,23 +104,9 @@ export function ShareModal({
   useEffect(() => {
     if (!open) return
     setTab(initialTab)
-    setSignInStatus({ kind: 'idle' })
   }, [open, initialTab])
 
   const noun = kind === 'folder' ? 'folder' : 'file'
-
-  const handleSignInWithGithub = useCallback(() => {
-    setSignInStatus({ kind: 'signing-in' })
-    void onSignInWithGithub().then((result) => {
-      if (result.ok) {
-        setSignInStatus({ kind: 'done', login: result.login })
-      } else if (result.reason === 'error') {
-        setSignInStatus({ kind: 'failed', error: result.error })
-      } else {
-        setSignInStatus({ kind: 'idle' })
-      }
-    })
-  }, [onSignInWithGithub])
 
   const handleStartSync = useCallback(() => {
     void onStartSync().then((link) => {
@@ -250,34 +226,22 @@ export function ShareModal({
                   </>
                 )}
               </div>
-            ) : !isGithubConnected ? (
+            ) : !isSignedIn ? (
               <div
                 style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
                 data-testid="share-modal-signin-state"
               >
                 <p style={helpTextStyle}>
-                  Sign in with GitHub to share a link that always shows your
-                  latest cloud save.
+                  Sign in to share a link that always shows your latest cloud
+                  save.
                 </p>
-                {signInStatus.kind === 'failed' && (
-                  <p
-                    style={{ margin: 0, color: '#b00020', fontSize: '12px' }}
-                    data-testid="share-modal-signin-error"
-                  >
-                    {signInStatus.error}
-                  </p>
-                )}
                 <button
                   type="button"
                   style={primaryButtonStyle}
-                  data-testid="share-modal-sign-in-with-github"
-                  disabled={signInStatus.kind === 'signing-in'}
-                  onClick={handleSignInWithGithub}
+                  data-testid="share-modal-sign-in"
+                  onClick={onSignIn}
                 >
-                  <GitHubLogoIcon aria-hidden="true" />{' '}
-                  {signInStatus.kind === 'signing-in'
-                    ? 'Signing in…'
-                    : 'Sign in with GitHub'}
+                  Sign in
                 </button>
               </div>
             ) : !canSync ? (
@@ -285,7 +249,7 @@ export function ShareModal({
                 style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
               >
                 <p style={statusLineStyle} data-testid="share-modal-identity">
-                  Signed in as <strong>@{githubLogin}</strong>
+                  Signed in as <strong>{accountEmail}</strong>
                 </p>
                 <p
                   style={helpTextStyle}
@@ -299,7 +263,7 @@ export function ShareModal({
                 style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
               >
                 <p style={statusLineStyle} data-testid="share-modal-identity">
-                  Signed in as <strong>@{githubLogin}</strong>
+                  Signed in as <strong>{accountEmail}</strong>
                 </p>
                 <p style={helpTextStyle}>
                   {kind === 'folder'
@@ -328,7 +292,7 @@ export function ShareModal({
                 style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
               >
                 <p style={statusLineStyle} data-testid="share-modal-identity">
-                  Synced as <strong>@{githubLogin}</strong>
+                  Synced as <strong>{accountEmail}</strong>
                 </p>
                 <div style={linkRowStyle}>
                   <input

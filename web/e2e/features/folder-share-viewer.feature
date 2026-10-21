@@ -5,7 +5,7 @@ Feature: Viewing and importing a shared folder
   # whole suite run.
   Background:
     Given clipboard permissions are granted
-    And an account is signed in as "e2e-test-user"
+    And an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: A viewer of a synced folder link sees a tree rooted at the folder and can open a nested file
     Given a cloud file named "ViewOne/Advent/o-come.jianpu" titled "O Come Emmanuel" is seeded for the signed-in account
@@ -17,7 +17,7 @@ Feature: Viewing and importing a shared folder
     Then the share dialog shows a synced link
     When a viewer opens the synced link of the share dialog
     Then the viewer banner says "Synced folder: ViewOne"
-    And the viewer banner says "Shared by @e2e-test-user"
+    And the viewer banner does not say "Shared by"
     And the viewer's preview contains "O Come Emmanuel"
     When the viewer opens the file list
     Then the viewer's file list shows the file "amazing"
@@ -141,7 +141,7 @@ Feature: Viewing and importing a shared folder
     And the viewer's import button is after the export button
 
   Scenario: On a phone a single synced file's export stays on screen, ahead of the banner's Import button
-    Given the owner is signed in with GitHub as "e2e-test-user"
+    Given the owner is signed in as "e2e-test-user@jianpu.test"
     And the file store is seeded with the synced score
     When the owner loads the app and clicks "Sync"
     Then the synced link is copied

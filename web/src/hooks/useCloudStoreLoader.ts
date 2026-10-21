@@ -14,8 +14,8 @@ export function cloudLoadRetryDelayMs(attempt: number): number {
 }
 
 /** True when the worker rejected the stored identity token itself (its
- * `unauthorized` `ApiError` -- e.g. the GitHub grant was revoked by a
- * sign-out elsewhere), as opposed to a transient network/server failure.
+ * `unauthorized` `ApiError` -- e.g. the session expired, or a password
+ * change elsewhere ended it), as opposed to a transient network/server failure.
  * Retrying such a token can never succeed. */
 export function isAuthRejection(error: unknown): boolean {
   return (

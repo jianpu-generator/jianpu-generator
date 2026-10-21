@@ -2,8 +2,8 @@
 // `useSyncedShareOwner.ts` and rendered by `SyncedShareErrorDialog.tsx`.
 // Implements task 9 in TODO-synced-share-rust-d1-migration.md: errors here
 // are meant to be maximally verbose (per §0) EXCEPT for one hard exception --
-// the GitHub OAuth token and its stored hash must never appear. The worker's
-// `unauthorized` `ApiError` (a `VerificationFailure`, `crates/live-share-worker/src/verification.rs`)
+// the session token and its stored hash must never appear. The worker's
+// `unauthorized` `ApiError` (a `VerificationFailure`, `crates/live-share-worker/src/auth/session.rs`)
 // has no field for either by construction, so the common case is already
 // safe by the time it reaches here; `redactSecrets` below is a defensive
 // backstop for any other failure shape (a raw non-2xx body, a thrown network
@@ -33,18 +33,18 @@ export interface SyncedShareFailure {
 
 const REDACTED = '[redacted]'
 
-/** GitHub token prefixes (fine-grained and classic PATs, OAuth/installation
- * tokens) recognizable regardless of context. */
-const GITHUB_TOKEN_PATTERN =
-  /\b(?:gh[oprsu]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g
+/** A session token: 32 random bytes as base64url, so exactly 43 characters
+ * of that alphabet (`crypto.rs`'s `new_session_token`). */
+const SESSION_TOKEN_PATTERN =
+  /(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])/g
 
 /** A long run of hex characters is what a SHA-256 token hash (64 hex chars,
- * per `identity.rs`'s hashing of the Synced Share token) looks like -- redact
+ * per `auth/session.rs`'s `hash_token`) looks like -- redact
  * generically even without knowing the exact value in scope. */
 const HEX_HASH_PATTERN = /\b[0-9a-f]{32,}\b/gi
 
 /**
- * Defensively redacts anything that looks like a GitHub token or a
+ * Defensively redacts anything that looks like a session token or a
  * token hash from `text` before it is ever rendered in the error dialog.
  * This is a backstop, not the primary guarantee -- the primary guarantee is
  * that `VerificationFailure` (the worker's actual failure payload) has no
@@ -52,7 +52,7 @@ const HEX_HASH_PATTERN = /\b[0-9a-f]{32,}\b/gi
  */
 export function redactSecrets(text: string): string {
   return text
-    .replace(GITHUB_TOKEN_PATTERN, REDACTED)
+    .replace(SESSION_TOKEN_PATTERN, REDACTED)
     .replace(HEX_HASH_PATTERN, REDACTED)
 }
 

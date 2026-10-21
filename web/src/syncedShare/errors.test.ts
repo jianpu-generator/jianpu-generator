@@ -7,13 +7,15 @@ import {
 } from './workerClient'
 
 describe('redactSecrets', () => {
-  it('redacts recognizable GitHub token prefixes', () => {
-    expect(redactSecrets('token=gho_abcdefghijklmnopqrstuvwxyz012345')).toBe(
-      'token=[redacted]',
-    )
+  it('redacts a session-token-shaped value', () => {
     expect(
-      redactSecrets('pat github_pat_11ABCDEFG0abcdefghijklmnopqrstuvwxyz'),
-    ).toBe('pat [redacted]')
+      redactSecrets('token=Zq3_kP9-xV2mL8nR4tY7wB1cD6fH0jK5sA2eG9uI3oQ'),
+    ).toBe('token=[redacted]')
+  })
+
+  it('leaves longer base64url runs alone', () => {
+    const longer = 'Zq3_kP9-xV2mL8nR4tY7wB1cD6fH0jK5sA2eG9uI3oQx'
+    expect(redactSecrets(longer)).toBe(longer)
   })
 
   it('redacts long hex runs that look like a token hash', () => {
@@ -45,14 +47,14 @@ describe('buildSyncedShareFailure: worker failure responses', () => {
       'start',
       workerError(401, 'Unauthorized', {
         code: 'unauthorized',
-        reason: 'GitHub verification failed: 401 Unauthorized',
+        reason: 'Your session has ended. Sign in again.',
         failedAt: 1_700_000_000_000,
         attempts: 3,
       }),
     )
     expect(failure).toEqual({
       operation: 'start',
-      reason: 'GitHub verification failed: 401 Unauthorized',
+      reason: 'Your session has ended. Sign in again.',
       failedAt: 1_700_000_000_000,
       attempts: 3,
       httpStatus: 401,
@@ -67,12 +69,14 @@ describe('buildSyncedShareFailure: worker failure responses', () => {
       workerError(401, 'Unauthorized', {
         code: 'unauthorized',
         reason:
-          'unexpected token gho_abcdefghijklmnopqrstuvwxyz012345 in response',
+          'unexpected token Zq3_kP9-xV2mL8nR4tY7wB1cD6fH0jK5sA2eG9uI3oQ in response',
         failedAt: 1,
         attempts: 1,
       }),
     )
-    expect(failure.reason).not.toContain('gho_')
+    expect(failure.reason).not.toContain(
+      'Zq3_kP9-xV2mL8nR4tY7wB1cD6fH0jK5sA2eG9uI3oQ',
+    )
     expect(failure.reason).toContain('[redacted]')
   })
 
@@ -111,9 +115,11 @@ describe('buildSyncedShareFailure: network failures', () => {
     const failure = buildSyncedShareFailure(
       'stop',
       new NetworkFailure(
-        'leaked gho_abcdefghijklmnopqrstuvwxyz012345 in error',
+        'leaked Zq3_kP9-xV2mL8nR4tY7wB1cD6fH0jK5sA2eG9uI3oQ in error',
       ),
     )
-    expect(failure.reason).not.toContain('gho_')
+    expect(failure.reason).not.toContain(
+      'Zq3_kP9-xV2mL8nR4tY7wB1cD6fH0jK5sA2eG9uI3oQ',
+    )
   })
 })

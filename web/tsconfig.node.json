@@ -23,13 +23,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": [
-    "vite.config.ts",
-    "playwright.config.ts",
-    "playwright.pages.config.ts",
-    "scripts/**/*.ts",
-    "e2e/mock-github-oauth-server.ts",
-    "e2e/mockGithubIdentity.ts",
-    "e2e-pages/static-pages-server.ts"
-  ]
+  "include": ["vite.config.ts", "playwright.config.ts", "scripts/**/*.ts"]
 }

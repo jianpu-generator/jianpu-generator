@@ -19,11 +19,8 @@ use utoipa::{IntoParams, ToSchema};
 /// same link, and while ended `filename`/`content` are empty so a stopped
 /// link can't leak the live file. Never carries `owner_user_id`,
 /// `share_id`, the file id, any token/hash, or any other internal id -- see
-/// `crate::share::to_public_doc`. `owner_login` is the one deliberate
-/// exception: `user_identities.login` (a cached, public GitHub display
-/// name, not an internal id) is exposed here specifically so the
-/// viewer-facing `SyncedShareBanner` can show "Shared by @login"; it's
-/// `None` when the owner has no cached login (task 10).
+/// `crate::share::to_public_doc`. Nor does it say who the owner is: an
+/// owner's only name is their email, which a link must not leak.
 ///
 /// A FOLDER share also answers with this shape: `folder` is then set to the
 /// whole tree, and `filename` is the folder's name, `content` empty and
@@ -38,7 +35,6 @@ pub struct SyncedDoc {
     pub filename: String,
     pub content: String,
     pub revision: i64,
-    pub owner_login: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub folder: Option<SharedFolder>,
 }
@@ -286,16 +282,58 @@ pub struct ShareIdPath {
     pub share_id: String,
 }
 
-/// Body of the test-only `POST /e2e/reset` (see `crate::e2e_reset`) --
-/// empty: which accounts to reset comes from the worker's own env, never
-/// the caller.
+/// Body of `POST /auth/sign-up` and `POST /auth/sign-in`. `email` is
+/// trimmed and lowercased before use (`auth::email::normalize_email`).
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
-pub struct E2eResetRequest {}
+#[serde(rename_all = "camelCase")]
+pub struct CredentialsRequest {
+    pub email: String,
+    pub password: String,
+}
+
+/// Response of `POST /auth/sign-up` and `POST /auth/sign-in`: a new session.
+/// The web app sends `session_token` as every other route's
+/// `identity_token`, and shows `email` (normalized) as the account's name.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionResponse {
+    pub session_token: String,
+    pub email: String,
+}
+
+/// Body of `POST /auth/sign-out`: the session to end.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SignOutRequest {
+    pub identity_token: String,
+}
+
+/// Body of `POST /auth/change-password`. The caller's own session survives;
+/// every other session of the account is ended.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangePasswordRequest {
+    pub identity_token: String,
+    pub current_password: String,
+    pub new_password: String,
+}
+
+/// Body of the test-only `POST /e2e/reset` (see `crate::e2e_reset`).
+/// `emails` narrows the reset to some of the accounts the worker's own env
+/// allows (every one of them must be in that list); absent, it resets them
+/// all.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct E2eResetRequest {
+    #[serde(default)]
+    pub emails: Option<Vec<String>>,
+}
 
 /// Response of `POST /e2e/reset` -- how many rows it deleted.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct E2eResetResponse {
+    pub deleted_accounts: usize,
     pub deleted_shares: usize,
     pub deleted_files: usize,
 }

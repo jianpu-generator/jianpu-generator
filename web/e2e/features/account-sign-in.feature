@@ -1,16 +1,20 @@
-Feature: Unified account sign-in for cloud storage
+Feature: Signing in for cloud storage
 
-  Scenario: Signing in via the popup makes cloud storage selectable and switches to it
-    Given the GitHub authorization popup is mocked to redirect back successfully
+  Scenario: Signing in switches to cloud storage automatically
+    Given an account exists for "e2e-sign-in@jianpu.test"
     When the app loads for the account sign-in flow
     And I open the storage settings modal for sign-in
-    And I click "Sign in with GitHub" in the storage settings modal
-    Then the storage settings modal shows connected as "e2e-test-user"
-    When I select the "Cloud storage" storage option
-    Then the stored storage-backend preference is set to cloud
+    And I select the "Cloud storage" storage option
+    And I click "Sign in" in the storage settings modal
+    And I enter the email "e2e-sign-in@jianpu.test" in the account dialog
+    And I enter the e2e password in the account dialog
+    And I click "Sign in" in the account dialog
+    Then the storage settings modal shows connected as "e2e-sign-in@jianpu.test"
+    And the "Cloud storage" storage option is checked
+    And the stored storage-backend preference is set to cloud
 
   Scenario: Signing out reverts to the local backend and stops saving to the cloud
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
     And a cloud file named "song.jianpu" is seeded for the signed-in account
     When the app loads the cloud-backed file list for disconnect
     And I select the "song" tab before disconnecting

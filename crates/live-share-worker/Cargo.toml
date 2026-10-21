@@ -15,27 +15,25 @@ crate-type = ["cdylib", "rlib"]
 worker = { version = "0.8", features = ["d1"] }
 serde = { version = "1", features = ["derive"] }
 # Pure-Rust (no C build, unlike sqlx's "sqlite" feature above), so safe as a
-# normal dependency on `wasm32-unknown-unknown`. Used only to build the
-# GitHub token-exchange request body in `src/oauth.rs`.
+# normal dependency on `wasm32-unknown-unknown`.
 serde_json = "1"
-# Pure-Rust SHA-256 (no C build), used to hash the Synced Share sign-in
-# token before it is ever written to `oauth_sessions.token_hash` -- the raw
-# token itself must never be persisted (TODO §0).
+# Pure-Rust SHA-256 (no C build), used to hash a session token before it is
+# ever written to `sessions.token_hash` -- the raw token itself must never
+# be persisted (see `src/auth/session.rs`).
 sha2 = "0.10"
-# Executor-agnostic exponential backoff for the GitHub verification retry
-# policy (TODO §0): its `future` module awaits a supplied future rather than
-# owning its own tokio-based timer, which is required here since Workers run
-# on `wasm-bindgen-futures`, not tokio. The "wasm-bindgen" feature switches
-# its internal sleep to `gloo-timers`' wasm-bindgen-based timer instead of
-# `tokio::time::sleep`.
-backoff = { version = "0.4", default-features = false, features = [
-    "wasm-bindgen",
-] }
-# Pure-Rust (no C build), safe on `wasm32-unknown-unknown`. Used only to
-# build the `Authorization: Basic` header for `src/oauth.rs`'s GitHub
-# token-revocation call, which -- unlike the token exchange -- needs HTTP
-# Basic auth (`client_id:client_secret`) rather than a JSON body field.
+# Pure-Rust (no C build), safe on `wasm32-unknown-unknown`. Encodes session
+# tokens (base64url) and the salt and hash of a stored password hash
+# (`src/auth/password.rs`).
 base64 = "0.22"
+# WebCrypto, for PBKDF2 password hashing and random session tokens and salts
+# (`src/crypto.rs`). `worker` already depends on `web-sys`; this only turns
+# on the WebCrypto bindings it leaves off.
+web-sys = { version = "0.3", features = [
+    "Crypto",
+    "CryptoKey",
+    "Pbkdf2Params",
+    "SubtleCrypto",
+] }
 # Describes every route (method, path, params, request/response bodies,
 # `ApiError`) as OpenAPI, from the same `#[utoipa::path]` annotations the
 # worker `Router` is registered from (see `src/handlers/routes.rs`) --

@@ -10,7 +10,7 @@ import {
   openBin,
   openFileList,
 } from '../../fileSwitcherHelpers'
-import { currentSignedInLogin } from './cloud-account.steps'
+import { currentSignedInEmail } from './cloud-account.steps'
 import { gotoCloudApp } from './cloud-account-helpers'
 import { Given, Then, When } from './fixtures'
 
@@ -44,8 +44,8 @@ const COLLISION_RESTORED_CONTENT = [
 Given(
   'the signed-in account has "original.jianpu" active and "original.jianpu" binned via a separate delete, for a restore collision',
   async ({ page }) => {
-    const login = currentSignedInLogin()
-    await seedCloudFile(login, 'original.jianpu', COLLISION_ACTIVE_CONTENT)
+    const email = currentSignedInEmail()
+    await seedCloudFile(email, 'original.jianpu', COLLISION_ACTIVE_CONTENT)
     // The real schema enforces one globally-unique name per owner across
     // *both* active and trashed files (`idx_files_owner_name` in migration
     // 0003) -- unlike the deleted GitHub backend, where `scores/original.jianpu`
@@ -59,11 +59,11 @@ Given(
     // restore the client then issues targets this row's real id with the
     // client-computed "original 2.jianpu" name, which lands for real.
     const trashSource = await seedCloudFile(
-      login,
+      email,
       'original-collision-source.jianpu',
       COLLISION_RESTORED_CONTENT,
     )
-    await trashCloudFile(login, trashSource.id)
+    await trashCloudFile(email, trashSource.id)
 
     await page.route(workerRouteGlob('/files/list'), async (route) => {
       const response = await route.fetch()

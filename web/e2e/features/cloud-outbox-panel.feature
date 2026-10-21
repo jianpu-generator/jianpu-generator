@@ -1,7 +1,7 @@
 Feature: Cloud outbox panel: queued work is visible and every halt has a way out
 
   Background:
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: C1 The panel lists a waiting file with a Retry now button
     Given a cloud file named "outbox-c1.jianpu" is seeded for the signed-in account

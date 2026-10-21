@@ -48,7 +48,7 @@ The rendering pipeline layers, entry points, key types, and domain glossary are 
 
 ## Debugging production
 
-When asked why something happened in production (e.g. a user got signed out of GitHub), **query the `app_log` D1 table before guessing**. It holds 30 days of what the Synced Share worker did (see "App log (observability)" in `ARCHITECTURE.md`). Saved queries live in `crates/live-share-worker/queries/observability/` (`recent.sql`, `auth_rejections.sql`, `auth_by_version.sql`, `tokens_issued_per_user.sql`). Run one against the production database from `crates/live-share-worker`:
+When asked why something happened in production (e.g. a user got signed out, or can't sign in), **query the `app_log` D1 table before guessing**. It holds 30 days of what the Synced Share worker did (see "App log (observability)" in `ARCHITECTURE.md`). Saved queries live in `crates/live-share-worker/queries/observability/` (`recent.sql`, `auth_rejections.sql`, `auth_by_version.sql`, `sign_ins_per_email.sql`). Run one against the production database from `crates/live-share-worker`:
 
 ```sh
 pnpm exec wrangler d1 execute jianpu-live-share --remote --command="$(cat queries/observability/auth_rejections.sql)"

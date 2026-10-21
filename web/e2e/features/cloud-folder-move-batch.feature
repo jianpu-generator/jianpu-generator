@@ -1,7 +1,7 @@
 Feature: A folder move is delivered to the cloud as one all-or-nothing batch
 
   Background:
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: Moving a folder offline moves all its files together on reconnect
     Given a cloud file named "CloudBatchA/one.jianpu" is seeded for the signed-in account

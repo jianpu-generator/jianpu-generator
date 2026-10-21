@@ -7,8 +7,8 @@ import { Given, Then, When } from './fixtures'
 // Covers the header's persistent account chip (account-chip.feature) --
 // see HANDOFF-account-chip.md. The chip's own signed-out/signed-in/syncing
 // states and its profile popover; sign-out through the popover is also
-// exercised by the rewritten scenarios in account-sign-in.feature and
-// synced-share-github-signin.feature, whose "click the account chip" /
+// exercised by account-auth.feature, account-sign-in.feature and
+// synced-share-sign-in.feature, whose "click the account chip" /
 // "click \"Sign out\" in the profile popover" steps live here too, shared
 // across all three feature files via playwright-bdd's global step registry
 // (same pattern as `openSyncedTab` being shared from
@@ -35,10 +35,8 @@ When('I click {string} in the header', async ({ page }, label: string) => {
 Then(
   'the header shows the account chip labeled {string}',
   async ({ page }, label: string) => {
-    // The popup OAuth round trip (mocked via "the GitHub authorization
-    // popup is mocked to redirect back successfully") needs a moment to
-    // complete before the chip re-renders -- longer than Playwright's
-    // default 5s assertion timeout.
+    // Signing in waits on the worker's password check before the chip
+    // re-renders -- allow longer than Playwright's default 5s.
     await expect(page.getByTestId('account-chip')).toBeVisible({
       timeout: 10_000,
     })
@@ -94,16 +92,6 @@ Then('the profile popover shows {string}', async ({ page }, text: string) => {
 })
 
 Then(
-  'the profile popover has a {string} link to {string}',
-  async ({ page }, linkText: string, href: string) => {
-    const link = page
-      .getByTestId('account-popover')
-      .getByRole('link', { name: linkText })
-    await expect(link).toHaveAttribute('href', href)
-  },
-)
-
-Then(
   'the header account chip shows the syncing indicator',
   async ({ page }) => {
     await expect(
@@ -137,6 +125,13 @@ Then(
   'the storage settings modal shows the sign-in prompt',
   async ({ page }) => {
     await expect(page.getByTestId('account-sign-in')).toBeVisible()
+  },
+)
+
+Then(
+  'the storage settings modal hides the sign-in prompt',
+  async ({ page }) => {
+    await expect(page.getByTestId('account-sign-in')).toHaveCount(0)
   },
 )
 

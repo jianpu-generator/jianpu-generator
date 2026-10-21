@@ -1,7 +1,7 @@
 Feature: Cmd/Ctrl+S force-save via the cloud storage backend
 
   Scenario: Cmd/Ctrl+S force-flushes a pending debounced cloud save immediately
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
     And a cloud file named "save.jianpu" is seeded for the signed-in account
     And a fake clock is installed to prevent an autosave race with force save
     When the app loads the cloud-backed file list for a force save

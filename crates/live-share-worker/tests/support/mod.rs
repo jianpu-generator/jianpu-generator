@@ -47,8 +47,8 @@ pub(crate) const LIST_ACTIVE_FILES_UNDER_PREFIXES: &str =
 pub(crate) const REWRITE_FOLDER_SHARE_PREFIX: &str =
     include_str!("../../queries/rewrite_folder_share_prefix.sql");
 pub(crate) const RENAME_FILES_BATCH: &str = include_str!("../../queries/rename_files_batch.sql");
-pub(crate) const DELETE_SHARES_OF_PROVIDER_USERS: &str =
-    include_str!("../../queries/delete_shares_of_provider_users.sql");
+pub(crate) const DELETE_SHARES_OF_USERS: &str =
+    include_str!("../../queries/delete_shares_of_users.sql");
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct MigratedShare {
@@ -80,22 +80,11 @@ pub(crate) async fn migrate_up_to_file_shares(
 pub(crate) async fn add_user(
     connection: &mut SqliteConnection,
     user_id: &str,
-    provider_user_id: &str,
-    login: &str,
 ) -> Result<(), sqlx::Error> {
     sqlx::query("INSERT INTO users (id, created_at) VALUES (?1, 0)")
         .bind(user_id)
-        .execute(&mut *connection)
+        .execute(connection)
         .await?;
-    sqlx::query(
-        "INSERT INTO user_identities (provider, provider_user_id, user_id, login, linked_at) \
-         VALUES ('github', ?1, ?2, ?3, 0)",
-    )
-    .bind(provider_user_id)
-    .bind(user_id)
-    .bind(login)
-    .execute(connection)
-    .await?;
     Ok(())
 }
 
@@ -163,7 +152,7 @@ pub(crate) async fn migrated() -> Result<SqliteConnection, sqlx::Error> {
     migrate_up_to_file_shares(&mut connection).await?;
     connection.execute(SHARES_POINT_AT_FILES).await?;
     connection.execute(FOLDER_SHARES).await?;
-    add_user(&mut connection, "u1", "100", "octocat").await?;
-    add_user(&mut connection, "u2", "200", "hubot").await?;
+    add_user(&mut connection, "u1").await?;
+    add_user(&mut connection, "u2").await?;
     Ok(connection)
 }

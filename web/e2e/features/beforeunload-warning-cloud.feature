@@ -1,7 +1,7 @@
 Feature: Beforeunload warning for pending cloud saves
 
   Background:
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: Closing the tab warns while a cloud save is still pending
     Given a cloud file named "pending.jianpu" is seeded for the signed-in account

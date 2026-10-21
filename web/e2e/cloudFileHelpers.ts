@@ -4,7 +4,7 @@ import type {
   components,
   paths,
 } from '../src/generated/live-share-worker/schema'
-import { syncedShareIdentityTokenFor } from './mockGithubIdentity.ts'
+import { signInE2eAccount } from './e2eAccounts.ts'
 
 export type WorkerSchemas = components['schemas']
 type PublicFile = WorkerSchemas['PublicFile']
@@ -77,6 +77,29 @@ async function expectOk<Data>(
   return data as Data
 }
 
+// One session per account for the seeding calls below, signed in on first
+// use. Cleared before every scenario (`clearSeedTokens`, from
+// `cloud-account.steps.ts`), since a scenario may reset its account.
+const seedTokens = new Map<string, Promise<string>>()
+
+async function cachedSeedToken(email: string): Promise<string> {
+  let token = seedTokens.get(email)
+  if (!token) {
+    token = signInE2eAccount(email)
+    seedTokens.set(email, token)
+  }
+  return await token
+}
+
+/** The session token the seeding calls use for `email`. */
+export async function seedTokenFor(email: string): Promise<string> {
+  return await cachedSeedToken(email)
+}
+
+export function clearSeedTokens(): void {
+  seedTokens.clear()
+}
+
 /** Deterministic default seed content -- distinct enough to tell apart from
  * a scenario's own edits in a failing assertion's diff, but never itself
  * asserted on by name. */
@@ -105,17 +128,17 @@ export const DEFAULT_CLOUD_FILE_CONTENT = [
  * would fail with `name_taken` on any rerun once the first attempt's row is
  * already sitting there under this exact name -- see `reseedExistingFile`. */
 export async function seedCloudFile(
-  login: string,
+  email: string,
   name: string,
   content: string = DEFAULT_CLOUD_FILE_CONTENT,
 ): Promise<PublicFile> {
-  const identityToken = syncedShareIdentityTokenFor(login)
+  const identityToken = await seedTokenFor(email)
   const { data, error, response } = await worker.POST('/files', {
     body: { identityToken, id: crypto.randomUUID(), name, content },
   })
   if (data) return data
   if (error?.code === 'name_taken') {
-    return await reseedExistingFile(login, name, content)
+    return await reseedExistingFile(email, name, content)
   }
   throw new Error(
     `cloudFileHelpers: POST /files failed with ${response.status}: ${JSON.stringify(error)}`,
@@ -127,11 +150,11 @@ export async function seedCloudFile(
  * it) and overwrites its content, so a colliding `seedCloudFile` call ends
  * up in exactly the state a fresh create would have produced. */
 async function reseedExistingFile(
-  login: string,
+  email: string,
   name: string,
   content: string,
 ): Promise<PublicFile> {
-  const identityToken = syncedShareIdentityTokenFor(login)
+  const identityToken = await seedTokenFor(email)
   const listed = await expectOk(
     'POST /files/list',
     worker.POST('/files/list', { body: { identityToken } }),
@@ -173,12 +196,12 @@ export type CloudWriteOutcome = 'ok' | ApiError['code']
 /** Tries to create a cloud file and reports the worker's verdict instead of
  * failing the step -- for scenarios about refused writes. */
 export async function tryCreateCloudFile(
-  login: string,
+  email: string,
   name: string,
 ): Promise<CloudWriteOutcome> {
   const { error } = await worker.POST('/files', {
     body: {
-      identityToken: syncedShareIdentityTokenFor(login),
+      identityToken: await seedTokenFor(email),
       id: crypto.randomUUID(),
       name,
       content: DEFAULT_CLOUD_FILE_CONTENT,
@@ -189,31 +212,31 @@ export async function tryCreateCloudFile(
 
 /** Tries to rename a cloud file and reports the worker's verdict. */
 export async function tryRenameCloudFile(
-  login: string,
+  email: string,
   id: string,
   name: string,
 ): Promise<CloudWriteOutcome> {
   const { error } = await worker.POST('/files/{id}/rename', {
     params: { path: { id } },
-    body: { identityToken: syncedShareIdentityTokenFor(login), name },
+    body: { identityToken: await seedTokenFor(email), name },
   })
   return error ? error.code : 'ok'
 }
 
 /** Moves a previously seeded file to the bin, by its real D1 id. */
-export async function trashCloudFile(login: string, id: string): Promise<void> {
+export async function trashCloudFile(email: string, id: string): Promise<void> {
   await expectOk(
     'POST /files/{id}/delete',
     worker.POST('/files/{id}/delete', {
       params: { path: { id } },
-      body: { identityToken: syncedShareIdentityTokenFor(login) },
+      body: { identityToken: await seedTokenFor(email) },
     }),
   )
 }
 
 /** Renames (or moves) a previously seeded file to `name`, by its real D1 id. */
 export async function renameCloudFile(
-  login: string,
+  email: string,
   id: string,
   name: string,
 ): Promise<void> {
@@ -221,7 +244,7 @@ export async function renameCloudFile(
     'POST /files/{id}/rename',
     worker.POST('/files/{id}/rename', {
       params: { path: { id } },
-      body: { identityToken: syncedShareIdentityTokenFor(login), name },
+      body: { identityToken: await seedTokenFor(email), name },
     }),
   )
 }
@@ -229,7 +252,7 @@ export async function renameCloudFile(
 /** Restores a previously trashed file out of the bin under `name`, by its
  * real D1 id. */
 export async function restoreCloudFile(
-  login: string,
+  email: string,
   id: string,
   name: string,
 ): Promise<void> {
@@ -237,7 +260,7 @@ export async function restoreCloudFile(
     'POST /files/{id}/restore',
     worker.POST('/files/{id}/restore', {
       params: { path: { id } },
-      body: { identityToken: syncedShareIdentityTokenFor(login), name },
+      body: { identityToken: await seedTokenFor(email), name },
     }),
   )
 }

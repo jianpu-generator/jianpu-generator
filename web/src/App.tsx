@@ -164,7 +164,7 @@ export default function App() {
   } = useAppController()
   const previewInteractive = wasm.status === 'ready'
   const handleAccountSignOut = useCallback(() => {
-    syncedShare.onDisconnectGithub()
+    syncedShare.onSignOut()
     if (preference.backend === 'cloud') void switchBackend({ kind: 'local' })
   }, [syncedShare, preference, switchBackend])
 
@@ -287,6 +287,9 @@ export default function App() {
         pendingDownload={pendingDownload}
         onConfirmDownload={confirmPendingDownload}
         onCancelDownload={cancelPendingDownload}
+        accountDialog={syncedShare.accountDialog}
+        onCloseAccountDialog={syncedShare.onCloseAccountDialog}
+        onSignIn={syncedShare.onSignIn}
       />
       <ExportAudioToast
         open={

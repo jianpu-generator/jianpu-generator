@@ -5,6 +5,7 @@ import {
   CLOUD_WORKER_ORIGIN,
   DEFAULT_CLOUD_FILE_CONTENT,
   seedCloudFile,
+  seedTokenFor,
 } from '../../cloudFileHelpers'
 import {
   fileSwitcherTrigger,
@@ -12,8 +13,7 @@ import {
   focusEditor,
   openFileList,
 } from '../../fileSwitcherHelpers'
-import { syncedShareIdentityTokenFor } from '../../mockGithubIdentity.ts'
-import { currentSignedInLogin } from './cloud-account.steps'
+import { currentSignedInEmail } from './cloud-account.steps'
 import { gotoCloudApp } from './cloud-account-helpers'
 import { installContentSaveTracking } from './cloud-content-save-tracking'
 import { Given, Then, When } from './fixtures'
@@ -40,7 +40,7 @@ async function changeServerCopy(
   fileName: string,
   content: string,
 ): Promise<void> {
-  const identityToken = syncedShareIdentityTokenFor(currentSignedInLogin())
+  const identityToken = await seedTokenFor(currentSignedInEmail())
   const { data: listed } = await worker.POST('/files/list', {
     body: { identityToken },
   })
@@ -57,7 +57,7 @@ async function changeServerCopy(
 
 /** The server's current content of `fileName` ('' when absent). */
 async function serverContentOf(fileName: string): Promise<string> {
-  const identityToken = syncedShareIdentityTokenFor(currentSignedInLogin())
+  const identityToken = await seedTokenFor(currentSignedInEmail())
   const { data } = await worker.POST('/files/list', { body: { identityToken } })
   return (
     data?.files.find(
@@ -84,7 +84,7 @@ async function openFile(page: Page, name: string): Promise<void> {
 Given(
   'a cloud file named {string} is seeded for the signed-in account with two separate lines',
   async ({}, name: string) => {
-    await seedCloudFile(currentSignedInLogin(), name, TWO_LINE_BASE)
+    await seedCloudFile(currentSignedInEmail(), name, TWO_LINE_BASE)
   },
 )
 

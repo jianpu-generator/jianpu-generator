@@ -13,8 +13,8 @@
 //! Function bundles.
 //!
 //! And `e2eWorkerConfig.json` (`live_share_worker::e2e_worker_config`): the
-//! var names `web/playwright.config.ts` overrides to point the worker at
-//! the mock GitHub server and enable the test-only `POST /e2e/reset` route.
+//! var name `web/playwright.config.ts` sets to enable the test-only
+//! `POST /e2e/reset` route.
 //!
 //! And `deployConfig.json`, copied from the crate's `deploy.json`: the
 //! GitHub OAuth client id and public worker host that the web build and the
@@ -34,7 +34,6 @@ use live_share_worker::share_id::share_id_format;
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DeployConfig {
-    github_client_id: String,
     worker_host: String,
     d1_database_id: String,
 }

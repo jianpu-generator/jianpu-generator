@@ -19,22 +19,20 @@ When('I open the storage settings modal for sign-in', async ({ page }) => {
   await page.getByTestId('storage-settings-modal').waitFor()
 })
 
-When(
-  'I click "Sign in with GitHub" in the storage settings modal',
-  async ({ page }) => {
-    await page.getByRole('button', { name: 'Sign in with GitHub' }).click()
-  },
-)
+When('I click "Sign in" in the storage settings modal', async ({ page }) => {
+  await page
+    .getByTestId('storage-settings-modal')
+    .getByRole('button', { name: 'Sign in', exact: true })
+    .click()
+})
 
 Then(
   'the storage settings modal shows connected as {string}',
-  async ({ page }, login: string) => {
+  async ({ page }, email: string) => {
     await expect(page.getByTestId('account-connected')).toBeVisible({
       timeout: 10_000,
     })
-    await expect(page.getByTestId('account-connected')).toContainText(
-      `@${login}`,
-    )
+    await expect(page.getByTestId('account-connected')).toContainText(email)
   },
 )
 
@@ -92,7 +90,7 @@ When('I click the {string} button', async ({ page }, label: string) => {
 
 Then('the stored account auth is cleared', async ({ page }) => {
   const storedAuth = await page.evaluate(() =>
-    localStorage.getItem('jianpu:synced-share-github-auth:v1'),
+    localStorage.getItem('jianpu:account-auth:v2'),
   )
   // `accountAuth.ts`'s state is a `usehooks-ts` `useLocalStorage` hook --
   // `setAccountAuth(null)` writes the JSON-stringified value `"null"`
@@ -123,7 +121,7 @@ Then(
 // own "signing out while cloud storage is active" scenario (that one signs
 // out via the header chip directly, with no storage-settings modal to close
 // first) -- mirrors this file's own `openSyncedTab` cross-import pattern in
-// `synced-share-github-signin.steps.ts`.
+// `synced-share-sign-in.steps.ts`.
 export async function attemptEditAndForceSave(page: Page) {
   await focusEditor(page)
   await page.keyboard.press('Control+End')

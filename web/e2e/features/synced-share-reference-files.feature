@@ -11,7 +11,7 @@ Feature: Synced shares point at the owner's cloud file
 
   Background:
     Given clipboard permissions are granted
-    And the owner is signed in with GitHub as "e2e-test-user"
+    And the owner is signed in as "e2e-test-user@jianpu.test"
     And the file store is seeded with the synced score
 
   Scenario: Switching to another file and editing it never changes what the first file's viewers see

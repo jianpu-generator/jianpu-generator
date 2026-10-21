@@ -6,7 +6,6 @@ import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SyncedShareViewerStatus } from '../hooks/useSyncedShareViewer'
 import type { SelectionMove, SelectionUnit } from '../jianpuWasm'
 import type { SharePayload } from '../shareUrl'
-import type { SyncedShareGithubAuthResult } from '../storage/accountAuthPopup'
 import type { SyncedShareFailure } from '../syncedShare/errors'
 import {
   playFromCurrentMeasureShortcutLabel,
@@ -41,28 +40,26 @@ interface SyncedShareHeaderProps {
   sharedFolder: SharedFolderViewer | null
   viewerStatus: SyncedShareViewerStatus
   viewerFilename: string | null
-  /** The owning user's cached GitHub login (`user_identities.login`),
-   * for the "Shared by @username" attribution -- task 10. `null` when the
-   * worker has none cached for this share's owner. */
-  viewerOwnerLogin: string | null
   onImportSyncedShare: () => void
   /** Whether the active file can have a live link (cloud files only) --
    * see `useSyncedShareOwner.ts`. */
   canSync: boolean
   isSynced: boolean
   syncedShareLink: string | null
-  /** Whether the dedicated Synced Share GitHub sign-in connection is
-   * present -- see `useSyncedShareOwner.ts`. */
-  isGithubConnected: boolean
-  /** Cached GitHub username for the "Synced as @username" identity chip;
-   * `null` until connected. */
-  githubLogin: string | null
+  /** Whether this browser has an account session -- see
+   * `useSyncedShareOwner.ts`. */
+  isSignedIn: boolean
+  /** The signed-in account's email, for the header chip and the "Synced
+   * as" identity row; `null` while signed out. */
+  accountEmail: string | null
   onStartSync: () => Promise<string | null>
   onStopSync: () => void
-  onSignInWithGithub: () => Promise<SyncedShareGithubAuthResult>
-  /** Logs out of the Synced Share GitHub connection, stopping any active
-   * sync first -- offered from the "Synced as @username" chip's dropdown. */
-  onDisconnectGithub: () => void
+  /** Opens the account dialog (`AccountAuthModal`) on its sign-in form. */
+  onSignIn: () => void
+  /** Opens the change password dialog. */
+  onChangePassword: () => void
+  /** Ends this browser's session, stopping any active sync first. */
+  onSignOut: () => void
   /** Drives the full-screen error dialog (task 9) -- non-null while a
    * Synced Share request has failed. */
   syncFailure: SyncedShareFailure | null
@@ -241,7 +238,6 @@ export function AppHeader({
             status={syncedShare.viewerStatus}
             filename={syncedShare.viewerFilename}
             folderName={sharedFolder?.folderName ?? null}
-            ownerLogin={syncedShare.viewerOwnerLogin}
             onImport={
               sharedFolder
                 ? sharedFolder.onImport
@@ -339,11 +335,11 @@ export function AppHeader({
             canSync={syncedShare.canSync}
             isSynced={syncedShare.isSynced}
             syncedShareLink={syncedShare.syncedShareLink}
-            isGithubConnected={syncedShare.isGithubConnected}
-            githubLogin={syncedShare.githubLogin}
+            isSignedIn={syncedShare.isSignedIn}
+            accountEmail={syncedShare.accountEmail}
             onStartSync={syncedShare.onStartSync}
             onStopSync={syncedShare.onStopSync}
-            onSignInWithGithub={syncedShare.onSignInWithGithub}
+            onSignIn={syncedShare.onSignIn}
             folderShares={syncedShare.folderShares}
           />
         )}
@@ -382,10 +378,11 @@ export function AppHeader({
           isLoadingCloud={isLoadingCloud}
         />
         <ProfileControl
-          isGithubConnected={syncedShare.isGithubConnected}
-          githubLogin={syncedShare.githubLogin}
+          isSignedIn={syncedShare.isSignedIn}
+          accountEmail={syncedShare.accountEmail}
           isSynced={syncedShare.isSynced}
-          onSignInWithGithub={syncedShare.onSignInWithGithub}
+          onSignIn={syncedShare.onSignIn}
+          onChangePassword={syncedShare.onChangePassword}
           onSignOut={onSignOut}
         />
       </div>

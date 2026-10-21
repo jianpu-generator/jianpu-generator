@@ -5,12 +5,12 @@ import {
   seedCloudFile,
   trashCloudFile,
 } from '../../cloudFileHelpers'
+import { DEFAULT_E2E_EMAIL } from '../../e2eAccounts.ts'
 import {
   fileSwitcherTrigger,
   fileTabByExactName,
   openFileList,
 } from '../../fileSwitcherHelpers'
-import { DEFAULT_MOCK_GITHUB_LOGIN } from '../../mockGithubIdentity.ts'
 import { BeforeScenario, Given, Then, When } from './fixtures'
 import { syncedShareButtonState as sharedState } from './synced-share-button-state'
 
@@ -46,7 +46,7 @@ Given(
   async ({}, title: string) => {
     otherFileName = `synced-other-${crypto.randomUUID().slice(0, 8)}`
     await seedCloudFile(
-      DEFAULT_MOCK_GITHUB_LOGIN,
+      DEFAULT_E2E_EMAIL,
       `${otherFileName}.jianpu`,
       scoreTitled(title),
     )
@@ -90,7 +90,7 @@ When(
 
 When('the shared cloud file is moved to the bin', async () => {
   if (!sharedState.ownerFileId) throw new Error('no synced file was seeded')
-  await trashCloudFile(DEFAULT_MOCK_GITHUB_LOGIN, sharedState.ownerFileId)
+  await trashCloudFile(DEFAULT_E2E_EMAIL, sharedState.ownerFileId)
 })
 
 When('the shared cloud file is restored from the bin', async () => {
@@ -98,7 +98,7 @@ When('the shared cloud file is restored from the bin', async () => {
     throw new Error('no synced file was seeded')
   }
   await restoreCloudFile(
-    DEFAULT_MOCK_GITHUB_LOGIN,
+    DEFAULT_E2E_EMAIL,
     sharedState.ownerFileId,
     sharedState.ownerFileName,
   )

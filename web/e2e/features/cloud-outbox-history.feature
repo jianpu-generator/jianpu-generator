@@ -1,7 +1,7 @@
 Feature: Cloud outbox history: every message, sent or not, can be inspected and searched
 
   Background:
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: H1 A delivered edit stays in the history
     Given a cloud file named "outbox-h1.jianpu" is seeded for the signed-in account

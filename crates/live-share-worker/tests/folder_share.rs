@@ -16,7 +16,6 @@ fn header(ended_at: Option<i64>) -> FolderShareHeader {
         ended_at,
         owner_user_id: "owner".to_string(),
         folder_prefix: "Hymns/Advent".to_string(),
-        owner_login: Some("octocat".to_string()),
     }
 }
 
@@ -107,7 +106,6 @@ fn the_viewer_tree_uses_paths_relative_to_the_shared_folder() {
             filename: "Advent".to_string(),
             content: String::new(),
             revision: 0,
-            owner_login: Some("octocat".to_string()),
             folder: Some(SharedFolder {
                 name: "Advent".to_string(),
                 files: vec![
@@ -152,16 +150,10 @@ fn a_folder_without_files_is_a_live_empty_tree() {
 }
 
 #[test]
-fn a_stopped_folder_share_hides_everything_but_the_owner() {
+fn a_stopped_folder_share_hides_everything() {
     let doc = to_public_folder_doc(&header(Some(5)), &[row("Hymns/Advent/a.jianpu", "x", 1)]);
 
-    assert_eq!(
-        doc,
-        SyncedDoc {
-            owner_login: Some("octocat".to_string()),
-            ..empty_doc()
-        }
-    );
+    assert_eq!(doc, empty_doc());
 }
 
 #[test]

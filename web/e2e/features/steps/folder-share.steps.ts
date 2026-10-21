@@ -40,13 +40,11 @@ Given('the cloud app is open', async ({ page }) => {
 Given(
   'the cloud folder {string} holds {int} large unrelated files for the signed-in account',
   async ({}, folder: string, count: number) => {
-    // seedCloudFile needs the login; the shared account is the default one.
-    const { DEFAULT_MOCK_GITHUB_LOGIN } = await import(
-      '../../mockGithubIdentity.ts'
-    )
+    // seedCloudFile needs the email; the shared account is the default one.
+    const { DEFAULT_E2E_EMAIL } = await import('../../e2eAccounts.ts')
     for (let index = 0; index < count; index++) {
       await seedCloudFile(
-        DEFAULT_MOCK_GITHUB_LOGIN,
+        DEFAULT_E2E_EMAIL,
         `${folder}/big-${index}.jianpu`,
         `# score\n// ${incompressibleText(index + 1, 6000)}\n1 2 3 4`,
       )

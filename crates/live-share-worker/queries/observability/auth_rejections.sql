@@ -1,29 +1,38 @@
--- Why was a user signed out? For each token GitHub rejected (newest first):
--- when/where it was issued, and how many tokens were issued to the same
--- GitHub user after it. `issued_after >= 10` => GitHub's cap of 10 live
--- tokens per user + OAuth App + scope revoked it. No `token_rejected` row
--- around the sign-out time => the worker never answered 401, so the token
--- was dropped client-side. `github_says` is GitHub's verbatim reason.
--- `origin`/`user_agent` are the rejected request's own, falling back to the
--- sign-in's (rows from before 2026-10-20 only have them on `token_issued`).
+-- Why was a user signed out, or refused at sign-in? The last 50 refused
+-- auth events, newest first. `sign_in_failed` gives the email and `reason`
+-- (`wrong_password`, `unknown_email`, `locked`); `locked_out` says until
+-- when. `session_rejected` means a session token was refused (signed out,
+-- expired, or ended by a password change): `started_by` is the sign-in or
+-- sign-up that issued it, and `password_changed_at` the account's latest
+-- password change after it, if any. No row around the time a user was
+-- signed out => the worker never answered 401, so the browser dropped the
+-- token itself.
 SELECT
+    r.kind,
     r.subject,
-    r.worker_version,
-    COALESCE(r.origin, i.origin) AS origin,
-    COALESCE(r.user_agent, i.user_agent) AS user_agent,
-    DATETIME(r.at / 1000, 'unixepoch') AS rejected_at,
-    DATETIME(i.at / 1000, 'unixepoch') AS issued_at,
+    JSON_EXTRACT(r.detail, '$.reason') AS reason,
+    JSON_EXTRACT(r.detail, '$.failed_count') AS failed_count,
+    DATETIME(JSON_EXTRACT(r.detail, '$.locked_until') / 1000, 'unixepoch')
+        AS locked_until,
+    s.subject AS started_by,
+    DATETIME(s.at / 1000, 'unixepoch') AS started_at,
     (
-        SELECT COUNT(*) FROM app_log AS n
+        SELECT DATETIME(MAX(p.at) / 1000, 'unixepoch') FROM app_log AS p
         WHERE
-            n.flow = 'auth' AND n.kind = 'token_issued' AND n.at > i.at
-            AND JSON_EXTRACT(n.detail, '$.provider_user_id')
-            = JSON_EXTRACT(i.detail, '$.provider_user_id')
-    ) AS issued_after,
-    JSON_EXTRACT(r.detail, '$.reason') AS github_says
+            p.flow = 'auth' AND p.kind = 'password_changed'
+            AND p.subject = s.subject AND p.at > s.at
+    ) AS password_changed_at,
+    r.worker_version,
+    r.origin,
+    r.user_agent,
+    DATETIME(r.at / 1000, 'unixepoch') AS rejected_at
 FROM app_log AS r
-LEFT JOIN app_log AS i
-    ON i.flow = 'auth' AND i.kind = 'token_issued' AND i.subject = r.subject
-WHERE r.flow = 'auth' AND r.kind = 'token_rejected'
+LEFT JOIN app_log AS s
+    ON
+        r.kind = 'session_rejected'
+        AND s.flow = 'auth' AND s.kind IN ('signed_in', 'signed_up')
+        AND JSON_EXTRACT(s.detail, '$.token_tag')
+        = JSON_EXTRACT(r.detail, '$.token_tag')
+WHERE r.flow = 'auth' AND r.outcome = 'rejected'
 ORDER BY r.at DESC
-LIMIT 20;
+LIMIT 50;

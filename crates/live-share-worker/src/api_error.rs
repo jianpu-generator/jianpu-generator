@@ -8,7 +8,7 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::verification::VerificationFailure;
+use crate::auth::session::VerificationFailure;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(tag = "code", rename_all = "snake_case")]
@@ -41,12 +41,32 @@ pub enum ApiError {
         #[serde(rename = "currentRevision")]
         current_revision: i64,
     },
-    /// GitHub verification of the caller's identity token failed, after
-    /// retries. Carries exactly `VerificationFailure`'s fields, which by
-    /// construction never include the token or its hash.
+    /// The caller's `identity_token` names no live session (never existed,
+    /// expired, signed out, or ended by a password change). Carries exactly
+    /// `VerificationFailure`'s fields, which by construction never include
+    /// the token or its hash.
     Unauthorized(VerificationFailure),
-    /// A call this worker makes to GitHub itself failed.
-    UpstreamFailed { message: String },
+    /// Sign-up with an email that already has an account.
+    EmailTaken,
+    /// Sign-up or sign-in with something that isn't shaped like an email
+    /// (`auth::email::normalize_email`).
+    InvalidEmail,
+    /// Sign-up or change password with a password the rules refuse
+    /// (`auth::password::password_weakness`); `message` says why.
+    WeakPassword { message: String },
+    /// Sign-in with an unknown email or a wrong password (deliberately the
+    /// same answer for both), or change password with a wrong current
+    /// password.
+    IncorrectCredentials,
+    /// Too many wrong passwords for this email (`auth::lockout`): refused
+    /// without checking the password until `retryAfterSeconds` from now.
+    SignInLocked {
+        #[serde(rename = "retryAfterSeconds")]
+        retry_after_seconds: i64,
+    },
+    /// Too many sign-in or sign-up requests from this IP address in the
+    /// last minute.
+    RateLimited,
     /// Anything else (a D1 error, ...).
     Internal { message: String },
 }
@@ -54,16 +74,20 @@ pub enum ApiError {
 impl ApiError {
     pub fn status_code(&self) -> u16 {
         match self {
-            ApiError::BadRequest | ApiError::InvalidName { .. } => 400,
-            ApiError::Unauthorized(_) => 401,
+            ApiError::BadRequest
+            | ApiError::InvalidName { .. }
+            | ApiError::InvalidEmail
+            | ApiError::WeakPassword { .. } => 400,
+            ApiError::Unauthorized(_) | ApiError::IncorrectCredentials => 401,
             ApiError::NotFound => 404,
-            ApiError::NameTaken
+            ApiError::EmailTaken
+            | ApiError::NameTaken
             | ApiError::NamesTaken { .. }
             | ApiError::FileFolderConflict { .. }
             | ApiError::RevisionConflict { .. } => 409,
             ApiError::SharedFolderTooLarge { .. } => 413,
+            ApiError::SignInLocked { .. } | ApiError::RateLimited => 429,
             ApiError::Internal { .. } => 500,
-            ApiError::UpstreamFailed { .. } => 502,
         }
     }
 }

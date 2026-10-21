@@ -5,13 +5,7 @@ name: Deploy Synced Share worker
 # now-deleted deploy pipeline (formerly `live-share-worker/`, see
 # TODO-synced-share-rust-d1-migration.md task 11).
 #
-# Prerequisite not handled by this pipeline (TODO §7 / task 12): a deploy
-# here will succeed, but GitHub sign-in stays broken until, once, by hand:
-#   `SYNCED_SHARE_GITHUB_CLIENT_SECRET` is set via
-#   `pnpm exec wrangler secret put SYNCED_SHARE_GITHUB_CLIENT_SECRET` from
-#   `crates/live-share-worker/` (cf has no `secret put` yet).
-# It requires a real Synced Share GitHub OAuth App, which this pipeline
-# does not create.
+# The worker needs no secrets: accounts are email + password, kept in D1.
 
 on:
   push:

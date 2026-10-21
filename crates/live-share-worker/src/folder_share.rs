@@ -38,7 +38,6 @@ pub struct FolderShareHeader {
     pub ended_at: Option<i64>,
     pub owner_user_id: String,
     pub folder_prefix: String,
-    pub owner_login: Option<String>,
 }
 
 /// One active file under the shared folder, as stored (full path).
@@ -79,7 +78,7 @@ pub fn check_size(stats: FolderStats) -> Result<(), ApiError> {
 }
 
 /// The viewer's response for a folder share. A stopped share keeps only
-/// `ended` and the owner attribution. A live share lists every file by its
+/// `ended`. A live share lists every file by its
 /// path relative to the shared folder (the owner's ancestor folder names
 /// never leak) in path order, and `empty_folders`: the relative folders kept
 /// only by a `.keep` placeholder, with no file anywhere under them (the
@@ -92,10 +91,7 @@ pub fn check_size(stats: FolderStats) -> Result<(), ApiError> {
 /// failing; `revision` is 0 -- each file carries its own.
 pub fn to_public_folder_doc(header: &FolderShareHeader, rows: &[FolderFileRow]) -> SyncedDoc {
     if header.ended_at.is_some() {
-        return SyncedDoc {
-            owner_login: header.owner_login.clone(),
-            ..empty_doc()
-        };
+        return empty_doc();
     }
     let name = last_segment(&header.folder_prefix).to_string();
     let relative = |row: &FolderFileRow| -> String {
@@ -132,7 +128,6 @@ pub fn to_public_folder_doc(header: &FolderShareHeader, rows: &[FolderFileRow]) 
         filename: name.clone(),
         content: String::new(),
         revision: 0,
-        owner_login: header.owner_login.clone(),
         folder: Some(SharedFolder {
             name,
             files,

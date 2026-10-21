@@ -1,7 +1,7 @@
 Feature: Cloud content saves go through the local outbox
 
   Background:
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: A1 An edit made while the cloud is unreachable survives a page refresh
     Given a cloud file named "outbox-a1.jianpu" is seeded for the signed-in account

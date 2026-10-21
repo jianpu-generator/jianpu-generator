@@ -1,7 +1,7 @@
 Feature: File operations on the cloud (D1) storage backend
 
   Background:
-    Given an account is signed in as "e2e-test-user"
+    Given an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: Creating a file persists it to the cloud backend
     When the app loads the cloud backend with no files

@@ -89,7 +89,7 @@ export const buttonStyle: React.CSSProperties = {
 
 /** Shared accent-blue "primary action" button style -- originally defined
  * in `ShareModal.tsx` alone, hoisted here so `StorageSettingsModal`'s "Sign
- * in with GitHub" button matches it too instead of the two dialogs each
+ * in" button matches it too instead of the two dialogs each
  * styling the same action differently (see `HANDOFF-account-chip.md`). */
 export const primaryButtonStyle: React.CSSProperties = {
   ...buttonStyle,

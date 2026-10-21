@@ -5,21 +5,21 @@ import {
   tryCreateCloudFile,
   tryRenameCloudFile,
 } from '../../cloudFileHelpers'
-import { currentSignedInLogin } from './cloud-account.steps'
+import { currentSignedInEmail } from './cloud-account.steps'
 import { Then, When } from './fixtures'
 
 let lastOutcome: CloudWriteOutcome | undefined
 
 When('I try to create the cloud file {string}', async ({}, name: string) => {
-  lastOutcome = await tryCreateCloudFile(currentSignedInLogin(), name)
+  lastOutcome = await tryCreateCloudFile(currentSignedInEmail(), name)
 })
 
 When(
   'I try to rename the cloud file {string} to {string}',
   async ({}, from: string, to: string) => {
     // Seeding is idempotent per name, so this resolves the file's real id.
-    const { id } = await seedCloudFile(currentSignedInLogin(), from)
-    lastOutcome = await tryRenameCloudFile(currentSignedInLogin(), id, to)
+    const { id } = await seedCloudFile(currentSignedInEmail(), from)
+    lastOutcome = await tryRenameCloudFile(currentSignedInEmail(), id, to)
   },
 )
 

@@ -5,7 +5,7 @@ Feature: Sharing a whole folder from its row menu
   # account is shared by the whole suite run.
   Background:
     Given clipboard permissions are granted
-    And an account is signed in as "e2e-test-user"
+    And an account is signed in as "e2e-test-user@jianpu.test"
 
   Scenario: Sharing a folder shows a link, a marker on the folder and a via tag on what is inside
     Given a cloud file named "ShareOne/hymn.jianpu" is seeded for the signed-in account
