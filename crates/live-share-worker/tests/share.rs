@@ -12,7 +12,6 @@ fn live_view() -> ShareView {
         filename: "song.jianpu".to_string(),
         content: "[M] 1".to_string(),
         revision: 3,
-        owner_login: Some("octocat".to_string()),
     }
 }
 
@@ -22,7 +21,7 @@ fn a_share_id_with_no_row_reads_as_the_empty_doc() {
 }
 
 #[test]
-fn a_live_share_shows_the_files_current_content_and_owner_login() {
+fn a_live_share_shows_the_files_current_content() {
     assert_eq!(
         to_public_doc(Some(&live_view())),
         SyncedDoc {
@@ -30,19 +29,9 @@ fn a_live_share_shows_the_files_current_content_and_owner_login() {
             filename: "song.jianpu".to_string(),
             content: "[M] 1".to_string(),
             revision: 3,
-            owner_login: Some("octocat".to_string()),
             folder: None,
         }
     );
-}
-
-#[test]
-fn carries_no_owner_login_when_none_is_cached() {
-    let view = ShareView {
-        owner_login: None,
-        ..live_view()
-    };
-    assert_eq!(to_public_doc(Some(&view)).owner_login, None);
 }
 
 #[test]
@@ -51,13 +40,7 @@ fn a_stopped_share_hides_the_files_content() {
         ended_at: Some(2_000),
         ..live_view()
     };
-    assert_eq!(
-        to_public_doc(Some(&view)),
-        SyncedDoc {
-            owner_login: Some("octocat".to_string()),
-            ..empty_doc()
-        }
-    );
+    assert_eq!(to_public_doc(Some(&view)), empty_doc());
 }
 
 #[test]
@@ -66,13 +49,7 @@ fn a_share_whose_file_is_in_the_bin_reads_as_ended() {
         trashed_at: Some(2_000),
         ..live_view()
     };
-    assert_eq!(
-        to_public_doc(Some(&view)),
-        SyncedDoc {
-            owner_login: Some("octocat".to_string()),
-            ..empty_doc()
-        }
-    );
+    assert_eq!(to_public_doc(Some(&view)), empty_doc());
 }
 
 #[test]
@@ -82,10 +59,7 @@ fn never_leaks_an_owner_id_on_the_wire() -> Result<(), serde_json::Error> {
         .as_object()
         .map(|object| object.keys().collect())
         .unwrap_or_default();
-    assert_eq!(
-        keys,
-        vec!["content", "ended", "filename", "ownerLogin", "revision"]
-    );
+    assert_eq!(keys, vec!["content", "ended", "filename", "revision"]);
     Ok(())
 }
 

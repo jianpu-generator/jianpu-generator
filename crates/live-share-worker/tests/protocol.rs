@@ -3,7 +3,8 @@
 #![allow(clippy::disallowed_macros)]
 
 use live_share_worker::protocol::{
-    FileShareRequest, FileShareResponse, ShareStatus, ShareStatusResponse, SyncedDoc,
+    ChangePasswordRequest, FileShareRequest, FileShareResponse, SessionResponse, ShareStatus,
+    ShareStatusResponse, SyncedDoc,
 };
 
 #[test]
@@ -13,7 +14,6 @@ fn serializes_synced_doc_with_camel_case_fields() -> Result<(), serde_json::Erro
         filename: "song.jianpu".to_string(),
         content: "[M] 1".to_string(),
         revision: 1,
-        owner_login: Some("octocat".to_string()),
         folder: None,
     };
 
@@ -21,24 +21,33 @@ fn serializes_synced_doc_with_camel_case_fields() -> Result<(), serde_json::Erro
 
     assert!(json.contains("\"filename\":\"song.jianpu\""));
     assert!(json.contains("\"revision\":1"));
-    assert!(json.contains("\"ownerLogin\":\"octocat\""));
+    assert!(!json.contains("owner"));
     Ok(())
 }
 
 #[test]
-fn serializes_synced_doc_owner_login_as_null_when_absent() -> Result<(), serde_json::Error> {
-    let doc = SyncedDoc {
-        ended: true,
-        filename: String::new(),
-        content: String::new(),
-        revision: 0,
-        owner_login: None,
-        folder: None,
+fn reads_a_change_password_request_in_camel_case() -> Result<(), serde_json::Error> {
+    let request: ChangePasswordRequest = serde_json::from_str(
+        r#"{"identityToken":"t","currentPassword":"old password","newPassword":"new password"}"#,
+    )?;
+
+    assert_eq!(request.identity_token, "t");
+    assert_eq!(request.current_password, "old password");
+    assert_eq!(request.new_password, "new password");
+    Ok(())
+}
+
+#[test]
+fn writes_a_session_response_in_camel_case() -> Result<(), serde_json::Error> {
+    let response = SessionResponse {
+        session_token: "t".to_string(),
+        email: "a@example.com".to_string(),
     };
 
-    let json = serde_json::to_string(&doc)?;
-
-    assert!(json.contains("\"ownerLogin\":null"));
+    assert_eq!(
+        serde_json::to_string(&response)?,
+        r#"{"sessionToken":"t","email":"a@example.com"}"#
+    );
     Ok(())
 }
 

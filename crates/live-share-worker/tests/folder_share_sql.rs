@@ -13,8 +13,8 @@ async fn the_migration_keeps_existing_file_shares_and_backfills_their_owner(
 ) -> Result<(), sqlx::Error> {
     let mut connection = connect().await?;
     migrate_up_to_file_shares(&mut connection).await?;
-    add_user(&mut connection, "u1", "100", "octocat").await?;
-    add_user(&mut connection, "u2", "200", "hubot").await?;
+    add_user(&mut connection, "u1").await?;
+    add_user(&mut connection, "u2").await?;
     add_file(&mut connection, "f1", "u1", "Hymns/a.jianpu", "one").await?;
     add_file(&mut connection, "f2", "u2", "b.jianpu", "two").await?;
     sqlx::query(

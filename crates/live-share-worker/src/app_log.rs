@@ -34,7 +34,7 @@ pub const WORKER_VERSION: &str = env!("WORKER_GIT_SHA");
 const TOKEN_TAG_LENGTH: usize = 12;
 
 /// Identifies a token without storing it: the first 12 hex chars of its
-/// SHA-256 hash (`identity::hash_token`'s output).
+/// SHA-256 hash (`auth::session::hash_token`'s output).
 pub fn token_tag(token_hash: &str) -> String {
     token_hash.chars().take(TOKEN_TAG_LENGTH).collect()
 }
@@ -56,11 +56,24 @@ pub enum LogEvent {
     Auth(AuthEvent),
 }
 
-/// The GitHub sign-in token's life cycle: issued, verified (only on a cache
-/// miss, never per request), rejected by GitHub, or revoked on sign-out.
+/// An account's life cycle: created, signed in (or refused), locked out,
+/// signed out, its password changed, or a session token refused on some
+/// other route. Emails are logged; passwords and raw session tokens never
+/// are -- a session is named by its `token_tag`.
+///
+/// The `Token*` and `VerificationUnavailable` variants are from GitHub
+/// sign-in, which no longer exists: nothing writes them any more, and they
+/// stay only so rows written before the switch keep decoding until pruned.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "detail", rename_all = "snake_case")]
 pub enum AuthEvent {
+    SignedUp(SignedUp),
+    SignedIn(SignedIn),
+    SignInFailed(SignInFailed),
+    LockedOut(LockedOut),
+    SignedOut(SignedOut),
+    PasswordChanged(PasswordChanged),
+    SessionRejected(SessionRejected),
     TokenIssued(TokenIssued),
     TokenExchangeFailed(TokenExchangeFailed),
     TokenVerified(TokenVerified),
@@ -70,7 +83,76 @@ pub enum AuthEvent {
     TokenRevokeFailed(TokenRevokeFailed),
 }
 
-/// `POST /auth/github/callback` exchanged a code for a new token.
+/// `POST /auth/sign-up` created an account and its first session.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SignedUp {
+    pub email: String,
+    pub token_tag: String,
+}
+
+/// `POST /auth/sign-in` started a session.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SignedIn {
+    pub email: String,
+    pub token_tag: String,
+}
+
+/// Why a sign-in (or a change password's current password) was refused.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SignInFailureReason {
+    /// The email has an account, but the password is not its password.
+    WrongPassword,
+    /// No account has this email. Answered exactly like a wrong password.
+    UnknownEmail,
+    /// The email is locked out; the password wasn't checked.
+    Locked,
+}
+
+/// A sign-in or a change password was refused. `failed_count` is the
+/// email's wrong passwords in a row after this one (0 when this one locked
+/// it, or when `reason` is `locked`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SignInFailed {
+    pub email: String,
+    pub reason: SignInFailureReason,
+    pub failed_count: i64,
+}
+
+/// A wrong password locked the email until `locked_until` (milliseconds
+/// since the epoch). `lockout_level` counts lockouts since its last
+/// successful sign-in, this one included.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LockedOut {
+    pub email: String,
+    pub locked_until: i64,
+    pub lockout_level: i64,
+}
+
+/// `POST /auth/sign-out` ended a session.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SignedOut {
+    pub token_tag: String,
+}
+
+/// `POST /auth/change-password` changed an account's password and ended
+/// its `ended_sessions` other sessions.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PasswordChanged {
+    pub email: String,
+    pub token_tag: String,
+    pub ended_sessions: usize,
+}
+
+/// A route was called with a session token that names no live session
+/// (never existed, expired, signed out, or ended by a password change); the
+/// worker answered `unauthorized` and the web app discards the token.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SessionRejected {
+    pub token_tag: String,
+}
+
+/// Legacy (GitHub sign-in). `POST /auth/github/callback` exchanged a code for a new token.
 /// `provider_user_id`/`login` come from a best-effort `GET /user` with the
 /// new token, so they are `None` when that call failed.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -82,20 +164,21 @@ pub struct TokenIssued {
     pub login: Option<String>,
 }
 
-/// GitHub's token endpoint did not hand out a token.
+/// Legacy (GitHub sign-in). GitHub's token endpoint did not hand out a token.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenExchangeFailed {
     pub reason: String,
 }
 
-/// A token not in the verification cache was verified against GitHub.
+/// Legacy (GitHub sign-in). A token not in the verification cache was
+/// verified against GitHub.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenVerified {
     pub token_tag: String,
     pub provider_user_id: String,
 }
 
-/// GitHub's `GET /user` answered 401 for a token -- the worker then answers
+/// Legacy (GitHub sign-in). GitHub's `GET /user` answered 401 for a token -- the worker then answers
 /// `unauthorized` and the web app discards the token. `reason` is GitHub's
 /// status and body, verbatim.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -105,7 +188,7 @@ pub struct TokenRejected {
     pub attempts: u32,
 }
 
-/// A token could not be verified for a reason that says nothing about the
+/// Legacy (GitHub sign-in). A token could not be verified for a reason that says nothing about the
 /// token (GitHub 5xx or rate limit, network, D1).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VerificationUnavailable {
@@ -114,13 +197,15 @@ pub struct VerificationUnavailable {
     pub attempts: u32,
 }
 
-/// `POST /auth/github/revoke` revoked a token on sign-out.
+/// Legacy (GitHub sign-in). `POST /auth/github/revoke` revoked a token on
+/// sign-out.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenRevoked {
     pub token_tag: String,
 }
 
-/// `POST /auth/github/revoke` failed to revoke a token.
+/// Legacy (GitHub sign-in). `POST /auth/github/revoke` failed to revoke a
+/// token.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenRevokeFailed {
     pub token_tag: String,
@@ -149,12 +234,15 @@ impl Outcome {
 }
 
 /// Where a row's request came from: captured on every request-driven row
-/// (sign-in, verification, revocation); `None` on rows with no request,
-/// such as the scheduled prune.
+/// (sign-in, sign-out, a rejected session); `None` on rows with no
+/// request, such as the scheduled prune.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RequestMeta {
     pub origin: Option<String>,
     pub user_agent: Option<String>,
+    /// `CF-Connecting-IP`, the key of the sign-in rate limits. Never
+    /// written to `app_log`.
+    pub client_ip: Option<String>,
 }
 
 /// The event-derived columns of an `app_log` row (the rest -- `at`,
@@ -172,6 +260,13 @@ pub struct LogRow {
 impl AuthEvent {
     fn outcome(&self) -> Outcome {
         match self {
+            AuthEvent::SignedUp(_)
+            | AuthEvent::SignedIn(_)
+            | AuthEvent::SignedOut(_)
+            | AuthEvent::PasswordChanged(_) => Outcome::Ok,
+            AuthEvent::SignInFailed(_)
+            | AuthEvent::LockedOut(_)
+            | AuthEvent::SessionRejected(_) => Outcome::Rejected,
             AuthEvent::TokenIssued(_)
             | AuthEvent::TokenVerified(_)
             | AuthEvent::TokenRevoked(_) => Outcome::Ok,
@@ -181,15 +276,26 @@ impl AuthEvent {
         }
     }
 
-    fn token_tag(&self) -> Option<&str> {
+    /// The `subject` column: the account's email when the event is about
+    /// one, otherwise the session's token tag.
+    fn subject(&self) -> Option<String> {
+        let email = |email: &str| Some(format!("email:{email}"));
+        let token = |tag: &str| Some(format!("token:{tag}"));
         match self {
-            AuthEvent::TokenIssued(event) => Some(&event.token_tag),
+            AuthEvent::SignedUp(event) => email(&event.email),
+            AuthEvent::SignedIn(event) => email(&event.email),
+            AuthEvent::SignInFailed(event) => email(&event.email),
+            AuthEvent::LockedOut(event) => email(&event.email),
+            AuthEvent::PasswordChanged(event) => email(&event.email),
+            AuthEvent::SignedOut(event) => token(&event.token_tag),
+            AuthEvent::SessionRejected(event) => token(&event.token_tag),
+            AuthEvent::TokenIssued(event) => token(&event.token_tag),
             AuthEvent::TokenExchangeFailed(_) => None,
-            AuthEvent::TokenVerified(event) => Some(&event.token_tag),
-            AuthEvent::TokenRejected(event) => Some(&event.token_tag),
-            AuthEvent::VerificationUnavailable(event) => Some(&event.token_tag),
-            AuthEvent::TokenRevoked(event) => Some(&event.token_tag),
-            AuthEvent::TokenRevokeFailed(event) => Some(&event.token_tag),
+            AuthEvent::TokenVerified(event) => token(&event.token_tag),
+            AuthEvent::TokenRejected(event) => token(&event.token_tag),
+            AuthEvent::VerificationUnavailable(event) => token(&event.token_tag),
+            AuthEvent::TokenRevoked(event) => token(&event.token_tag),
+            AuthEvent::TokenRevokeFailed(event) => token(&event.token_tag),
         }
     }
 }
@@ -201,11 +307,12 @@ impl LogEvent {
         }
     }
 
-    /// What the row is about, as a typed tag (`token:<token tag>`), so rows
-    /// of one token can be joined across kinds.
+    /// What the row is about, as a typed tag (`email:<email>` or
+    /// `token:<token tag>`), so rows of one account or one session can be
+    /// joined across kinds.
     pub fn subject(&self) -> Option<String> {
         match self {
-            LogEvent::Auth(event) => event.token_tag().map(|tag| format!("token:{tag}")),
+            LogEvent::Auth(event) => event.subject(),
         }
     }
 

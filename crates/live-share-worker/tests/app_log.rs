@@ -4,9 +4,10 @@
 #![allow(clippy::disallowed_macros)]
 
 use live_share_worker::app_log::{
-    prune_cutoff_millis, token_tag, AuthEvent, LogEvent, LogRow, Outcome, TokenExchangeFailed,
-    TokenIssued, TokenRejected, TokenRevokeFailed, TokenRevoked, TokenVerified,
-    VerificationUnavailable, APP_LOG_RETENTION_MILLIS,
+    prune_cutoff_millis, token_tag, AuthEvent, LockedOut, LogEvent, LogRow, Outcome,
+    PasswordChanged, SessionRejected, SignInFailed, SignInFailureReason, SignedIn, SignedOut,
+    SignedUp, TokenExchangeFailed, TokenIssued, TokenRejected, TokenRevokeFailed, TokenRevoked,
+    TokenVerified, VerificationUnavailable, APP_LOG_RETENTION_MILLIS,
 };
 use serde_json::{json, Value};
 
@@ -24,11 +25,110 @@ struct Case {
     expected: ExpectedRow,
 }
 
+const EMAIL: &str = "ann@example.com";
+
 fn every_auth_event() -> Vec<Case> {
-    issuance_and_verification_cases()
+    session_start_cases()
         .into_iter()
+        .chain(session_end_cases())
+        .chain(issuance_and_verification_cases())
         .chain(rejection_and_revocation_cases())
         .collect()
+}
+
+fn session_start_cases() -> Vec<Case> {
+    vec![
+        Case {
+            event: AuthEvent::SignedUp(SignedUp {
+                email: EMAIL.to_string(),
+                token_tag: TAG.to_string(),
+            }),
+            expected: ExpectedRow {
+                kind: "signed_up",
+                outcome: Outcome::Ok,
+                subject: Some("email:ann@example.com"),
+                detail: json!({ "email": EMAIL, "token_tag": TAG }),
+            },
+        },
+        Case {
+            event: AuthEvent::SignedIn(SignedIn {
+                email: EMAIL.to_string(),
+                token_tag: TAG.to_string(),
+            }),
+            expected: ExpectedRow {
+                kind: "signed_in",
+                outcome: Outcome::Ok,
+                subject: Some("email:ann@example.com"),
+                detail: json!({ "email": EMAIL, "token_tag": TAG }),
+            },
+        },
+        Case {
+            event: AuthEvent::SignInFailed(SignInFailed {
+                email: EMAIL.to_string(),
+                reason: SignInFailureReason::WrongPassword,
+                failed_count: 2,
+            }),
+            expected: ExpectedRow {
+                kind: "sign_in_failed",
+                outcome: Outcome::Rejected,
+                subject: Some("email:ann@example.com"),
+                detail: json!({ "email": EMAIL, "reason": "wrong_password", "failed_count": 2 }),
+            },
+        },
+        Case {
+            event: AuthEvent::LockedOut(LockedOut {
+                email: EMAIL.to_string(),
+                locked_until: 1_760_000_900_000,
+                lockout_level: 1,
+            }),
+            expected: ExpectedRow {
+                kind: "locked_out",
+                outcome: Outcome::Rejected,
+                subject: Some("email:ann@example.com"),
+                detail: json!({ "email": EMAIL, "locked_until": 1_760_000_900_000_i64, "lockout_level": 1 }),
+            },
+        },
+    ]
+}
+
+fn session_end_cases() -> Vec<Case> {
+    vec![
+        Case {
+            event: AuthEvent::SignedOut(SignedOut {
+                token_tag: TAG.to_string(),
+            }),
+            expected: ExpectedRow {
+                kind: "signed_out",
+                outcome: Outcome::Ok,
+                subject: Some("token:3fa9c1d20b7e"),
+                detail: json!({ "token_tag": TAG }),
+            },
+        },
+        Case {
+            event: AuthEvent::PasswordChanged(PasswordChanged {
+                email: EMAIL.to_string(),
+                token_tag: TAG.to_string(),
+                ended_sessions: 2,
+            }),
+            expected: ExpectedRow {
+                kind: "password_changed",
+                outcome: Outcome::Ok,
+                subject: Some("email:ann@example.com"),
+                detail: json!({ "email": EMAIL, "token_tag": TAG, "ended_sessions": 2 }),
+            },
+        },
+        Case {
+            event: AuthEvent::SessionRejected(SessionRejected {
+                token_tag: TAG.to_string(),
+            }),
+            expected: ExpectedRow {
+                kind: "session_rejected",
+                outcome: Outcome::Rejected,
+                subject: Some("token:3fa9c1d20b7e"),
+                detail: json!({ "token_tag": TAG }),
+            },
+        },
+    ]
 }
 
 fn issuance_and_verification_cases() -> Vec<Case> {

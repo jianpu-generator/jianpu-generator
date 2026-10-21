@@ -98,10 +98,6 @@ async fn the_viewer_header_resolves_a_folder_share_and_not_a_file_share() -> Res
         "Hymns/Advent"
     );
     assert_eq!(header.try_get::<String, _>("owner_user_id")?, "u1");
-    assert_eq!(
-        header.try_get::<Option<String>, _>("owner_login")?,
-        Some("octocat".to_string())
-    );
     assert!(file_share.is_none());
     assert!(folder_as_file.is_none());
     Ok(())
@@ -268,9 +264,8 @@ async fn the_e2e_reset_removes_folder_shares_of_the_listed_accounts_only() -> Re
     start_folder(&mut connection, "s-mine", "u1", "Hymns").await?;
     start_folder(&mut connection, "s-theirs", "u2", "Hymns").await?;
 
-    let deleted = sqlx::query(DELETE_SHARES_OF_PROVIDER_USERS)
-        .bind("github")
-        .bind(r#"["100"]"#)
+    let deleted = sqlx::query(DELETE_SHARES_OF_USERS)
+        .bind(r#"["u1"]"#)
         .execute(&mut connection)
         .await?;
 

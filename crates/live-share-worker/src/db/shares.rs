@@ -34,7 +34,6 @@ struct ShareViewRow {
     filename: String,
     content: String,
     revision: i64,
-    owner_login: Option<String>,
 }
 
 impl From<ShareViewRow> for ShareView {
@@ -45,7 +44,6 @@ impl From<ShareViewRow> for ShareView {
             filename: row.filename,
             content: row.content,
             revision: row.revision,
-            owner_login: row.owner_login,
         }
     }
 }
@@ -142,7 +140,6 @@ struct FolderShareHeaderRow {
     ended_at: Option<i64>,
     owner_user_id: String,
     folder_prefix: String,
-    owner_login: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -242,7 +239,6 @@ pub(crate) async fn get_folder_share_header(
         ended_at: row.ended_at,
         owner_user_id: row.owner_user_id,
         folder_prefix: row.folder_prefix,
-        owner_login: row.owner_login,
     }))
 }
 

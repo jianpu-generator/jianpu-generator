@@ -22,9 +22,6 @@ pub struct ShareView {
     pub filename: String,
     pub content: String,
     pub revision: i64,
-    /// Best-effort cached `user_identities.login` of the file's owner, for
-    /// the viewer's "Shared by @login" attribution.
-    pub owner_login: Option<String>,
 }
 
 /// A share id with no `shares` row reads the same as one that was shared
@@ -35,7 +32,6 @@ pub fn empty_doc() -> SyncedDoc {
         filename: String::new(),
         content: String::new(),
         revision: 0,
-        owner_login: None,
         folder: None,
     }
 }
@@ -49,21 +45,17 @@ fn file_name_only(path: &str) -> String {
 
 /// Builds the public wire shape for `GET /shares/{share_id}`. An ended share
 /// (stopped, or its file is in the bin) returns empty `filename`/`content`,
-/// so a stopped link can never leak what the file says now -- only
-/// `ended` and the owner attribution survive.
+/// so a stopped link can never leak what the file says now -- only `ended`
+/// survives.
 pub fn to_public_doc(view: Option<&ShareView>) -> SyncedDoc {
     match view {
         None => empty_doc(),
-        Some(view) if view.ended_at.is_some() || view.trashed_at.is_some() => SyncedDoc {
-            owner_login: view.owner_login.clone(),
-            ..empty_doc()
-        },
+        Some(view) if view.ended_at.is_some() || view.trashed_at.is_some() => empty_doc(),
         Some(view) => SyncedDoc {
             ended: false,
             filename: file_name_only(&view.filename),
             content: view.content.clone(),
             revision: view.revision,
-            owner_login: view.owner_login.clone(),
             folder: None,
         },
     }

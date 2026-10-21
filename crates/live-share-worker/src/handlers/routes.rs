@@ -170,6 +170,7 @@ fn request_meta(req: &Request) -> RequestMeta {
     RequestMeta {
         origin: header("Origin"),
         user_agent: header("User-Agent"),
+        client_ip: header("CF-Connecting-IP"),
     }
 }
 
@@ -238,8 +239,9 @@ impl Routes {
     }
 
     /// A `POST` route with a JSON request body. The handler also gets the
-    /// request's `RequestMeta` (`Origin` / `User-Agent`), which every row it
-    /// logs to `app_log` carries.
+    /// request's `RequestMeta` (`Origin` / `User-Agent`, which every row it
+    /// logs to `app_log` carries, and the client IP the sign-in rate limits
+    /// key on).
     pub(crate) fn post<Params, Body, R, F, Fut>(
         self,
         path: &str,

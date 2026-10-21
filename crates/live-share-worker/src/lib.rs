@@ -1,35 +1,31 @@
-//! Entry point for the Rust rewrite of the Synced Share Worker (see
+//! Entry point for the Rust rewrite of the Synced Share worker (see
 //! `TODO-synced-share-rust-d1-migration.md`, task 4, and the "Synced Share
 //! worker" section of `ARCHITECTURE.md` for the full picture).
 //!
 //! Ported from the old TS `live-share-worker/src/*.ts` (Workers KV + an
-//! anonymous `ownerToken`) to D1 + GitHub-required ownership. A share is a
+//! anonymous `ownerToken`) to D1 + account-required ownership. A share is a
 //! pointer to a cloud `files` row (`shares.file_id`), owned through
-//! `files.owner_user_id` -- see `share`. Identity resolution
-//! routes every write through `identity::resolve_verified_user_id`, a
-//! hashed-token cache in front of `identity::github::GithubIdentityProvider`
-//! (real `GET /user` verification), per
-//! `TODO-synced-share-rust-d1-migration.md` §0/§6.
+//! `files.owner_user_id` -- see `share`. Accounts are email + password
+//! (`auth`, routes in `handlers::auth`); every write resolves its caller
+//! through `identity::resolve_verified_user_id`, a session lookup.
 //!
-//! `api_error`, `app_log`, `e2e_reset`, `e2e_worker_config`, `files`, `protocol`, `share`,
-//! `share_id`, and `verification` are `pub`
+//! `api_error`, `app_log`, `auth`, `e2e_reset`, `e2e_worker_config`,
+//! `files`, `folder_share`, `protocol`, `share` and `share_id` are `pub`
 //! (and D1/JsValue-free) so `tests/*.rs` can unit-test them directly, per
 //! this repo's convention of keeping tests in separate files rather than inline
 //! `#[cfg(test)]` modules. Everything else here is D1- or
 //! wasm-runtime-facing and stays crate-private -- it isn't exercised by
-//! host-side `cargo test` (per `TODO-synced-share-rust-d1-migration.md` §0:
-//! real D1 integration testing is deferred to `cf dev`, not built
-//! here; the GitHub verification call itself is mocked in `verification`'s
-//! unit tests instead of hit for real, per that section's testing
-//! decision).
+//! host-side `cargo test` (real D1 integration testing is left to the e2e
+//! suite against `cf dev`).
 
+mod crypto;
 mod db;
 mod handlers;
 mod identity;
-mod oauth;
 
 pub mod api_error;
 pub mod app_log;
+pub mod auth;
 pub mod e2e_reset;
 pub mod e2e_worker_config;
 pub mod files;
@@ -37,7 +33,6 @@ pub mod folder_share;
 pub mod protocol;
 pub mod share;
 pub mod share_id;
-pub mod verification;
 
 use worker::{
     console_error, event, Context, Cors, Env, Method, Request, Response, Result, ScheduleContext,
@@ -48,8 +43,8 @@ use crate::app_log::{prune_cutoff_millis, APP_LOG_PRUNE_BATCH_SIZE, APP_LOG_PRUN
 
 /// The web app calls this worker cross-origin, so every response --
 /// including the `OPTIONS` preflight a `POST`'s JSON body triggers -- needs
-/// these. `*` is fine: there's no cookie/session auth here, just an
-/// unguessable `share_id` plus an `identity_token` in the request body,
+/// these. `*` is fine: there's no cookie auth here, just an unguessable
+/// `share_id` plus a session token (`identity_token`) in the request body,
 /// neither of which `Access-Control-Allow-Origin` exposes to an origin that
 /// doesn't already have them (same reasoning as the old TS `index.ts`).
 fn cors_config() -> Cors {
@@ -67,7 +62,7 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
         return Response::empty()?.with_status(204).with_cors(&cors);
     }
 
-    let e2e_reset_enabled = env.var(e2e_reset::GITHUB_USER_IDS_VAR).is_ok();
+    let e2e_reset_enabled = env.var(e2e_reset::EMAILS_VAR).is_ok();
     let response = handlers::routes(e2e_reset_enabled)?
         .into_router()
         .run(req, env)

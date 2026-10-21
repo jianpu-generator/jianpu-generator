@@ -32,11 +32,6 @@ use crate::db;
 /// since every character lands directly in a copy-pasted URL.
 pub(crate) const SHARE_ID_LENGTH: usize = 11;
 
-/// Not constrained by any client-side pattern (internal id only) -- just
-/// long enough to be unguessable, per the schema's own comment ("same style
-/// as share_id -- not sequential").
-pub(crate) const USER_ID_LENGTH: usize = 21;
-
 /// The base64url alphabet, so an id is URL-safe as-is. Exposed to the web
 /// client only through `share_id_format`'s `pattern`.
 const ID_CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";

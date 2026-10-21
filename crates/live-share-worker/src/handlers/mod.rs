@@ -5,22 +5,18 @@
 //! `POST /files/{id}/share{,/stop,/status}`, `POST /folders/share{,/stop,/status}`
 //! and `POST /shares/overview`; `shares` submodule), the
 //! `/files` routes (the cloud storage backend, see `crate::files`; `files`
-//! submodule), plus the `/auth/github/callback` and `/auth/github/revoke`
-//! routes (see `crate::oauth`) added for the dedicated Synced Share sign-in
-//! connection.
+//! submodule), plus the account routes `/auth/sign-up`, `/auth/sign-in`,
+//! `/auth/sign-out` and `/auth/change-password` (`auth` submodule).
 //!
 //! Every write (including starting/stopping a share) resolves its caller's
-//! identity via `identity::resolve_verified_user_id`, fronted by
-//! `identity::github::GithubIdentityProvider` -- never the client's own
-//! claim -- per `TODO-synced-share-rust-d1-migration.md` §0/§6 (task 7). A
-//! verification failure (after the backoff-wrapped retries) fails the
-//! request closed with `ApiError::Unauthorized` (401), carrying a
-//! `verification::VerificationFailure`: reason, timestamp, attempt count,
+//! identity via `identity::resolve_verified_user_id` -- a session lookup,
+//! never the client's own claim. A token that names no live session fails
+//! the request closed with `ApiError::Unauthorized` (401), carrying a
+//! `auth::session::VerificationFailure`: reason, timestamp, attempt count,
 //! and deliberately nothing else -- the token/hash must never appear in
-//! this response. Every
-//! `/files/*` route requires a resolved identity too. The only anonymous
-//! read of a file's content is `GET /shares/{share_id}`, and only while that
-//! file's share is live and the file isn't in the bin.
+//! this response. Every `/files/*` route requires a resolved identity too.
+//! The only anonymous read of a file's content is `GET /shares/{share_id}`,
+//! and only while that file's share is live and the file isn't in the bin.
 //!
 //! `routes()` is the one list of routes: each entry registers into both the
 //! worker `Router` and the OpenAPI spec (see `routes`), so the web client
@@ -28,23 +24,21 @@
 //! failure is an `ApiError` body.
 //!
 //! Helpers below (`is_unique_constraint_violation`, `resolve_files_caller`)
-//! are private to this module but visible to both submodules per Rust's
+//! are private to this module but visible to every submodule per Rust's
 //! ancestor-visibility rule -- no `pub(crate)` needed. `D1_BINDING` is
-//! `pub(crate)` since `crate::oauth` (outside this module) and `lib.rs`'s
-//! scheduled handler write `app_log` rows through it too.
+//! `pub(crate)` since `lib.rs`'s scheduled handler writes through it too.
 
+mod auth;
 mod e2e_reset;
 mod files;
 pub(crate) mod routes;
 mod shares;
 
-use worker::{D1Database, RouteContext};
+use worker::D1Database;
 
 use crate::api_error::ApiError;
 use crate::app_log::RequestMeta;
-use crate::identity::github::GithubIdentityProvider;
-use crate::identity::{resolve_verified_user_id, session_ttl_millis_from_env};
-use crate::oauth;
+use crate::identity::resolve_verified_user_id;
 use routes::{HandlerResult, Routes};
 
 /// D1 binding name this worker expects in `deploy.json`/`cloudflare.config.ts`. Wiring the
@@ -59,8 +53,10 @@ pub(crate) const D1_BINDING: &str = "DB";
 pub(crate) fn routes(e2e_reset_enabled: bool) -> worker::Result<Routes> {
     Routes::new()
         .get("/shares/{share_id}", shares::get_share)?
-        .post("/auth/github/callback", oauth::github_oauth_callback)?
-        .post("/auth/github/revoke", oauth::github_revoke)?
+        .post("/auth/sign-up", auth::sign_up)?
+        .post("/auth/sign-in", auth::sign_in)?
+        .post("/auth/sign-out", auth::sign_out)?
+        .post("/auth/change-password", auth::change_password)?
         .post("/files/list", files::list_files)?
         .post("/files", files::create_file)?
         .post("/files/{id}/content", files::update_file_content)?
@@ -85,27 +81,16 @@ fn is_unique_constraint_violation(error: &worker::Error) -> bool {
     error.to_string().contains("UNIQUE constraint failed")
 }
 
-/// Resolves a `/files/*` request's caller identity, same path every Synced
-/// Share write already goes through -- see this module's doc comment. A
-/// failed verification (GitHub call failed even after the backoff-wrapped
-/// retries) becomes `ApiError::Unauthorized`, whose body is exactly
-/// `VerificationFailure`'s fields -- per TODO §0, the token/hash must never
-/// appear there, which `VerificationFailure` enforces by construction.
+/// Resolves an authenticated request's caller identity -- see this
+/// module's doc comment. A token that names no live session becomes
+/// `ApiError::Unauthorized`, whose body is exactly `VerificationFailure`'s
+/// fields, which never include the token or its hash.
 async fn resolve_files_caller(
     d1: &D1Database,
-    ctx: &RouteContext<()>,
     identity_token: &str,
     request_meta: &RequestMeta,
 ) -> HandlerResult<String> {
-    let identity_provider = GithubIdentityProvider::from_env(ctx);
-    let session_ttl_millis = session_ttl_millis_from_env(ctx);
-    resolve_verified_user_id(
-        d1,
-        &identity_provider,
-        identity_token,
-        session_ttl_millis,
-        request_meta,
-    )
-    .await?
-    .map_err(ApiError::Unauthorized)
+    resolve_verified_user_id(d1, identity_token, request_meta)
+        .await?
+        .map_err(ApiError::Unauthorized)
 }
