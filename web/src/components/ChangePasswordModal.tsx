@@ -10,6 +10,7 @@ import {
   LockoutBanner,
   useLockoutCountdown,
 } from './accountDialogParts'
+import { SpinnerLabel } from './SpinnerLabel'
 import { primaryButtonStyle } from './storageSettingsModalStyles'
 
 export interface ChangePasswordModalProps {
@@ -124,7 +125,7 @@ export function ChangePasswordModal({
           style={primaryButtonStyle}
           disabled={busy || locked}
         >
-          Change password
+          <SpinnerLabel pending={busy} label="Change password" />
         </button>
         <p style={footnoteStyle}>Your other devices will be signed out.</p>
       </AccountForm>
