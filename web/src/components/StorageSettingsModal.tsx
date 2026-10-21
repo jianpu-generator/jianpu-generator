@@ -220,7 +220,7 @@ export function StorageSettingsModal({
                   </p>
                 ) : null}
               </div>
-            ) : (
+            ) : selectedKind === 'cloud' ? (
               <div
                 style={{
                   display: 'flex',
@@ -240,7 +240,7 @@ export function StorageSettingsModal({
                   Sign in
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
         </Dialog.Content>
       </Dialog.Portal>

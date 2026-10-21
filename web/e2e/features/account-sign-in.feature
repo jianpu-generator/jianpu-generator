@@ -4,6 +4,7 @@ Feature: Signing in for cloud storage
     Given an account exists for "e2e-sign-in@jianpu.test"
     When the app loads for the account sign-in flow
     And I open the storage settings modal for sign-in
+    And I select the "Cloud storage" storage option
     And I click "Sign in" in the storage settings modal
     And I enter the email "e2e-sign-in@jianpu.test" in the account dialog
     And I enter the e2e password in the account dialog

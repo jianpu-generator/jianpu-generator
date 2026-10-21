@@ -42,8 +42,10 @@ Feature: Account chip in the header
     Then the sign-in prompt is shown
     When I close the share modal
     And I open the storage settings modal for sign-in
+    Then the "This browser" storage option is checked
+    And the storage settings modal hides the sign-in prompt
+    When I select the "Cloud storage" storage option
     Then the storage settings modal shows the sign-in prompt
-    And the "This browser" storage option is checked
 
   Scenario: Signing out while cloud storage is active falls back to local storage and stops saving to the cloud
     Given an account is signed in as "e2e-test-user@jianpu.test"

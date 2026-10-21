@@ -128,6 +128,13 @@ Then(
   },
 )
 
+Then(
+  'the storage settings modal hides the sign-in prompt',
+  async ({ page }) => {
+    await expect(page.getByTestId('account-sign-in')).toHaveCount(0)
+  },
+)
+
 Given(
   'the stored storage-backend preference is {string}',
   async ({ page }, backend: string) => {
