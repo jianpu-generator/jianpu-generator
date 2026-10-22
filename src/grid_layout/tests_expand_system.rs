@@ -7,9 +7,10 @@ use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, Measur
 use crate::coordinate_resolver::LyricFontSizes;
 use crate::grid_layout::layout::{
     expand_system_to_rows, system_lyric_height_pt, system_musical_height_pt, LyricSizing,
+    SystemBands,
 };
 use crate::grid_layout::types::GridContent;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 fn make_system_single_note_block() -> Vec<MeasureBlock> {
     vec![make_block("S", 3)] // 4 musical cols, bar at compiler col 3
@@ -159,7 +160,7 @@ fn bar_line_height_includes_lyric_rows() {
     let expected_height = system_musical_height_pt(
         first,
         base,
-        &HashSet::new(),
+        &SystemBands::default(),
         lyric_sizing.notes_vertical_padding_pt,
     ) + system_lyric_height_pt(first, base, lyric_sizing);
 

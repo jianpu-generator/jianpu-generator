@@ -23,6 +23,7 @@ use crate::ast::parsed::Accidental;
 use crate::compositor::types::{FontFamily, TextSpan};
 
 mod font_source;
+pub(crate) mod guitar_diagram;
 #[cfg(test)]
 mod tests;
 

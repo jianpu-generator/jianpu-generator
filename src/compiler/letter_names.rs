@@ -1,29 +1,37 @@
 //! The letter-name view: every note head's jianpu degree spelled as its
 //! pitch's letter name (`F♯`), and every chord symbol's root and bass
 //! likewise (`F♯m⁷/C♯`), against the key in effect at its measure.
-//! Everything else about the layout stays as in the jianpu view.
+//! Everything else about the layout stays as in the jianpu view. Also home
+//! to `label_note_heads`, which dispatches to every view that keeps the
+//! jianpu layout — see `NoteLabels`.
 
 use super::types::{ColumnElement, CompileResult, ElementContent, MeasureBlock, MeasureRow};
 use crate::ast::grouped::Score;
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
 use crate::pitch_description::spelling::SpelledPitch;
 
-/// What a note head reads as: its jianpu degree (`1`–`7`), or its letter
-/// name (`C`–`B`, with any sharps/flats the key implies).
+/// Which view of the jianpu layout to draw: what a note head reads as — its
+/// jianpu degree (`1`–`7`), or its letter name (`C`–`B`, with any
+/// sharps/flats the key implies) — and whether chord symbols carry guitar
+/// chord diagrams.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum NoteLabels {
     #[default]
     Degrees,
     LetterNames,
+    /// Degrees, plus a guitar chord diagram above every chord symbol (see
+    /// `guitar_chords`).
+    GuitarChords,
 }
 
-/// `result`, compiled from `score`, with its note heads labelled as
-/// `labels` says: unchanged for degrees, each note head's `letter_name` set
-/// for letter names.
+/// `result`, compiled from `score`, labelled as `labels` says: unchanged for
+/// degrees, each note head's `letter_name` set for letter names, each chord
+/// symbol's `guitar_voicing` set for guitar chords.
 pub fn label_note_heads(result: CompileResult, score: &Score, labels: NoteLabels) -> CompileResult {
     match labels {
         NoteLabels::Degrees => result,
         NoteLabels::LetterNames => spell_letter_names(result, score),
+        NoteLabels::GuitarChords => super::guitar_chords::place_guitar_voicings(result, score),
     }
 }
 
@@ -43,7 +51,7 @@ fn spell_letter_names(result: CompileResult, score: &Score) -> CompileResult {
 /// The tonic of the key in effect at each block. A merged rest run's block
 /// stands in for `represents_measures` source measures, so the walk advances
 /// by that many and keeps the last key change among them.
-fn block_tonics(blocks: &[MeasureBlock], score: &Score) -> Vec<SpelledPitch> {
+pub(super) fn block_tonics(blocks: &[MeasureBlock], score: &Score) -> Vec<SpelledPitch> {
     // Overwritten by the first measure, whose `key` the grouper always sets.
     let c_major = SpelledPitch::key_tonic(&KeyChange {
         note: Note {
@@ -114,11 +122,13 @@ fn spell_content(content: ElementContent, tonic: SpelledPitch) -> ElementContent
             degrees,
             dotted,
             double_dotted,
+            guitar_voicing,
         } => ElementContent::ChordSymbol {
             text: degrees.letter_symbol(tonic),
             degrees,
             dotted,
             double_dotted,
+            guitar_voicing,
         },
         other => other,
     }

@@ -36,7 +36,7 @@ pub(crate) fn compute_all_measure_click_targets(
         header,
         base,
         hide_system_dividers,
-        |page_idx, system, row_offset, _tuplet_part_indices, musical_row_count| {
+        |page_idx, system, row_offset, _bands, musical_row_count| {
             let row_start = row_offset;
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
@@ -93,7 +93,7 @@ pub(crate) fn compute_all_bar_number_click_targets(
         header,
         base,
         hide_system_dividers,
-        |page_idx, system, row_offset, _tuplet_part_indices, _musical_row_count| {
+        |page_idx, system, row_offset, _bands, _musical_row_count| {
             // The decoration row is always the row immediately above
             // `row_offset` when the system draws one — see
             // `for_each_system`'s doc comment. In practice every non-empty
@@ -160,7 +160,7 @@ pub(crate) fn compute_all_bar_line_click_targets(
         header,
         base,
         hide_system_dividers,
-        |page_idx, system, row_offset, _tuplet_part_indices, musical_row_count| {
+        |page_idx, system, row_offset, _bands, musical_row_count| {
             let row_start = row_offset;
             let row_end = row_offset + musical_row_count.saturating_sub(1);
             let mut col_offset: u32 = MUSIC_START_COL;
@@ -232,8 +232,8 @@ pub(crate) fn compute_all_part_label_click_targets(
         header,
         base,
         hide_system_dividers,
-        |page_idx, system, row_offset, tuplet_part_indices, _musical_row_count| {
-            let part_spans = note_row_spans(lyric_links, system, row_offset, tuplet_part_indices);
+        |page_idx, system, row_offset, bands, _musical_row_count| {
+            let part_spans = note_row_spans(lyric_links, system, row_offset, bands);
 
             let measure_index_start = global_measure_index;
             for block in system {

@@ -4,13 +4,13 @@
 
 use crate::compiler::types::{ElementContent, LyricLink, MeasureBlock, MeasureRow};
 use crate::grid_layout::layout::{
-    block_column_width, is_chord_only_row, is_lyric_row, sings_along_to, LABEL_COLS,
+    block_column_width, is_chord_only_row, is_lyric_row, sings_along_to, SystemBands, LABEL_COLS,
     MUSIC_START_COL,
 };
 use crate::grid_layout::playback_cursor::{block_has_bar_line, group_elements_by_note_id};
 use crate::grid_layout::system_walk::for_each_system;
 use crate::grid_layout::types::{GridElement, Header, LyricClickTarget, LyricLabelClickTarget};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 /// One absolute row index per entry in `first.rows`, `Some` only for entries
 /// that are a lyric row (`is_lyric_row`) — `None` for note rows. Mirrors
@@ -23,7 +23,7 @@ fn lyric_row_absolute_indices(
     lyric_links: &[LyricLink],
     system: &[MeasureBlock],
     row_offset: usize,
-    tuplet_part_indices: &HashSet<usize>,
+    bands: &SystemBands,
 ) -> Vec<Option<usize>> {
     let Some(first) = system.first() else {
         return Vec::new();
@@ -38,13 +38,7 @@ fn lyric_row_absolute_indices(
             idx += 1;
             continue;
         }
-        let sub_count = if is_chord_only_row(part_template) {
-            4
-        } else if tuplet_part_indices.contains(&idx) {
-            7
-        } else {
-            6
-        };
+        let sub_count = bands.sub_row_count(idx, part_template);
         result.push(None);
         cursor += sub_count;
         let mut verse_end = idx + 1;
@@ -214,9 +208,8 @@ pub(crate) fn compute_all_lyric_click_targets(
         header,
         base,
         hide_system_dividers,
-        |page_idx, system, row_offset, tuplet_part_indices, _musical_row_count| {
-            let row_indices =
-                lyric_row_absolute_indices(lyric_links, system, row_offset, tuplet_part_indices);
+        |page_idx, system, row_offset, bands, _musical_row_count| {
+            let row_indices = lyric_row_absolute_indices(lyric_links, system, row_offset, bands);
             let owner_note_row_indices = lyric_owner_note_row_indices(lyric_links, system);
 
             let last_block_idx = system.len().saturating_sub(1);
@@ -298,9 +291,8 @@ pub(crate) fn compute_all_lyric_label_click_targets(
         header,
         base,
         hide_system_dividers,
-        |page_idx, system, row_offset, tuplet_part_indices, _musical_row_count| {
-            let row_indices =
-                lyric_row_absolute_indices(lyric_links, system, row_offset, tuplet_part_indices);
+        |page_idx, system, row_offset, bands, _musical_row_count| {
+            let row_indices = lyric_row_absolute_indices(lyric_links, system, row_offset, bands);
 
             let measure_index_start = global_measure_index;
             for block in system {

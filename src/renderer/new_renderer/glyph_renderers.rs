@@ -194,6 +194,10 @@ pub(super) use rest::render_rest;
 mod chord_symbol;
 pub(super) use chord_symbol::render_chord_symbol;
 
+#[path = "glyph_renderers_guitar_diagram.rs"]
+mod guitar_diagram;
+pub(super) use guitar_diagram::render_guitar_diagram;
+
 /// Standard multi-bar-rest engraving: a thick horizontal bar with short vertical
 /// ticks at both ends, and the collapsed measure count printed centered above it.
 pub(super) fn render_multi_measure_rest(

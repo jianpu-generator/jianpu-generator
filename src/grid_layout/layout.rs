@@ -7,7 +7,7 @@ use crate::grid_layout::types::{
     GridContent, GridElement, GridPage, GridRow, HAlign, MeasureColumnLayout, MeasureRange,
 };
 use crate::render_config::RenderConfig;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 #[path = "layout_row_classification.rs"]
 mod row_classification;
@@ -48,11 +48,15 @@ pub(crate) use spacing::build_measure_column_layout;
 #[cfg(test)]
 pub(crate) use spacing::measure_column_weights;
 
+#[path = "layout_system_bands.rs"]
+mod system_bands;
+pub(crate) use system_bands::{system_bands, SystemBands};
+
 #[path = "layout_systems.rs"]
 mod systems;
 pub(crate) use systems::{
     compute_bar_height, pack_into_systems, system_has_any_decoration, system_lyric_height_pt,
-    system_musical_height_pt, system_tuplet_part_indices, LABEL_COLS, MUSIC_START_COL,
+    system_musical_height_pt, LABEL_COLS, MUSIC_START_COL,
 };
 
 #[path = "layout_decoration.rs"]
@@ -67,18 +71,14 @@ use decoration::{make_decoration_row, make_separator_row};
 fn system_total_height(
     system: &[MeasureBlock],
     base: f32,
-    tuplet_part_indices: &HashSet<usize>,
+    bands: &SystemBands,
     lyric_sizing: LyricSizing,
 ) -> f32 {
     let Some(first) = system.first() else {
         return 0.0;
     };
-    let musical = system_musical_height_pt(
-        first,
-        base,
-        tuplet_part_indices,
-        lyric_sizing.notes_vertical_padding_pt,
-    );
+    let musical =
+        system_musical_height_pt(first, base, bands, lyric_sizing.notes_vertical_padding_pt);
     let lyric = system_lyric_height_pt(first, base, lyric_sizing);
     let deco = if system_has_any_decoration(system) {
         crate::font_metrics::directive_line_row_height()
@@ -239,8 +239,8 @@ fn pack_page_systems(
     let mut used_h: f32 = 0.0;
 
     for (abs_sys, system) in systems.into_iter().enumerate() {
-        let tuplet_part_indices = system_tuplet_part_indices(&system, tuplet_bracket_map, abs_sys);
-        let sys_h = system_total_height(&system, base, &tuplet_part_indices, lyric_sizing);
+        let bands = system_bands(&system, tuplet_bracket_map, abs_sys);
+        let sys_h = system_total_height(&system, base, &bands, lyric_sizing);
         let gap = if current_page.is_empty() || hide_system_dividers {
             0.0
         } else {

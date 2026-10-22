@@ -11,6 +11,8 @@ pub enum SvgVariant {
     OmittedPartRest,
     MultiMeasureRest,
     ChordSymbol,
+    /// A stroke or mark of a guitar chord diagram (see `Tag::GuitarDiagram`).
+    GuitarDiagram,
     PercussionHit,
     HorizontalLine,
     Underline,
@@ -30,6 +32,7 @@ impl SvgVariant {
             Self::OmittedPartRest => "omitted-part-rest",
             Self::MultiMeasureRest => "multi-measure-rest",
             Self::ChordSymbol => "chord-symbol",
+            Self::GuitarDiagram => "guitar-diagram",
             Self::PercussionHit => "percussion-hit",
             Self::HorizontalLine => "horizontal-line",
             Self::Underline => "underline",
@@ -183,6 +186,13 @@ pub enum Tag {
         measure_index_next: Option<usize>,
         measure_index_prev: Option<usize>,
     },
+    /// One guitar chord diagram (the guitar chord view). `frets` is its
+    /// absolute frets low E to high E (`"x 3 2 0 1 0"`), for tests to read
+    /// without parsing geometry.
+    GuitarDiagram {
+        frets: String,
+        base_fret: u8,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -205,6 +215,18 @@ pub enum SvgKind {
     },
     Circle {
         r: f32,
+    },
+    /// An unfilled circle (`x`/`y` its centre), e.g. a guitar diagram's open
+    /// string.
+    RingCircle {
+        r: f32,
+        stroke_width: f32,
+    },
+    /// A filled bar with fully rounded ends (`x`/`y` its top-left corner),
+    /// e.g. a guitar diagram's barre.
+    RoundedBar {
+        width: f32,
+        height: f32,
     },
     Path {
         // Quadratic bezier: x/y from SvgElement; control and end vary

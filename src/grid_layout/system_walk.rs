@@ -1,10 +1,10 @@
 use crate::compiler::types::MeasureBlock;
 use crate::grid_layout::highlight::{abs_sys_index, system_musical_row_count};
 use crate::grid_layout::layout::{
-    make_header_rows, system_has_any_decoration, system_tuplet_part_indices,
+    make_header_rows, system_bands, system_has_any_decoration, SystemBands,
 };
 use crate::grid_layout::types::{GridElement, Header};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 /// Shared page→system→row-offset walk behind every `compute_all_*` function
 /// in `click_targets.rs`/`playback_cursor.rs`: packs `page_systems` in the
@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 /// across system-divider rows, decoration rows, and each system's own
 /// musical row count.
 ///
-/// `visit` receives `(page_idx, system, row_offset, tuplet_part_indices,
+/// `visit` receives `(page_idx, system, row_offset, bands,
 /// musical_row_count)` for every non-empty system, in traversal order. Any
 /// state a caller accumulates across systems (a running `global_measure_index`,
 /// an output `Vec`) it owns itself and mutates from inside the closure —
@@ -24,7 +24,7 @@ pub(crate) fn for_each_system<'a>(
     header: &Header,
     base: f32,
     hide_system_dividers: bool,
-    mut visit: impl FnMut(usize, &'a [MeasureBlock], usize, &HashSet<usize>, usize),
+    mut visit: impl FnMut(usize, &'a [MeasureBlock], usize, &SystemBands, usize),
 ) {
     for (page_idx, page_sys) in page_systems.iter().enumerate() {
         let header_row_count = make_header_rows(header, base, page_idx == 0).len();
@@ -40,16 +40,9 @@ pub(crate) fn for_each_system<'a>(
                 row_offset += 1;
             }
             let abs_sys = abs_sys_index(page_systems, page_idx, sys_idx);
-            let tuplet_part_indices =
-                system_tuplet_part_indices(system, tuplet_bracket_map, abs_sys);
-            let musical_row_count = system_musical_row_count(system, &tuplet_part_indices);
-            visit(
-                page_idx,
-                system,
-                row_offset,
-                &tuplet_part_indices,
-                musical_row_count,
-            );
+            let bands = system_bands(system, tuplet_bracket_map, abs_sys);
+            let musical_row_count = system_musical_row_count(system, &bands);
+            visit(page_idx, system, row_offset, &bands, musical_row_count);
             row_offset += musical_row_count;
         }
     }

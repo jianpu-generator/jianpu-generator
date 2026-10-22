@@ -16,6 +16,7 @@ pub(super) fn is_flush_left_glyph(content: &GridContent) -> bool {
             | GridContent::Rest { .. }
             | GridContent::PercussionHit
             | GridContent::ChordSymbol { .. }
+            | GridContent::GuitarDiagram { .. }
             | GridContent::NoteDash { .. }
             | GridContent::LyricSyllable { .. }
             | GridContent::LowOctaveDots { .. }
@@ -102,6 +103,9 @@ pub(super) fn flush_left_padding(content: &GridContent, config: RowResolveConfig
                 crate::font_metrics::cjk_glyph_left_bearing(leading_char, font_size),
             )
         }
+        // Drawn, not a glyph: no bearing. Its leftmost dot starts where its
+        // chord symbol's ink does.
+        GridContent::GuitarDiagram { .. } => return config.paddings.chords,
         _ => return config.paddings.notes,
     };
     (padding - bearing).max(0.0)

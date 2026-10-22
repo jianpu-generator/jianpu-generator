@@ -53,11 +53,13 @@ world jianpu-wasm {
     // ==================== svg_types.rs ====================
 
     /// What the jianpu layout's note heads read as
-    /// (`jianpu_generator::NoteLabels`): degree digits, or the letter names
-    /// of the letter-name view.
+    /// (`jianpu_generator::NoteLabels`): degree digits, the letter names
+    /// of the letter-name view, or degree digits with a guitar chord diagram
+    /// at each chord symbol (the guitar chord view).
     enum note-labels {
         degrees,
         letter-names,
+        guitar-chords,
     }
 
     enum text-anchor {
@@ -144,6 +146,13 @@ world jianpu-wasm {
         measure-index-prev: option<u32>,
     }
 
+    /// A guitar chord diagram (the guitar chord view): its absolute frets,
+    /// low E to high E (`"x 3 2 0 1 0"`), and the fret its grid starts at.
+    record guitar-diagram-tag {
+        frets: string,
+        base-fret: u8,
+    }
+
     variant tag {
         measure(measure-tag),
         bar-number(bar-number-tag),
@@ -153,6 +162,7 @@ world jianpu-wasm {
         lyric(lyric-tag),
         lyric-label(lyric-label-tag),
         bar-line(bar-line-tag),
+        guitar-diagram(guitar-diagram-tag),
     }
 
     record svg-text-kind {
@@ -174,6 +184,20 @@ world jianpu-wasm {
 
     record svg-circle-kind {
         r: f32,
+    }
+
+    /// An unfilled circle, `x`/`y` its centre (a guitar diagram's open
+    /// string).
+    record svg-ring-circle-kind {
+        r: f32,
+        stroke-width: f32,
+    }
+
+    /// A filled bar with fully rounded ends, `x`/`y` its top-left corner (a
+    /// guitar diagram's barre).
+    record svg-rounded-bar-kind {
+        width: f32,
+        height: f32,
     }
 
     record svg-path-kind {
@@ -233,6 +257,8 @@ world jianpu-wasm {
         text(svg-text-kind),
         line(svg-line-kind),
         circle(svg-circle-kind),
+        ring-circle(svg-ring-circle-kind),
+        rounded-bar(svg-rounded-bar-kind),
         path(svg-path-kind),
         rect(svg-rect-kind),
         error-rect(svg-error-rect-kind),
@@ -259,6 +285,7 @@ world jianpu-wasm {
         bar-line,
         lyric,
         directive-line,
+        guitar-diagram,
     }
 
     // `variant` is a reserved WIT keyword, so the field named `variant` in

@@ -67,6 +67,9 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
                 r
             ));
         }
+        SvgKind::RingCircle { .. } | SvgKind::RoundedBar { .. } => {
+            serialize_guitar_diagram_shape(el, out);
+        }
         SvgKind::Path {
             control_x,
             control_y,
@@ -108,6 +111,35 @@ fn serialize_element(el: &SvgElement, out: &mut String) {
             spans,
         ),
         SvgKind::Group { children, tag } => serialize_group(out, children, tag),
+    }
+}
+
+/// The two shapes only guitar chord diagrams use (an open string's ring and
+/// a barre), split out of `serialize_element` to keep it short.
+fn serialize_guitar_diagram_shape(el: &SvgElement, out: &mut String) {
+    match &el.kind {
+        SvgKind::RingCircle { r, stroke_width } => {
+            out.push_str(&format!(
+                r#"<circle cx="{:.2}" cy="{:.2}"{} r="{:.2}" fill="none" stroke="black" stroke-width="{:.2}"/>"#,
+                el.x,
+                el.y,
+                variant_attr(el.variant),
+                r,
+                stroke_width
+            ));
+        }
+        SvgKind::RoundedBar { width, height } => {
+            out.push_str(&format!(
+                r#"<rect x="{:.2}" y="{:.2}"{} width="{:.2}" height="{:.2}" rx="{:.2}" fill="black"/>"#,
+                el.x,
+                el.y,
+                variant_attr(el.variant),
+                width,
+                height,
+                height * 0.5
+            ));
+        }
+        _ => {}
     }
 }
 

@@ -4,19 +4,20 @@
 mod chord_template;
 mod guitar_diagram_svg;
 mod guitar_voicing;
+pub use guitar_voicing::GuitarVoicing;
 mod piano_diagram_svg;
 pub(crate) mod spelling;
 
 use itertools::Itertools;
 
 use crate::ast::grouped::{GroupedChordNote, NoteEvent, Score};
-use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, TriadQuality};
+use crate::ast::parsed::{Accidental, Extension, KeyChange, Note, NoteName, TriadQuality};
 use crate::error::Span;
 use crate::source_edit::ByteRange;
 
 use chord_template::chord_template;
 use guitar_diagram_svg::render_guitar_diagram_svg;
-use guitar_voicing::{chords_db_bass_name, find_guitar_voicing};
+use guitar_voicing::{chords_db_bass_name, find_guitar_voicings};
 use piano_diagram_svg::{
     interval_function_name, interval_label, render_piano_diagram_svg, PianoTone,
 };
@@ -187,12 +188,8 @@ fn describe_chord(chord: &GroupedChordNote, tonic: SpelledPitch) -> ChordDescrip
         bass.map(|bass| format!("/{}", bass.name()))
             .unwrap_or_default(),
     );
-    let guitar_diagram_svg = slash_chord_voicing(chord, root, bass)
-        .or_else(|| {
-            template
-                .chords_db_suffix
-                .and_then(|suffix| find_guitar_voicing(root.pitch_class(), suffix))
-        })
+    let guitar_diagram_svg = guitar_voicings(&chord.triad, chord.extension.as_ref(), root, bass)
+        .first()
         .map(|voicing| render_guitar_diagram_svg(voicing, &chord_name));
     let piano_diagram_svg =
         render_piano_diagram_svg(&piano_tones(root, &template.intervals, bass), &chord_name);
@@ -243,24 +240,45 @@ fn piano_tones(
 
 const TRIAD_TONE_COUNT: usize = 3;
 
-/// chords-db only has slash voicings for plain major/minor triads, under
-/// suffixes like `"/G"` and `"m/C"`.
-fn slash_chord_voicing(
-    chord: &GroupedChordNote,
+/// Every chords-db voicing of the chord rooted on `root`, most common first;
+/// empty when chords-db has none (e.g. `7sus2`). A slash chord with no
+/// slash-specific voicing falls back to its plain chord's.
+pub(crate) fn guitar_voicings(
+    triad: &TriadQuality,
+    extension: Option<&Extension>,
     root: SpelledPitch,
     bass: Option<SpelledPitch>,
-) -> Option<&'static guitar_voicing::GuitarVoicing> {
-    let bass = bass?;
-    if chord.extension.is_some() {
-        return None;
+) -> Vec<&'static GuitarVoicing> {
+    let slash_voicings = bass
+        .map(|bass| slash_chord_voicings(triad, extension, root, bass))
+        .unwrap_or_default();
+    if !slash_voicings.is_empty() {
+        return slash_voicings;
     }
-    let triad_prefix = match chord.triad {
+    chord_template(triad, extension)
+        .chords_db_suffix
+        .map(|suffix| find_guitar_voicings(root.pitch_class(), suffix))
+        .unwrap_or_default()
+}
+
+/// chords-db only has slash voicings for plain major/minor triads, under
+/// suffixes like `"/G"` and `"m/C"`.
+fn slash_chord_voicings(
+    triad: &TriadQuality,
+    extension: Option<&Extension>,
+    root: SpelledPitch,
+    bass: SpelledPitch,
+) -> Vec<&'static GuitarVoicing> {
+    if extension.is_some() {
+        return vec![];
+    }
+    let triad_prefix = match triad {
         TriadQuality::Major => "",
         TriadQuality::Minor => "m",
-        _ => return None,
+        _ => return vec![],
     };
     let suffix = format!("{triad_prefix}/{}", chords_db_bass_name(bass.pitch_class()));
-    find_guitar_voicing(root.pitch_class(), &suffix)
+    find_guitar_voicings(root.pitch_class(), &suffix)
 }
 
 #[cfg(test)]

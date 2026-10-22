@@ -94,6 +94,7 @@ impl TimedUnit for GroupedChordNote {
             degrees,
             dotted: self.dotted,
             double_dotted: self.double_dotted,
+            guitar_voicing: None,
         }
     }
 }
