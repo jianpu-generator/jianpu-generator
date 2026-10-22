@@ -21,6 +21,14 @@ Feature: Selecting measures in the staff notation view
     Then the section jump selected measure range is "1-3"
     And the highlighted staff measures are 1 to 3
 
+  Scenario: Hovering between the two clicks previews the range, and Escape cancels it
+    When I click staff measure 1
+    And I hover staff measure 4
+    Then the highlighted staff measures are 1 to 4
+    When I press Escape
+    Then the highlighted staff measures are 1 to 1
+    And the section jump selected measure range is "1-1"
+
   Scenario: Playing after a staff selection plays exactly the selected measures
     When I click staff measure 1
     And I click staff measure 2

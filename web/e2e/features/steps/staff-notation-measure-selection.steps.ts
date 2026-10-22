@@ -89,12 +89,23 @@ Given(
   },
 )
 
-When('I click staff measure {int}', async ({ page }, index: number) => {
+/** The centre of staff measure `index`, scrolled into view first. */
+async function staffMeasureCentre(page: Page, index: number) {
   const measure = staffMeasure(page, index)
   await measure.scrollIntoViewIfNeeded()
   const box = await measure.boundingBox()
   if (!box) throw new Error(`Staff measure ${index} has no bounding box.`)
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+}
+
+When('I click staff measure {int}', async ({ page }, index: number) => {
+  const { x, y } = await staffMeasureCentre(page, index)
+  await page.mouse.click(x, y)
+})
+
+When('I hover staff measure {int}', async ({ page }, index: number) => {
+  const { x, y } = await staffMeasureCentre(page, index)
+  await page.mouse.move(x, y)
 })
 
 Then(

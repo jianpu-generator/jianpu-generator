@@ -16,7 +16,6 @@ import { findRevealTarget } from './previewRevealTarget'
 import type { LyricCell, NoteCell } from './previewSelection'
 import { usePlaybackCursor } from './usePlaybackCursor'
 import { usePreviewClickSelection } from './usePreviewClickSelection'
-import { useStaffMeasureHighlights } from './useStaffMeasureHighlights'
 
 export type { LyricCell, NoteCell } from './previewSelection'
 
@@ -195,19 +194,17 @@ export function Preview({
     onLyricRangeSelect,
     lyricSpans,
     onMeasureRangeSelect,
+    staffScore,
+    selectedMeasureRange,
   )
   useEffect(() => {
     onPendingSecondClickChange?.(pendingSecondClick)
   }, [pendingSecondClick, onPendingSecondClickChange])
   const onSectionLabelClickRef = useRef(onSectionLabelClick)
   onSectionLabelClickRef.current = onSectionLabelClick
-  useStaffMeasureHighlights(previewPagesRef, staffScore, selectedMeasureRange)
 
   useEffect(() => {
-    if (!audioBusy) return
-    if (audioElement && !audioElement.paused) {
-      audioElement.pause()
-    }
+    if (audioBusy && audioElement && !audioElement.paused) audioElement.pause()
   }, [audioBusy, audioElement])
 
   // Scrolls the preview to the current selection. Prefers the amber

@@ -134,6 +134,9 @@
    click-and-click gesture waits on its second click. */
 .preview-page--staff .staff-measure-highlight {
   fill: rgba(37, 99, 235, 0.15);
+  /* Never a hover target: a rect appearing under the pointer would fire a
+   * fresh `mouseover`, re-running the staff hover preview that painted it. */
+  pointer-events: none;
 }
 
 [data-pending-selection] .preview-page--staff .staff-measure-highlight {

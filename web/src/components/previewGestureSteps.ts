@@ -6,6 +6,7 @@ import {
   type HandlePreviewClickArgs,
   resolveSelection,
 } from './previewSelectionResolver'
+import { applyStaffMeasureHighlights } from './previewStaffMeasures'
 
 /** Anchors `anchorStateRef` to `newState` and immediately self-commits its
  * single-target resolution (matching a plain click's long-standing
@@ -42,7 +43,18 @@ export function cancelAnchor(
   anchorState: NonNullable<PreviewAnchorState>,
   args: HandlePreviewClickArgs,
 ): void {
-  resolveSelection(anchorState, undefined, undefined, args)
+  const container = args.previewPagesRef.current
+  if (args.staffMeasures) {
+    // The staff view's hover preview painted over the anchor's highlight
+    // directly (see `hoverStaffMeasure`), so put the anchor's back.
+    if (container && anchorState.mode === 'measure') {
+      applyStaffMeasureHighlights(container, args.staffMeasures, [
+        anchorState.anchor,
+      ])
+    }
+  } else {
+    resolveSelection(anchorState, undefined, undefined, args)
+  }
   anchorStateRef.current = null
   args.onPendingSecondClickChange?.(false)
 }
