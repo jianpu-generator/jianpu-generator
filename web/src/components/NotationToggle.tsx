@@ -5,10 +5,11 @@ interface NotationToggleProps {
   onChange: (notation: Notation) => void
 }
 
-const OPTIONS: { value: Notation; icon: string; label: string }[] = [
+// ABC has no icon: its label already reads as its own symbol.
+const OPTIONS: { value: Notation; icon?: string; label: string }[] = [
   { value: 'jianpu', icon: '簡', label: 'Jianpu' },
   { value: 'staff', icon: '𝄞', label: 'Staff' },
-  { value: 'abc', icon: 'A', label: 'ABC' },
+  { value: 'abc', label: 'ABC' },
 ]
 
 /** Switches the preview between jianpu, western staff notation, and ABC (the
@@ -26,9 +27,11 @@ export function NotationToggle({ notation, onChange }: NotationToggleProps) {
           data-testid={`notation-toggle-${value}`}
           onClick={() => onChange(value)}
         >
-          <span className="notation-toggle-icon" aria-hidden="true">
-            {icon}
-          </span>
+          {icon && (
+            <span className="notation-toggle-icon" aria-hidden="true">
+              {icon}
+            </span>
+          )}
           {label}
         </button>
       ))}

@@ -162,3 +162,55 @@ time=4/4 key=D4 bpm=120
     assert_eq!(hits, 2);
     assert_eq!(letter_names(&result), vec![vec![]]);
 }
+
+/// Each block's chord symbols' text, in order.
+fn chord_texts(result: &CompileResult) -> Vec<Vec<String>> {
+    result
+        .blocks
+        .iter()
+        .map(|block| {
+            block
+                .rows
+                .iter()
+                .flat_map(|row| &row.elements)
+                .filter_map(|element| match &element.content {
+                    ElementContent::ChordSymbol { text, .. } => Some(text.clone()),
+                    _ => None,
+                })
+                .collect()
+        })
+        .collect()
+}
+
+const CHORDS_IN_D: &str = "# parts
+C = chords
+
+# score
+time=4/4 key=D4 bpm=120
+[C] 1 6m/3 4M7 5b7
+
+key=F4
+[C] 1 7bsus4 3#o 2m7/5
+";
+
+#[test]
+fn letter_names_spell_chord_roots_and_slash_basses_against_the_key() {
+    assert_eq!(
+        chord_texts(&compile_with(CHORDS_IN_D, NoteLabels::LetterNames)),
+        vec![
+            vec!["D", "Bm/F\u{266F}", "G△⁷", "A\u{266D}⁷"],
+            vec!["F", "E\u{266D}sus4", "A\u{266F}°", "Gm⁷/C"],
+        ]
+    );
+}
+
+#[test]
+fn degrees_keep_chord_symbols_in_jianpu() {
+    assert_eq!(
+        chord_texts(&compile_with(CHORDS_IN_D, NoteLabels::Degrees)),
+        vec![
+            vec!["1", "6m/3", "4△⁷", "\u{266D}5⁷"],
+            vec!["1", "\u{266D}7sus4", "\u{266F}3°", "2m⁷/5"],
+        ]
+    );
+}

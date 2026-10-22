@@ -7,12 +7,15 @@ const SOURCE = [
   '',
   '# parts',
   'Soprano [S] = notes',
+  'Chords [C] = chords',
   '',
   '# score',
   '(bpm=120 key=D4 time=4/4)',
   '[S] 1 2 3 4',
+  '[C] 1 - 6m/3 -',
   '',
   "[S] 5 6 7 1'",
+  '[C] 4M7 - 5b -',
 ].join('\n')
 
 Given(
@@ -39,6 +42,15 @@ Then(
   async ({ page }, expected: string) => {
     await expect(
       page.locator('.preview-page text[data-variant="note-head"]'),
+    ).toHaveText(expected.split(' '))
+  },
+)
+
+Then(
+  "the preview's chord symbols read {string}",
+  async ({ page }, expected: string) => {
+    await expect(
+      page.locator('.preview-page text[data-variant="chord-symbol"]'),
     ).toHaveText(expected.split(' '))
   },
 )

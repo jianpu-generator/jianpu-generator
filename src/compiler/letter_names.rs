@@ -1,5 +1,6 @@
 //! The letter-name view: every note head's jianpu degree spelled as its
-//! pitch's letter name (`F♯`), against the key in effect at its measure.
+//! pitch's letter name (`F♯`), and every chord symbol's root and bass
+//! likewise (`F♯m⁷/C♯`), against the key in effect at its measure.
 //! Everything else about the layout stays as in the jianpu view.
 
 use super::types::{ColumnElement, CompileResult, ElementContent, MeasureBlock, MeasureRow};
@@ -105,6 +106,17 @@ fn spell_content(content: ElementContent, tonic: SpelledPitch) -> ElementContent
             pitch,
             accidental,
             octave,
+            dotted,
+            double_dotted,
+        },
+        ElementContent::ChordSymbol {
+            text: _,
+            degrees,
+            dotted,
+            double_dotted,
+        } => ElementContent::ChordSymbol {
+            text: degrees.letter_symbol(tonic),
+            degrees,
             dotted,
             double_dotted,
         },

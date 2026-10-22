@@ -2,6 +2,7 @@ use super::slur_chains::SlurKey;
 use crate::ast::grouped::{GroupedChordNote, GroupedNote, GroupedPercussionHit};
 use crate::ast::parsed::TupletInfo;
 use crate::compiler::types::ElementContent;
+use crate::compiler::ChordDegrees;
 
 // ── TimedUnit trait ───────────────────────────────────────────────────────────
 
@@ -87,8 +88,10 @@ impl TimedUnit for GroupedChordNote {
         self.tuplet
     }
     fn element_content(&self) -> ElementContent {
+        let degrees = ChordDegrees::of(self);
         ElementContent::ChordSymbol {
-            text: self.format_symbol(),
+            text: degrees.degree_symbol(),
+            degrees,
             dotted: self.dotted,
             double_dotted: self.double_dotted,
         }

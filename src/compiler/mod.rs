@@ -18,6 +18,11 @@ mod tuplet_spans;
 mod rest_runs;
 use rest_runs::merge_rest_runs;
 
+mod chord_degrees;
+pub use chord_degrees::ChordDegrees;
+#[cfg(test)]
+pub(crate) mod test_chord_degrees;
+
 mod letter_names;
 pub use letter_names::{label_note_heads, NoteLabels};
 

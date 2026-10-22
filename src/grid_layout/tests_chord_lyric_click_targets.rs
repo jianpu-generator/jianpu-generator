@@ -34,6 +34,7 @@ fn chord_row_and_chord_lyric_row() -> Vec<MeasureRow> {
                     0,
                     ElementContent::ChordSymbol {
                         text: "C".to_string(),
+                        degrees: crate::compiler::test_chord_degrees::tonic_major(),
                         dotted: false,
                         double_dotted: false,
                     },

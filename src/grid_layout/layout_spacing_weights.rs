@@ -189,6 +189,7 @@ pub(super) fn column_weight(content: &ElementContent, config: &RenderConfig) -> 
             text,
             dotted,
             double_dotted,
+            ..
         } => {
             chord_symbol_weight(text, config)
                 + dot_extra_weight(

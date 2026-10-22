@@ -93,6 +93,7 @@ fn chord_row(id: &str) -> MeasureRow {
             column: 0,
             content: ElementContent::ChordSymbol {
                 text: "Am".to_string(),
+                degrees: crate::compiler::test_chord_degrees::tonic_major(),
                 dotted: false,
                 double_dotted: false,
             },

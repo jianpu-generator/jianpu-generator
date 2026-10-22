@@ -343,6 +343,7 @@ fn push_note_element(
             text,
             dotted,
             double_dotted,
+            ..
         } => push_head(
             sub_rows,
             head_sub,
