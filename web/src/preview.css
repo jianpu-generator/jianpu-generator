@@ -76,11 +76,19 @@
   height: auto;
 }
 
+.preview-floating-controls {
+  position: absolute;
+  top: 0.5rem;
+  /* Clear `.preview-pages`' vertical scrollbar. */
+  right: 1.25rem;
+  z-index: 10;
+}
+
 .notation-toggle {
   display: inline-flex;
-  align-self: flex-end;
-  margin: 0.5rem 1rem 0;
+  margin: 0;
   padding: 0;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
   border: 1px solid var(--border);
   border-radius: 0.25rem;
   overflow: hidden;
@@ -104,11 +112,19 @@
   cursor: pointer;
 }
 
+.notation-toggle-icon {
+  margin-right: 0.3em;
+  font-size: 1.2em;
+  line-height: 1;
+}
+
 .notation-toggle-btn--on {
   background: var(--border);
   font-weight: 600;
 }
 
-.preview-page--staff svg {
-  width: 100%;
+/* Verovio's SVG has only a viewBox; give it the jianpu page's A4 width so
+   `.preview-page svg`'s max-width scales it down to the available width. */
+.preview-page--staff > svg {
+  width: 210mm;
 }

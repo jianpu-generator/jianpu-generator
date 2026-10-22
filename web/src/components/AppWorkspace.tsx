@@ -308,12 +308,14 @@ export function AppWorkspace({
           .filter(Boolean)
           .join(' ')}
       >
-        <NotationToggle
-          notation={staffNotation.notation}
-          onChange={staffNotation.setNotation}
-        />
         <Preview
           documents={documents}
+          floatingControls={
+            <NotationToggle
+              notation={staffNotation.notation}
+              onChange={staffNotation.setNotation}
+            />
+          }
           staffPages={staffView ? staffNotation.pages : null}
           highlightedDocuments={highlightedDocuments}
           rendering={staffView ? staffNotation.loading : rendering}

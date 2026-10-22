@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import type { NoteTiming, SvgDocument } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import { PreviewPages } from './PreviewPages'
@@ -23,6 +23,9 @@ interface PreviewProps {
   /** Verovio-engraved staff-notation pages; when set, shown instead of the
    * jianpu `documents` (see `useStaffNotation`). */
   staffPages?: string[] | null
+  /** Controls floated over the top-right corner of the pages, e.g. the
+   * jianpu/staff `NotationToggle`. */
+  floatingControls?: ReactNode
   highlightedDocuments?: SvgDocument[]
   rendering: boolean
   audioGenerating?: boolean
@@ -126,6 +129,7 @@ interface PreviewProps {
 export function Preview({
   documents,
   staffPages = null,
+  floatingControls = null,
   highlightedDocuments = [],
   rendering,
   audioGenerating = false,
@@ -343,6 +347,9 @@ export function Preview({
         </div>
       ) : null}
       <div className="preview-pages-wrapper">
+        {floatingControls ? (
+          <div className="preview-floating-controls">{floatingControls}</div>
+        ) : null}
         {pendingSecondClick ? (
           <div
             className="pending-second-click-banner"
