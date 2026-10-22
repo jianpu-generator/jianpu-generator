@@ -96,6 +96,7 @@ fn chord(column: u32, text: &str) -> ColumnElement {
         content: ElementContent::ChordSymbol {
             text: text.to_string(),
             degrees: crate::compiler::test_chord_degrees::tonic_major(),
+            guitar_voicing: None,
             dotted: false,
             double_dotted: false,
         },

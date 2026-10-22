@@ -177,5 +177,6 @@ pub(super) fn note_labels_from_wit(labels: NoteLabels) -> jianpu_generator::Note
         NoteLabels::Degrees => jianpu_generator::NoteLabels::Degrees,
         NoteLabels::LetterNames => jianpu_generator::NoteLabels::LetterNames,
         NoteLabels::HarmonicaTabs => jianpu_generator::NoteLabels::HarmonicaTabs,
+        NoteLabels::GuitarChords => jianpu_generator::NoteLabels::GuitarChords,
     }
 }

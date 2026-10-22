@@ -1,5 +1,6 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compiler::types::{ArcKind, BarLineKind};
+use crate::pitch_description::GuitarVoicing;
 
 #[derive(Debug, Clone)]
 pub struct AbsolutePage {
@@ -38,6 +39,10 @@ pub enum AbsoluteContent {
         text: String,
         dotted: bool,
         double_dotted: bool,
+    },
+    /// A guitar chord diagram; `x` is its left edge, `y` its bottom edge.
+    GuitarDiagram {
+        voicing: GuitarVoicing,
     },
     NoteDash {
         dotted: bool,

@@ -1,6 +1,7 @@
 use super::ChordDegrees;
 use crate::ast::parsed::{Accidental, JianPuPitch, PartKind};
 use crate::error::{Diagnostic, Span};
+use crate::pitch_description::GuitarVoicing;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ArcKind {
@@ -159,6 +160,10 @@ pub enum ElementContent {
         degrees: ChordDegrees,
         dotted: bool,
         double_dotted: bool,
+        /// The chord diagram the guitar chord view draws above `text`
+        /// (`label_note_heads` with `NoteLabels::GuitarChords`); `None` in
+        /// every other view, and for a chord chords-db has no voicing for.
+        guitar_voicing: Option<GuitarVoicing>,
     },
     PercussionHit,
     Underline {

@@ -6,8 +6,9 @@
 //!
 //! Also generates `src/pitch_description/guitar_voicing.rs`'s lookup table
 //! from the vendored `vendor/chords-db/guitar.json` (see
-//! `emit_guitar_voicings`), keeping only each chord's first position so the
-//! wasm binary carries a few KB of table instead of the whole JSON.
+//! `emit_guitar_voicings`), keeping only each position's frets, base fret
+//! and barres so the wasm binary carries a compact table instead of the
+//! whole JSON.
 
 use serde::Deserialize;
 use std::env;
@@ -101,8 +102,9 @@ fn chords_db_root_pitch_class(root: &str) -> Result<u8, Box<dyn std::error::Erro
     Ok(pitch_class)
 }
 
-/// Emits one `GuitarVoicingEntry` per chords-db chord, using only its first
-/// (most common) position.
+/// Emits one `GuitarVoicingEntry` per chords-db chord position, in
+/// chords-db's order (most common first) — `find_guitar_voicings` relies on
+/// that order.
 fn emit_guitar_voicings(manifest_dir: &str) -> Result<String, Box<dyn std::error::Error>> {
     let json_path = PathBuf::from(manifest_dir).join("vendor/chords-db/guitar.json");
     let db: ChordsDb = serde_json::from_str(&fs::read_to_string(json_path)?)?;
@@ -111,16 +113,15 @@ fn emit_guitar_voicings(manifest_dir: &str) -> Result<String, Box<dyn std::error
     for (root, chords) in &db.chords {
         let root_pitch_class = chords_db_root_pitch_class(root)?;
         for chord in chords {
-            let Some(position) = chord.positions.first() else {
-                continue;
-            };
-            out.push_str(&format!(
-                "    GuitarVoicingEntry {{ root_pitch_class: {root_pitch_class}, suffix: {suffix:?}, voicing: GuitarVoicing {{ frets: {frets:?}, base_fret: {base_fret}, barres: &{barres:?} }} }},\n",
-                suffix = chord.suffix,
-                frets = position.frets,
-                base_fret = position.base_fret,
-                barres = position.barres,
-            ));
+            for position in &chord.positions {
+                out.push_str(&format!(
+                    "    GuitarVoicingEntry {{ root_pitch_class: {root_pitch_class}, suffix: {suffix:?}, voicing: GuitarVoicing {{ frets: {frets:?}, base_fret: {base_fret}, barres: &{barres:?} }} }},\n",
+                    suffix = chord.suffix,
+                    frets = position.frets,
+                    base_fret = position.base_fret,
+                    barres = position.barres,
+                ));
+            }
         }
     }
     out.push_str("];\n");

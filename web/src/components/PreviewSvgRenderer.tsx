@@ -98,6 +98,30 @@ function renderSvgElement(doc: SvgDocument, index: number): ReactNode {
       )
     case 'circle':
       return <circle key={key} cx={el.x} cy={el.y} r={kind.r} fill="black" />
+    case 'ring-circle':
+      return (
+        <circle
+          key={key}
+          cx={el.x}
+          cy={el.y}
+          r={kind.r}
+          fill="none"
+          stroke="black"
+          strokeWidth={kind.strokeWidth}
+        />
+      )
+    case 'rounded-bar':
+      return (
+        <rect
+          key={key}
+          x={el.x}
+          y={el.y}
+          width={kind.width}
+          height={kind.height}
+          rx={kind.height / 2}
+          fill="black"
+        />
+      )
     case 'path':
       return (
         <path

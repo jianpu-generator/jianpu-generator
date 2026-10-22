@@ -58,6 +58,7 @@ fn svg_variant_to_out(variant: SvgVariant) -> SvgVariantOut {
         SvgVariant::BarLine => SvgVariantOut::BarLine,
         SvgVariant::Lyric => SvgVariantOut::Lyric,
         SvgVariant::DirectiveLine => SvgVariantOut::DirectiveLine,
+        SvgVariant::GuitarDiagram => SvgVariantOut::GuitarDiagram,
     }
 }
 
@@ -144,6 +145,10 @@ fn tag_to_out(tag: &Tag) -> TagOut {
             measure_index_next: *measure_index_next,
             measure_index_prev: *measure_index_prev,
         },
+        Tag::GuitarDiagram { frets, base_fret } => TagOut::GuitarDiagram {
+            frets: frets.clone(),
+            base_fret: *base_fret,
+        },
     }
 }
 
@@ -196,6 +201,8 @@ fn svg_kind_to_out(kind: &SvgKind) -> SvgKindOut {
             stroke_width: *stroke_width,
         },
         SvgKind::Circle { r } => SvgKindOut::Circle { r: *r },
+        SvgKind::RingCircle { r, stroke_width } => ring_circle_to_out(*r, *stroke_width),
+        SvgKind::RoundedBar { width, height } => rounded_bar_to_out(*width, *height),
         SvgKind::Path {
             control_x,
             control_y,
@@ -242,6 +249,16 @@ fn svg_kind_to_out(kind: &SvgKind) -> SvgKindOut {
             tag: tag.as_ref().map(tag_to_out),
         },
     }
+}
+
+/// The guitar-diagram shape arms of [`svg_kind_to_out`]'s dispatch, split out
+/// to keep that function under clippy's line-count limit.
+fn ring_circle_to_out(r: f32, stroke_width: f32) -> SvgKindOut {
+    SvgKindOut::RingCircle { r, stroke_width }
+}
+
+fn rounded_bar_to_out(width: f32, height: f32) -> SvgKindOut {
+    SvgKindOut::RoundedBar { width, height }
 }
 
 /// The `SvgKind::TextWithTspans` arm of [`svg_kind_to_out`]'s dispatch, split

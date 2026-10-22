@@ -56,6 +56,9 @@ pub(super) fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridCo
             dotted: *dotted,
             double_dotted: *double_dotted,
         }),
+        GridContent::GuitarDiagram { voicing } => Some(PostArcGridContent::GuitarDiagram {
+            voicing: voicing.clone(),
+        }),
         GridContent::PercussionHit => Some(PostArcGridContent::PercussionHit),
         content => to_post_arc_text_content(content),
     }

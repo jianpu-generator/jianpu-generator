@@ -1,9 +1,8 @@
 use super::{
     block_column_width, chord_part_sub_row_heights, is_chord_only_row, is_lyric_row,
-    lyric_row_height, note_part_height_pt, LyricSizing,
+    lyric_row_height, note_part_height_pt, LyricSizing, SystemBands,
 };
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
-use crate::grid_layout::types::GridElement;
 use crate::render_config::RenderConfig;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
@@ -18,41 +17,13 @@ pub(crate) const LABEL_COLS: u32 = 1;
 /// leading barline so it gets the same breathing room as inter-measure barlines.
 pub(crate) const MUSIC_START_COL: u32 = LABEL_COLS + 1;
 
-/// Total height in points for all musical sub-rows in a system
-/// (sum over all non-lyric part rows). `tuplet_part_indices` holds the
-/// consolidated part indices (row position within `block.rows`) that have a
-/// tuplet bracket in this system, so parts without one don't count the
-/// `tuplet_bracket` sub-row's height (see `note_part_height_pt`).
-/// Consolidated part indices (row position within `system`'s first block's
-/// `rows`) that have a tuplet bracket in this system, per `tuplet_bracket_map`
-/// (keyed by `(abs_sys, source_part_index)`, see `resolve_tuplet_spans`).
-/// Shared by every pass that needs to know whether a part's `tuplet_bracket`
-/// sub-row is reserved in this particular system — layout height math
-/// (`system_musical_height_pt`), row expansion (`expand_note_part`), and the
-/// highlight/click/playback-cursor row-counting passes (`grid_layout::highlight`,
-/// `grid_layout::playback_cursor`) all must agree on this or their row indices
-/// drift apart.
-pub(crate) fn system_tuplet_part_indices(
-    system: &[MeasureBlock],
-    tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
-    abs_sys: usize,
-) -> HashSet<usize> {
-    let Some(first) = system.first() else {
-        return HashSet::new();
-    };
-    first
-        .rows
-        .iter()
-        .enumerate()
-        .filter(|(_, row)| tuplet_bracket_map.contains_key(&(abs_sys, row.source_part_index)))
-        .map(|(idx, _)| idx)
-        .collect()
-}
-
+/// Total height in points for all musical sub-rows in a system (sum over
+/// all non-lyric part rows of `block`, the system's first), counting each
+/// part's optional bands only where `bands` says it draws them.
 pub(crate) fn system_musical_height_pt(
     block: &MeasureBlock,
     base: f32,
-    tuplet_part_indices: &HashSet<usize>,
+    bands: &SystemBands,
     notes_vertical_padding_pt: f32,
 ) -> f32 {
     block
@@ -61,15 +32,21 @@ pub(crate) fn system_musical_height_pt(
         .enumerate()
         .filter(|(_, r)| !is_lyric_row(r))
         .map(|(idx, r)| {
-            if is_chord_only_row(r) {
+            let musical = if is_chord_only_row(r) {
                 chord_part_sub_row_heights(base).iter().sum::<f32>()
             } else {
                 note_part_height_pt(
                     base,
-                    tuplet_part_indices.contains(&idx),
+                    bands.has_tuplet_bracket(idx),
                     notes_vertical_padding_pt,
                 )
-            }
+            };
+            let diagrams = if bands.has_guitar_diagrams(idx) {
+                crate::font_metrics::guitar_diagram::band_height_pt()
+            } else {
+                0.0
+            };
+            musical + diagrams
         })
         .sum()
 }
@@ -334,15 +311,11 @@ pub(crate) fn pack_into_systems(
 pub(crate) fn compute_bar_height(
     first: &MeasureBlock,
     base: f32,
-    tuplet_part_indices: &HashSet<usize>,
+    bands: &SystemBands,
     lyric_sizing: LyricSizing,
 ) -> f32 {
-    system_musical_height_pt(
-        first,
-        base,
-        tuplet_part_indices,
-        lyric_sizing.notes_vertical_padding_pt,
-    ) + system_lyric_height_pt(first, base, lyric_sizing)
+    system_musical_height_pt(first, base, bands, lyric_sizing.notes_vertical_padding_pt)
+        + system_lyric_height_pt(first, base, lyric_sizing)
 }
 
 pub(crate) fn system_has_any_decoration(system: &[MeasureBlock]) -> bool {

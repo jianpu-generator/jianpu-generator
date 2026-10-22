@@ -1,5 +1,6 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compiler::types::{ArcKind, BarLineKind};
+use crate::pitch_description::GuitarVoicing;
 
 #[path = "click_target_types.rs"]
 mod click_target_types;
@@ -171,6 +172,12 @@ pub enum GridContent {
         text: String,
         dotted: bool,
         double_dotted: bool,
+    },
+    /// A chord symbol's guitar chord diagram (the guitar chord view), in the
+    /// guitar-diagram band above it, flush-left with the chord symbol and
+    /// bottom-aligned in its band.
+    GuitarDiagram {
+        voicing: GuitarVoicing,
     },
     /// Percussion hit glyph (unpitched GM drum key), centered like a note head.
     PercussionHit,

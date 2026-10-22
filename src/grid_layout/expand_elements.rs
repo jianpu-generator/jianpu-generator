@@ -1,6 +1,7 @@
 use crate::compiler::types::{BarLineKind, ElementContent, MeasureRow, MULTI_MEASURE_REST_WIDTH};
 use crate::grid_layout::layout::MUSIC_START_COL;
 use crate::grid_layout::types::{GridContent, GridElement, GridRow, HAlign, VAlign};
+use crate::pitch_description::GuitarVoicing;
 
 pub(crate) fn grid_el(
     column: u32,
@@ -31,6 +32,8 @@ pub(crate) fn push_head(
 
 pub(crate) struct MeasureRenderParams {
     pub(crate) head_sub: usize,
+    /// The guitar-diagram band, when the part draws one in this system.
+    pub(crate) guitar_diagram_sub: Option<usize>,
     pub(crate) bar_height: f32,
     pub(crate) part_idx: usize,
     /// True when this measure is the last one in its system, so its closing
@@ -117,6 +120,26 @@ fn push_implicit_fill_rest(
     }
 }
 
+/// A chord's diagram, in its part's guitar-diagram band (when the system
+/// has one for that part).
+fn push_guitar_diagram(
+    sub_rows: &mut [GridRow],
+    guitar_diagram_sub: Option<usize>,
+    grid_col: u32,
+    voicing: &GuitarVoicing,
+) {
+    if let Some(row) = guitar_diagram_sub.and_then(|sub| sub_rows.get_mut(sub)) {
+        row.elements.push(grid_el(
+            grid_col,
+            GridContent::GuitarDiagram {
+                voicing: voicing.clone(),
+            },
+            HAlign::Center,
+            VAlign::Bottom,
+        ));
+    }
+}
+
 pub(crate) fn expand_measure_elements(
     row: &MeasureRow,
     measure_col_offset: u32,
@@ -187,6 +210,13 @@ pub(crate) fn expand_measure_elements(
                 }
             }
             ElementContent::Lyric { .. } | ElementContent::LyricLine { .. } => {} // handled in lyric-row branch above
+            ElementContent::ChordSymbol {
+                guitar_voicing: Some(voicing),
+                ..
+            } => {
+                push_guitar_diagram(sub_rows, params.guitar_diagram_sub, grid_col, voicing);
+                push_note_element(sub_rows, head_sub, grid_col, &el.content);
+            }
             ElementContent::NoteHead { octave, .. } if *octave < 0 => {
                 push_low_octave_note_head(
                     sub_rows,

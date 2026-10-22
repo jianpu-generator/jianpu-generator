@@ -1,11 +1,10 @@
 use crate::compiler::types::{ColumnElement, ElementContent, LyricLink, MeasureBlock};
 use crate::grid_layout::layout::{
-    block_column_width, is_chord_only_row, is_lyric_row, sings_along_to, LABEL_COLS,
-    MUSIC_START_COL,
+    block_column_width, is_lyric_row, sings_along_to, SystemBands, LABEL_COLS, MUSIC_START_COL,
 };
 use crate::grid_layout::system_walk::for_each_system;
 use crate::grid_layout::types::{GridElement, Header, PlaybackCursorTarget};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 
 /// Groups a `MeasureRow`'s elements by `note_id`, returning `(note_id,
 /// min_column, max_column)` for each contiguous note/rest found in this
@@ -75,7 +74,7 @@ pub(crate) fn note_row_spans(
     lyric_links: &[LyricLink],
     system: &[MeasureBlock],
     row_offset: usize,
-    tuplet_part_indices: &HashSet<usize>,
+    bands: &SystemBands,
 ) -> Vec<NoteRowSpan> {
     let Some(first) = system.first() else {
         return Vec::new();
@@ -97,13 +96,7 @@ pub(crate) fn note_row_spans(
             idx += 1;
             continue;
         }
-        let sub_count = if is_chord_only_row(part_template) {
-            4
-        } else if tuplet_part_indices.contains(&idx) {
-            7
-        } else {
-            6
-        };
+        let sub_count = bands.sub_row_count(idx, part_template);
         let start = cursor;
         cursor += sub_count;
         let click_row_end = cursor - 1;
@@ -146,8 +139,8 @@ pub(crate) fn compute_all_playback_cursor_targets(
         header,
         base,
         hide_system_dividers,
-        |page_idx, system, row_offset, tuplet_part_indices, _musical_row_count| {
-            let part_spans = note_row_spans(lyric_links, system, row_offset, tuplet_part_indices);
+        |page_idx, system, row_offset, bands, _musical_row_count| {
+            let part_spans = note_row_spans(lyric_links, system, row_offset, bands);
 
             let last_block_idx = system.len() - 1;
             let mut col_offset: u32 = MUSIC_START_COL;

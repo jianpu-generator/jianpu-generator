@@ -31,7 +31,10 @@ const STORAGE_KEY = 'jianpu:preview-notation:v1'
 function load(): Notation {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    return stored === 'staff' || stored === 'abc' || stored === 'harmonica'
+    return stored === 'staff' ||
+      stored === 'abc' ||
+      stored === 'guitar' ||
+      stored === 'harmonica'
       ? stored
       : 'jianpu'
   } catch {

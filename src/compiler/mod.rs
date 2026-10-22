@@ -27,6 +27,9 @@ mod harmonica_tabs;
 mod letter_names;
 pub use letter_names::{label_note_heads, NoteLabels};
 
+mod guitar_chords;
+mod guitar_voicing_path;
+
 use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartRow, Score};
 use crate::ast::parsed::{Accidental, KeyChange, NoteName, PartKind};
 use itertools::Itertools;

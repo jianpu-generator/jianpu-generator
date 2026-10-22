@@ -51,6 +51,7 @@ pub(super) fn svg_variant_to_wit(variant: crate::svg_types::SvgVariantOut) -> Sv
         SvgVariantOut::BarLine => SvgVariant::BarLine,
         SvgVariantOut::Lyric => SvgVariant::Lyric,
         SvgVariantOut::DirectiveLine => SvgVariant::DirectiveLine,
+        SvgVariantOut::GuitarDiagram => SvgVariant::GuitarDiagram,
     }
 }
 
@@ -150,6 +151,12 @@ pub(super) fn tag_to_wit(tag: &crate::svg_types::TagOut) -> Tag {
             measure_index_next: measure_index_next.map(|v| v as u32),
             measure_index_prev: measure_index_prev.map(|v| v as u32),
         }),
+        crate::svg_types::TagOut::GuitarDiagram { frets, base_fret } => {
+            Tag::GuitarDiagram(GuitarDiagramTag {
+                frets: frets.clone(),
+                base_fret: *base_fret,
+            })
+        }
     }
 }
 
@@ -229,6 +236,14 @@ pub(super) fn svg_line_kind_to_wit(x2: f32, y2: f32, stroke_width: f32) -> SvgLi
 
 pub(super) fn svg_circle_kind_to_wit(r: f32) -> SvgCircleKind {
     SvgCircleKind { r }
+}
+
+pub(super) fn svg_ring_circle_kind_to_wit(r: f32, stroke_width: f32) -> SvgRingCircleKind {
+    SvgRingCircleKind { r, stroke_width }
+}
+
+pub(super) fn svg_rounded_bar_kind_to_wit(width: f32, height: f32) -> SvgRoundedBarKind {
+    SvgRoundedBarKind { width, height }
 }
 
 pub(super) fn svg_rect_kind_to_wit(width: f32, height: f32) -> SvgRectKind {

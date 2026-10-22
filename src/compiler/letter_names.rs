@@ -2,7 +2,8 @@
 //! replaced by its pitch's letter name (`F♯`) or its harmonica tab (`-4`),
 //! resolved against the key in effect at its measure. The letter-name view
 //! also respells chord symbols (`F♯m⁷/C♯`). Everything else about the layout
-//! stays as in the jianpu view.
+//! stays as in the jianpu view. Also home to `label_note_heads`, which
+//! dispatches to every view that keeps the jianpu layout — see `NoteLabels`.
 
 use super::harmonica_tabs::HarmonicaTabs;
 use super::types::{
@@ -12,20 +13,24 @@ use crate::ast::grouped::Score;
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
 use crate::pitch_description::spelling::SpelledPitch;
 
-/// What a note head reads as: its jianpu degree (`1`–`7`), its letter name
-/// (`C`–`B`, with any sharps/flats the key implies), or its tab on a 10-hole
-/// diatonic harmonica (see `harmonica_tabs`).
+/// Which view of the jianpu layout to draw: what a note head reads as — its
+/// jianpu degree (`1`–`7`), its letter name (`C`–`B`, with any sharps/flats
+/// the key implies), or its tab on a 10-hole diatonic harmonica (see
+/// `harmonica_tabs`) — and whether chord symbols carry guitar chord diagrams.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum NoteLabels {
     #[default]
     Degrees,
     LetterNames,
     HarmonicaTabs,
+    /// Degrees, plus a guitar chord diagram above every chord symbol (see
+    /// `guitar_chords`).
+    GuitarChords,
 }
 
-/// `result`, compiled from `score`, with its note heads labelled as
-/// `labels` says: unchanged for degrees, each note head's `head_label` set
-/// otherwise.
+/// `result`, compiled from `score`, labelled as `labels` says: unchanged for
+/// degrees, each note head's `head_label` set for letter names and harmonica
+/// tabs, each chord symbol's `guitar_voicing` set for guitar chords.
 pub fn label_note_heads(result: CompileResult, score: &Score, labels: NoteLabels) -> CompileResult {
     match labels {
         NoteLabels::Degrees => result,
@@ -38,6 +43,7 @@ pub fn label_note_heads(result: CompileResult, score: &Score, labels: NoteLabels
                 harmonica.tab_content(content, key)
             })
         }
+        NoteLabels::GuitarChords => super::guitar_chords::place_guitar_voicings(result, score),
     }
 }
 
@@ -58,6 +64,14 @@ fn relabel_blocks(
             .collect(),
         ..result
     }
+}
+
+/// The tonic of the key in effect at each block (see `block_keys`).
+pub(super) fn block_tonics(blocks: &[MeasureBlock], score: &Score) -> Vec<SpelledPitch> {
+    block_keys(blocks, score)
+        .iter()
+        .map(SpelledPitch::key_tonic)
+        .collect()
 }
 
 fn c_major() -> KeyChange {
@@ -152,11 +166,13 @@ fn spell_content(content: ElementContent, tonic: SpelledPitch) -> ElementContent
             degrees,
             dotted,
             double_dotted,
+            guitar_voicing,
         } => ElementContent::ChordSymbol {
             text: degrees.letter_symbol(tonic),
             degrees,
             dotted,
             double_dotted,
+            guitar_voicing,
         },
         other => other,
     }

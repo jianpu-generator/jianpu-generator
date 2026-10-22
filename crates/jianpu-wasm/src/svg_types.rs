@@ -34,6 +34,7 @@ pub enum SvgVariantOut {
     BarLine,
     Lyric,
     DirectiveLine,
+    GuitarDiagram,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -70,6 +71,14 @@ pub enum SvgKindOut {
     },
     Circle {
         r: f32,
+    },
+    RingCircle {
+        r: f32,
+        stroke_width: f32,
+    },
+    RoundedBar {
+        width: f32,
+        height: f32,
     },
     Path {
         control_x: f32,
@@ -153,6 +162,10 @@ pub enum TagOut {
     BarLine {
         measure_index_next: Option<usize>,
         measure_index_prev: Option<usize>,
+    },
+    GuitarDiagram {
+        frets: String,
+        base_fret: u8,
     },
 }
 

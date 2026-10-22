@@ -12,6 +12,8 @@ mod tests_part_kind_x_alignment;
 mod tests_render_filtering;
 #[path = "tests_render_filtering_slur.rs"]
 mod tests_render_filtering_slur;
+#[path = "tests_render_guitar_chords.rs"]
+mod tests_render_guitar_chords;
 #[path = "tests_render_harmonica_tabs.rs"]
 mod tests_render_harmonica_tabs;
 #[path = "tests_render_letter_names.rs"]
