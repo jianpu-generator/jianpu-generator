@@ -45,6 +45,7 @@ fn svg_variant_to_out(variant: SvgVariant) -> SvgVariantOut {
     match variant {
         SvgVariant::Text => SvgVariantOut::Text,
         SvgVariant::NoteHead => SvgVariantOut::NoteHead,
+        SvgVariant::UnplayableNoteHead => SvgVariantOut::UnplayableNoteHead,
         SvgVariant::Rest => SvgVariantOut::Rest,
         SvgVariant::OmittedPartRest => SvgVariantOut::OmittedPartRest,
         SvgVariant::MultiMeasureRest => SvgVariantOut::MultiMeasureRest,

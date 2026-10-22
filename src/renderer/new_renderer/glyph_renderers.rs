@@ -138,7 +138,7 @@ pub(super) fn render_note_head(
     results.push(SvgElement {
         x: run_x,
         y: elem.y,
-        variant: Some(SvgVariant::NoteHead),
+        variant: Some(glyph.variant()),
         kind: SvgKind::Text {
             content: content.clone(),
             font_size: **base_font_size,

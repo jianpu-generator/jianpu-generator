@@ -53,11 +53,12 @@ world jianpu-wasm {
     // ==================== svg_types.rs ====================
 
     /// What the jianpu layout's note heads read as
-    /// (`jianpu_generator::NoteLabels`): degree digits, or the letter names
-    /// of the letter-name view.
+    /// (`jianpu_generator::NoteLabels`): degree digits, the letter names of
+    /// the letter-name view, or the tabs of the harmonica-tab view.
     enum note-labels {
         degrees,
         letter-names,
+        harmonica-tabs,
     }
 
     enum text-anchor {
@@ -247,6 +248,7 @@ world jianpu-wasm {
     enum svg-variant {
         text,
         note-head,
+        unplayable-note-head,
         rest,
         omitted-part-rest,
         multi-measure-rest,

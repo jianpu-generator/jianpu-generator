@@ -72,7 +72,7 @@ fn note_head(column: u32) -> ColumnElement {
             octave: 0,
             dotted: false,
             double_dotted: false,
-            letter_name: None,
+            head_label: None,
         },
         note_id: None,
     }

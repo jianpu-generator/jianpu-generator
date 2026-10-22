@@ -15,7 +15,7 @@ fn simple_block(col_count: u32) -> MeasureBlock {
                 octave: 0,
                 dotted: false,
                 double_dotted: false,
-                letter_name: None,
+                head_label: None,
             },
             note_id: None,
         })
