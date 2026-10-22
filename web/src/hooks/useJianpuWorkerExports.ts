@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import type { ResolvedPartVisibility } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
+import type { Notation } from '../worker/messages'
 import { baseNameFromActiveFile, postAfterPaint } from './workerHelpers'
 
 interface UseJianpuWorkerExportsParams {
@@ -9,6 +10,8 @@ interface UseJianpuWorkerExportsParams {
   activeFileRef: React.RefObject<string>
   enabledTracksRef: React.RefObject<string[] | undefined>
   visibilityRef: React.RefObject<ResolvedPartVisibility>
+  /** PDF exports follow the preview's notation. */
+  notation: Notation
   pdfExporting: boolean
   splitPdfExporting: boolean
   midiExporting: boolean
@@ -45,6 +48,7 @@ export function useJianpuWorkerExports({
   activeFileRef,
   enabledTracksRef,
   visibilityRef,
+  notation,
   pdfExporting,
   splitPdfExporting,
   midiExporting,
@@ -87,9 +91,11 @@ export function useJianpuWorkerExports({
       source: sourceRef.current,
       id,
       visibility: visibilityRef.current,
+      notation,
     }
     postAfterPaint(worker, payload)
   }, [
+    notation,
     pdfExporting,
     splitPdfExporting,
     workerRef,
@@ -113,9 +119,11 @@ export function useJianpuWorkerExports({
       source: sourceRef.current,
       id,
       baseName: baseNameFromActiveFile(activeFileRef.current),
+      notation,
     }
     postAfterPaint(worker, payload)
   }, [
+    notation,
     pdfExporting,
     splitPdfExporting,
     workerRef,

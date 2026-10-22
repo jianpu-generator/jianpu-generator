@@ -16,6 +16,10 @@ Example:
 cargo run -- generate svg simple.jianpu
 ```
 
+## Running the app locally
+
+Start the dev servers with `just dev` from the repo root: it runs the web app (Vite, `localhost:5173`) together with the live-share worker (`cf dev`, `localhost:8787`, with the local D1 migrations applied), and logs both to `dev.log`. Don't run `pnpm dev` in `web/` alone — without the worker there is no backend, so cloud files (the local D1 database) won't load.
+
 ## Committing
 
 Commit message titles must always include a scope: `<type>(<scope>): <description>`, e.g. `feat(sequence): allow entries to omit parts for a single occurrence`. The scope identifies **where** the change lives (the module/directory/area touched, e.g. `sequence`, `grid-layout`, `midi`, `editor`), never **what** the change does or which feature it adds — that belongs in the description. When a change spans multiple modules in service of one feature, pick the scope by where the change is centered (the module doing the most work, or the one a reader would look in first), not by naming the feature itself. Never omit the scope, even for small or single-file changes. Don't restate the scope word in the description; the scope already says it.

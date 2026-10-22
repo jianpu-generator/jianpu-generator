@@ -17,6 +17,8 @@ import type {
   SequenceEntry,
 } from '../types'
 import type { NoteCell } from '../utils/noteSpanSelection'
+import type { StaffRenderResult } from '../worker/messages'
+import type { StaffNotation } from './useStaffNotation'
 
 /** Tracks one in-flight "send source, get rewritten source back" round trip
  * to the render worker, so a stale reply (superseded by a newer request for
@@ -50,6 +52,16 @@ export interface DescribeSelectionRequestTracker {
   latestIdRef: RefObject<number>
   pendingRequestsRef: RefObject<
     Map<number, (description: PitchDescription | null) => void>
+  >
+}
+
+/** Same tracking scheme as `DescribeSelectionRequestTracker`, for the
+ * staff-notation view's Verovio render (see `useStaffNotation`). */
+export interface StaffRenderRequestTracker {
+  requestIdRef: RefObject<number>
+  latestIdRef: RefObject<number>
+  pendingRequestsRef: RefObject<
+    Map<number, (result: StaffRenderResult) => void>
   >
 }
 
@@ -250,4 +262,7 @@ export interface JianpuWorkerState {
    * has no embedded source.
    */
   importFromFile: (file: File) => Promise<string>
+  /** The jianpu/staff preview toggle and, while it's on staff, the
+   * Verovio-engraved pages. */
+  staffNotation: StaffNotation
 }

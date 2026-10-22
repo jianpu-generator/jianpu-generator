@@ -2,9 +2,10 @@ import type { RefObject } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import type { ClickableElementId } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
+import type { StaffScore } from '../worker/messages'
 import { clickableElementIdFromElement } from './clickableElementId'
 import type { PreviewAnchorState } from './previewAnchorState'
-import { cancelAnchor } from './previewClickHandler'
+import { cancelAnchor } from './previewGestureSteps'
 import {
   getMeasureAtPoint,
   type LyricCell,
@@ -14,6 +15,11 @@ import {
   type HandlePreviewClickArgs,
   resolveSelection,
 } from './previewSelectionResolver'
+import { hoverStaffMeasure } from './previewStaffClickHandler'
+import {
+  type SelectedMeasures,
+  useStaffMeasureHighlights,
+} from './useStaffMeasureHighlights'
 
 export type { PreviewAnchorState } from './previewAnchorState'
 
@@ -54,7 +60,9 @@ function hoveredElementId(
  * rather than its ancestor, can't be reached by `closest()` alone).
  * `mouseout` only resolves on a genuine boundary-leave (the pointer leaving
  * the container entirely) — every element-to-element transition inside it
- * is already handled by the corresponding `mouseover`.
+ * is already handled by the corresponding `mouseover`. The staff view
+ * (`staffScore` set) previews on `mousemove` instead, measure-only
+ * (`hoverStaffMeasure`), and its selection highlight is painted here too.
  *
  * A document-level `keydown` listener cancels the anchored gesture back to
  * idle on Escape, the click-click model's equivalent of releasing a held
@@ -78,6 +86,12 @@ export function usePreviewClickSelection(
     noteCells: NoteCell[],
     lyricCells: LyricCell[],
   ) => void,
+  // Set while the preview shows staff notation, whose hover preview is
+  // measure-only (`hoverStaffMeasure`) and whose selection highlight is
+  // painted here too (`useStaffMeasureHighlights`), since it has to yield
+  // to an anchored gesture.
+  staffScore: StaffScore | null = null,
+  selectedMeasureRange: SelectedMeasures | null = null,
 ) {
   // The mouseover/mouseout/keydown handlers below live in a
   // `useEffect(() => {...}, [previewPagesRef])`, so they'd otherwise close
@@ -93,6 +107,8 @@ export function usePreviewClickSelection(
   onLyricRangeSelectRef.current = onLyricRangeSelect
   const onMeasureRangeSelectRef = useRef(onMeasureRangeSelect)
   onMeasureRangeSelectRef.current = onMeasureRangeSelect
+  const staffMeasuresRef = useRef(staffScore?.measures)
+  staffMeasuresRef.current = staffScore?.measures
 
   const anchorStateRef = useRef<PreviewAnchorState>(null)
   // See `HandlePreviewClickArgs`'s doc comment — owned here (alongside
@@ -100,6 +116,12 @@ export function usePreviewClickSelection(
   // consume it, and passed through to every `HandlePreviewClickArgs` built
   // below.
   const suppressNextRevealRef = useRef(false)
+  useStaffMeasureHighlights(
+    previewPagesRef,
+    staffScore,
+    selectedMeasureRange,
+    anchorStateRef,
+  )
 
   // Whether a click-and-click gesture is anchored and waiting on its second
   // click — real React state (unlike `anchorStateRef` itself) since
@@ -140,6 +162,7 @@ export function usePreviewClickSelection(
       noteSpans: noteSpansRef.current,
       lyricSpans: lyricSpansRef.current,
       onSectionLabelClick: undefined,
+      staffMeasures: staffMeasuresRef.current,
       onNoteRangeSelect: onNoteRangeSelectRef.current,
       onLyricRangeSelect: onLyricRangeSelectRef.current,
       onMeasureRangeSelect: onMeasureRangeSelectRef.current,
@@ -148,6 +171,8 @@ export function usePreviewClickSelection(
     const handleMouseOver = (e: MouseEvent) => {
       const anchorState = anchorStateRef.current
       if (!anchorState) return
+      // The staff view previews on `mousemove` instead (see below).
+      if (staffMeasuresRef.current) return
       const point = { x: e.clientX, y: e.clientY }
 
       if (
@@ -177,9 +202,27 @@ export function usePreviewClickSelection(
       )
     }
 
+    // Verovio's SVG has no per-measure hover targets (blank staff space is
+    // all one `<svg>`), so `mouseover` rarely fires there — the staff view
+    // tracks the pointer itself, and `hoverStaffMeasure` only repaints when
+    // the hovered measure changes.
+    const handleMouseMove = (e: MouseEvent) => {
+      const anchorState = anchorStateRef.current
+      const staffMeasures = staffMeasuresRef.current
+      if (!anchorState || !staffMeasures) return
+      hoverStaffMeasure(
+        container,
+        staffMeasures,
+        anchorState,
+        e.clientX,
+        e.clientY,
+      )
+    }
+
     const handleMouseOut = (e: MouseEvent) => {
       const anchorState = anchorStateRef.current
-      if (!anchorState) return
+      // The staff view keeps the last hovered measure instead.
+      if (!anchorState || staffMeasuresRef.current) return
       // Every element-to-element transition inside the container is already
       // handled by `handleMouseOver` above — only a genuine boundary-leave
       // (the pointer leaving the container entirely) needs to resolve here.
@@ -213,6 +256,7 @@ export function usePreviewClickSelection(
 
     container.addEventListener('mouseover', handleMouseOver)
     container.addEventListener('mouseout', handleMouseOut)
+    container.addEventListener('mousemove', handleMouseMove)
     // Capture phase, not bubble: a preview click never blurs Monaco (its
     // `mousedown` handler calls `preventDefault()` — see
     // `previewClickHandler.ts` — which suppresses the browser's default
@@ -226,6 +270,7 @@ export function usePreviewClickSelection(
     return () => {
       container.removeEventListener('mouseover', handleMouseOver)
       container.removeEventListener('mouseout', handleMouseOut)
+      container.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('keydown', handleKeyDown, true)
     }
   }, [previewPagesRef])

@@ -156,5 +156,6 @@ export function useJianpuWorker(
     editRange: actions.editRange,
     describeSelection: actions.describeSelection,
     importFromFile: actions.importFromFile,
+    staffNotation: actions.staffNotation,
   }
 }

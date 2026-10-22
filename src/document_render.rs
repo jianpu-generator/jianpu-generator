@@ -160,6 +160,28 @@ pub fn render_documents_from_source_with_visibility(
     })
 }
 
+/// Parse, group, apply a resolved part visibility, and export the score as
+/// MEI for Verovio to engrave as staff notation (see `mei_export`). Parts
+/// outside `visibility.rendered_tracks` get no staff, chord line or verse.
+pub fn render_mei_from_source_with_visibility(
+    source: &str,
+    filename: &str,
+    visibility: &ResolvedPartVisibility,
+    instruments: &[crate::parser::parts_parser::InstrumentInfo],
+) -> Result<crate::mei_export::MeiDocument, IrrecoverableError> {
+    let enabled_tracks = visibility.rendered_tracks.as_deref();
+    let display_names = crate::filter_part_list(
+        crate::list_parts_from_source(source, filename, instruments)?,
+        enabled_tracks,
+    )
+    .into_iter()
+    .map(|part| (part.abbreviation, part.display_name))
+    .collect();
+    let mut score = crate::compile(source, filename, instruments)?;
+    crate::apply_track_filter(&mut score, enabled_tracks);
+    Ok(crate::mei_export::score_to_mei(&score, &display_names))
+}
+
 /// Like [`render_documents_from_source_with_visibility`], with `measure_ranges`
 /// (disjoint, inclusive) highlighted.
 pub fn render_documents_with_highlight_range_and_visibility(

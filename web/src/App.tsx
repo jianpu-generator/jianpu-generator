@@ -161,6 +161,7 @@ export default function App() {
     handleMeasureRangeSelect,
     handlePlayNoteSelection,
     noPartsSelected,
+    staffNotation,
   } = useAppController()
   const previewInteractive = wasm.status === 'ready'
   const handleAccountSignOut = useCallback(() => {
@@ -391,6 +392,7 @@ export default function App() {
           measureAudioNoteTimings={measureAudioNoteTimings}
           measureAudioElement={measureAudioElement}
           noPartsSelected={noPartsSelected}
+          staffNotation={staffNotation}
         />
       )}
     </div>

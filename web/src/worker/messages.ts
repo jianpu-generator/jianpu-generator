@@ -1,4 +1,9 @@
-import type { FontBytesByFamily, NoteTiming, SvgDocument } from '../jianpuWasm'
+import type {
+  FontBytesByFamily,
+  NoteTiming,
+  StaffMeasure,
+  SvgDocument,
+} from '../jianpuWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -16,6 +21,25 @@ import type {
   SequenceEntry,
 } from '../types'
 import type { NoteCell } from '../utils/noteSpanSelection'
+
+/** Which notation the preview (and so PDF export) shows. */
+export type Notation = 'jianpu' | 'staff'
+
+/** Verovio's pages for MEI Rust exported (see `staffMessageHandlers.ts`). */
+export type StaffEngraveResult =
+  | { status: 'ok'; pages: string[] }
+  | { status: 'err'; message: string }
+
+/** The staff-notation view: Verovio's pages, plus Rust's list of which SVG
+ * element engraves which score measure. */
+export interface StaffScore {
+  pages: string[]
+  measures: StaffMeasure[]
+}
+
+export type StaffRenderResult =
+  | { status: 'ok'; score: StaffScore }
+  | { status: 'err'; message: string }
 
 export type WorkerRequest =
   | { type: 'wasmModule'; module: WebAssembly.Module }
@@ -46,12 +70,15 @@ export type WorkerRequest =
       source: string
       id: number
       visibility: ResolvedPartVisibility
+      /** The preview's notation; the PDF is engraved in the same one. */
+      notation: Notation
     }
   | {
       type: 'generateSplitPdf'
       source: string
       id: number
       baseName: string
+      notation: Notation
     }
   | {
       type: 'generateMidi'
@@ -199,6 +226,12 @@ export type WorkerRequest =
       ranges: EditorSelection[]
       id: number
     }
+  | {
+      type: 'renderStaff'
+      source: string
+      id: number
+      visibility: ResolvedPartVisibility
+    }
 
 export type WorkerResponse =
   | {
@@ -308,3 +341,4 @@ export type WorkerResponse =
       id: number
       description: PitchDescription | null
     }
+  | { type: 'staffRendered'; id: number; result: StaffRenderResult }

@@ -38,6 +38,7 @@ pub mod layout;
 mod lyric_slots;
 pub mod lyric_spans;
 pub mod measure_spans;
+pub mod mei_export;
 pub mod migrate_lyrics;
 pub mod note_spans;
 pub mod parser;
@@ -51,6 +52,7 @@ pub mod sound_label;
 pub mod source_edit;
 pub mod source_embed;
 pub mod split_track;
+pub mod staff_export;
 pub mod symbols;
 mod tuplet;
 pub mod utils;
@@ -67,7 +69,8 @@ pub mod wav;
 pub use audio_source::*;
 pub use document_render::{
     render_documents_from_source_with_visibility,
-    render_documents_with_highlight_range_and_visibility, RenderDocumentOutput,
+    render_documents_with_highlight_range_and_visibility, render_mei_from_source_with_visibility,
+    RenderDocumentOutput,
 };
 pub use filters::*;
 pub use lyric_spans::*;

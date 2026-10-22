@@ -1,4 +1,6 @@
 import { tagSelector } from '../dataAttributes'
+import type { StaffScore } from '../worker/messages'
+import { staffMeasureElement } from './previewStaffMeasures'
 
 interface RevealSelection {
   revealMeasureIndex: number
@@ -11,11 +13,22 @@ interface RevealSelection {
  * order is wherever the chain's earliest entry sits in the document — not
  * necessarily `revealMeasureIndex`. So only the caret-only highlight (a
  * single contiguous range) is targeted by its rect; a chain selection
- * always scrolls to its reveal measure. */
+ * always scrolls to its reveal measure. In the staff view (`staffScore`
+ * set) it's always the reveal measure's Verovio group. */
 export function findRevealTarget(
-  container: Element,
+  container: HTMLElement,
   selection: RevealSelection,
+  staffScore: StaffScore | null,
 ): Element | null {
+  if (staffScore) {
+    return (
+      staffMeasureElement(
+        container,
+        staffScore.measures,
+        selection.revealMeasureIndex,
+      ) ?? null
+    )
+  }
   const highlightRect =
     selection.highlightRanges === undefined
       ? container.querySelector('[data-testid="measure-highlight"]')

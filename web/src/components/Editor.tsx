@@ -46,7 +46,8 @@ export interface EditorProps {
   diagnosticViewZones?: DiagnosticViewZone[]
   measureSpans?: MeasureSpan[]
   toolbar?: ReactNode
-  /** `isEmpty` is true when the selection is a plain caret (0-length) rather
+  /** The line span of every selection (multicursor included). `isEmpty` is
+   * true when every selection is a plain caret (0-length) rather
    * than a highlighted range — callers use this to gate the preview's
    * measure-background highlight, which should only show for a bare caret. */
   onSelectionChange?: (
@@ -232,20 +233,23 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       if (!model) return
       const selection = ed.getSelection()
       if (!selection) return
-      const isEmpty = selection.isEmpty()
+      // A multicursor selection (e.g. one produced by clicking a part
+      // label, which selects that part's notes across every measure in
+      // its system) surfaces as several disjoint selections here, not
+      // one — getSelections()[0] is the primary/anchor selection,
+      // matching `selection` above.
+      const selections = ed.getSelections() ?? [selection]
+      const allEmpty = selections.every((sel) => sel.isEmpty())
+      // The line span covers every selection, not just the primary one, so
+      // a multi-measure range select reports (and highlights) all of its
+      // measures.
       onSelectionChangeRef.current?.(
-        selection.startLineNumber,
-        selection.endLineNumber,
-        isEmpty,
+        Math.min(...selections.map((sel) => sel.startLineNumber)),
+        Math.max(...selections.map((sel) => sel.endLineNumber)),
+        allEmpty,
       )
       if (onSelectionOffsetChangeRef.current) {
         const text = model.getValue()
-        // A multicursor selection (e.g. one produced by clicking a part
-        // label, which selects that part's notes across every measure in
-        // its system) surfaces as several disjoint selections here, not
-        // one — getSelections()[0] is the primary/anchor selection,
-        // matching `selection` above.
-        const selections = ed.getSelections() ?? [selection]
         const ranges: EditorSelection[] = selections.map((sel) => ({
           start: stringIndexToByteOffset(
             text,
@@ -256,7 +260,6 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
             model.getOffsetAt(sel.getEndPosition()),
           ),
         }))
-        const allEmpty = selections.every((sel) => sel.isEmpty())
         onSelectionOffsetChangeRef.current(ranges, allEmpty)
       }
       onCursorLineChangeRef.current?.(selection.startLineNumber)

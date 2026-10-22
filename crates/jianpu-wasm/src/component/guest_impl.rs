@@ -98,6 +98,14 @@ impl Guest for Component {
         render_svg_with_highlight_range(source, raw_measure_ranges, visibility, raw_instruments)
     }
 
+    fn render_mei(
+        source: String,
+        visibility: ResolvedPartVisibility,
+        raw_instruments: Vec<InstrumentInfo>,
+    ) -> RenderMeiResponse {
+        render_mei(source, visibility, raw_instruments)
+    }
+
     fn generate_split_wavs(
         source: String,
         base_name: String,
@@ -329,6 +337,9 @@ impl Guest for Component {
     }
 
     forward_to_free_functions! {
+        render_split_meis(source: String, base_name: String, raw_instruments: Vec<InstrumentInfo>) -> RenderSplitMeisResponse;
+        generate_staff_pdf(pages: Vec<String>, source: String, fonts: FontBytesByFamily) -> GeneratePdfResponse;
+        generate_split_staff_pdfs(parts: Vec<StaffPdfPart>, fonts: FontBytesByFamily) -> GenerateSplitPdfsResponse;
         generate_wav(source: String, enabled_tracks: Option<Vec<String>>, metronome: bool, soundfont: Vec<u8>) -> GenerateWavResponse;
         generate_wav_for_measure_range(source: String, start_index: u32, end_index: u32, extend_to_last_occurrence: bool, respect_sequence: bool, sequence_entry_start_index: Option<u32>, sequence_entry_end_index: Option<u32>, enabled_tracks: Option<Vec<String>>, metronome: bool, trim_start_s: Option<f64>, trim_end_s: Option<f64>, trim_next_note_start_s: Option<f64>, soundfont: Vec<u8>) -> GenerateWavResponse;
         file_store_create_folder(state: FileStoreState, parent: Option<String>, name: String, context: FileOperationContext) -> FileStoreResponse;
