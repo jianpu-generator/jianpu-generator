@@ -103,3 +103,50 @@ When(
     }).toPass({ timeout: 15_000 })
   },
 )
+
+const exportedFiles = new Map<string, { name: string; bytes: Buffer }>()
+
+When(
+  'I export {string} from the preview, keeping it as the {word} PDF',
+  async ({ page }, itemName: string, notation: string) => {
+    const menuButton = page.getByRole('button', { name: 'Export', exact: true })
+    await expect(menuButton).toBeEnabled({ timeout: STAFF_RENDER_TIMEOUT })
+    await menuButton.click()
+    const item = page.getByRole('menuitem', { name: itemName, exact: true })
+    await expect(item).toBeEnabled({ timeout: STAFF_RENDER_TIMEOUT })
+    await item.click()
+    const confirm = page.getByTestId('download-rename-confirm')
+    await expect(confirm).toBeVisible({ timeout: STAFF_RENDER_TIMEOUT })
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: STAFF_RENDER_TIMEOUT }),
+      confirm.click(),
+    ])
+    const fs = await import('node:fs')
+    exportedFiles.set(notation, {
+      name: download.suggestedFilename(),
+      bytes: fs.readFileSync((await download.path()) as string),
+    })
+  },
+)
+
+Then('the staff PDF is named {string}', async ({}, name: string) => {
+  expect(exportedFiles.get('staff')?.name).toBe(name)
+})
+
+Then('the staff PDF differs from the jianpu PDF', async () => {
+  const staff = exportedFiles.get('staff')?.bytes
+  const jianpu = exportedFiles.get('jianpu')?.bytes
+  expect(staff?.subarray(0, 4).toString()).toBe('%PDF')
+  expect(jianpu?.subarray(0, 4).toString()).toBe('%PDF')
+  expect(staff?.equals(jianpu as Buffer)).toBe(false)
+})
+
+Then(
+  'the staff ZIP holds {string} and {string}',
+  async ({}, first: string, second: string) => {
+    // A ZIP's central directory stores each entry's name uncompressed.
+    const zip = exportedFiles.get('staff')?.bytes.toString('latin1') ?? ''
+    expect(zip).toContain(first)
+    expect(zip).toContain(second)
+  },
+)

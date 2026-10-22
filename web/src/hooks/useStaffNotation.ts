@@ -1,10 +1,14 @@
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import type { ResolvedPartVisibility } from '../types'
-import type { StaffRenderResult, WorkerRequest } from '../worker/messages'
+import type {
+  Notation,
+  StaffRenderResult,
+  WorkerRequest,
+} from '../worker/messages'
 import type { StaffRenderRequestTracker } from './useJianpuWorkerTypes'
 
-export type Notation = 'jianpu' | 'staff'
+export type { Notation }
 
 /** The jianpu/staff preview toggle plus what the staff view shows. */
 export interface StaffNotation {

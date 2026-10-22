@@ -44,19 +44,11 @@ function loadToolkit(): Promise<VerovioToolkit> {
   return toolkitPromise
 }
 
-async function renderStaff(
-  msg: Extract<WorkerRequest, { type: 'renderStaff' }>,
-): Promise<StaffRenderResult> {
-  const mei = jianpuWasm().renderMei(msg.source, msg.visibility, GM_INSTRUMENTS)
-  if (mei.tag === 'err') {
-    return {
-      status: 'err',
-      message: mei.val.diagnostics[0]?.message ?? 'Could not export the score.',
-    }
-  }
+/** Engraves MEI (from Rust) into one SVG string per page. */
+export async function engraveMei(mei: string): Promise<StaffRenderResult> {
   try {
     const toolkit = await loadToolkit()
-    if (!toolkit.loadData(mei.val.mei)) {
+    if (!toolkit.loadData(mei)) {
       return { status: 'err', message: 'Verovio could not read the score.' }
     }
     const pages = Array.from({ length: toolkit.getPageCount() }, (_, index) =>
@@ -69,6 +61,19 @@ async function renderStaff(
       message: `Could not load the staff notation engine: ${String(error)}`,
     }
   }
+}
+
+async function renderStaff(
+  msg: Extract<WorkerRequest, { type: 'renderStaff' }>,
+): Promise<StaffRenderResult> {
+  const mei = jianpuWasm().renderMei(msg.source, msg.visibility, GM_INSTRUMENTS)
+  if (mei.tag === 'err') {
+    return {
+      status: 'err',
+      message: mei.val.diagnostics[0]?.message ?? 'Could not export the score.',
+    }
+  }
+  return engraveMei(mei.val.mei)
 }
 
 export async function handleRenderStaff(

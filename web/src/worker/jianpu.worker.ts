@@ -22,6 +22,10 @@ import {
   handlePreviewInstrument,
   handlePreviewPercussion,
 } from './previewMessageHandlers'
+import {
+  handleGenerateSplitStaffPdf,
+  handleGenerateStaffPdf,
+} from './staffExportHandlers'
 import { handleRenderStaff } from './staffMessageHandlers'
 
 export type { WorkerRequest, WorkerResponse } from './messages'
@@ -188,12 +192,15 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'generatePdf') {
-    handleGeneratePdf(msg, loadedFonts)
+    if (msg.notation === 'staff') void handleGenerateStaffPdf(msg, loadedFonts)
+    else handleGeneratePdf(msg, loadedFonts)
     return
   }
 
   if (msg.type === 'generateSplitPdf') {
-    handleGenerateSplitPdf(msg, loadedFonts)
+    if (msg.notation === 'staff') {
+      void handleGenerateSplitStaffPdf(msg, loadedFonts)
+    } else handleGenerateSplitPdf(msg, loadedFonts)
     return
   }
 

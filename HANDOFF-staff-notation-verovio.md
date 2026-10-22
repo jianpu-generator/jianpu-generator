@@ -19,6 +19,7 @@ hands the MEI string Rust produced to Verovio and displays the SVG.
 | Web toggle (TODO 3) | Done — Jianpu/Staff toggle above the preview, remembered **globally per browser** (`localStorage` `jianpu:preview-notation:v1`, `useStaffNotation.ts`); switch to per-file if wanted |
 | e2e (TODO 5) | Partly — `web/e2e/features/staff-notation-view.feature` (toggle, hidden part, remembered after reload); the click-to-cursor scenario waits on TODO 4 |
 | Click / selection / playback (TODO 4) | Not started |
+| Staff PDF export | Done — Export > PDF / PDF (ZIP) follow the preview's notation; Verovio's pages go back to Rust (`src/staff_export/`) for the PDF. Verovio's `<title class="labelAttr">` tooltips must be stripped or usvg pushes centred text (the title) off the page |
 | Licence note (TODO 18) | Done — README "Credits", pinned `verovio@6.3.0` |
 
 Spike result on the production score `choir/把根留住.jianpu` (16 parts:

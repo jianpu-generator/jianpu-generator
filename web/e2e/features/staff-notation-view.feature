@@ -21,3 +21,16 @@ Feature: Staff notation view
     Then the preview shows a staff notation page
     When I switch the preview notation to "jianpu"
     Then the preview shows jianpu pages
+
+  Scenario: Exporting a PDF from the staff view engraves the PDF in staff notation
+    When I export "PDF" from the preview, keeping it as the jianpu PDF
+    And I switch the preview notation to "staff"
+    And I export "PDF" from the preview, keeping it as the staff PDF
+    Then the staff PDF is named "staff.pdf"
+    And the staff PDF differs from the jianpu PDF
+
+  Scenario: Exporting parts from the staff view zips one staff PDF per part
+    When I switch the preview notation to "staff"
+    And I export "PDF (ZIP)" from the preview, keeping it as the staff PDF
+    Then the staff PDF is named "staff.zip"
+    And the staff ZIP holds "staff - Soprano.pdf" and "staff - Alto.pdf"

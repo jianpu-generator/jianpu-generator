@@ -458,6 +458,32 @@ world jianpu-wasm {
     // `render-svg`, so hidden parts get no staff.
     export render-mei: func(source: string, visibility: resolved-part-visibility, raw-instruments: list<instrument-info>) -> render-mei-response;
 
+    /// One sounding part's MEI for the split staff export; `file-name` is
+    /// the PDF it becomes.
+    record split-mei {
+        track-name: string,
+        file-name: string,
+        mei: string,
+    }
+
+    variant render-split-meis-response {
+        ok(list<split-mei>),
+        err(diagnostics-error),
+    }
+
+    export render-split-meis: func(source: string, base-name: string, raw-instruments: list<instrument-info>) -> render-split-meis-response;
+
+    /// Verovio's SVG pages for one part of the split staff export.
+    record staff-pdf-part {
+        track-name: string,
+        file-name: string,
+        pages: list<string>,
+    }
+
+    /// Verovio's staff pages → PDF, with `source` embedded for re-import.
+    export generate-staff-pdf: func(pages: list<string>, source: string, fonts: font-bytes-by-family) -> generate-pdf-response;
+    export generate-split-staff-pdfs: func(parts: list<staff-pdf-part>, fonts: font-bytes-by-family) -> generate-split-pdfs-response;
+
     // Phase 3, group 3 of PLAN-wit-bindgen-migration.md.
     export list-parts: func(source: string, raw-instruments: list<instrument-info>) -> list-parts-response;
 

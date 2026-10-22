@@ -65,6 +65,7 @@ mod guest_impl;
 mod guest_metadata_and_misc;
 mod guest_outbox;
 mod guest_selection_and_render;
+mod guest_staff_export;
 
 mod diagnostics_conversion;
 mod highlight_conversion;
@@ -88,6 +89,7 @@ use guest_generate_and_timings::*;
 use guest_metadata_and_misc::*;
 use guest_outbox::*;
 use guest_selection_and_render::*;
+use guest_staff_export::*;
 use highlight_conversion::*;
 use metadata_and_selection_conversion::*;
 use metadata_fields_conversion::*;

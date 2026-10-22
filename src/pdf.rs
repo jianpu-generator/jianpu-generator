@@ -29,6 +29,8 @@ pub fn write_pdf(
         db.load_font_data(fonts.sans_serif.clone());
         db.load_font_data(fonts.monospace.clone());
         db.set_sans_serif_family(crate::fonts::SANS_SERIF_FONT_NAME);
+        // Verovio's staff pages (see `staff_export`) ask for `Times, serif`.
+        db.set_serif_family(crate::fonts::SANS_SERIF_FONT_NAME);
         db.set_monospace_family(crate::fonts::MONOSPACE_FONT_NAME);
     }
 

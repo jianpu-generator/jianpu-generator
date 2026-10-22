@@ -52,6 +52,7 @@ pub mod sound_label;
 pub mod source_edit;
 pub mod source_embed;
 pub mod split_track;
+pub mod staff_export;
 pub mod symbols;
 mod tuplet;
 pub mod utils;

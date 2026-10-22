@@ -19,6 +19,9 @@ import type { NoteCell } from '../utils/noteSpanSelection'
 
 /** The staff-notation view's pages, engraved by Verovio from the MEI Rust
  * exported (see `staffMessageHandlers.ts`). */
+/** Which notation the preview (and so PDF export) shows. */
+export type Notation = 'jianpu' | 'staff'
+
 export type StaffRenderResult =
   | { status: 'ok'; pages: string[] }
   | { status: 'err'; message: string }
@@ -52,12 +55,15 @@ export type WorkerRequest =
       source: string
       id: number
       visibility: ResolvedPartVisibility
+      /** The preview's notation; the PDF is engraved in the same one. */
+      notation: Notation
     }
   | {
       type: 'generateSplitPdf'
       source: string
       id: number
       baseName: string
+      notation: Notation
     }
   | {
       type: 'generateMidi'

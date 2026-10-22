@@ -214,6 +214,14 @@ export function useJianpuWorkerActions({
     lastSelectionRef: state.lastSelectionRef,
   })
 
+  const staffNotation = useStaffNotation({
+    workerRef: state.workerRef,
+    source,
+    visibility: state.visibility,
+    staffRenderTracker: state.staffRenderTracker,
+    debounceMs,
+  })
+
   const {
     exportPdf,
     exportSplitPdf,
@@ -228,6 +236,7 @@ export function useJianpuWorkerActions({
     activeFileRef: state.activeFileRef,
     enabledTracksRef: state.enabledTracksRef,
     visibilityRef: state.visibilityRef,
+    notation: staffNotation.notation,
     pdfExporting: state.pdfExporting,
     splitPdfExporting: state.splitPdfExporting,
     midiExporting: state.midiExporting,
@@ -289,14 +298,6 @@ export function useJianpuWorkerActions({
     workerRef: state.workerRef,
     sourceRef: state.sourceRef,
     describeSelectionTracker: state.describeSelectionTracker,
-  })
-
-  const staffNotation = useStaffNotation({
-    workerRef: state.workerRef,
-    source,
-    visibility: state.visibility,
-    staffRenderTracker: state.staffRenderTracker,
-    debounceMs,
   })
 
   const { importFromFile } = useJianpuWorkerImport({
