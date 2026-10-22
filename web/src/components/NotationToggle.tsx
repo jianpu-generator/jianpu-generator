@@ -6,7 +6,7 @@ interface NotationToggleProps {
 }
 
 // ABC, Guitar and Harmonica have no icon: their labels already read on their
-// own.
+// own. A native <select> can only hold text, so the icon is prefixed to it.
 const OPTIONS: { value: Notation; icon?: string; label: string }[] = [
   { value: 'jianpu', icon: '簡', label: '123' },
   { value: 'staff', icon: '𝄞', label: 'Staff' },
@@ -18,28 +18,24 @@ const OPTIONS: { value: Notation; icon?: string; label: string }[] = [
 /** Switches the preview between jianpu, western staff notation, ABC (the
  * jianpu layout with letter names in place of degree numbers), Guitar (the
  * jianpu layout with a chord diagram at each chord symbol), and Harmonica
- * (the jianpu layout with diatonic harmonica tabs). */
+ * (the jianpu layout with diatonic harmonica tabs). A native dropdown, so it
+ * stays compact as views are added and opens the platform picker on mobile. */
 export function NotationToggle({ notation, onChange }: NotationToggleProps) {
   return (
-    <fieldset className="notation-toggle" data-testid="notation-toggle">
-      <legend className="notation-toggle-legend">Notation</legend>
-      {OPTIONS.map(({ value, icon, label }) => (
-        <button
-          key={value}
-          type="button"
-          className={`notation-toggle-btn${notation === value ? ' notation-toggle-btn--on' : ''}`}
-          aria-pressed={notation === value}
-          data-testid={`notation-toggle-${value}`}
-          onClick={() => onChange(value)}
-        >
-          {icon && (
-            <span className="notation-toggle-icon" aria-hidden="true">
-              {icon}
-            </span>
-          )}
-          {label}
-        </button>
-      ))}
-    </fieldset>
+    <label className="notation-toggle" data-testid="notation-toggle">
+      <span className="notation-toggle-legend">Notation</span>
+      <select
+        className="notation-toggle-select"
+        data-testid="notation-select"
+        value={notation}
+        onChange={(event) => onChange(event.target.value as Notation)}
+      >
+        {OPTIONS.map(({ value, icon, label }) => (
+          <option key={value} value={value}>
+            {icon ? `${icon} ${label}` : label}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
