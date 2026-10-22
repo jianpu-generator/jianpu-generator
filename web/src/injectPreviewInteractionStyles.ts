@@ -2,6 +2,7 @@ import {
   DATA_RANGE_ACTIVE_FLAG,
   rectVariantSelector,
   tagSelector,
+  variantSelector,
 } from './dataAttributes'
 
 // The hover/selection fills painted onto the preview SVG's click-target
@@ -94,6 +95,15 @@ const PREVIEW_INTERACTION_RULES: FillRule[] = [
       `${rectVariantSelector('lyric-label-click-target')}[${DATA_RANGE_ACTIVE_FLAG.lyricLabel}]`,
     ],
     fill: LABEL_ACTIVE_FILL,
+  },
+  // Not an interaction fill, but it needs the same typed selector: a harmonica
+  // tab for a pitch the harmonica can't play. Rust writes the same red onto
+  // the exported SVG/PDF (`UNPLAYABLE_FILL` in `src/serializer/text.rs`).
+  {
+    selectors: [
+      `.preview-page svg text${variantSelector('unplayable-note-head')}`,
+    ],
+    fill: '#d32f2f',
   },
 ]
 

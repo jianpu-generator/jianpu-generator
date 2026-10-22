@@ -4,6 +4,9 @@ use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnc
 pub enum SvgVariant {
     Text,
     NoteHead,
+    /// A note head whose label (a harmonica tab) names a pitch the
+    /// instrument can't play, drawn in red. See `NoteHeadLabel::unplayable`.
+    UnplayableNoteHead,
     Rest,
     /// A rest that fills a part not mentioned in this measure, rendered
     /// with a distinct glyph so it reads as "not written" rather than
@@ -28,6 +31,7 @@ impl SvgVariant {
         match self {
             Self::Text => "text",
             Self::NoteHead => "note-head",
+            Self::UnplayableNoteHead => "unplayable-note-head",
             Self::Rest => "rest",
             Self::OmittedPartRest => "omitted-part-rest",
             Self::MultiMeasureRest => "multi-measure-rest",

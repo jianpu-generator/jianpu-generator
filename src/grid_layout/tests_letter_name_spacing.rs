@@ -2,8 +2,8 @@
 
 use crate::ast::parsed::{Accidental, JianPuPitch, Offset};
 use crate::compiler::types::{
-    ColumnElement, ElementContent, LetterNamePlacement, MeasureBlock, MeasureRow,
-    NoteHeadLetterName, RowId,
+    ColumnElement, ElementContent, HeadLabelPlacement, MeasureBlock, MeasureRow, NoteHeadLabel,
+    RowId,
 };
 use crate::font_metrics;
 use crate::grid_layout::layout::{build_measure_column_layout, measure_column_weights};
@@ -22,24 +22,18 @@ fn test_config() -> RenderConfig {
     }
 }
 
-fn in_place_of_degree(text: &str) -> Option<NoteHeadLetterName> {
-    Some(NoteHeadLetterName {
-        text: text.to_string(),
-        placement: LetterNamePlacement::InPlaceOfDegree,
+fn in_place_of_degree(text: &str) -> Option<NoteHeadLabel> {
+    Some(NoteHeadLabel::playable(text.to_string()))
+}
+
+fn after_degree(text: &str) -> Option<NoteHeadLabel> {
+    Some(NoteHeadLabel {
+        placement: HeadLabelPlacement::AfterDegree,
+        ..NoteHeadLabel::playable(text.to_string())
     })
 }
 
-fn after_degree(text: &str) -> Option<NoteHeadLetterName> {
-    Some(NoteHeadLetterName {
-        text: text.to_string(),
-        placement: LetterNamePlacement::AfterDegree,
-    })
-}
-
-fn block_with_note(
-    letter_name: Option<NoteHeadLetterName>,
-    accidental: Accidental,
-) -> MeasureBlock {
+fn block_with_note(head_label: Option<NoteHeadLabel>, accidental: Accidental) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
             kind: crate::ast::parsed::PartKind::Notes,
@@ -55,7 +49,7 @@ fn block_with_note(
                         octave: 0,
                         dotted: false,
                         double_dotted: false,
-                        letter_name,
+                        head_label,
                     },
                     note_id: None,
                 },
@@ -141,7 +135,6 @@ fn a_guitar_view_note_head_still_leads_with_its_digit_s_accidental() {
         &[block_with_note(after_degree("E\u{266D}"), Accidental::Flat)],
         &config,
     );
-
     // Skip the system's leading placeholder column (see
     // `build_measure_column_layout`), which never carries a lead.
     let note_col = layout[0].column_rods.len() - 2;

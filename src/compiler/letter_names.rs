@@ -1,85 +1,126 @@
-//! The letter-name view: every note head's jianpu degree spelled as its
-//! pitch's letter name (`F♯`), and every chord symbol's root and bass
-//! likewise (`F♯m⁷/C♯`), against the key in effect at its measure.
-//! Everything else about the layout stays as in the jianpu view. The guitar
-//! chord view spells the same letter names after the degrees instead
-//! (`3 (F♯)`, `6m (Bm)`). Also home
-//! to `label_note_heads`, which dispatches to every view that keeps the
-//! jianpu layout — see `NoteLabels`.
+//! The letter-name and harmonica-tab views: every note head's jianpu degree
+//! replaced by its pitch's letter name (`F♯`) or its harmonica tab (`-4`),
+//! resolved against the key in effect at its measure. The letter-name view
+//! also respells chord symbols (`F♯m⁷/C♯`). Everything else about the layout
+//! stays as in the jianpu view. The guitar chord view spells the same letter
+//! names after the degrees instead (`3 (F♯)`, `6m (Bm)`). Also home to
+//! `label_note_heads`, which
+//! dispatches to every view that keeps the jianpu layout — see `NoteLabels`.
 
+use super::harmonica_tabs::HarmonicaTabs;
 use super::types::{
-    ColumnElement, CompileResult, ElementContent, LetterNamePlacement, MeasureBlock, MeasureRow,
-    NoteHeadLetterName,
+    ColumnElement, CompileResult, ElementContent, HeadLabelPlacement, MeasureBlock, MeasureRow,
+    NoteHeadLabel,
 };
 use crate::ast::grouped::Score;
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
 use crate::pitch_description::spelling::SpelledPitch;
 
 /// Which view of the jianpu layout to draw: what a note head reads as — its
-/// jianpu degree (`1`–`7`), or its letter name (`C`–`B`, with any
-/// sharps/flats the key implies) — and whether chord symbols carry guitar
-/// chord diagrams.
+/// jianpu degree (`1`–`7`), its letter name (`C`–`B`, with any sharps/flats
+/// the key implies), or its tab on a 10-hole diatonic harmonica (see
+/// `harmonica_tabs`) — and whether chord symbols carry guitar chord diagrams.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum NoteLabels {
     #[default]
     Degrees,
     LetterNames,
+    HarmonicaTabs,
     /// Degrees followed by their letter names (`1 (C)`, `6m (Am)`), plus a
     /// guitar chord diagram above every chord symbol (see `guitar_chords`).
     GuitarChords,
 }
 
 /// `result`, compiled from `score`, labelled as `labels` says: unchanged for
-/// degrees, each note head's `letter_name` set for letter names, and for
-/// guitar chords each note head's `letter_name` set to follow its degree
-/// and each chord symbol's `guitar_voicing` set.
+/// degrees, each note head's `head_label` set for letter names and harmonica
+/// tabs, and for guitar chords each note head's `head_label` set to follow
+/// its degree and each chord symbol's `guitar_voicing` set.
 pub fn label_note_heads(result: CompileResult, score: &Score, labels: NoteLabels) -> CompileResult {
     match labels {
         NoteLabels::Degrees => result,
-        NoteLabels::LetterNames => {
-            spell_letter_names(result, score, LetterNamePlacement::InPlaceOfDegree)
+        NoteLabels::LetterNames => relabel_blocks(result, score, |content, key| {
+            spell_content(
+                content,
+                SpelledPitch::key_tonic(key),
+                HeadLabelPlacement::InPlaceOfDegree,
+            )
+        }),
+        NoteLabels::HarmonicaTabs => {
+            let harmonica = HarmonicaTabs::tuned_to(opening_key(score));
+            relabel_blocks(result, score, |content, key| {
+                harmonica.tab_content(content, key)
+            })
         }
-        NoteLabels::GuitarChords => spell_letter_names(
+        NoteLabels::GuitarChords => relabel_blocks(
             super::guitar_chords::place_guitar_voicings(result, score),
             score,
-            LetterNamePlacement::AfterDegree,
+            |content, key| {
+                spell_content(
+                    content,
+                    SpelledPitch::key_tonic(key),
+                    HeadLabelPlacement::AfterDegree,
+                )
+            },
         ),
     }
 }
 
-fn spell_letter_names(
+/// `result` with every element's content passed through `relabel`, along
+/// with the key in effect at its block.
+fn relabel_blocks(
     result: CompileResult,
     score: &Score,
-    placement: LetterNamePlacement,
+    relabel: impl Fn(ElementContent, &KeyChange) -> ElementContent,
 ) -> CompileResult {
-    let tonics = block_tonics(&result.blocks, score);
+    let keys = block_keys(&result.blocks, score);
     CompileResult {
         blocks: result
             .blocks
             .into_iter()
-            .zip(tonics)
-            .map(|(block, tonic)| spell_block(block, tonic, placement))
+            .zip(keys)
+            .map(|(block, key)| relabel_block(block, |content| relabel(content, &key)))
             .collect(),
         ..result
     }
 }
 
-/// The tonic of the key in effect at each block. A merged rest run's block
-/// stands in for `represents_measures` source measures, so the walk advances
-/// by that many and keeps the last key change among them.
+/// The tonic of the key in effect at each block (see `block_keys`).
 pub(super) fn block_tonics(blocks: &[MeasureBlock], score: &Score) -> Vec<SpelledPitch> {
-    // Overwritten by the first measure, whose `key` the grouper always sets.
-    let c_major = SpelledPitch::key_tonic(&KeyChange {
+    block_keys(blocks, score)
+        .iter()
+        .map(SpelledPitch::key_tonic)
+        .collect()
+}
+
+fn c_major() -> KeyChange {
+    KeyChange {
         note: Note {
             name: NoteName::C,
             octave: 4,
             accidental: Accidental::Natural,
         },
-    });
+    }
+}
+
+/// The key the score opens in, which the grouper always sets on the first
+/// measure.
+fn opening_key(score: &Score) -> KeyChange {
+    score
+        .measures
+        .first()
+        .and_then(|measure| measure.key.clone())
+        .unwrap_or_else(c_major)
+}
+
+/// The key in effect at each block. A merged rest run's block stands in for
+/// `represents_measures` source measures, so the walk advances by that many
+/// and keeps the last key change among them.
+fn block_keys(blocks: &[MeasureBlock], score: &Score) -> Vec<KeyChange> {
     blocks
         .iter()
-        .scan((0, c_major), |(next_measure, tonic), block| {
-            if let Some(key) = score
+        // Overwritten by the first measure's key, as `opening_key`.
+        .scan((0, c_major()), |(next_measure, key), block| {
+            if let Some(change) = score
                 .measures
                 .iter()
                 .skip(*next_measure)
@@ -87,18 +128,17 @@ pub(super) fn block_tonics(blocks: &[MeasureBlock], score: &Score) -> Vec<Spelle
                 .filter_map(|measure| measure.key.as_ref())
                 .next_back()
             {
-                *tonic = SpelledPitch::key_tonic(key);
+                *key = change.clone();
             }
             *next_measure += block.represents_measures;
-            Some(*tonic)
+            Some(key.clone())
         })
         .collect()
 }
 
-fn spell_block(
+fn relabel_block(
     block: MeasureBlock,
-    tonic: SpelledPitch,
-    placement: LetterNamePlacement,
+    relabel: impl Fn(ElementContent) -> ElementContent,
 ) -> MeasureBlock {
     MeasureBlock {
         rows: block
@@ -109,7 +149,7 @@ fn spell_block(
                     .elements
                     .into_iter()
                     .map(|element| ColumnElement {
-                        content: spell_content(element.content, tonic, placement),
+                        content: relabel(element.content),
                         ..element
                     })
                     .collect(),
@@ -123,7 +163,7 @@ fn spell_block(
 fn spell_content(
     content: ElementContent,
     tonic: SpelledPitch,
-    placement: LetterNamePlacement,
+    placement: HeadLabelPlacement,
 ) -> ElementContent {
     match content {
         ElementContent::NoteHead {
@@ -132,11 +172,11 @@ fn spell_content(
             octave,
             dotted,
             double_dotted,
-            letter_name: _,
+            head_label: _,
         } => ElementContent::NoteHead {
-            letter_name: Some(NoteHeadLetterName {
-                text: tonic.scale_degree(&pitch, &accidental).engraved_name(),
+            head_label: Some(NoteHeadLabel {
                 placement,
+                ..NoteHeadLabel::playable(tonic.scale_degree(&pitch, &accidental).engraved_name())
             }),
             pitch,
             accidental,
@@ -152,8 +192,8 @@ fn spell_content(
             guitar_voicing,
         } => ElementContent::ChordSymbol {
             text: match placement {
-                LetterNamePlacement::InPlaceOfDegree => degrees.letter_symbol(tonic),
-                LetterNamePlacement::AfterDegree => {
+                HeadLabelPlacement::InPlaceOfDegree => degrees.letter_symbol(tonic),
+                HeadLabelPlacement::AfterDegree => {
                     format!("{text} ({})", degrees.letter_symbol(tonic))
                 }
             },

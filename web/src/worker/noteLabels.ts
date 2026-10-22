@@ -1,17 +1,19 @@
 import type { NoteLabels } from '../jianpuWasm'
 import type { Notation } from './messages'
 
+const NOTE_LABELS: Record<Notation, NoteLabels> = {
+  jianpu: 'degrees',
+  staff: 'degrees',
+  abc: 'letter-names',
+  guitar: 'guitar-chords',
+  harmonica: 'harmonica-tabs',
+}
+
 /** What the jianpu layout's note heads read as for the preview's notation:
- * the ABC view swaps each degree for its letter name, and the guitar view
+ * the ABC view swaps each degree for its letter name, the guitar view
  * follows each degree with its letter name (`1 (C)`) and draws a chord
- * diagram at each chord symbol. */
+ * diagram at each chord symbol, and the harmonica
+ * view swaps each degree for its harmonica tab. */
 export function noteLabelsFor(notation: Notation): NoteLabels {
-  switch (notation) {
-    case 'abc':
-      return 'letter-names'
-    case 'guitar':
-      return 'guitar-chords'
-    default:
-      return 'degrees'
-  }
+  return NOTE_LABELS[notation]
 }

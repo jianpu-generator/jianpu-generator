@@ -1,28 +1,30 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
-use crate::compiler::types::{LetterNamePlacement, NoteHeadLetterName};
+use crate::compiler::NoteHeadLabel;
 use crate::compositor::types::FontFamily;
 use crate::font_metrics;
+use crate::renderer::new_types::SvgVariant;
 
 /// What a note head reads as: its jianpu degree (with any written
-/// sharp/flat), or, in the letter-name view, `letter_name` in its place, or,
-/// in the guitar chord view, the degree followed by `letter_name`.
+/// sharp/flat), or, in the letter-name and harmonica-tab views, `head_label`
+/// in its place, or, in the guitar chord view, the degree followed by
+/// `head_label`.
 pub(in crate::renderer::new_renderer) struct NoteHeadGlyph<'a> {
     pub(in crate::renderer::new_renderer) pitch: &'a JianPuPitch,
     pub(in crate::renderer::new_renderer) accidental: &'a Accidental,
-    pub(in crate::renderer::new_renderer) letter_name: Option<&'a NoteHeadLetterName>,
+    pub(in crate::renderer::new_renderer) head_label: Option<&'a NoteHeadLabel>,
 }
 
 impl NoteHeadGlyph<'_> {
-    /// The text run's content: the letter name, or the accidental and digit
-    /// (followed by the letter name in the guitar chord view).
+    /// The text run's content: the label, or the accidental and digit
+    /// (followed by the label in the guitar chord view).
     pub(super) fn content(&self) -> String {
         let digit = self.pitch.to_digit();
-        match self.letter_name {
-            Some(letter_name) if self.replaces_degree() => letter_name.label(digit),
-            Some(letter_name) => format!(
+        match self.head_label {
+            Some(head_label) if head_label.replaces_degree() => head_label.run_text(digit),
+            Some(head_label) => format!(
                 "{}{}",
                 font_metrics::accidental_symbol(self.accidental),
-                letter_name.label(digit)
+                head_label.run_text(digit)
             ),
             None => format!(
                 "{}{}",
@@ -32,20 +34,30 @@ impl NoteHeadGlyph<'_> {
         }
     }
 
-    /// Where the text run starts, given the glyph's anchor `x`. A digit's
-    /// accidental leads it, so its run starts one accidental-width earlier; a
-    /// letter name drawn in its place has its accidental trail its letter
-    /// (`F♯`), so its run starts at `x` itself.
-    pub(super) fn run_x(&self, x: f32, font_family: FontFamily, font_size: f32) -> f32 {
-        if self.replaces_degree() {
-            x
-        } else {
-            x - font_metrics::accidental_width_for_family(font_family, self.accidental, font_size)
+    /// The text run's styling hook: an unplayable label is flagged as such.
+    pub(super) fn variant(&self) -> SvgVariant {
+        match self.head_label {
+            Some(NoteHeadLabel {
+                unplayable: true, ..
+            }) => SvgVariant::UnplayableNoteHead,
+            _ => SvgVariant::NoteHead,
         }
     }
 
-    fn replaces_degree(&self) -> bool {
-        self.letter_name
-            .is_some_and(|name| name.placement == LetterNamePlacement::InPlaceOfDegree)
+    /// Where the text run starts, given the glyph's anchor `x`. A digit's
+    /// accidental leads it, so its run starts one accidental-width earlier; a
+    /// label drawn in its place has its accidental trail its letter (`F♯`),
+    /// so its run starts at `x` itself.
+    pub(super) fn run_x(&self, x: f32, font_family: FontFamily, font_size: f32) -> f32 {
+        match self.head_label {
+            Some(head_label) if head_label.replaces_degree() => x,
+            _ => {
+                x - font_metrics::accidental_width_for_family(
+                    font_family,
+                    self.accidental,
+                    font_size,
+                )
+            }
+        }
     }
 }

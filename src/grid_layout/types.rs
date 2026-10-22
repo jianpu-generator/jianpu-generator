@@ -1,5 +1,5 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
-use crate::compiler::types::{ArcKind, BarLineKind, NoteHeadLetterName};
+use crate::compiler::types::{ArcKind, BarLineKind};
 use crate::pitch_description::GuitarVoicing;
 
 #[path = "click_target_types.rs"]
@@ -142,7 +142,7 @@ pub enum GridContent {
         octave: i8,
         dotted: bool,
         double_dotted: bool,
-        letter_name: Option<NoteHeadLetterName>,
+        head_label: Option<crate::compiler::NoteHeadLabel>,
     },
     Rest {
         dotted: bool,
@@ -160,13 +160,13 @@ pub enum GridContent {
     },
     /// `count` below-octave dots of an underlined note, placed in the sub-row
     /// of that note's lowest underline so they hang beneath it. `pitch` is
-    /// the note's own digit, and `letter_name` its letter name in the
+    /// the note's own digit, and `head_label` its letter name in the
     /// letter-name view, only so this anchors to the same flush-left x as
     /// its `NoteHead` (see `flush_left_padding`).
     LowOctaveDots {
         count: u8,
         pitch: JianPuPitch,
-        letter_name: Option<NoteHeadLetterName>,
+        head_label: Option<crate::compiler::NoteHeadLabel>,
     },
     ChordSymbol {
         text: String,

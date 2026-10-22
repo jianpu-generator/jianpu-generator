@@ -1,5 +1,5 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
-use crate::compiler::types::{ArcKind, BarLineKind, NoteHeadLetterName};
+use crate::compiler::types::{ArcKind, BarLineKind};
 use crate::pitch_description::GuitarVoicing;
 
 #[derive(Debug, Clone)]
@@ -24,7 +24,7 @@ pub enum AbsoluteContent {
         octave: i8,
         dotted: bool,
         double_dotted: bool,
-        letter_name: Option<NoteHeadLetterName>,
+        head_label: Option<crate::compiler::NoteHeadLabel>,
     },
     Rest {
         dotted: bool,

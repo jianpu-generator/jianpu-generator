@@ -5,7 +5,7 @@
 
 use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compiler::types::{
-    ElementContent, LetterNamePlacement, MeasureBlock, NoteHeadLetterName, MULTI_MEASURE_REST_WIDTH,
+    ElementContent, MeasureBlock, NoteHeadLabel, MULTI_MEASURE_REST_WIDTH,
 };
 use crate::compositor::types::FontFamily;
 use crate::font_metrics;
@@ -147,21 +147,19 @@ pub(super) fn multi_measure_rest_weight(count: usize, config: &RenderConfig) -> 
 fn note_head_weight(
     pitch: &JianPuPitch,
     accidental: &Accidental,
-    letter_name: Option<&NoteHeadLetterName>,
+    head_label: Option<&NoteHeadLabel>,
     config: &RenderConfig,
 ) -> f32 {
-    let label_width = |letter_name: &NoteHeadLetterName| {
+    let run_width = |head_label: &NoteHeadLabel| {
         font_metrics::text_width_for_family(
             config.glyph_font_families.notes,
-            &letter_name.label(pitch.to_digit()),
+            &head_label.run_text(pitch.to_digit()),
             config.notes_font_size(),
         )
     };
-    match letter_name {
-        Some(letter_name) if letter_name.placement == LetterNamePlacement::InPlaceOfDegree => {
-            label_width(letter_name)
-        }
-        Some(letter_name) => label_width(letter_name) + accidental_extra_weight(accidental, config),
+    match head_label {
+        Some(head_label) if head_label.replaces_degree() => run_width(head_label),
+        Some(head_label) => run_width(head_label) + accidental_extra_weight(accidental, config),
         None => note_glyph_weight(config) + accidental_extra_weight(accidental, config),
     }
 }
@@ -173,10 +171,10 @@ pub(super) fn column_weight(content: &ElementContent, config: &RenderConfig) -> 
             accidental,
             dotted,
             double_dotted,
-            letter_name,
+            head_label,
             ..
         } => {
-            note_head_weight(pitch, accidental, letter_name.as_ref(), config)
+            note_head_weight(pitch, accidental, head_label.as_ref(), config)
                 + dot_extra_weight(
                     *dotted,
                     *double_dotted,
@@ -288,9 +286,9 @@ pub(super) fn measure_note_weight(block: &MeasureBlock, config: &RenderConfig) -
                         ElementContent::NoteHead {
                             pitch,
                             accidental,
-                            letter_name,
+                            head_label,
                             ..
-                        } => note_head_weight(pitch, accidental, letter_name.as_ref(), config),
+                        } => note_head_weight(pitch, accidental, head_label.as_ref(), config),
                         ElementContent::Rest { .. } | ElementContent::PercussionHit => {
                             note_glyph_weight(config)
                         }

@@ -38,6 +38,7 @@ pub(super) fn svg_variant_to_wit(variant: crate::svg_types::SvgVariantOut) -> Sv
     match variant {
         SvgVariantOut::Text => SvgVariant::Text,
         SvgVariantOut::NoteHead => SvgVariant::NoteHead,
+        SvgVariantOut::UnplayableNoteHead => SvgVariant::UnplayableNoteHead,
         SvgVariantOut::Rest => SvgVariant::Rest,
         SvgVariantOut::OmittedPartRest => SvgVariant::OmittedPartRest,
         SvgVariantOut::MultiMeasureRest => SvgVariant::MultiMeasureRest,

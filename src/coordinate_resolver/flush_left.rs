@@ -1,5 +1,5 @@
 use crate::ast::parsed::JianPuPitch;
-use crate::compiler::types::{LetterNamePlacement, NoteHeadLetterName};
+use crate::compiler::NoteHeadLabel;
 use crate::grid_layout::types::GridContent;
 
 use super::resolve::RowResolveConfig;
@@ -39,15 +39,15 @@ pub(super) fn is_flush_left_glyph(content: &GridContent) -> bool {
 pub(super) fn flush_left_padding(content: &GridContent, config: RowResolveConfig) -> f32 {
     let (padding, bearing) = match content {
         GridContent::NoteHead {
-            pitch, letter_name, ..
+            pitch, head_label, ..
         }
         | GridContent::LowOctaveDots {
-            pitch, letter_name, ..
+            pitch, head_label, ..
         } => (
             config.paddings.notes,
             crate::font_metrics::glyph_left_bearing_for_family(
                 config.glyph_font_families.notes,
-                note_head_leading_char(pitch, letter_name.as_ref()),
+                note_head_leading_char(pitch, head_label.as_ref()),
                 config.notes_font_size,
             ),
         ),
@@ -114,10 +114,10 @@ pub(super) fn flush_left_padding(content: &GridContent, config: RowResolveConfig
 
 /// The first character a note head draws: its letter name's letter in the
 /// letter-name view (see `compiler::label_note_heads`), its digit
-/// otherwise (the guitar chord view's letter name follows the digit).
-fn note_head_leading_char(pitch: &JianPuPitch, letter_name: Option<&NoteHeadLetterName>) -> char {
-    letter_name
-        .filter(|name| name.placement == LetterNamePlacement::InPlaceOfDegree)
-        .and_then(|name| name.text.chars().next())
+/// otherwise (the guitar chord view's label follows the digit).
+fn note_head_leading_char(pitch: &JianPuPitch, head_label: Option<&NoteHeadLabel>) -> char {
+    head_label
+        .filter(|label| label.replaces_degree())
+        .and_then(|label| label.text.chars().next())
         .unwrap_or_else(|| pitch.to_digit())
 }

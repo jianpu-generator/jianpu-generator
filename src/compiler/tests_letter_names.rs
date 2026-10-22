@@ -20,11 +20,11 @@ fn letter_names(result: &CompileResult) -> Vec<Vec<Option<String>>> {
                 .flat_map(|row| &row.elements)
                 .filter_map(|element| match &element.content {
                     ElementContent::NoteHead {
-                        pitch, letter_name, ..
+                        pitch, head_label, ..
                     } => Some(
-                        letter_name
+                        head_label
                             .as_ref()
-                            .map(|name| name.label(pitch.to_digit())),
+                            .map(|label| label.run_text(pitch.to_digit())),
                     ),
                     _ => None,
                 })
