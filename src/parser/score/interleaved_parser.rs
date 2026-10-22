@@ -1,5 +1,6 @@
 use crate::ast::parsed::{
-    AbbreviationReference, ParsedMeasureSlot, ParsedTrack, PartDecl, ScoreEvent, ScoreLineSlot,
+    AbbreviationReference, KeyChange, ParsedMeasureSlot, ParsedTrack, PartDecl, ScoreEvent,
+    ScoreLineSlot,
 };
 use crate::error::{Diagnostic, IrrecoverableError, RecoverableError, Span, Spanned};
 use crate::parser::score::token_parser::GroupStack;
@@ -23,7 +24,7 @@ use beat_padding::{beats_per_measure, validate_and_pad_group_lines};
 pub(crate) use beat_padding::{can_implicitly_pad, padded_measure_events, timed_beats};
 use column_lines::process_padded_columns;
 pub(crate) use directives::directive_keyword_spans;
-use directives::split_directive;
+use directives::{split_directive, SplitDirective};
 
 /// One entry per bar group: all directive events emitted by that group's directive row.
 pub(super) type DirectiveEventsPerMeasure = Vec<Vec<Spanned<ScoreEvent>>>;
@@ -34,7 +35,7 @@ type ParseResult = Result<
     (
         Vec<ParsedTrack>,
         DirectiveEventsPerMeasure,
-        Vec<Option<RecoverableError>>,
+        Vec<Option<Diagnostic>>,
         Vec<AbbreviationReference>,
     ),
     IrrecoverableError,
@@ -80,12 +81,14 @@ struct BarGroupContext<'a> {
     slot_actions: Vec<SlotAction>,
     time_num: &'a mut u8,
     time_den: &'a mut u8,
+    /// The key in effect so far, which a relative `key=+N` resolves against.
+    active_key: &'a mut KeyChange,
     accumulators: &'a mut [TrackAccumulator],
     lyric_tie_states: &'a mut [LyricTieState],
     group_states: &'a mut [GroupStack],
     bar_lyric_slots: &'a mut [Option<u32>],
     directive_events_per_measure: &'a mut DirectiveEventsPerMeasure,
-    per_measure_directive_errors: &'a mut Vec<Option<RecoverableError>>,
+    per_measure_directive_errors: &'a mut Vec<Option<Diagnostic>>,
     extra_document_errors: &'a mut Vec<RecoverableError>,
 }
 
@@ -131,8 +134,8 @@ fn finalize_unclosed_groups(
 }
 
 fn attach_document_error(
-    per_group_desugar_errors: &mut Vec<Option<RecoverableError>>,
-    error: RecoverableError,
+    per_group_desugar_errors: &mut Vec<Option<Diagnostic>>,
+    error: Diagnostic,
 ) {
     match per_group_desugar_errors.first_mut() {
         Some(slot @ None) => *slot = Some(error),
@@ -149,11 +152,12 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
 
     let mut time_num: u8 = 4;
     let mut time_den: u8 = 4;
+    let mut active_key = crate::midi::default_active_key();
     let mut lyric_tie_states = vec![LyricTieState::default(); declarations.len()];
     let mut group_states = vec![GroupStack::default(); declarations.len()];
     let mut bar_lyric_slots = vec![None; declarations.len()];
     let mut directive_events_per_measure: DirectiveEventsPerMeasure = Vec::new();
-    let mut per_measure_directive_errors: Vec<Option<RecoverableError>> = Vec::new();
+    let mut per_measure_directive_errors: Vec<Option<Diagnostic>> = Vec::new();
     let mut extra_document_errors: Vec<RecoverableError> = Vec::new();
 
     let mut ctx = BarGroupContext {
@@ -163,6 +167,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         slot_actions: Vec::new(),
         time_num: &mut time_num,
         time_den: &mut time_den,
+        active_key: &mut active_key,
         accumulators: &mut accumulators,
         lyric_tie_states: &mut lyric_tie_states,
         group_states: &mut group_states,
@@ -186,7 +191,10 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
     );
 
     let tracks = build_parse_result(declarations, accumulators, group_states)?;
-    let mut per_group_desugar_errors = per_group_desugar_errors;
+    let mut per_group_desugar_errors: Vec<Option<Diagnostic>> = per_group_desugar_errors
+        .into_iter()
+        .map(|error| error.map(Diagnostic::Error))
+        .collect();
     for (slot, directive_error) in per_group_desugar_errors
         .iter_mut()
         .zip(per_measure_directive_errors)
@@ -196,7 +204,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
         }
     }
     for error in extra_document_errors {
-        attach_document_error(&mut per_group_desugar_errors, error);
+        attach_document_error(&mut per_group_desugar_errors, Diagnostic::Error(error));
     }
     Ok((
         tracks,
@@ -224,9 +232,11 @@ pub(crate) fn measure_capacities(groups: &[Vec<SourceLine>], base_offset: usize)
                 denominator: 4,
             },
             |time, group| {
-                let (directive_events, _, _) = split_directive(group, base_offset);
+                let directive =
+                    split_directive(group, base_offset, &mut crate::midi::default_active_key());
                 if let Some(changed) =
-                    directive_events
+                    directive
+                        .events
                         .iter()
                         .rev()
                         .find_map(|event| match event.value {
@@ -256,10 +266,13 @@ fn process_bar_group(
     ctx.slots = group_slots;
     ctx.slot_actions = build_slot_actions(&ctx.slots);
 
-    let (directive_events, data_lines, directive_errors) =
-        split_directive(group_lines, ctx.base_offset);
+    let SplitDirective {
+        events: directive_events,
+        data_lines,
+        diagnostics: directive_diagnostics,
+    } = split_directive(group_lines, ctx.base_offset, ctx.active_key);
     ctx.per_measure_directive_errors
-        .push(directive_errors.into_iter().next());
+        .push(directive_diagnostics.into_iter().next());
 
     for e in &directive_events {
         if let ScoreEvent::TimeSignatureChange {

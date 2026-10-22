@@ -156,7 +156,7 @@ pub struct ParsedDocument {
     /// in file order. Used by rename-symbol to find all reference sites.
     pub abbreviation_references: Vec<AbbreviationReference>,
     /// Per-measure recoverable errors from desugaring (e.g. missing lyrics line).
-    pub per_measure_parse_errors: Vec<Option<RecoverableError>>,
+    pub per_measure_parse_errors: Vec<Option<Diagnostic>>,
     /// Recoverable errors from parsing the [metadata] section.
     pub metadata_parse_errors: Vec<RecoverableError>,
     /// Recoverable errors from parsing the [parts] section.

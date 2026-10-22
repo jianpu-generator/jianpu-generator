@@ -193,7 +193,8 @@ fn too_many_lines_recoverable_error_span_points_to_absolute_file_position() {
         .as_ref()
         .expect("recoverable error must be recorded for the measure");
     assert_eq!(
-        error.span.start, expected_offset,
+        error.span().start,
+        expected_offset,
         "recoverable error span should point to the absolute file position of the extra line"
     );
 }
