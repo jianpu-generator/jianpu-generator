@@ -42,6 +42,19 @@ pub struct KeyChange {
     pub note: Note,
 }
 
+impl Default for KeyChange {
+    /// The key in effect before any `key=` directive: C4.
+    fn default() -> Self {
+        Self {
+            note: Note {
+                name: NoteName::C,
+                octave: 4,
+                accidental: Accidental::Natural,
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Note {
     pub name: NoteName,

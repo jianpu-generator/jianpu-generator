@@ -171,7 +171,7 @@ pub(super) fn one_measure_score() -> Score {
                 notes: Notes {
                     events: vec![NoteEvent::Note(GroupedNote {
                         pitch: JianPuPitch::One,
-                        accidental: crate::ast::parsed::Accidental::Natural,
+                        accidental: Accidental::Natural,
                         octave: 0,
                         duration: 16,
                         slur: false,

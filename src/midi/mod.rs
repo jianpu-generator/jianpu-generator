@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::grouped::Score;
-use crate::ast::parsed::{Accidental, KeyChange, NoteName, PartKind};
+use crate::ast::parsed::{KeyChange, PartKind};
 use crate::error::IrrecoverableError;
 use crate::parser::parts_parser::DEFAULT_PART_VOLUME;
 
@@ -262,7 +262,7 @@ pub fn write_midi_with_metronome(
 
     let mut current_tick: u32 = 0;
     let mut tie_state = TieState::default();
-    let mut active_key = default_active_key();
+    let mut active_key = KeyChange::default();
     let mut measure_start_ticks = vec![current_tick];
 
     for measure in &score.measures {
@@ -296,16 +296,6 @@ pub use timing::{
     note_timings_seconds_for_literal_range, note_timings_seconds_for_range, NoteTiming,
 };
 pub use timing_range::{write_midi_for_measure_range, write_midi_for_measure_range_with_metronome};
-
-pub(crate) fn default_active_key() -> KeyChange {
-    KeyChange {
-        note: crate::ast::parsed::Note {
-            name: NoteName::C,
-            octave: 4,
-            accidental: Accidental::Natural,
-        },
-    }
-}
 
 pub(crate) fn process_measure(
     measure: &crate::ast::grouped::MultiPartMeasure,

@@ -152,7 +152,7 @@ pub fn parse(content: &str, base_offset: usize, declarations: &[PartDecl]) -> Pa
 
     let mut time_num: u8 = 4;
     let mut time_den: u8 = 4;
-    let mut active_key = crate::midi::default_active_key();
+    let mut active_key = KeyChange::default();
     let mut lyric_tie_states = vec![LyricTieState::default(); declarations.len()];
     let mut group_states = vec![GroupStack::default(); declarations.len()];
     let mut bar_lyric_slots = vec![None; declarations.len()];
@@ -232,8 +232,7 @@ pub(crate) fn measure_capacities(groups: &[Vec<SourceLine>], base_offset: usize)
                 denominator: 4,
             },
             |time, group| {
-                let directive =
-                    split_directive(group, base_offset, &mut crate::midi::default_active_key());
+                let directive = split_directive(group, base_offset, &mut KeyChange::default());
                 if let Some(changed) =
                     directive
                         .events
