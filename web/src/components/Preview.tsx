@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import type { NoteTiming, SvgDocument } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
+import type { StaffScore } from '../worker/messages'
 import { PreviewPages } from './PreviewPages'
 import { handlePreviewClick } from './previewClickHandler'
 import {
@@ -15,16 +16,15 @@ import { findRevealTarget } from './previewRevealTarget'
 import type { LyricCell, NoteCell } from './previewSelection'
 import { usePlaybackCursor } from './usePlaybackCursor'
 import { usePreviewClickSelection } from './usePreviewClickSelection'
+import { useStaffMeasureHighlights } from './useStaffMeasureHighlights'
 
 export type { LyricCell, NoteCell } from './previewSelection'
 
 interface PreviewProps {
   documents: SvgDocument[]
-  /** Verovio-engraved staff-notation pages; when set, shown instead of the
-   * jianpu `documents` (see `useStaffNotation`). */
-  staffPages?: string[] | null
-  /** Controls floated over the top-right corner of the pages, e.g. the
-   * jianpu/staff `NotationToggle`. */
+  /** Verovio's staff notation (`useStaffNotation`); replaces `documents`. */
+  staffScore?: StaffScore | null
+  /** Controls floated over the pages' top-right corner (`NotationToggle`). */
   floatingControls?: ReactNode
   highlightedDocuments?: SvgDocument[]
   rendering: boolean
@@ -128,7 +128,7 @@ interface PreviewProps {
 
 export function Preview({
   documents,
-  staffPages = null,
+  staffScore = null,
   floatingControls = null,
   highlightedDocuments = [],
   rendering,
@@ -201,6 +201,7 @@ export function Preview({
   }, [pendingSecondClick, onPendingSecondClickChange])
   const onSectionLabelClickRef = useRef(onSectionLabelClick)
   onSectionLabelClickRef.current = onSectionLabelClick
+  useStaffMeasureHighlights(previewPagesRef, staffScore, selectedMeasureRange)
 
   useEffect(() => {
     if (!audioBusy) return
@@ -269,8 +270,11 @@ export function Preview({
     const frameId = requestAnimationFrame(() => {
       const container = previewPagesRef.current
       if (!container) return
-
-      const target = findRevealTarget(container, selectedMeasureRange)
+      const target = findRevealTarget(
+        container,
+        selectedMeasureRange,
+        staffScore,
+      )
       target?.scrollIntoView({
         block: 'center',
         inline: 'nearest',
@@ -278,7 +282,7 @@ export function Preview({
     })
 
     return () => cancelAnimationFrame(frameId)
-  }, [selectedMeasureRange, documents, highlightedDocuments])
+  }, [selectedMeasureRange, documents, highlightedDocuments, staffScore])
 
   // Re-applies the note range-select highlight declaratively from
   // `selectedNoteCells` on every relevant render, rather than leaving it as
@@ -371,16 +375,17 @@ export function Preview({
               noteSpans,
               lyricSpans,
               onSectionLabelClick: onSectionLabelClickRef.current,
+              staffMeasures: staffScore?.measures,
               onNoteRangeSelect,
               onLyricRangeSelect,
               onMeasureRangeSelect,
             })
           }
         >
-          {(staffPages ?? activeDocs).length === 0 && !rendering ? (
+          {(staffScore?.pages ?? activeDocs).length === 0 && !rendering ? (
             <p className="preview-empty">{emptyMessage}</p>
           ) : null}
-          <PreviewPages documents={activeDocs} staffPages={staffPages} />
+          <PreviewPages documents={activeDocs} staffScore={staffScore} />
         </div>
         {rendering ? (
           <div

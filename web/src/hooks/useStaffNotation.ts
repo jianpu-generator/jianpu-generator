@@ -4,6 +4,7 @@ import type { ResolvedPartVisibility } from '../types'
 import type {
   Notation,
   StaffRenderResult,
+  StaffScore,
   WorkerRequest,
 } from '../worker/messages'
 import type { StaffRenderRequestTracker } from './useJianpuWorkerTypes'
@@ -14,14 +15,16 @@ export type { Notation }
 export interface StaffNotation {
   notation: Notation
   setNotation: (notation: Notation) => void
-  /** Verovio's SVG pages for the current source; empty until the first
-   * staff render lands. */
-  pages: string[]
+  /** The engraved current source; no pages until the first staff render
+   * lands. */
+  score: StaffScore
   /** True while a staff render (including the first, which also downloads
    * Verovio) is in flight. */
   loading: boolean
   error: string | null
 }
+
+const EMPTY_SCORE: StaffScore = { pages: [], measures: [] }
 
 const STORAGE_KEY = 'jianpu:preview-notation:v1'
 
@@ -62,7 +65,7 @@ export function useStaffNotation({
 }: UseStaffNotationParams): StaffNotation {
   const { requestIdRef, latestIdRef, pendingRequestsRef } = staffRenderTracker
   const [notation, setNotationState] = useState<Notation>(load)
-  const [pages, setPages] = useState<string[]>([])
+  const [score, setScore] = useState<StaffScore>(EMPTY_SCORE)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -81,7 +84,7 @@ export function useStaffNotation({
       pendingRequestsRef.current.set(id, (result: StaffRenderResult) => {
         setLoading(false)
         if (result.status === 'ok') {
-          setPages(result.pages)
+          setScore(result.score)
           setError(null)
           return
         }
@@ -106,5 +109,5 @@ export function useStaffNotation({
     pendingRequestsRef,
   ])
 
-  return { notation, setNotation, pages, loading, error }
+  return { notation, setNotation, score, loading, error }
 }

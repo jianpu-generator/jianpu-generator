@@ -168,7 +168,7 @@ pub fn render_mei_from_source_with_visibility(
     filename: &str,
     visibility: &ResolvedPartVisibility,
     instruments: &[crate::parser::parts_parser::InstrumentInfo],
-) -> Result<String, IrrecoverableError> {
+) -> Result<crate::mei_export::MeiDocument, IrrecoverableError> {
     let enabled_tracks = visibility.rendered_tracks.as_deref();
     let display_names = crate::filter_part_list(
         crate::list_parts_from_source(source, filename, instruments)?,

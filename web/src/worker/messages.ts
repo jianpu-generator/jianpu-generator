@@ -1,4 +1,9 @@
-import type { FontBytesByFamily, NoteTiming, SvgDocument } from '../jianpuWasm'
+import type {
+  FontBytesByFamily,
+  NoteTiming,
+  StaffMeasure,
+  SvgDocument,
+} from '../jianpuWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -17,13 +22,23 @@ import type {
 } from '../types'
 import type { NoteCell } from '../utils/noteSpanSelection'
 
-/** The staff-notation view's pages, engraved by Verovio from the MEI Rust
- * exported (see `staffMessageHandlers.ts`). */
 /** Which notation the preview (and so PDF export) shows. */
 export type Notation = 'jianpu' | 'staff'
 
-export type StaffRenderResult =
+/** Verovio's pages for MEI Rust exported (see `staffMessageHandlers.ts`). */
+export type StaffEngraveResult =
   | { status: 'ok'; pages: string[] }
+  | { status: 'err'; message: string }
+
+/** The staff-notation view: Verovio's pages, plus Rust's list of which SVG
+ * element engraves which score measure. */
+export interface StaffScore {
+  pages: string[]
+  measures: StaffMeasure[]
+}
+
+export type StaffRenderResult =
+  | { status: 'ok'; score: StaffScore }
   | { status: 'err'; message: string }
 
 export type WorkerRequest =

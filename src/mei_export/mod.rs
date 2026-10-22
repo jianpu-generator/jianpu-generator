@@ -4,7 +4,8 @@
 //! One staff per `notes` part, chord parts become `<harm>` symbols over the
 //! top sounding staff, and lyric parts become verses on their target's
 //! notes. Every note's `xml:id` encodes its source byte range
-//! (`n{start}-{end}`), which Verovio carries through to its SVG output.
+//! (`n{start}-{end}`), and every measure's `xml:id` is listed in
+//! [`MeiDocument::measures`]; Verovio carries both through to its SVG output.
 
 mod duration;
 mod harmony;
@@ -45,7 +46,27 @@ struct ScoreParts<'a> {
     verses: &'a HashMap<String, Vec<Verse>>,
 }
 
-pub fn score_to_mei(score: &Score, display_names: &HashMap<String, String>) -> String {
+/// A score as MEI, plus which `<measure>` element engraves which measure.
+pub struct MeiDocument {
+    pub mei: String,
+    /// One entry per score measure, in order.
+    pub measures: Vec<StaffMeasure>,
+}
+
+/// Ties a `<measure>`'s `xml:id` (the `id` of its group in Verovio's SVG)
+/// to its index in `Score::measures`, so the staff view never has to know
+/// the id format.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StaffMeasure {
+    pub element_id: String,
+    pub measure_index: usize,
+}
+
+fn measure_element_id(measure_index: usize) -> String {
+    format!("measure-{measure_index}")
+}
+
+pub fn score_to_mei(score: &Score, display_names: &HashMap<String, String>) -> MeiDocument {
     let staves = collect_staves(score, display_names);
     let verses = collect_verses(score);
     let parts = ScoreParts {
@@ -81,7 +102,15 @@ pub fn score_to_mei(score: &Score, display_names: &HashMap<String, String>) -> S
             ));
         }
     }
-    document_xml(score, &score_def, &measures)
+    MeiDocument {
+        mei: document_xml(score, &score_def, &measures),
+        measures: (0..measures.len())
+            .map(|measure_index| StaffMeasure {
+                element_id: measure_element_id(measure_index),
+                measure_index,
+            })
+            .collect(),
+    }
 }
 
 pub(crate) fn default_key() -> KeyChange {
@@ -292,8 +321,9 @@ fn document_xml(score: &Score, score_def: &str, measures: &[MeasureXml]) -> Stri
         .enumerate()
         .map(|(index, measure)| {
             format!(
-                "{}<measure n=\"{}\">\n{}{}</measure>\n",
+                "{}<measure xml:id=\"{}\" n=\"{}\">\n{}{}</measure>\n",
                 measure.preamble,
+                measure_element_id(index),
                 index + 1,
                 measure.staves,
                 measure.controls

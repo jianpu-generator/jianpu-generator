@@ -222,7 +222,17 @@ pub(super) fn render_mei(
         &resolved_part_visibility_from_wit(visibility),
         &instruments,
     ) {
-        Ok(mei) => RenderMeiResponse::Ok(RenderMeiSuccess { mei }),
+        Ok(document) => RenderMeiResponse::Ok(RenderMeiSuccess {
+            mei: document.mei,
+            measures: document
+                .measures
+                .into_iter()
+                .map(|measure| StaffMeasure {
+                    element_id: measure.element_id,
+                    measure_index: measure.measure_index as u32,
+                })
+                .collect(),
+        }),
         Err(error) => RenderMeiResponse::Err(diagnostics_error_to_wit(&[
             crate::diagnostics::diagnostic_from_error(&error),
         ])),

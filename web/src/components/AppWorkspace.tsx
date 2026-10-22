@@ -316,7 +316,7 @@ export function AppWorkspace({
               onChange={staffNotation.setNotation}
             />
           }
-          staffPages={staffView ? staffNotation.pages : null}
+          staffScore={staffView ? staffNotation.score : null}
           highlightedDocuments={highlightedDocuments}
           rendering={staffView ? staffNotation.loading : rendering}
           onSectionLabelClick={handleSectionJump}

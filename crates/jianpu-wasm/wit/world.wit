@@ -443,8 +443,17 @@ world jianpu-wasm {
 
     export render-svg-with-highlight-range: func(source: string, raw-measure-ranges: list<measure-range-in>, visibility: resolved-part-visibility, raw-instruments: list<instrument-info>) -> render-response;
 
+    /// Which `<measure>` in the MEI (and so which `id` in Verovio's SVG)
+    /// engraves which score measure — the staff view's only way to map
+    /// between the two, so it never knows the id format.
+    record staff-measure {
+        element-id: string,
+        measure-index: u32,
+    }
+
     record render-mei-success {
         mei: string,
+        measures: list<staff-measure>,
     }
 
     variant render-mei-response {

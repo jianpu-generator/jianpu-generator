@@ -128,3 +128,14 @@
 .preview-page--staff > svg {
   width: 210mm;
 }
+
+/* A selected staff measure (`applyStaffMeasureHighlights`): the jianpu
+   view's committed-selection blue, or its pending amber while a
+   click-and-click gesture waits on its second click. */
+.preview-page--staff .staff-measure-highlight {
+  fill: rgba(37, 99, 235, 0.15);
+}
+
+[data-pending-selection] .preview-page--staff .staff-measure-highlight {
+  fill: rgba(217, 119, 6, 0.25);
+}

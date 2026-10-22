@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import type { ClickableElementId } from '../jianpuWasm'
+import type { ClickableElementId, StaffMeasure } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import type { PreviewAnchorState } from './previewAnchorState'
 import type { LyricCell, NoteCell } from './previewSelection'
@@ -56,6 +56,10 @@ export interface HandlePreviewClickArgs {
   noteSpans: NoteSpan[]
   lyricSpans: LyricSpan[]
   onSectionLabelClick: ((label: string) => void) | undefined
+  /** Set in the staff view: Rust's list of Verovio's measure elements,
+   * which switches `handlePreviewClick` to measure-only selection (see
+   * `handleStaffPreviewClick`). */
+  staffMeasures: StaffMeasure[] | undefined
   onNoteRangeSelect: ((selectedCells: NoteCell[]) => void) | undefined
   onLyricRangeSelect: ((selectedCells: LyricCell[]) => void) | undefined
   onMeasureRangeSelect:

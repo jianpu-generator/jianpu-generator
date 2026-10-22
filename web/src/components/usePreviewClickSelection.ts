@@ -4,7 +4,7 @@ import type { ClickableElementId } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import { clickableElementIdFromElement } from './clickableElementId'
 import type { PreviewAnchorState } from './previewAnchorState'
-import { cancelAnchor } from './previewClickHandler'
+import { cancelAnchor } from './previewGestureSteps'
 import {
   getMeasureAtPoint,
   type LyricCell,
@@ -140,6 +140,7 @@ export function usePreviewClickSelection(
       noteSpans: noteSpansRef.current,
       lyricSpans: lyricSpansRef.current,
       onSectionLabelClick: undefined,
+      staffMeasures: undefined,
       onNoteRangeSelect: onNoteRangeSelectRef.current,
       onLyricRangeSelect: onLyricRangeSelectRef.current,
       onMeasureRangeSelect: onMeasureRangeSelectRef.current,

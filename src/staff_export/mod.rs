@@ -40,7 +40,7 @@ pub fn render_split_meis_from_source(
                 .collect();
             SplitMeiEntry {
                 filename: split_pdf_filename(base_name, &split_track_label(&labels, &track)),
-                mei: crate::mei_export::score_to_mei(&part_score, &display_names),
+                mei: crate::mei_export::score_to_mei(&part_score, &display_names).mei,
                 track_name: track,
             }
         })

@@ -2,6 +2,7 @@ import type { VerovioToolkit } from 'verovio/esm'
 import { jianpuWasm } from '../jianpuWasm'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
 import type {
+  StaffEngraveResult,
   StaffRenderResult,
   WorkerRequest,
   WorkerResponse,
@@ -45,7 +46,7 @@ function loadToolkit(): Promise<VerovioToolkit> {
 }
 
 /** Engraves MEI (from Rust) into one SVG string per page. */
-export async function engraveMei(mei: string): Promise<StaffRenderResult> {
+export async function engraveMei(mei: string): Promise<StaffEngraveResult> {
   try {
     const toolkit = await loadToolkit()
     if (!toolkit.loadData(mei)) {
@@ -73,7 +74,12 @@ async function renderStaff(
       message: mei.val.diagnostics[0]?.message ?? 'Could not export the score.',
     }
   }
-  return engraveMei(mei.val.mei)
+  const engraved = await engraveMei(mei.val.mei)
+  if (engraved.status === 'err') return engraved
+  return {
+    status: 'ok',
+    score: { pages: engraved.pages, measures: mei.val.measures },
+  }
 }
 
 export async function handleRenderStaff(

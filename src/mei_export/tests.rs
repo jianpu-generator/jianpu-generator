@@ -1,6 +1,6 @@
 use super::duration::{split_duration, split_undotted_duration};
 use super::pitch::{key_signature, spell, AccidentalTracker, Letter};
-use super::score_to_mei;
+use super::{score_to_mei, StaffMeasure};
 use crate::ast::parsed::{Accidental, JianPuPitch, KeyChange, Note, NoteName};
 use std::collections::HashMap;
 
@@ -17,7 +17,7 @@ fn key(name: NoteName, accidental: Accidental) -> KeyChange {
 fn mei_of(source: &str) -> String {
     let doc = crate::parser::parse(source, "test.jianpu", &[]).unwrap();
     let score = crate::grouper::group(doc).unwrap();
-    score_to_mei(&score, &HashMap::new())
+    score_to_mei(&score, &HashMap::new()).mei
 }
 
 #[test]
@@ -98,6 +98,32 @@ fn notes_carry_their_source_span_as_id() {
 }
 
 #[test]
+fn every_measure_is_listed_with_its_element_id() {
+    let source =
+        "# parts\nMelody [m] = notes\n\n# score\nkey=C4 time=2/4\n[m] 1 2\n\n[m] 3 4\n\n[m] 5 6\n";
+    let doc = crate::parser::parse(source, "test.jianpu", &[]).unwrap();
+    let score = crate::grouper::group(doc).unwrap();
+    let document = score_to_mei(&score, &HashMap::new());
+    assert_eq!(
+        document
+            .measures
+            .iter()
+            .map(|StaffMeasure { measure_index, .. }| *measure_index)
+            .collect::<Vec<_>>(),
+        vec![0, 1, 2]
+    );
+    for StaffMeasure { element_id, .. } in &document.measures {
+        assert!(
+            document
+                .mei
+                .contains(&format!(r#"<measure xml:id="{element_id}" "#)),
+            "{}",
+            document.mei
+        );
+    }
+}
+
+#[test]
 fn ties_slurs_and_beams_are_encoded() {
     let mei = mei_of(
         "# parts\nMelody [m] = notes\n\n# score\nkey=C4 time=2/4\n[m] (1_2_) 3~\n\n[m] 3 -\n",
@@ -138,7 +164,8 @@ fn hidden_parts_get_no_staff() {
         },
         &[],
     )
-    .unwrap();
+    .unwrap()
+    .mei;
     assert!(mei.contains("<label>Soprano</label>"), "{mei}");
     assert!(!mei.contains("<label>Alto</label>"), "{mei}");
     assert!(!mei.contains("<syl>"), "{mei}");
@@ -156,7 +183,8 @@ fn shown_lyrics_of_a_hidden_part_ride_an_invisible_staff() {
         },
         &[],
     )
-    .unwrap();
+    .unwrap()
+    .mei;
     assert!(mei.contains("<label>Sustain</label>"), "{mei}");
     assert!(!mei.contains("<label>Bass</label>"), "{mei}");
     assert!(
