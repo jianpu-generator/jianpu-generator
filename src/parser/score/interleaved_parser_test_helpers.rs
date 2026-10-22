@@ -2,7 +2,7 @@ use crate::ast::parsed::{
     ParsedMeasureSlot, ParsedTimedTrack, ParsedTrack, PartDecl, PartKind, Soundfont,
 };
 use crate::error::Spanned;
-use crate::error::{IrrecoverableError, RecoverableError, Span};
+use crate::error::{Diagnostic, IrrecoverableError, Span};
 
 /// Convenience wrapper that calls `parse` and returns only the tracks,
 /// discarding the directive-events accumulator. Used in unit tests.
@@ -14,13 +14,13 @@ pub(super) fn parse(
     super::parse(content, base_offset, declarations).map(|(tracks, _, _, _)| tracks)
 }
 
-/// Convenience wrapper that calls `parse` and returns the recoverable errors,
+/// Convenience wrapper that calls `parse` and returns the per-measure diagnostics,
 /// discarding the tracks and directive-events accumulator.
 pub(super) fn parse_recoverable_errors(
     content: &str,
     base_offset: usize,
     declarations: &[PartDecl],
-) -> Result<Vec<Option<RecoverableError>>, IrrecoverableError> {
+) -> Result<Vec<Option<Diagnostic>>, IrrecoverableError> {
     super::parse(content, base_offset, declarations).map(|(_, _, errors, _)| errors)
 }
 
