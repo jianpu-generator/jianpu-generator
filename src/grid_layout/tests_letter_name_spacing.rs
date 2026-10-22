@@ -19,7 +19,7 @@ fn test_config() -> RenderConfig {
     }
 }
 
-fn block_with_note(letter_name: Option<&str>, accidental: Accidental) -> MeasureBlock {
+fn block_with_note(head_label: Option<&str>, accidental: Accidental) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
             kind: crate::ast::parsed::PartKind::Notes,
@@ -35,7 +35,8 @@ fn block_with_note(letter_name: Option<&str>, accidental: Accidental) -> Measure
                         octave: 0,
                         dotted: false,
                         double_dotted: false,
-                        letter_name: letter_name.map(str::to_string),
+                        head_label: head_label
+                            .map(|text| crate::compiler::NoteHeadLabel::playable(text.to_string())),
                     },
                     note_id: None,
                 },

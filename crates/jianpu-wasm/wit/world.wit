@@ -54,11 +54,13 @@ world jianpu-wasm {
 
     /// What the jianpu layout's note heads read as
     /// (`jianpu_generator::NoteLabels`): degree digits, the letter names
-    /// of the letter-name view, or degree digits with a guitar chord diagram
-    /// at each chord symbol (the guitar chord view).
+    /// of the letter-name view, the tabs of the harmonica-tab view, or
+    /// degree digits with a guitar chord diagram at each chord symbol (the
+    /// guitar chord view).
     enum note-labels {
         degrees,
         letter-names,
+        harmonica-tabs,
         guitar-chords,
     }
 
@@ -273,6 +275,7 @@ world jianpu-wasm {
     enum svg-variant {
         text,
         note-head,
+        unplayable-note-head,
         rest,
         omitted-part-rest,
         multi-measure-rest,

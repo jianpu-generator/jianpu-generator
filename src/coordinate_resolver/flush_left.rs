@@ -38,15 +38,15 @@ pub(super) fn is_flush_left_glyph(content: &GridContent) -> bool {
 pub(super) fn flush_left_padding(content: &GridContent, config: RowResolveConfig) -> f32 {
     let (padding, bearing) = match content {
         GridContent::NoteHead {
-            pitch, letter_name, ..
+            pitch, head_label, ..
         }
         | GridContent::LowOctaveDots {
-            pitch, letter_name, ..
+            pitch, head_label, ..
         } => (
             config.paddings.notes,
             crate::font_metrics::glyph_left_bearing_for_family(
                 config.glyph_font_families.notes,
-                note_head_leading_char(pitch, letter_name.as_deref()),
+                note_head_leading_char(pitch, head_label.as_ref().map(|label| label.text.as_str())),
                 config.notes_font_size,
             ),
         ),
@@ -114,8 +114,8 @@ pub(super) fn flush_left_padding(content: &GridContent, config: RowResolveConfig
 /// The first character a note head draws: its letter name's letter in the
 /// letter-name view (see `compiler::label_note_heads`), its digit
 /// otherwise.
-fn note_head_leading_char(pitch: &JianPuPitch, letter_name: Option<&str>) -> char {
-    letter_name
+fn note_head_leading_char(pitch: &JianPuPitch, head_label: Option<&str>) -> char {
+    head_label
         .and_then(|name| name.chars().next())
         .unwrap_or_else(|| pitch.to_digit())
 }

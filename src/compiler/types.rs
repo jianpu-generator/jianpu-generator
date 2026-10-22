@@ -111,6 +111,25 @@ pub struct ColumnElement {
     pub note_id: Option<usize>,
 }
 
+/// What a note head reads as in place of its jianpu digit: its letter name
+/// (`F♯`) or its harmonica tab (`-4`), as set by `label_note_heads`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NoteHeadLabel {
+    pub text: String,
+    /// True when the pitch can't be played on the instrument the label is
+    /// for (a harmonica tab with no hole for it), drawn as a warning.
+    pub unplayable: bool,
+}
+
+impl NoteHeadLabel {
+    pub fn playable(text: String) -> Self {
+        Self {
+            text,
+            unplayable: false,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ElementContent {
     NoteHead {
@@ -119,7 +138,7 @@ pub enum ElementContent {
         octave: i8,
         dotted: bool,
         double_dotted: bool,
-        letter_name: Option<String>,
+        head_label: Option<NoteHeadLabel>,
     },
     Rest {
         dotted: bool,

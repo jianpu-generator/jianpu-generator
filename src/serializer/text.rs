@@ -1,7 +1,11 @@
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
-use crate::renderer::new_types::{SvgElement, SvgKind, TspanData};
+use crate::renderer::new_types::{SvgElement, SvgKind, SvgVariant, TspanData};
 
 use super::{escape_xml, variant_attr};
+
+/// The red an unplayable note head (`SvgVariant::UnplayableNoteHead`) is
+/// drawn in; the web preview styles its `data-variant` the same.
+const UNPLAYABLE_FILL: &str = "#d32f2f";
 
 pub(super) fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) {
     let SvgKind::Text {
@@ -42,8 +46,12 @@ pub(super) fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) 
     } else {
         ""
     };
+    let fill_str = match el.variant {
+        Some(SvgVariant::UnplayableNoteHead) => format!("fill=\"{UNPLAYABLE_FILL}\" "),
+        _ => String::new(),
+    };
     out.push_str(&format!(
-        r#"<text x="{:.1}" y="{:.1}"{} font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family='{}' font-weight="{}" {}{}>{}</text>"#,
+        r#"<text x="{:.1}" y="{:.1}"{} font-size="{:.1}" text-anchor="{}" dominant-baseline="{}" font-family='{}' font-weight="{}" {}{}{}>{}</text>"#,
         el.x,
         el.y,
         variant_attr(el.variant),
@@ -54,6 +62,7 @@ pub(super) fn serialize_text(el: &SvgElement, out: &mut String, kind: &SvgKind) 
         weight_str,
         style_str,
         decoration_str,
+        fill_str,
         escape_xml(content)
     ));
 }

@@ -23,6 +23,7 @@ pub use chord_degrees::ChordDegrees;
 #[cfg(test)]
 pub(crate) mod test_chord_degrees;
 
+mod harmonica_tabs;
 mod letter_names;
 pub use letter_names::{label_note_heads, NoteLabels};
 
@@ -301,6 +302,8 @@ mod tests_all_rest_notes_measures;
 mod tests_blank_lyric_rows;
 #[cfg(test)]
 mod tests_directive_mid_score;
+#[cfg(test)]
+mod tests_harmonica_tabs;
 #[cfg(test)]
 mod tests_implicit_fill_rest;
 #[cfg(test)]

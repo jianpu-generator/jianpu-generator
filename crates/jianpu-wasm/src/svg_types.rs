@@ -21,6 +21,7 @@ pub struct SvgElementOut {
 pub enum SvgVariantOut {
     Text,
     NoteHead,
+    UnplayableNoteHead,
     Rest,
     OmittedPartRest,
     MultiMeasureRest,

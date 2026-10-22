@@ -209,13 +209,13 @@ fn render_note_glyph(
             octave,
             dotted,
             double_dotted,
-            letter_name,
+            head_label,
         } => render_note_head(
             elem,
             &NoteHeadGlyph {
                 pitch,
                 accidental,
-                letter_name: letter_name.as_deref(),
+                head_label: head_label.as_ref(),
             },
             *octave,
             &DotState::new(*dotted, *double_dotted),

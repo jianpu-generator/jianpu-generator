@@ -118,7 +118,7 @@ fn accidental_lead(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
         ElementContent::NoteHead {
             accidental,
-            letter_name: None,
+            head_label: None,
             ..
         } => accidental_extra_weight(accidental, config),
         ElementContent::ChordSymbol { text, .. } => {

@@ -18,7 +18,9 @@ fn letter_names(result: &CompileResult) -> Vec<Vec<Option<String>>> {
                 .iter()
                 .flat_map(|row| &row.elements)
                 .filter_map(|element| match &element.content {
-                    ElementContent::NoteHead { letter_name, .. } => Some(letter_name.clone()),
+                    ElementContent::NoteHead { head_label, .. } => {
+                        Some(head_label.as_ref().map(|label| label.text.clone()))
+                    }
                     _ => None,
                 })
                 .collect()
