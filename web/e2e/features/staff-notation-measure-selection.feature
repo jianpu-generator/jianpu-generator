@@ -14,6 +14,11 @@ Feature: Selecting measures in the staff notation view
     And the highlighted staff measures are 24 to 25
     And staff measure 25 is scrolled into view
 
+  Scenario: Hovering a staff measure tints it and shows a pointer
+    When I hover staff measure 2
+    Then staff measure 2 shows the hover state
+    And staff measure 3 does not show the hover state
+
   Scenario: Click-and-click on two staff measures selects the range between them
     When I click staff measure 1
     Then the pending-second-click banner is shown in the staff view

@@ -6,6 +6,9 @@ const SVG_NS = 'http://www.w3.org/2000/svg'
 /** `data-testid` of the rect painted behind each selected staff measure. */
 export const STAFF_MEASURE_HIGHLIGHT_TEST_ID = 'staff-measure-highlight'
 
+/** `data-testid` of each staff measure's transparent hover/click target. */
+export const STAFF_MEASURE_HIT_TARGET_TEST_ID = 'staff-measure-hit-target'
+
 interface StaffMeasureElement {
   element: SVGGraphicsElement
   measureIndex: number
@@ -52,6 +55,46 @@ export function staffMeasureElement(
   )?.element
 }
 
+/** A rect covering `element`'s whole box, inserted behind its contents. */
+function insertMeasureRect(
+  element: SVGGraphicsElement,
+  className: string,
+  testId: string,
+): void {
+  const box = element.getBBox()
+  const rect = document.createElementNS(SVG_NS, 'rect')
+  rect.setAttribute('x', String(box.x))
+  rect.setAttribute('y', String(box.y))
+  rect.setAttribute('width', String(box.width))
+  rect.setAttribute('height', String(box.height))
+  rect.setAttribute('class', className)
+  rect.dataset.testid = testId
+  element.insertBefore(rect, element.firstChild)
+}
+
+/** Gives every staff measure a transparent rect over its whole box, so the
+ * blank space between its notes (which Verovio leaves unpainted) is hovered
+ * too — `preview.css` tints it and shows a pointer, like the jianpu view's
+ * click targets. Run once per set of pages. */
+export function applyStaffMeasureHitTargets(
+  container: HTMLElement,
+  measures: StaffMeasure[],
+): void {
+  for (const { element } of staffMeasureElements(container, measures)) {
+    if (
+      element.querySelector(
+        `:scope > [data-testid="${STAFF_MEASURE_HIT_TARGET_TEST_ID}"]`,
+      )
+    )
+      continue
+    insertMeasureRect(
+      element,
+      'staff-measure-hit-target',
+      STAFF_MEASURE_HIT_TARGET_TEST_ID,
+    )
+  }
+}
+
 /** Paints a rect behind every staff measure inside `ranges`, clearing the
  * previous ones. Idempotent, so it's re-run whenever Verovio's pages are
  * swapped in. */
@@ -75,14 +118,10 @@ export function applyStaffMeasureHighlights(
       ({ start, end }) => start <= measureIndex && measureIndex <= end,
     )
     if (!selected) continue
-    const box = element.getBBox()
-    const rect = document.createElementNS(SVG_NS, 'rect')
-    rect.setAttribute('x', String(box.x))
-    rect.setAttribute('y', String(box.y))
-    rect.setAttribute('width', String(box.width))
-    rect.setAttribute('height', String(box.height))
-    rect.setAttribute('class', 'staff-measure-highlight')
-    rect.dataset.testid = STAFF_MEASURE_HIGHLIGHT_TEST_ID
-    element.insertBefore(rect, element.firstChild)
+    insertMeasureRect(
+      element,
+      'staff-measure-highlight',
+      STAFF_MEASURE_HIGHLIGHT_TEST_ID,
+    )
   }
 }

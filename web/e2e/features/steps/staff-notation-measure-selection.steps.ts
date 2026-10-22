@@ -1,5 +1,8 @@
 import { expect, type Page, test } from '@playwright/test'
-import { STAFF_MEASURE_HIGHLIGHT_TEST_ID } from '../../../src/components/previewStaffMeasures'
+import {
+  STAFF_MEASURE_HIGHLIGHT_TEST_ID,
+  STAFF_MEASURE_HIT_TARGET_TEST_ID,
+} from '../../../src/components/previewStaffMeasures'
 import { Given, Then, When } from './fixtures'
 
 const SECTION_A_MEASURES = 24
@@ -89,23 +92,15 @@ Given(
   },
 )
 
-/** The centre of staff measure `index`, scrolled into view first. */
-async function staffMeasureCentre(page: Page, index: number) {
-  const measure = staffMeasure(page, index)
-  await measure.scrollIntoViewIfNeeded()
-  const box = await measure.boundingBox()
-  if (!box) throw new Error(`Staff measure ${index} has no bounding box.`)
-  return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
-}
-
+// Playwright's own `hover`/`click` wait for the measure to stop moving and
+// check it's what's under the pointer; each measure's hover target covers
+// its whole box, so its centre always lands inside it.
 When('I click staff measure {int}', async ({ page }, index: number) => {
-  const { x, y } = await staffMeasureCentre(page, index)
-  await page.mouse.click(x, y)
+  await staffMeasure(page, index).click()
 })
 
 When('I hover staff measure {int}', async ({ page }, index: number) => {
-  const { x, y } = await staffMeasureCentre(page, index)
-  await page.mouse.move(x, y)
+  await staffMeasure(page, index).hover()
 })
 
 Then(
@@ -149,5 +144,38 @@ Then(
         ),
       )
       .toEqual({ start, end })
+  },
+)
+
+/** The hover target's painted fill and the cursor over staff measure
+ * `index`'s blank space. */
+async function staffMeasureHoverStyle(page: Page, index: number) {
+  return staffMeasure(page, index)
+    .getByTestId(STAFF_MEASURE_HIT_TARGET_TEST_ID)
+    .evaluate((rect) => {
+      const style = getComputedStyle(rect)
+      return { fill: style.fill, cursor: style.cursor }
+    })
+}
+
+const TRANSPARENT_FILLS = ['transparent', 'rgba(0, 0, 0, 0)']
+
+Then(
+  'staff measure {int} shows the hover state',
+  async ({ page }, index: number) => {
+    await expect
+      .poll(async () => {
+        const { fill, cursor } = await staffMeasureHoverStyle(page, index)
+        return { tinted: !TRANSPARENT_FILLS.includes(fill), cursor }
+      })
+      .toEqual({ tinted: true, cursor: 'pointer' })
+  },
+)
+
+Then(
+  'staff measure {int} does not show the hover state',
+  async ({ page }, index: number) => {
+    const { fill } = await staffMeasureHoverStyle(page, index)
+    expect(TRANSPARENT_FILLS).toContain(fill)
   },
 )

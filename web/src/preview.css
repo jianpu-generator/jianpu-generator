@@ -142,3 +142,18 @@
 [data-pending-selection] .preview-page--staff .staff-measure-highlight {
   fill: rgba(217, 119, 6, 0.25);
 }
+
+/* Each staff measure's hover target (`applyStaffMeasureHitTargets`): the
+   jianpu view's click-target hover fill and pointer, for the whole measure
+   while any part of it is hovered. */
+.preview-page--staff .staff-measure-hit-target {
+  fill: transparent;
+}
+
+.preview-page--staff g:has(> .staff-measure-hit-target) {
+  cursor: pointer;
+}
+
+.preview-page--staff g:hover > .staff-measure-hit-target {
+  fill: rgba(100, 160, 255, 0.2);
+}
