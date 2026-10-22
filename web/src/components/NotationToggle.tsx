@@ -7,7 +7,7 @@ interface NotationToggleProps {
 
 // ABC has no icon: its label already reads as its own symbol.
 const OPTIONS: { value: Notation; icon?: string; label: string }[] = [
-  { value: 'jianpu', icon: '簡', label: 'Jianpu' },
+  { value: 'jianpu', icon: '簡', label: '123' },
   { value: 'staff', icon: '𝄞', label: 'Staff' },
   { value: 'abc', label: 'ABC' },
 ]
