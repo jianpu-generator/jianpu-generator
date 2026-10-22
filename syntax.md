@@ -292,7 +292,7 @@ bpm=92 key=C4 time=4/4 label="Verse 1"
 | Directive | Example | Effect |
 |-----------|---------|--------|
 | `bpm=` | `bpm=120` | Tempo (beats per minute) |
-| `key=` | `key=C4`, `key=F#3`, `key=Bb4` | Key signature (`1` = this note) |
+| `key=` | `key=C4`, `key=F#3`, `key=Bb4`, `key=+2`, `key=-1` | Key signature (`1` = this note), or a shift of the current key by `N` semitones |
 | `time=` | `time=4/4`, `time=3/4` | Time signature |
 | `label=` | `label="Verse 1"` | Section label rendered above the row group |
 | `merge_duplicate_measures_across_parts=` | `merge_duplicate_measures_across_parts=no` | Overrides the `#metadata` default from this measure onward (`yes`/`no`) |
@@ -306,6 +306,24 @@ Rules:
 - Directives apply to **all** parts. They are stored on the first notes part and propagate through grouping.
 - `label` applies only to the measure where it is declared (does not persist to the next bar) — this is true for rendering purposes and whenever no `# sequence` section is present. When a `# sequence` section **is** present, each label additionally denotes a *span* of measures for playback-order purposes: see [`# sequence` — explicit playback order](#sequence--explicit-playback-order) below.
 - `bpm`, `key`, and `time` persist until the next directive line overrides them.
+- `key=+N` / `key=-N` changes key **relative to the key in effect**, by `N` semitones, and then persists like an absolute `key=`:
+  - It resolves to the conventional spelling of the new tonic, i.e. the one with the fewest accidentals: `C`, `Db`, `D`, `Eb`, `E`, `F`, `F#`, `G`, `Ab`, `A`, `Bb`, `B`. So `key=C4` then `key=+1` is `Db4`, never `C#4`.
+  - It carries across octaves: `key=B4` then `key=+1` is `C5`; `key=C4` then `key=-2` is `Bb3`.
+  - Relative changes stack: `key=C4`, then `key=+2` (D4), then `key=+2` again is `E4`.
+  - Before any absolute `key=`, it shifts the default key `C4` (`key=+2` as the first key is `D4`).
+  - `N` must be a whole number from `-12` to `+12`; a value outside that range is an error and is clamped to the nearest bound.
+  - `key=0` (or `+0` / `-0`) is a warning and leaves the key unchanged.
+  - Rendering (`1=…`), playback and staff notation behave exactly as if the resolved key had been written.
+
+  ```
+  time=4/4 key=C4 bpm=120 label="Chorus"
+  [Melody] 1 2 3 4
+
+  key=+2 label="Last Chorus"
+  [Melody] 1 2 3 4
+  ```
+
+  Here the last chorus is in D4 (`1` = D4).
 - `merge_duplicate_measures_across_parts` and `hide_resting_parts` also persist until the next directive line overrides them; unset, they start from the `#metadata` value (or its default of `yes`) for the first measure.
 - `break` is a bare keyword (no `=value`). It applies only to the measure it's written on — it does not persist — and forces that measure to start a new system, even if `max_measures_per_system` hasn't been reached yet. It's a no-op if the measure would already be first in its system (e.g. it's the very first measure of the score, or the previous measure already filled its system). Since it changes where a system boundary falls, a `break` measure is never absorbed into a collapsed multi-measure rest run that would otherwise start before it — see [Multi-measure rests](#multi-measure-rests).
 
@@ -313,7 +331,7 @@ Rules:
 
 When `time=` or `bpm=` changes on a measure, the generator may add a **directive row** above the bar-number / section-label row for that system line. Time signature and BPM appear once on that row (not on each part row), aligned with each measure’s note-start column. They do not shift notes or lyrics horizontally. If neither value changes on any measure in the line, the directive row is omitted.
 
-Note names: `A` `B` `C` `D` `E` `F` `G`, with optional `#` or `b` accidental, followed by octave digit (e.g. `4`).
+Note names: `A` `B` `C` `D` `E` `F` `G`, with optional `#` or `b` accidental, followed by octave digit (e.g. `4`). A relative `key=` value is instead a sign and a number of semitones (`+2`, `-1`).
 
 ### `# sequence` — explicit playback order
 

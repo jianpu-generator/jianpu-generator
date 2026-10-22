@@ -1,7 +1,8 @@
 use crate::ast::grouped::{MultiPartMeasure, Score};
+use crate::ast::parsed::KeyChange;
 use crate::error::IrrecoverableError;
 
-use super::{default_active_key, process_measure, RawEvent, RawKind, TieState, TPQ};
+use super::{process_measure, RawEvent, RawKind, TieState, TPQ};
 
 pub use super::timing_range::build_measure_range_score;
 
@@ -22,7 +23,7 @@ pub(super) fn measure_tick_boundaries_and_tempo(
 ) -> Result<TickBoundariesAndTempo, IrrecoverableError> {
     let mut raw: Vec<RawEvent> = Vec::new();
     let mut tie_state = TieState::default();
-    let mut active_key = default_active_key();
+    let mut active_key = KeyChange::default();
     let mut current_tick: u32 = 0;
     let mut boundaries = vec![0u32];
     let part_channels = super::build_part_channel_assignments(measures);

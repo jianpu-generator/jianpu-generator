@@ -335,9 +335,9 @@ fn directive_error_span_includes_base_offset() {
         .find_map(|e| e)
         .expect("unknown directive must produce a recoverable error");
     assert!(
-        error.span.start >= base_offset,
+        error.span().start >= base_offset,
         "directive error span start ({}) must be >= base_offset ({})",
-        error.span.start,
+        error.span().start,
         base_offset
     );
 }

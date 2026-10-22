@@ -86,8 +86,7 @@ fn combine_measure(
     let parse_error = grouped_score
         .per_measure_parse_errors
         .get(measure_idx)
-        .and_then(|e| e.clone())
-        .map(Diagnostic::Error);
+        .and_then(|e| e.clone());
     let measure_diagnostics: Vec<Diagnostic> = directives_error
         .into_iter()
         .chain(source_span_error)
