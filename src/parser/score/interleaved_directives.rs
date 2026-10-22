@@ -1,30 +1,70 @@
-use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, ScoreEvent};
+use crate::ast::parsed::{KeyChange, ScoreEvent};
 use crate::desugar::SourceLine;
-use crate::error::{RecoverableError, Span, Spanned};
+use crate::error::{Diagnostic, RecoverableError, Span, Spanned, Warning};
 use crate::parser::score::directive_keyword::{
     classify_directive_token, DirectiveKey, DirectiveToken,
 };
 use crate::parser::score::measure_group::{collect_groups, is_directive_line};
 
-type SplitDirectiveResult<'a> = (
-    Vec<Spanned<ScoreEvent>>,
-    &'a [SourceLine],
-    Vec<RecoverableError>,
-);
+#[path = "interleaved_key_directive.rs"]
+mod key_directive;
 
-pub(super) fn split_directive(
-    lines: &[SourceLine],
+use key_directive::parse_key_value;
+
+pub(super) struct SplitDirective<'a> {
+    pub(super) events: Vec<Spanned<ScoreEvent>>,
+    /// The group's lines after its directive line (all of them if it has none).
+    pub(super) data_lines: &'a [SourceLine],
+    /// Errors first, then warnings.
+    pub(super) diagnostics: Vec<Diagnostic>,
+}
+
+/// Splits a measure group's directive line off its data lines. `active_key`
+/// is the key in effect before this group: a relative `key=+N` resolves
+/// against it, and every `key=` on the line updates it.
+pub(super) fn split_directive<'a>(
+    lines: &'a [SourceLine],
     base_offset: usize,
-) -> SplitDirectiveResult<'_> {
-    if let Some(directive_line) = lines.first() {
-        if is_directive_line(&directive_line.content) {
+    active_key: &mut KeyChange,
+) -> SplitDirective<'a> {
+    match lines.first() {
+        Some(directive_line) if is_directive_line(&directive_line.content) => {
             let absolute_offset = base_offset + directive_line.offset;
-            let (events, errors) = parse_directive_line(&directive_line.content, absolute_offset);
-            let remaining = lines.get(1..).unwrap_or(&[]);
-            return (events, remaining, errors);
+            let mut diagnostics = DirectiveDiagnostics::default();
+            let events = parse_directive_line(
+                &directive_line.content,
+                absolute_offset,
+                active_key,
+                &mut diagnostics,
+            );
+            SplitDirective {
+                events,
+                data_lines: lines.get(1..).unwrap_or(&[]),
+                diagnostics: diagnostics.into_ordered(),
+            }
         }
+        _ => SplitDirective {
+            events: Vec::new(),
+            data_lines: lines,
+            diagnostics: Vec::new(),
+        },
     }
-    (Vec::new(), lines, Vec::new())
+}
+
+#[derive(Default)]
+struct DirectiveDiagnostics {
+    errors: Vec<RecoverableError>,
+    warnings: Vec<Warning>,
+}
+
+impl DirectiveDiagnostics {
+    fn into_ordered(self) -> Vec<Diagnostic> {
+        self.errors
+            .into_iter()
+            .map(Diagnostic::Error)
+            .chain(self.warnings.into_iter().map(Diagnostic::Warning))
+            .collect()
+    }
 }
 
 /// Returns `(token_text, byte_offset_within_inner)` pairs.
@@ -74,7 +114,9 @@ fn tokenize_directive_tokens(inner: &str) -> Result<Vec<(String, usize)>, String
 fn parse_directive_line(
     line: &str,
     line_offset: usize,
-) -> (Vec<Spanned<ScoreEvent>>, Vec<RecoverableError>) {
+    active_key: &mut KeyChange,
+    diagnostics: &mut DirectiveDiagnostics,
+) -> Vec<Spanned<ScoreEvent>> {
     let inner = line;
     let inner_offset = line_offset;
 
@@ -82,42 +124,41 @@ fn parse_directive_line(
         Ok(tokens) => tokens,
         Err(_) => {
             let span = Span::new(line_offset, line_offset + line.len());
-            return (
-                Vec::new(),
-                vec![RecoverableError::general(
-                    span,
-                    "unclosed quote in directive line",
-                )],
-            );
+            diagnostics.errors.push(RecoverableError::general(
+                span,
+                "unclosed quote in directive line",
+            ));
+            return Vec::new();
         }
     };
 
     let mut events = Vec::new();
-    let mut errors = Vec::new();
 
     for (token, token_inner_offset) in &tokens {
         let token_file_offset = inner_offset + token_inner_offset;
         let span = Span::new(token_file_offset, token_file_offset + token.len());
         let Some(directive) = classify_directive_token(token) else {
-            errors.push(RecoverableError::general(
+            diagnostics.errors.push(RecoverableError::general(
                 span,
                 format!("unknown directive: '{token}'"),
             ));
             continue;
         };
-        if let Some(event) = directive_event(directive, span, &mut errors) {
+        if let Some(event) = directive_event(directive, span, active_key, diagnostics) {
             events.push(event);
         }
     }
 
-    (events, errors)
+    events
 }
 
 fn directive_event(
     directive: DirectiveToken,
     span: Span,
-    errors: &mut Vec<RecoverableError>,
+    active_key: &mut KeyChange,
+    diagnostics: &mut DirectiveDiagnostics,
 ) -> Option<Spanned<ScoreEvent>> {
+    let errors = &mut diagnostics.errors;
     use DirectiveToken::{Assignment, Break};
     let event = match directive {
         Break => Some(ScoreEvent::SystemBreak),
@@ -137,7 +178,7 @@ fn directive_event(
         Assignment {
             key: DirectiveKey::Key,
             value,
-        } => parse_key_value(value, span, errors),
+        } => parse_key_value(value, span, active_key, diagnostics),
         Assignment {
             key: DirectiveKey::Time,
             value,
@@ -210,74 +251,6 @@ pub(crate) fn directive_keyword_spans(content: &str, base_offset: usize) -> Vec<
                 })
         })
         .collect()
-}
-
-fn parse_key_value(
-    value: &str,
-    span: Span,
-    errors: &mut Vec<RecoverableError>,
-) -> Option<ScoreEvent> {
-    let mut chars = value.chars().peekable();
-
-    let name_char = match chars.next() {
-        Some(ch) => ch,
-        None => {
-            errors.push(RecoverableError::general(
-                span,
-                "expected note name after 'key='",
-            ));
-            return None;
-        }
-    };
-
-    let name = match name_char {
-        'A' => NoteName::A,
-        'B' => NoteName::B,
-        'C' => NoteName::C,
-        'D' => NoteName::D,
-        'E' => NoteName::E,
-        'F' => NoteName::F,
-        'G' => NoteName::G,
-        _ => {
-            errors.push(RecoverableError::general(
-                span,
-                format!("invalid note name: '{name_char}'"),
-            ));
-            return None;
-        }
-    };
-
-    let accidental = match chars.peek() {
-        Some('b') => {
-            chars.next();
-            Accidental::Flat
-        }
-        Some('#') => {
-            chars.next();
-            Accidental::Sharp
-        }
-        _ => Accidental::Natural,
-    };
-
-    let octave_str: String = chars.collect();
-    let octave = match octave_str.parse::<u8>() {
-        Ok(o) => o,
-        Err(_) => {
-            errors.push(RecoverableError::general(
-                span,
-                format!("invalid octave in 'key={value}': expected number"),
-            ));
-            return None;
-        }
-    };
-
-    Some(ScoreEvent::KeyChange(KeyChange {
-        note: Note {
-            name,
-            octave,
-            accidental,
-        },
-    }))
 }
 
 fn parse_bool_directive_value(

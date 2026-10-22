@@ -15,7 +15,7 @@ mod pitch;
 mod staves;
 
 use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartSlice, Score, TimeSignature};
-use crate::ast::parsed::{Accidental, KeyChange, NoteName, PartKind};
+use crate::ast::parsed::{KeyChange, PartKind};
 use harmony::{harm_xml, HarmonyPlacement};
 use itertools::Itertools;
 use layer::{layer_xml, lyrics_only_layer_xml, LayerContext, Slur, StaffState};
@@ -77,7 +77,7 @@ pub fn score_to_mei(score: &Score, display_names: &HashMap<String, String>) -> M
     let mut state = ScoreState {
         key: first
             .and_then(|measure| measure.key.clone())
-            .unwrap_or_else(default_key),
+            .unwrap_or_default(),
         time: first
             .and_then(|measure| measure.time_signature.clone())
             .unwrap_or(TimeSignature {
@@ -110,16 +110,6 @@ pub fn score_to_mei(score: &Score, display_names: &HashMap<String, String>) -> M
                 measure_index,
             })
             .collect(),
-    }
-}
-
-pub(crate) fn default_key() -> KeyChange {
-    KeyChange {
-        note: crate::ast::parsed::Note {
-            name: NoteName::C,
-            octave: 4,
-            accidental: Accidental::Natural,
-        },
     }
 }
 

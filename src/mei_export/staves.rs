@@ -101,7 +101,7 @@ fn choose_clef(score: &Score, name: &str, octave_offset: i8) -> Clef {
     let pitches: Vec<i32> = score
         .measures
         .iter()
-        .scan(super::default_key(), |key, measure| {
+        .scan(KeyChange::default(), |key, measure| {
             if let Some(change) = &measure.key {
                 *key = change.clone();
             }
