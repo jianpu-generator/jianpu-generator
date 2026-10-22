@@ -1,11 +1,16 @@
 //! The letter-name view: every note head's jianpu degree spelled as its
 //! pitch's letter name (`F♯`), and every chord symbol's root and bass
 //! likewise (`F♯m⁷/C♯`), against the key in effect at its measure.
-//! Everything else about the layout stays as in the jianpu view. Also home
+//! Everything else about the layout stays as in the jianpu view. The guitar
+//! chord view spells the same letter names after the degrees instead
+//! (`3 (F♯)`, `6m (Bm)`). Also home
 //! to `label_note_heads`, which dispatches to every view that keeps the
 //! jianpu layout — see `NoteLabels`.
 
-use super::types::{ColumnElement, CompileResult, ElementContent, MeasureBlock, MeasureRow};
+use super::types::{
+    ColumnElement, CompileResult, ElementContent, LetterNamePlacement, MeasureBlock, MeasureRow,
+    NoteHeadLetterName,
+};
 use crate::ast::grouped::Score;
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
 use crate::pitch_description::spelling::SpelledPitch;
@@ -19,30 +24,41 @@ pub enum NoteLabels {
     #[default]
     Degrees,
     LetterNames,
-    /// Degrees, plus a guitar chord diagram above every chord symbol (see
-    /// `guitar_chords`).
+    /// Degrees followed by their letter names (`1 (C)`, `6m (Am)`), plus a
+    /// guitar chord diagram above every chord symbol (see `guitar_chords`).
     GuitarChords,
 }
 
 /// `result`, compiled from `score`, labelled as `labels` says: unchanged for
-/// degrees, each note head's `letter_name` set for letter names, each chord
-/// symbol's `guitar_voicing` set for guitar chords.
+/// degrees, each note head's `letter_name` set for letter names, and for
+/// guitar chords each note head's `letter_name` set to follow its degree
+/// and each chord symbol's `guitar_voicing` set.
 pub fn label_note_heads(result: CompileResult, score: &Score, labels: NoteLabels) -> CompileResult {
     match labels {
         NoteLabels::Degrees => result,
-        NoteLabels::LetterNames => spell_letter_names(result, score),
-        NoteLabels::GuitarChords => super::guitar_chords::place_guitar_voicings(result, score),
+        NoteLabels::LetterNames => {
+            spell_letter_names(result, score, LetterNamePlacement::InPlaceOfDegree)
+        }
+        NoteLabels::GuitarChords => spell_letter_names(
+            super::guitar_chords::place_guitar_voicings(result, score),
+            score,
+            LetterNamePlacement::AfterDegree,
+        ),
     }
 }
 
-fn spell_letter_names(result: CompileResult, score: &Score) -> CompileResult {
+fn spell_letter_names(
+    result: CompileResult,
+    score: &Score,
+    placement: LetterNamePlacement,
+) -> CompileResult {
     let tonics = block_tonics(&result.blocks, score);
     CompileResult {
         blocks: result
             .blocks
             .into_iter()
             .zip(tonics)
-            .map(|(block, tonic)| spell_block(block, tonic))
+            .map(|(block, tonic)| spell_block(block, tonic, placement))
             .collect(),
         ..result
     }
@@ -79,7 +95,11 @@ pub(super) fn block_tonics(blocks: &[MeasureBlock], score: &Score) -> Vec<Spelle
         .collect()
 }
 
-fn spell_block(block: MeasureBlock, tonic: SpelledPitch) -> MeasureBlock {
+fn spell_block(
+    block: MeasureBlock,
+    tonic: SpelledPitch,
+    placement: LetterNamePlacement,
+) -> MeasureBlock {
     MeasureBlock {
         rows: block
             .rows
@@ -89,7 +109,7 @@ fn spell_block(block: MeasureBlock, tonic: SpelledPitch) -> MeasureBlock {
                     .elements
                     .into_iter()
                     .map(|element| ColumnElement {
-                        content: spell_content(element.content, tonic),
+                        content: spell_content(element.content, tonic, placement),
                         ..element
                     })
                     .collect(),
@@ -100,7 +120,11 @@ fn spell_block(block: MeasureBlock, tonic: SpelledPitch) -> MeasureBlock {
     }
 }
 
-fn spell_content(content: ElementContent, tonic: SpelledPitch) -> ElementContent {
+fn spell_content(
+    content: ElementContent,
+    tonic: SpelledPitch,
+    placement: LetterNamePlacement,
+) -> ElementContent {
     match content {
         ElementContent::NoteHead {
             pitch,
@@ -110,7 +134,10 @@ fn spell_content(content: ElementContent, tonic: SpelledPitch) -> ElementContent
             double_dotted,
             letter_name: _,
         } => ElementContent::NoteHead {
-            letter_name: Some(tonic.scale_degree(&pitch, &accidental).engraved_name()),
+            letter_name: Some(NoteHeadLetterName {
+                text: tonic.scale_degree(&pitch, &accidental).engraved_name(),
+                placement,
+            }),
             pitch,
             accidental,
             octave,
@@ -118,13 +145,18 @@ fn spell_content(content: ElementContent, tonic: SpelledPitch) -> ElementContent
             double_dotted,
         },
         ElementContent::ChordSymbol {
-            text: _,
+            text,
             degrees,
             dotted,
             double_dotted,
             guitar_voicing,
         } => ElementContent::ChordSymbol {
-            text: degrees.letter_symbol(tonic),
+            text: match placement {
+                LetterNamePlacement::InPlaceOfDegree => degrees.letter_symbol(tonic),
+                LetterNamePlacement::AfterDegree => {
+                    format!("{text} ({})", degrees.letter_symbol(tonic))
+                }
+            },
             degrees,
             dotted,
             double_dotted,

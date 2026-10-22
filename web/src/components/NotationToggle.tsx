@@ -15,7 +15,8 @@ const OPTIONS: { value: Notation; icon?: string; label: string }[] = [
 
 /** Switches the preview between jianpu, western staff notation, ABC (the
  * jianpu layout with letter names in place of degree numbers), and Guitar
- * (the jianpu layout with a chord diagram at each chord symbol). */
+ * (the jianpu layout with each degree followed by its letter name, `1 (C)`,
+ * and a chord diagram at each chord symbol). */
 export function NotationToggle({ notation, onChange }: NotationToggleProps) {
   return (
     <fieldset className="notation-toggle" data-testid="notation-toggle">

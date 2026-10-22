@@ -1,5 +1,5 @@
 use super::{block_column_width, LABEL_COLS, MUSIC_START_COL};
-use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock};
+use crate::compiler::types::{ColumnElement, ElementContent, LetterNamePlacement, MeasureBlock};
 use crate::grid_layout::layout::{directive_line_rod_width, directive_line_should_emit};
 use crate::grid_layout::types::MeasureColumnLayout;
 use crate::render_config::RenderConfig;
@@ -113,14 +113,21 @@ pub(crate) struct ColumnSizing {
 /// keeping every part's digits vertically aligned on the same beat. A chord
 /// symbol whose root carries a sharp/flat (`♯1m`) leads with it the same
 /// way (see `render_chord_symbol`). `0.0` for anything else, including a
-/// letter name, whose accidental trails its letter (`F♯`).
+/// letter name drawn in place of its digit, whose accidental trails its
+/// letter (`F♯`). The guitar chord view's letter name follows the digit
+/// (`♯4 (F♯)`), so its digit still leads with the accidental.
 fn accidental_lead(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
         ElementContent::NoteHead {
             accidental,
-            letter_name: None,
+            letter_name,
             ..
-        } => accidental_extra_weight(accidental, config),
+        } if letter_name
+            .as_ref()
+            .is_none_or(|name| name.placement == LetterNamePlacement::AfterDegree) =>
+        {
+            accidental_extra_weight(accidental, config)
+        }
         ElementContent::ChordSymbol { text, .. } => {
             crate::font_metrics::chord_leading_accidental_width_for_family(
                 config.glyph_font_families.chords,

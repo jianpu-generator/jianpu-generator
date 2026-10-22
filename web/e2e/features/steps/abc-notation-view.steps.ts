@@ -42,7 +42,7 @@ Then(
   async ({ page }, expected: string) => {
     await expect(
       page.locator('.preview-page text[data-variant="note-head"]'),
-    ).toHaveText(expected.split(' '))
+    ).toHaveText(expected.split(', '))
   },
 )
 
@@ -51,6 +51,6 @@ Then(
   async ({ page }, expected: string) => {
     await expect(
       page.locator('.preview-page text[data-variant="chord-symbol"]'),
-    ).toHaveText(expected.split(' '))
+    ).toHaveText(expected.split(', '))
   },
 )

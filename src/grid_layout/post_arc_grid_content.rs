@@ -1,5 +1,5 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
-use crate::compiler::types::BarLineKind;
+use crate::compiler::types::{BarLineKind, NoteHeadLetterName};
 use crate::compositor::types::FontFamily;
 use crate::pitch_description::GuitarVoicing;
 
@@ -15,7 +15,7 @@ pub enum PostArcGridContent {
         octave: i8,
         dotted: bool,
         double_dotted: bool,
-        letter_name: Option<String>,
+        letter_name: Option<NoteHeadLetterName>,
     },
     Rest {
         dotted: bool,

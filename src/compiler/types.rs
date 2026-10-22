@@ -111,6 +111,34 @@ pub struct ColumnElement {
     pub note_id: Option<usize>,
 }
 
+/// A note head's letter name (`F♯`), spelled against the key in effect at
+/// its measure, and where it is drawn relative to the degree.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NoteHeadLetterName {
+    pub text: String,
+    pub placement: LetterNamePlacement,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LetterNamePlacement {
+    /// Drawn in place of the degree: the letter-name view (`F♯`).
+    InPlaceOfDegree,
+    /// Drawn after the degree, in parentheses: the guitar chord view
+    /// (`3 (F♯)`).
+    AfterDegree,
+}
+
+impl NoteHeadLetterName {
+    /// What the note head's text run reads after its leading sharp/flat (if
+    /// any): the letter name alone, or `digit` followed by it in parentheses.
+    pub fn label(&self, digit: char) -> String {
+        match self.placement {
+            LetterNamePlacement::InPlaceOfDegree => self.text.clone(),
+            LetterNamePlacement::AfterDegree => format!("{digit} ({})", self.text),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ElementContent {
     NoteHead {
@@ -119,7 +147,9 @@ pub enum ElementContent {
         octave: i8,
         dotted: bool,
         double_dotted: bool,
-        letter_name: Option<String>,
+        /// Set by `label_note_heads` in the views that spell note heads by
+        /// letter name; `None` (just the degree) otherwise.
+        letter_name: Option<NoteHeadLetterName>,
     },
     Rest {
         dotted: bool,

@@ -1,5 +1,5 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
-use crate::compiler::types::{ArcKind, BarLineKind};
+use crate::compiler::types::{ArcKind, BarLineKind, NoteHeadLetterName};
 use crate::pitch_description::GuitarVoicing;
 
 #[path = "click_target_types.rs"]
@@ -142,7 +142,7 @@ pub enum GridContent {
         octave: i8,
         dotted: bool,
         double_dotted: bool,
-        letter_name: Option<String>,
+        letter_name: Option<NoteHeadLetterName>,
     },
     Rest {
         dotted: bool,
@@ -166,7 +166,7 @@ pub enum GridContent {
     LowOctaveDots {
         count: u8,
         pitch: JianPuPitch,
-        letter_name: Option<String>,
+        letter_name: Option<NoteHeadLetterName>,
     },
     ChordSymbol {
         text: String,

@@ -45,6 +45,23 @@ fn letter_names_replace_the_degree_digits_of_every_note_head() {
 }
 
 #[test]
+fn guitar_chords_follow_every_note_head_s_digit_with_its_letter_name() {
+    assert_eq!(
+        note_head_texts(&render(NoteLabels::GuitarChords)),
+        [
+            "1 (D)",
+            "2 (E)",
+            "3 (F\u{266F})",
+            "4 (G)",
+            "5 (A)",
+            "6 (B)",
+            "7 (C\u{266F})",
+            "1 (D)"
+        ]
+    );
+}
+
+#[test]
 fn degrees_keep_the_digits() {
     assert_eq!(
         note_head_texts(&render(NoteLabels::Degrees)),

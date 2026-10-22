@@ -1,4 +1,5 @@
 use crate::ast::parsed::JianPuPitch;
+use crate::compiler::types::{LetterNamePlacement, NoteHeadLetterName};
 use crate::grid_layout::types::GridContent;
 
 use super::resolve::RowResolveConfig;
@@ -46,7 +47,7 @@ pub(super) fn flush_left_padding(content: &GridContent, config: RowResolveConfig
             config.paddings.notes,
             crate::font_metrics::glyph_left_bearing_for_family(
                 config.glyph_font_families.notes,
-                note_head_leading_char(pitch, letter_name.as_deref()),
+                note_head_leading_char(pitch, letter_name.as_ref()),
                 config.notes_font_size,
             ),
         ),
@@ -113,9 +114,10 @@ pub(super) fn flush_left_padding(content: &GridContent, config: RowResolveConfig
 
 /// The first character a note head draws: its letter name's letter in the
 /// letter-name view (see `compiler::label_note_heads`), its digit
-/// otherwise.
-fn note_head_leading_char(pitch: &JianPuPitch, letter_name: Option<&str>) -> char {
+/// otherwise (the guitar chord view's letter name follows the digit).
+fn note_head_leading_char(pitch: &JianPuPitch, letter_name: Option<&NoteHeadLetterName>) -> char {
     letter_name
-        .and_then(|name| name.chars().next())
+        .filter(|name| name.placement == LetterNamePlacement::InPlaceOfDegree)
+        .and_then(|name| name.text.chars().next())
         .unwrap_or_else(|| pitch.to_digit())
 }

@@ -6,8 +6,9 @@ fn compile_with(source: &str, labels: NoteLabels) -> CompileResult {
     label_note_heads(compile(&score), &score, labels)
 }
 
-/// Each block's note heads' letter names, in order (`None` for a head left
-/// unlabelled).
+/// Each block's note heads' labels after any leading sharp/flat, in order:
+/// the letter name, or the digit followed by it in the guitar chord view
+/// (`None` for a head left unlabelled).
 fn letter_names(result: &CompileResult) -> Vec<Vec<Option<String>>> {
     result
         .blocks
@@ -18,7 +19,13 @@ fn letter_names(result: &CompileResult) -> Vec<Vec<Option<String>>> {
                 .iter()
                 .flat_map(|row| &row.elements)
                 .filter_map(|element| match &element.content {
-                    ElementContent::NoteHead { letter_name, .. } => Some(letter_name.clone()),
+                    ElementContent::NoteHead {
+                        pitch, letter_name, ..
+                    } => Some(
+                        letter_name
+                            .as_ref()
+                            .map(|name| name.label(pitch.to_digit())),
+                    ),
                     _ => None,
                 })
                 .collect()
@@ -211,6 +218,45 @@ fn degrees_keep_chord_symbols_in_jianpu() {
         vec![
             vec!["1", "6m/3", "4△⁷", "\u{266D}5⁷"],
             vec!["1", "\u{266D}7sus4", "\u{266F}3°", "2m⁷/5"],
+        ]
+    );
+}
+
+#[test]
+fn guitar_chords_follow_each_degree_with_its_letter_name() {
+    let result = compile_with(
+        "# parts
+S = notes
+
+# score
+time=4/4 key=D4 bpm=120
+[S] 1 3 4# 7b
+",
+        NoteLabels::GuitarChords,
+    );
+    assert_eq!(
+        letter_names(&result),
+        vec![names(&["1 (D)", "3 (F\u{266F})", "4 (G\u{266F})", "7 (C)"])]
+    );
+}
+
+#[test]
+fn guitar_chords_follow_each_chord_symbol_with_its_letter_name() {
+    assert_eq!(
+        chord_texts(&compile_with(CHORDS_IN_D, NoteLabels::GuitarChords)),
+        vec![
+            vec![
+                "1 (D)",
+                "6m/3 (Bm/F\u{266F})",
+                "4△⁷ (G△⁷)",
+                "\u{266D}5⁷ (A\u{266D}⁷)"
+            ],
+            vec![
+                "1 (F)",
+                "\u{266D}7sus4 (E\u{266D}sus4)",
+                "\u{266F}3° (A\u{266F}°)",
+                "2m⁷/5 (Gm⁷/C)"
+            ],
         ]
     );
 }

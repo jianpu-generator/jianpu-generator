@@ -3,8 +3,10 @@
 //! `layout_spacing.rs` to keep that file under the max line-count lint. See
 //! **Rod and spring** in `ARCHITECTURE.md`.
 
-use crate::ast::parsed::Accidental;
-use crate::compiler::types::{ElementContent, MeasureBlock, MULTI_MEASURE_REST_WIDTH};
+use crate::ast::parsed::{Accidental, JianPuPitch};
+use crate::compiler::types::{
+    ElementContent, LetterNamePlacement, MeasureBlock, NoteHeadLetterName, MULTI_MEASURE_REST_WIDTH,
+};
 use crate::compositor::types::FontFamily;
 use crate::font_metrics;
 use crate::render_config::RenderConfig;
@@ -139,18 +141,27 @@ pub(super) fn multi_measure_rest_weight(count: usize, config: &RenderConfig) -> 
 /// sharp/flat (see [`accidental_extra_weight`]), or — in the letter-name
 /// view — its letter name's real rendered width, accidental included, since
 /// `render_note_head` draws the letter name as one text run in the notes
-/// font in place of the digit.
+/// font in place of the digit. In the guitar chord view, the leading
+/// sharp/flat plus the real width of the digit followed by its letter name
+/// (`1 (C)`), drawn as the same one text run.
 fn note_head_weight(
+    pitch: &JianPuPitch,
     accidental: &Accidental,
-    letter_name: Option<&str>,
+    letter_name: Option<&NoteHeadLetterName>,
     config: &RenderConfig,
 ) -> f32 {
-    match letter_name {
-        Some(letter_name) => font_metrics::text_width_for_family(
+    let label_width = |letter_name: &NoteHeadLetterName| {
+        font_metrics::text_width_for_family(
             config.glyph_font_families.notes,
-            letter_name,
+            &letter_name.label(pitch.to_digit()),
             config.notes_font_size(),
-        ),
+        )
+    };
+    match letter_name {
+        Some(letter_name) if letter_name.placement == LetterNamePlacement::InPlaceOfDegree => {
+            label_width(letter_name)
+        }
+        Some(letter_name) => label_width(letter_name) + accidental_extra_weight(accidental, config),
         None => note_glyph_weight(config) + accidental_extra_weight(accidental, config),
     }
 }
@@ -158,13 +169,14 @@ fn note_head_weight(
 pub(super) fn column_weight(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
         ElementContent::NoteHead {
+            pitch,
             accidental,
             dotted,
             double_dotted,
             letter_name,
             ..
         } => {
-            note_head_weight(accidental, letter_name.as_deref(), config)
+            note_head_weight(pitch, accidental, letter_name.as_ref(), config)
                 + dot_extra_weight(
                     *dotted,
                     *double_dotted,
@@ -274,10 +286,11 @@ pub(super) fn measure_note_weight(block: &MeasureBlock, config: &RenderConfig) -
                     .iter()
                     .map(|e| match &e.content {
                         ElementContent::NoteHead {
+                            pitch,
                             accidental,
                             letter_name,
                             ..
-                        } => note_head_weight(accidental, letter_name.as_deref(), config),
+                        } => note_head_weight(pitch, accidental, letter_name.as_ref(), config),
                         ElementContent::Rest { .. } | ElementContent::PercussionHit => {
                             note_glyph_weight(config)
                         }

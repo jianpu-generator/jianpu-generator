@@ -215,7 +215,7 @@ fn render_note_glyph(
             &NoteHeadGlyph {
                 pitch,
                 accidental,
-                letter_name: letter_name.as_deref(),
+                letter_name: letter_name.as_ref(),
             },
             *octave,
             &DotState::new(*dotted, *double_dotted),

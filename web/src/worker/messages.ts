@@ -24,7 +24,8 @@ import type { NoteCell } from '../utils/noteSpanSelection'
 
 /** Which notation the preview (and so PDF export) shows. `abc` is the jianpu
  * layout with letter names (`D E F♯`) in place of degree numbers; `guitar` is
- * the jianpu layout with a guitar chord diagram at each chord symbol. */
+ * the jianpu layout with each degree followed by its letter name (`1 (D)`)
+ * and a guitar chord diagram at each chord symbol. */
 export type Notation = 'jianpu' | 'staff' | 'abc' | 'guitar'
 
 /** Verovio's pages for MEI Rust exported (see `staffMessageHandlers.ts`). */
