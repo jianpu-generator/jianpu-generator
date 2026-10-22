@@ -42,6 +42,21 @@ Never use tuple in new data structures, always use struct instead.
 
 Keep the TypeScript web frontend as dumb as possible; put logic in Rust (compiled to wasm for the worker). The web layer passes raw UI state (e.g. hidden/soloed sets) to Rust and renders what comes back. Don't derive effective state (solo resolution, track filtering) in TS hooks.
 
+## Shared web UI components
+
+Reuse the shared components in `web/src/components/` before building a new control. That folder is flat (shared primitives sit next to feature components), so these are the ones to know:
+
+- **`ResponsiveMenu`**: every dropdown or menu, including pickers like the notation view. It renders a Radix `DropdownMenu` on desktop and a full-screen `vaul` drawer on mobile, so mobile is handled for you. Style the trigger with `.preview-export-btn` and the content with `.export-menu-list` / `.export-menu-item` (`web/src/preview-toolbar.css`). See `ExportMenuButton` and `NotationToggle` for examples. Don't use a native `<select>` or a bare Radix `DropdownMenu` for these.
+- **`ExportMenuButton`**: a button that opens a sectioned menu of actions (built on `ResponsiveMenu`).
+- **`RadixSelectItem`** (`RadixTableSelect.tsx`): items for a Radix `Select` inside a table cell.
+- **`EditorToolbarButton`**: an icon button with a tooltip for the editor toolbar.
+- **`SpinnerLabel`**: a button label with the shared pending spinner.
+- **`accountDialogParts.tsx`**: `AccountDialogFrame`, `Field`, `ErrorBanner` and friends for account modals.
+- **Icons**: `@radix-ui/react-icons` first; app-specific icons live in `components/icons/`.
+- **Mobile branching**: in TypeScript, `useMediaQuery(MOBILE_BREAKPOINT_QUERY)` (`web/src/hooks/useMediaQuery.ts`) rather than a hard-coded width; in CSS, `@media (max-width: 768px)`.
+
+When you add a new reusable primitive, add it to this list (in both `CLAUDE.md` and `AGENTS.md`).
+
 ## Architecture documentation
 
 The rendering pipeline layers, entry points, key types, and domain glossary are documented in `ARCHITECTURE.md`.

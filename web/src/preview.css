@@ -84,42 +84,20 @@
   z-index: 10;
 }
 
-.notation-toggle {
-  display: inline-block;
-  position: relative;
-}
-
-.notation-toggle-legend {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-
-.notation-toggle-select {
-  appearance: none;
+/* The floating trigger keeps a shadow so it reads above the page. */
+.notation-toggle-trigger {
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
-  border: 1px solid var(--border);
-  border-radius: 0.25rem;
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23666' stroke-width='1.5'/%3E%3C/svg%3E")
-    no-repeat right 0.5rem center,
-    var(--surface);
-  color: inherit;
-  font: inherit;
   font-size: 0.8rem;
   font-weight: 600;
-  padding: 0.25rem 1.6rem 0.25rem 0.6rem;
-  cursor: pointer;
 }
 
-/* iOS Safari zooms the page when focusing a control under 16px. */
-@media (max-width: 768px) {
-  .notation-toggle-select {
-    font-size: 1rem;
-    padding-block: 0.35rem;
-  }
+.notation-toggle-icon {
+  font-size: 1.2em;
+  line-height: 1;
+}
+
+.notation-toggle-check {
+  margin-left: auto;
 }
 
 /* Verovio's SVG has only a viewBox; give it the jianpu page's A4 width so

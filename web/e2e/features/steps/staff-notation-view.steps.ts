@@ -46,7 +46,8 @@ Given(
 When(
   'I switch the preview notation to {string}',
   async ({ page }, notation: string) => {
-    await page.getByTestId('notation-select').selectOption(notation)
+    await page.getByTestId('notation-toggle').click()
+    await page.getByTestId(`notation-toggle-${notation}`).click()
   },
 )
 
