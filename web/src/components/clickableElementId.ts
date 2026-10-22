@@ -71,6 +71,7 @@ export function clickableElementIdFromElement(
       }
     }
     case 'section-label':
+    case 'guitar-diagram':
       return undefined
     default: {
       const exhaustiveCheck: never = tag

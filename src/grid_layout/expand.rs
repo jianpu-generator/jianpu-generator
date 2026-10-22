@@ -1,7 +1,7 @@
 use crate::compiler::types::{BarLineKind, MeasureBlock, MeasureRow};
 use crate::grid_layout::layout::{
     block_column_width, chord_part_sub_row_heights, compute_bar_height, is_chord_only_row,
-    is_lyric_row, note_part_sub_row_heights, LyricSizing, LABEL_COLS, MUSIC_START_COL,
+    is_lyric_row, note_part_sub_row_heights, LyricSizing, SystemBands, LABEL_COLS, MUSIC_START_COL,
 };
 use crate::grid_layout::types::{
     GridContent, GridElement, GridRow, HAlign, MeasureColumnLayout, VAlign,
@@ -28,33 +28,53 @@ pub(crate) struct NotePartParams<'a> {
     /// `note_part_sub_row_heights`). Always empty for a chord-only row,
     /// which has no `tuplet_bracket` sub-row.
     pub(crate) part_tuplet_brackets: &'a [GridElement],
+    /// Whether this part draws a guitar-diagram band above everything else
+    /// in this system (see `SystemBands`).
+    pub(crate) has_guitar_diagrams: bool,
     pub(crate) measure_layout: &'a [MeasureColumnLayout],
     /// See `Metadata::notes.vertical_padding_pt` / `note_part_sub_row_heights`.
     pub(crate) notes_vertical_padding_pt: f32,
 }
 
 /// A part's sub-rows before any elements are pushed into them, plus the
-/// `(arc_sub, head_sub)` indices locating its arc/note-head bands within
-/// them. A chord-only row has no `tuplet_bracket` sub-row, so
-/// its topmost row (index 0) is the arc row. A note row without a tuplet in
-/// this system also drops that sub-row, so its arc row is index 0 too. A
-/// note row with a tuplet keeps `tuplet_bracket` as index 0, pushing its arc
-/// row to index 1 (see `note_part_sub_row_heights`).
+/// indices locating its bands within them. A chord-only row has no
+/// `tuplet_bracket` sub-row, so its topmost musical row is the arc row. A
+/// note row without a tuplet in this system also drops that sub-row, so its
+/// arc row is topmost too. A note row with a tuplet keeps `tuplet_bracket`
+/// topmost, pushing its arc row down one (see `note_part_sub_row_heights`).
+/// A part with guitar diagrams in this system puts its guitar-diagram band
+/// above all of them, at index 0, pushing every other band down one.
 struct PartSubRows {
     rows: Vec<GridRow>,
+    /// The `tuplet_bracket` band, when the part has one; otherwise the
+    /// topmost musical band.
+    tuplet_sub: usize,
     arc_sub: usize,
     head_sub: usize,
+    guitar_diagram_sub: Option<usize>,
+}
+
+/// Which optional bands one part's sub-rows include (see `PartSubRows`).
+#[derive(Clone, Copy)]
+struct PartBands {
+    is_chord_only: bool,
+    has_tuplet: bool,
+    has_guitar_diagrams: bool,
 }
 
 fn build_part_sub_rows(
-    is_chord_only: bool,
-    has_tuplet: bool,
+    bands: PartBands,
     base: f32,
     column_count: u32,
     measure_layout: &[MeasureColumnLayout],
     notes_vertical_padding_pt: f32,
 ) -> PartSubRows {
-    let sub_heights: Vec<f32> = if is_chord_only {
+    let PartBands {
+        is_chord_only,
+        has_tuplet,
+        has_guitar_diagrams,
+    } = bands;
+    let musical_heights: Vec<f32> = if is_chord_only {
         chord_part_sub_row_heights(base).to_vec()
     } else if has_tuplet {
         note_part_sub_row_heights(base, notes_vertical_padding_pt).to_vec()
@@ -64,8 +84,11 @@ fn build_part_sub_rows(
         // `note_part_height_pt`, which mirrors this for system-height math).
         note_part_sub_row_heights(base, notes_vertical_padding_pt)[1..].to_vec()
     };
-    let rows: Vec<GridRow> = sub_heights
+    let guitar_diagram_heights =
+        has_guitar_diagrams.then(crate::font_metrics::guitar_diagram::band_height_pt);
+    let rows: Vec<GridRow> = guitar_diagram_heights
         .iter()
+        .chain(&musical_heights)
         .map(|&h| GridRow {
             height_pt: h,
             column_count,
@@ -81,10 +104,13 @@ fn build_part_sub_rows(
     } else {
         (0, 2)
     };
+    let offset = usize::from(has_guitar_diagrams);
     PartSubRows {
         rows,
-        arc_sub,
-        head_sub,
+        tuplet_sub: offset,
+        arc_sub: arc_sub + offset,
+        head_sub: head_sub + offset,
+        guitar_diagram_sub: has_guitar_diagrams.then_some(0),
     }
 }
 
@@ -102,11 +128,16 @@ pub(crate) fn expand_note_part(
     let has_tuplet = !params.part_tuplet_brackets.is_empty();
     let PartSubRows {
         rows: mut sub_rows,
+        tuplet_sub,
         arc_sub,
         head_sub,
+        guitar_diagram_sub,
     } = build_part_sub_rows(
-        is_chord_only,
-        has_tuplet,
+        PartBands {
+            is_chord_only,
+            has_tuplet,
+            has_guitar_diagrams: params.has_guitar_diagrams,
+        },
         base,
         column_count,
         params.measure_layout,
@@ -154,6 +185,7 @@ pub(crate) fn expand_note_part(
                 measure_col_offset,
                 &MeasureRenderParams {
                     head_sub,
+                    guitar_diagram_sub,
                     bar_height,
                     part_idx,
                     is_last_block: block_idx == last_block_idx,
@@ -167,7 +199,7 @@ pub(crate) fn expand_note_part(
         row.elements.extend_from_slice(part_arcs);
     }
     if has_tuplet {
-        if let Some(row) = sub_rows.get_mut(0) {
+        if let Some(row) = sub_rows.get_mut(tuplet_sub) {
             row.elements.extend_from_slice(params.part_tuplet_brackets);
         }
     }
@@ -189,9 +221,8 @@ pub(crate) fn expand_system_to_rows(
     };
     let total_musical_cols: u32 = system.iter().map(block_column_width).sum();
     let column_count = MUSIC_START_COL + total_musical_cols;
-    let tuplet_part_indices: std::collections::HashSet<usize> =
-        system_tuplet_brackets.keys().copied().collect();
-    let bar_height = compute_bar_height(first, base, &tuplet_part_indices, lyric_sizing);
+    let bands = SystemBands::of(system, system_tuplet_brackets.keys().copied().collect());
+    let bar_height = compute_bar_height(first, base, &bands, lyric_sizing);
     let mut all_rows: Vec<GridRow> = Vec::new();
     for (part_idx, part_template) in first.rows.iter().enumerate() {
         if is_lyric_row(part_template) {
@@ -222,6 +253,7 @@ pub(crate) fn expand_system_to_rows(
                     bar_height,
                     part_arcs,
                     part_tuplet_brackets,
+                    has_guitar_diagrams: bands.has_guitar_diagrams(part_idx),
                     measure_layout,
                     notes_vertical_padding_pt: lyric_sizing.notes_vertical_padding_pt,
                 },

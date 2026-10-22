@@ -82,6 +82,12 @@ pub(super) fn svg_kind_out_to_wit(kind: &crate::svg_types::SvgKindOut) -> SvgKin
             stroke_width,
         } => SvgKind::Line(svg_line_kind_to_wit(*x2, *y2, *stroke_width)),
         SvgKindOut::Circle { r } => SvgKind::Circle(svg_circle_kind_to_wit(*r)),
+        SvgKindOut::RingCircle { r, stroke_width } => {
+            SvgKind::RingCircle(svg_ring_circle_kind_to_wit(*r, *stroke_width))
+        }
+        SvgKindOut::RoundedBar { width, height } => {
+            SvgKind::RoundedBar(svg_rounded_bar_kind_to_wit(*width, *height))
+        }
         SvgKindOut::Path {
             control_x,
             control_y,

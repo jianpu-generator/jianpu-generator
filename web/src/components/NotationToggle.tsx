@@ -5,15 +5,17 @@ interface NotationToggleProps {
   onChange: (notation: Notation) => void
 }
 
-// ABC has no icon: its label already reads as its own symbol.
+// ABC and Guitar have no icon: their labels already read on their own.
 const OPTIONS: { value: Notation; icon?: string; label: string }[] = [
   { value: 'jianpu', icon: '簡', label: '123' },
   { value: 'staff', icon: '𝄞', label: 'Staff' },
   { value: 'abc', label: 'ABC' },
+  { value: 'guitar', label: 'Guitar' },
 ]
 
-/** Switches the preview between jianpu, western staff notation, and ABC (the
- * jianpu layout with letter names in place of degree numbers). */
+/** Switches the preview between jianpu, western staff notation, ABC (the
+ * jianpu layout with letter names in place of degree numbers), and Guitar
+ * (the jianpu layout with a chord diagram at each chord symbol). */
 export function NotationToggle({ notation, onChange }: NotationToggleProps) {
   return (
     <fieldset className="notation-toggle" data-testid="notation-toggle">

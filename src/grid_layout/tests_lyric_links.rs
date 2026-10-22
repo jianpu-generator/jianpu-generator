@@ -5,8 +5,8 @@ use crate::ast::parsed::{Accidental, JianPuPitch, PartKind};
 use crate::compiler::types::{
     ColumnElement, ElementContent, LyricLink, MeasureBlock, MeasureRow, RowId,
 };
+use crate::grid_layout::layout::SystemBands;
 use crate::grid_layout::playback_cursor::{note_row_spans, NoteRowSpan};
-use std::collections::HashSet;
 
 fn note_row(id: &str, source_part_index: usize) -> MeasureRow {
     MeasureRow {
@@ -57,7 +57,7 @@ fn spans_of(rows: Vec<MeasureRow>, links: &[LyricLink]) -> Vec<NoteRowSpan> {
         system_break: false,
         source_span: crate::error::Span::new(0, 0),
     };
-    note_row_spans(links, &[block], 0, &HashSet::new())
+    note_row_spans(links, &[block], 0, &SystemBands::default())
 }
 
 fn bounds(spans: &[NoteRowSpan]) -> Vec<(usize, usize, usize)> {

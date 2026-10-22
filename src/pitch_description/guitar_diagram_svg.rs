@@ -35,21 +35,9 @@ pub(crate) fn render_guitar_diagram_svg(voicing: &GuitarVoicing, chord_name: &st
     .concat();
     format!(
         r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" aria-label="Guitar chord diagram for {chord_name}" data-guitar-frets="{frets}" data-guitar-base-fret="{base_fret}" fill="currentColor" stroke="currentColor">{body}</svg>"#,
-        frets = absolute_frets_label(voicing),
+        frets = voicing.frets_label(),
         base_fret = voicing.base_fret,
     )
-}
-
-fn absolute_frets_label(voicing: &GuitarVoicing) -> String {
-    voicing
-        .frets
-        .iter()
-        .map(|&fret| match fret {
-            -1 => "x".to_string(),
-            0 => "0".to_string(),
-            relative => (i16::from(relative) + i16::from(voicing.base_fret) - 1).to_string(),
-        })
-        .join(" ")
 }
 
 fn string_x(string_index: usize) -> f64 {

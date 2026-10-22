@@ -54,6 +54,11 @@ pub(super) fn serialize_group(out: &mut String, children: &[SvgElement], tag: &O
                 r#"<g data-tag="lyric-label" data-part-index="{source_part_index}" data-measure-index-start="{measure_index_start}" data-measure-index-end="{measure_index_end}" style="cursor:pointer">"#
             ));
         }
+        Some(Tag::GuitarDiagram { frets, base_fret }) => {
+            out.push_str(&format!(
+                r#"<g data-tag="guitar-diagram" data-guitar-frets="{frets}" data-guitar-base-fret="{base_fret}">"#
+            ));
+        }
         Some(Tag::BarLine {
             measure_index_next,
             measure_index_prev,

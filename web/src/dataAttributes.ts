@@ -52,6 +52,7 @@ export const DATA_TAG = {
   lyric: 'lyric',
   'lyric-label': 'lyric-label',
   'bar-line': 'bar-line',
+  'guitar-diagram': 'guitar-diagram',
 } as const satisfies Record<Tag['tag'], string>
 
 /**
@@ -102,6 +103,10 @@ const TAG_FIELD_ATTRIBUTES = {
     measureIndexNext: 'data-measure-index-next',
     measureIndexPrev: 'data-measure-index-prev',
   },
+  'guitar-diagram': {
+    frets: 'data-guitar-frets',
+    baseFret: 'data-guitar-base-fret',
+  },
 } as const satisfies {
   [K in Tag['tag']]: Record<keyof TagValue<K>, `data-${string}`>
 }
@@ -116,6 +121,7 @@ const TAG_HAS_POINTER_CURSOR = {
   lyric: false,
   'lyric-label': true,
   'bar-line': true,
+  'guitar-diagram': false,
 } as const satisfies Record<Tag['tag'], boolean>
 
 /** The `data-*` attribute name `field` of `Tag` variant `tagType` is
@@ -274,6 +280,12 @@ export function tagFromElement(el: Element): Tag | undefined {
           measureIndexPrev: readIntField(el, tagType, 'measureIndexPrev'),
         },
       }
+    }
+    case 'guitar-diagram': {
+      const frets = el.getAttribute(tagFieldAttribute(tagType, 'frets'))
+      const baseFret = readIntField(el, tagType, 'baseFret')
+      if (frets === null || baseFret === undefined) return undefined
+      return { tag: 'guitar-diagram', val: { frets, baseFret } }
     }
     default: {
       const exhaustiveCheck: never = tagType

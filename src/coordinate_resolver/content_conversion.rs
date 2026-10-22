@@ -236,6 +236,9 @@ pub(super) fn grid_to_absolute(
             dotted: *dotted,
             double_dotted: *double_dotted,
         }),
+        PostArcGridContent::GuitarDiagram { voicing } => Some(AbsoluteContent::GuitarDiagram {
+            voicing: voicing.clone(),
+        }),
         PostArcGridContent::PercussionHit => Some(AbsoluteContent::PercussionHit),
         PostArcGridContent::Underline { level } => Some(AbsoluteContent::Underline {
             width: span_width,

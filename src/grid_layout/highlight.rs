@@ -1,7 +1,7 @@
 use crate::compiler::types::MeasureBlock;
 use crate::grid_layout::layout::{
-    block_column_width, is_chord_only_row, is_lyric_row, make_header_rows,
-    system_has_any_decoration, system_tuplet_part_indices, MUSIC_START_COL,
+    block_column_width, is_lyric_row, make_header_rows, system_bands, system_has_any_decoration,
+    SystemBands, MUSIC_START_COL,
 };
 use crate::grid_layout::types::{GridElement, Header, MeasureHighlight, MeasureRange};
 use std::collections::HashMap;
@@ -32,13 +32,9 @@ pub(crate) fn measure_column_bounds(
 }
 
 /// Number of grid rows a system's musical part rows expand to (see
-/// `expand_system_to_rows`). `tuplet_part_indices` (consolidated part indices,
-/// see `system_tuplet_part_indices`) marks which parts keep their
-/// `tuplet_bracket` sub-row in this particular system.
-pub(crate) fn system_musical_row_count(
-    system: &[MeasureBlock],
-    tuplet_part_indices: &std::collections::HashSet<usize>,
-) -> usize {
+/// `expand_system_to_rows`). `bands` marks which parts keep their optional
+/// bands in this particular system.
+pub(crate) fn system_musical_row_count(system: &[MeasureBlock], bands: &SystemBands) -> usize {
     let Some(first) = system.first() else {
         return 0;
     };
@@ -49,12 +45,8 @@ pub(crate) fn system_musical_row_count(
         .map(|(idx, part_template)| {
             if is_lyric_row(part_template) {
                 1
-            } else if is_chord_only_row(part_template) {
-                4
-            } else if tuplet_part_indices.contains(&idx) {
-                7
             } else {
-                6
+                bands.sub_row_count(idx, part_template)
             }
         })
         .sum()
@@ -102,9 +94,8 @@ pub(crate) fn compute_measure_highlights_for_range(
                 row_offset += 1;
             }
             let abs_sys = abs_sys_index(page_systems, page_idx, sys_idx);
-            let tuplet_part_indices =
-                system_tuplet_part_indices(system, tuplet_bracket_map, abs_sys);
-            let musical_row_count = system_musical_row_count(system, &tuplet_part_indices);
+            let bands = system_bands(system, tuplet_bracket_map, abs_sys);
+            let musical_row_count = system_musical_row_count(system, &bands);
             let row_start = row_offset;
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 
@@ -163,9 +154,8 @@ pub(crate) fn compute_measure_highlight_location(
                 row_offset += 1; // decoration row
             }
             let abs_sys = abs_sys_index(page_systems, page_idx, sys_idx);
-            let tuplet_part_indices =
-                system_tuplet_part_indices(system, tuplet_bracket_map, abs_sys);
-            let musical_row_count = system_musical_row_count(system, &tuplet_part_indices);
+            let bands = system_bands(system, tuplet_bracket_map, abs_sys);
+            let musical_row_count = system_musical_row_count(system, &bands);
             let row_start = row_offset;
             let row_end = row_offset + musical_row_count.saturating_sub(1);
 

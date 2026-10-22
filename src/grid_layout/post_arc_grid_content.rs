@@ -1,6 +1,7 @@
 use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compiler::types::BarLineKind;
 use crate::compositor::types::FontFamily;
+use crate::pitch_description::GuitarVoicing;
 
 use crate::grid_layout::types::SequenceEntryInfo;
 
@@ -37,6 +38,9 @@ pub enum PostArcGridContent {
         text: String,
         dotted: bool,
         double_dotted: bool,
+    },
+    GuitarDiagram {
+        voicing: GuitarVoicing,
     },
     PercussionHit,
     Underline {

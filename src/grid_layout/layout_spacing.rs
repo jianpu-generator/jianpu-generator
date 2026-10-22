@@ -78,6 +78,16 @@ fn column_rod(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
         ElementContent::BarLine => BARLINE_MIN_WIDTH_PT,
         ElementContent::MultiMeasureRest { .. } | ElementContent::Underline { .. } => 0.0,
+        // The diagram above a chord symbol starts where the symbol does, so
+        // the wider of the two decides how much room the column needs.
+        ElementContent::ChordSymbol {
+            guitar_voicing: Some(voicing),
+            ..
+        } => {
+            column_weight(content, config)
+                .max(crate::font_metrics::guitar_diagram::width_pt(voicing))
+                + element_clearance_pt(content, config)
+        }
         _ => column_weight(content, config) + element_clearance_pt(content, config),
     }
 }

@@ -216,6 +216,7 @@ fn make_block_with_chord(text: &str) -> MeasureBlock {
                     content: ElementContent::ChordSymbol {
                         text: text.to_string(),
                         degrees: crate::compiler::test_chord_degrees::tonic_major(),
+                        guitar_voicing: None,
                         dotted: false,
                         double_dotted: false,
                     },
