@@ -22,8 +22,9 @@ import type {
 } from '../types'
 import type { NoteCell } from '../utils/noteSpanSelection'
 
-/** Which notation the preview (and so PDF export) shows. */
-export type Notation = 'jianpu' | 'staff'
+/** Which notation the preview (and so PDF export) shows. `abc` is the jianpu
+ * layout with letter names (`D E F♯`) in place of degree numbers. */
+export type Notation = 'jianpu' | 'staff' | 'abc'
 
 /** Verovio's pages for MEI Rust exported (see `staffMessageHandlers.ts`). */
 export type StaffEngraveResult =
@@ -56,6 +57,7 @@ export type WorkerRequest =
       source: string
       id: number
       visibility: ResolvedPartVisibility
+      notation: Notation
     }
   | { type: 'listParts'; source: string; id: number }
   | {
@@ -173,6 +175,7 @@ export type WorkerRequest =
        * repeat of "A", but not "B" in between). */
       ranges: { start: number; end: number }[]
       visibility: ResolvedPartVisibility
+      notation: Notation
     }
   | { type: 'listMeasureSpans'; source: string; id: number }
   | {

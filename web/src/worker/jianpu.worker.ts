@@ -18,6 +18,7 @@ import {
 } from './exportMessageHandlers'
 import { handleImportFromFile } from './importMessageHandlers'
 import type { WorkerRequest, WorkerResponse } from './messages'
+import { noteLabelsFor } from './noteLabels'
 import {
   handlePreviewInstrument,
   handlePreviewPercussion,
@@ -255,6 +256,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       msg.ranges,
       msg.visibility,
       GM_INSTRUMENTS,
+      noteLabelsFor(msg.notation),
     )
     if (result.tag === 'ok') {
       postMessage({
@@ -323,6 +325,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     msg.source,
     msg.visibility,
     GM_INSTRUMENTS,
+    noteLabelsFor(msg.notation),
   )
   if (result.tag === 'ok') {
     postMessage({

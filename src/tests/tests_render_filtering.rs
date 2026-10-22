@@ -183,6 +183,7 @@ fn render_documents_from_source_with_visibility_hides_legend_entry_for_filtered_
             ..Default::default()
         },
         &[],
+        NoteLabels::Degrees,
     )
     .unwrap()
     .documents;

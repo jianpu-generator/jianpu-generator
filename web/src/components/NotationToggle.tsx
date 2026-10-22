@@ -8,9 +8,11 @@ interface NotationToggleProps {
 const OPTIONS: { value: Notation; icon: string; label: string }[] = [
   { value: 'jianpu', icon: '簡', label: 'Jianpu' },
   { value: 'staff', icon: '𝄞', label: 'Staff' },
+  { value: 'abc', icon: 'A', label: 'ABC' },
 ]
 
-/** Switches the preview between jianpu and western staff notation. */
+/** Switches the preview between jianpu, western staff notation, and ABC (the
+ * jianpu layout with letter names in place of degree numbers). */
 export function NotationToggle({ notation, onChange }: NotationToggleProps) {
   return (
     <fieldset className="notation-toggle" data-testid="notation-toggle">

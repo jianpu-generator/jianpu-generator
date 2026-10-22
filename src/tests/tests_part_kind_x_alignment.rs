@@ -73,6 +73,7 @@ fn wide_chord_symbols_align_their_root_digit_with_the_note() {
         "test.jianpu",
         &ResolvedPartVisibility::default(),
         &[],
+        NoteLabels::Degrees,
     )
     .unwrap();
 
@@ -120,6 +121,7 @@ n = notes
         "test.jianpu",
         &ResolvedPartVisibility::default(),
         &[],
+        NoteLabels::Degrees,
     )
     .unwrap();
 
@@ -179,6 +181,7 @@ fn notes_and_chords_parts_align_on_the_same_beat() {
         "test.jianpu",
         &ResolvedPartVisibility::default(),
         &[],
+        NoteLabels::Degrees,
     )
     .unwrap();
 

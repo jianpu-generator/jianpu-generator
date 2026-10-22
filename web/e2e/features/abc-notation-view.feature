@@ -1,0 +1,22 @@
+Feature: ABC notation view
+
+  Background:
+    Given a score in D major is loaded for the ABC notation view
+
+  Scenario: Switching the preview to ABC replaces degree numbers with letter names
+    Then the preview's note heads read "1 2 3 4 5 6 7 1"
+    When I switch the preview notation to "abc"
+    Then the preview's note heads read "D E F♯ G A B C♯ D"
+    When I switch the preview notation to "jianpu"
+    Then the preview's note heads read "1 2 3 4 5 6 7 1"
+
+  Scenario: The ABC view is remembered after a reload
+    When I switch the preview notation to "abc"
+    And I reload the page
+    Then the preview's note heads read "D E F♯ G A B C♯ D"
+
+  Scenario: Exporting a PDF from the ABC view writes letter names
+    When I export "PDF" from the preview, keeping it as the jianpu PDF
+    And I switch the preview notation to "abc"
+    And I export "PDF" from the preview, keeping it as the abc PDF
+    Then the abc PDF differs from the jianpu PDF

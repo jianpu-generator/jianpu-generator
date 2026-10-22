@@ -135,16 +135,36 @@ pub(super) fn multi_measure_rest_weight(count: usize, config: &RenderConfig) -> 
     label_width.max(bar_floor) + config.notes_horizontal_padding_pt() * 2.0
 }
 
+/// Width weight for a note head's own glyph(s): one digit plus its leading
+/// sharp/flat (see [`accidental_extra_weight`]), or — in the letter-name
+/// view — its letter name's real rendered width, accidental included, since
+/// `render_note_head` draws the letter name as one text run in the notes
+/// font in place of the digit.
+fn note_head_weight(
+    accidental: &Accidental,
+    letter_name: Option<&str>,
+    config: &RenderConfig,
+) -> f32 {
+    match letter_name {
+        Some(letter_name) => font_metrics::text_width_for_family(
+            config.glyph_font_families.notes,
+            letter_name,
+            config.notes_font_size(),
+        ),
+        None => note_glyph_weight(config) + accidental_extra_weight(accidental, config),
+    }
+}
+
 pub(super) fn column_weight(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
         ElementContent::NoteHead {
             accidental,
             dotted,
             double_dotted,
+            letter_name,
             ..
         } => {
-            note_glyph_weight(config)
-                + accidental_extra_weight(accidental, config)
+            note_head_weight(accidental, letter_name.as_deref(), config)
                 + dot_extra_weight(
                     *dotted,
                     *double_dotted,
@@ -252,9 +272,11 @@ pub(super) fn measure_note_weight(block: &MeasureBlock, config: &RenderConfig) -
                 row.elements
                     .iter()
                     .map(|e| match &e.content {
-                        ElementContent::NoteHead { accidental, .. } => {
-                            note_glyph_weight(config) + accidental_extra_weight(accidental, config)
-                        }
+                        ElementContent::NoteHead {
+                            accidental,
+                            letter_name,
+                            ..
+                        } => note_head_weight(accidental, letter_name.as_deref(), config),
                         ElementContent::Rest { .. } | ElementContent::PercussionHit => {
                             note_glyph_weight(config)
                         }

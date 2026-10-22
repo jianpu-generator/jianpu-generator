@@ -1,5 +1,6 @@
 //! Rendering a score under a resolved part visibility (see
 //! [`crate::resolve_part_visibility`]): which parts are drawn.
+use crate::compiler::NoteLabels;
 use crate::error::IrrecoverableError;
 use crate::parser::parts_parser::InstrumentInfo;
 use crate::{
@@ -16,6 +17,7 @@ pub fn render_svgs_from_source_with_visibility(
     filename: &str,
     visibility: &ResolvedPartVisibility,
     instruments: &[InstrumentInfo],
+    note_labels: NoteLabels,
 ) -> Result<RenderOutput, IrrecoverableError> {
     let enabled_tracks = visibility.rendered_tracks.as_deref();
     let parts = filter_part_list(
@@ -25,7 +27,7 @@ pub fn render_svgs_from_source_with_visibility(
     let mut score = compile(source, filename, instruments)?;
     apply_track_filter(&mut score, enabled_tracks);
     let mut diagnostics = collect_measure_diagnostics(&score);
-    let result = render_svgs_with_parts(&score, &parts, Some(source))?;
+    let result = render_svgs_with_parts(&score, &parts, Some(source), note_labels)?;
     diagnostics.extend(result.diagnostics);
     Ok(RenderOutput {
         svgs: result.svgs,
@@ -41,8 +43,14 @@ pub fn write_pdf_from_source_with_visibility(
     visibility: &ResolvedPartVisibility,
     fonts: &crate::fonts::FontBytesByFamily,
     instruments: &[InstrumentInfo],
+    note_labels: NoteLabels,
 ) -> Result<Vec<u8>, IrrecoverableError> {
-    let render_output =
-        render_svgs_from_source_with_visibility(source, filename, visibility, instruments)?;
+    let render_output = render_svgs_from_source_with_visibility(
+        source,
+        filename,
+        visibility,
+        instruments,
+        note_labels,
+    )?;
     crate::pdf::write_pdf(&render_output.svgs, fonts, Some(source))
 }

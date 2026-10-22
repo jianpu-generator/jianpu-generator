@@ -53,6 +53,7 @@ mod pdf {
             &crate::ResolvedPartVisibility::default(),
             &fonts,
             &[],
+            crate::NoteLabels::Degrees,
         )
         .unwrap();
         assert_eq!(media_box(&pdf), media_box(&jianpu));

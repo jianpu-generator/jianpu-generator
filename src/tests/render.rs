@@ -12,6 +12,8 @@ mod tests_part_kind_x_alignment;
 mod tests_render_filtering;
 #[path = "tests_render_filtering_slur.rs"]
 mod tests_render_filtering_slur;
+#[path = "tests_render_letter_names.rs"]
+mod tests_render_letter_names;
 #[path = "tests_render_low_octave_dots.rs"]
 mod tests_render_low_octave_dots;
 #[path = "tests_render_lyrics_only.rs"]

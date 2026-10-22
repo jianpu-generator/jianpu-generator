@@ -31,6 +31,7 @@ fn write_split_pdfs_from_source_produces_one_pdf_per_track() {
         "test_split",
         &[],
         &fonts::FontBytesByFamily::embedded(),
+        NoteLabels::Degrees,
     )
     .unwrap();
     assert_eq!(entries.len(), 2);
@@ -64,6 +65,7 @@ fn write_split_pdfs_from_source_single_part_uses_split_naming() {
         "song",
         &[],
         &fonts::FontBytesByFamily::embedded(),
+        NoteLabels::Degrees,
     )
     .unwrap();
     assert_eq!(entries.len(), 1);
@@ -81,6 +83,7 @@ fn write_split_pdfs_from_source_no_sections_returns_empty() {
         "song",
         &[],
         &fonts::FontBytesByFamily::embedded(),
+        NoteLabels::Degrees,
     )
     .unwrap();
     assert!(entries.is_empty());
@@ -160,6 +163,7 @@ fn write_split_pdfs_from_source_includes_part_legend() {
         "song",
         &[],
         &fonts::FontBytesByFamily::embedded(),
+        NoteLabels::Degrees,
     )
     .unwrap();
     let without_legend_entries = write_split_pdfs_from_source(
@@ -168,6 +172,7 @@ fn write_split_pdfs_from_source_includes_part_legend() {
         "song",
         &[],
         &fonts::FontBytesByFamily::embedded(),
+        NoteLabels::Degrees,
     )
     .unwrap();
     assert_eq!(with_legend_entries.len(), 1);
@@ -189,6 +194,7 @@ fn zip_split_pdfs_contains_named_entries() {
         "test_split",
         &[],
         &fonts::FontBytesByFamily::embedded(),
+        NoteLabels::Degrees,
     )
     .unwrap();
     let zip_bytes = zip_split_pdfs(&entries).unwrap();

@@ -65,11 +65,21 @@ impl SpelledPitch {
     }
 
     pub(crate) fn name(self) -> String {
+        self.name_with_accidentals("#", "b")
+    }
+
+    /// Like [`Self::name`], with the engraved `♯`/`♭` signs the jianpu view
+    /// draws its own accidentals with (see `font_metrics::accidental_symbol`).
+    pub(crate) fn engraved_name(self) -> String {
+        self.name_with_accidentals("\u{266F}", "\u{266D}")
+    }
+
+    fn name_with_accidentals(self, sharp: &str, flat: &str) -> String {
         let letter = LETTERS
             .get(usize::from(self.letter_index))
             .copied()
             .unwrap_or('C');
-        let accidental = if self.alteration >= 0 { "#" } else { "b" };
+        let accidental = if self.alteration >= 0 { sharp } else { flat };
         format!(
             "{letter}{}",
             accidental.repeat(usize::from(self.alteration.unsigned_abs()))

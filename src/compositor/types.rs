@@ -23,6 +23,7 @@ pub enum AbsoluteContent {
         octave: i8,
         dotted: bool,
         double_dotted: bool,
+        letter_name: Option<String>,
     },
     Rest {
         dotted: bool,

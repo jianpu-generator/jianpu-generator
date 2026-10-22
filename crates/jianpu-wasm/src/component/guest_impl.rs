@@ -85,17 +85,9 @@ impl Guest for Component {
         source: String,
         visibility: ResolvedPartVisibility,
         raw_instruments: Vec<InstrumentInfo>,
+        note_labels: NoteLabels,
     ) -> RenderResponse {
-        render_svg(source, visibility, raw_instruments)
-    }
-
-    fn render_svg_with_highlight_range(
-        source: String,
-        raw_measure_ranges: Vec<MeasureRangeIn>,
-        visibility: ResolvedPartVisibility,
-        raw_instruments: Vec<InstrumentInfo>,
-    ) -> RenderResponse {
-        render_svg_with_highlight_range(source, raw_measure_ranges, visibility, raw_instruments)
+        render_svg(source, visibility, raw_instruments, note_labels)
     }
 
     fn render_mei(
@@ -134,16 +126,18 @@ impl Guest for Component {
         source: String,
         visibility: ResolvedPartVisibility,
         fonts: FontBytesByFamily,
+        note_labels: NoteLabels,
     ) -> GeneratePdfResponse {
-        generate_pdf(source, visibility, fonts)
+        generate_pdf(source, visibility, fonts, note_labels)
     }
 
     fn generate_split_pdfs(
         source: String,
         base_name: String,
         fonts: FontBytesByFamily,
+        note_labels: NoteLabels,
     ) -> GenerateSplitPdfsResponse {
-        generate_split_pdfs(source, base_name, fonts)
+        generate_split_pdfs(source, base_name, fonts, note_labels)
     }
 
     fn generate_midi(source: String, enabled_tracks: Option<Vec<String>>) -> GenerateMidiResponse {
@@ -337,6 +331,7 @@ impl Guest for Component {
     }
 
     forward_to_free_functions! {
+        render_svg_with_highlight_range(source: String, raw_measure_ranges: Vec<MeasureRangeIn>, visibility: ResolvedPartVisibility, raw_instruments: Vec<InstrumentInfo>, note_labels: NoteLabels) -> RenderResponse;
         render_split_meis(source: String, base_name: String, raw_instruments: Vec<InstrumentInfo>) -> RenderSplitMeisResponse;
         generate_staff_pdf(pages: Vec<String>, source: String, fonts: FontBytesByFamily) -> GeneratePdfResponse;
         generate_split_staff_pdfs(parts: Vec<StaffPdfPart>, fonts: FontBytesByFamily) -> GenerateSplitPdfsResponse;

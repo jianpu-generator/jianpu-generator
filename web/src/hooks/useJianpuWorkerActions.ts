@@ -179,6 +179,14 @@ export function useJianpuWorkerActions({
     requestDownload: state.requestDownload,
   })
 
+  const staffNotation = useStaffNotation({
+    workerRef: state.workerRef,
+    source,
+    visibility: state.visibility,
+    staffRenderTracker: state.staffRenderTracker,
+    debounceMs,
+  })
+
   const { notifySelection } = useJianpuWorkerRenderRequests({
     workerRef: state.workerRef,
     sourceRef: state.sourceRef,
@@ -187,6 +195,7 @@ export function useJianpuWorkerActions({
     debounceMs,
     cursorOffsetTimerRef: state.cursorOffsetTimerRef,
     visibility: state.visibility,
+    notation: staffNotation.notation,
     renderedTracks: state.renderedTracks,
     setDocuments: state.setDocuments,
     setNextWavUrl,
@@ -212,14 +221,6 @@ export function useJianpuWorkerActions({
     lyricSpansRequestIdRef: state.lyricSpansRequestIdRef,
     latestLyricSpansIdRef: state.latestLyricSpansIdRef,
     lastSelectionRef: state.lastSelectionRef,
-  })
-
-  const staffNotation = useStaffNotation({
-    workerRef: state.workerRef,
-    source,
-    visibility: state.visibility,
-    staffRenderTracker: state.staffRenderTracker,
-    debounceMs,
   })
 
   const {

@@ -6,7 +6,7 @@ use glyph_renderers::{
     render_bar_line, render_chord_symbol, render_horizontal_line, render_low_octave_dots,
     render_lyric, render_lyric_line, render_multi_measure_rest, render_note_dash, render_note_head,
     render_percussion_hit, render_rest, render_tie_or_slur, render_tuplet_bracket,
-    render_underline, DotState, NoteRenderParams,
+    render_underline, DotState, NoteHeadGlyph, NoteRenderParams,
 };
 use overlay::render_overlay_element;
 
@@ -208,10 +208,14 @@ fn render_note_glyph(
             octave,
             dotted,
             double_dotted,
+            letter_name,
         } => render_note_head(
             elem,
-            pitch,
-            accidental,
+            &NoteHeadGlyph {
+                pitch,
+                accidental,
+                letter_name: letter_name.as_deref(),
+            },
             *octave,
             &DotState::new(*dotted, *double_dotted),
             &NoteRenderParams {

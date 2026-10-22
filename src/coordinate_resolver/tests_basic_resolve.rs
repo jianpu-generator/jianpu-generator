@@ -174,6 +174,7 @@ fn low_octave_dots_resolve_to_the_same_x_as_their_note_head() {
         content: GridContent::LowOctaveDots {
             count: 1,
             pitch: JianPuPitch::Five,
+            letter_name: None,
         },
     };
     let note_head = GridElement {
@@ -183,6 +184,7 @@ fn low_octave_dots_resolve_to_the_same_x_as_their_note_head() {
             octave: 0,
             dotted: false,
             double_dotted: false,
+            letter_name: None,
         },
         ..el
     };

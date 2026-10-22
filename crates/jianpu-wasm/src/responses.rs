@@ -3,7 +3,7 @@ use jianpu_generator::{
     compile, find_measure_at_byte_offset, list_lyric_spans_from_source,
     list_measure_spans_from_source, list_note_spans_from_source,
     render_documents_from_source_with_visibility,
-    render_documents_with_highlight_range_and_visibility, ResolvedPartVisibility,
+    render_documents_with_highlight_range_and_visibility, NoteLabels, ResolvedPartVisibility,
 };
 
 use crate::diagnostics::{
@@ -45,12 +45,14 @@ pub(crate) fn render_response(
     source: &str,
     visibility: &ResolvedPartVisibility,
     instruments: &[InstrumentInfo],
+    note_labels: NoteLabels,
 ) -> RenderResponse {
     match render_documents_from_source_with_visibility(
         source,
         "input.jianpu",
         visibility,
         instruments,
+        note_labels,
     ) {
         Ok(output) => {
             let diagnostics: Vec<_> = output
@@ -81,6 +83,7 @@ pub(crate) fn render_with_highlight_range_response(
     measure_ranges: &[jianpu_generator::grid_layout::MeasureRange],
     visibility: &ResolvedPartVisibility,
     instruments: &[InstrumentInfo],
+    note_labels: NoteLabels,
 ) -> RenderResponse {
     match render_documents_with_highlight_range_and_visibility(
         source,
@@ -88,6 +91,7 @@ pub(crate) fn render_with_highlight_range_response(
         measure_ranges,
         visibility,
         instruments,
+        note_labels,
     ) {
         Ok(output) => {
             let diagnostics: Vec<_> = output

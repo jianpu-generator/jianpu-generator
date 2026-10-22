@@ -118,6 +118,7 @@ pub fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
             &base_name,
             &opts.tracks,
             &crate::fonts::FontBytesByFamily::embedded(),
+            jg::NoteLabels::Degrees,
         )?;
         if entries.is_empty() {
             eprintln!(

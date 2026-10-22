@@ -1,6 +1,6 @@
 use crate::responses::{generate_pdf_response, generate_split_pdfs_response};
 use crate::types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
-use jianpu_generator::ResolvedPartVisibility;
+use jianpu_generator::{NoteLabels, ResolvedPartVisibility};
 
 use jianpu_generator::fonts::FontBytesByFamily;
 
@@ -9,7 +9,12 @@ fn reference_jianpu_generates_pdf() {
     let fonts = FontBytesByFamily::embedded();
     for path in super::demo_file_paths() {
         let source = super::read_demo_file(&path);
-        let resp = generate_pdf_response(&source, &ResolvedPartVisibility::default(), &fonts);
+        let resp = generate_pdf_response(
+            &source,
+            &ResolvedPartVisibility::default(),
+            &fonts,
+            NoteLabels::Degrees,
+        );
         match resp {
             GeneratePdfResponse::Ok { pdf } => {
                 assert!(pdf.len() > 4);
@@ -34,7 +39,7 @@ fn reference_jianpu_generates_split_pdf_zip() {
     for path in super::demo_file_paths() {
         let source = super::read_demo_file(&path);
         let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("demo");
-        let resp = generate_split_pdfs_response(&source, stem, &fonts);
+        let resp = generate_split_pdfs_response(&source, stem, &fonts, NoteLabels::Degrees);
         match resp {
             GenerateSplitPdfsResponse::Ok { zip } => {
                 assert!(zip.len() > 4);

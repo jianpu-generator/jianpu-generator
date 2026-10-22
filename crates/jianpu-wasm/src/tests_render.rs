@@ -1,7 +1,7 @@
 use super::*;
 use crate::responses::render_response;
 use crate::types::RenderResponse;
-use jianpu_generator::ResolvedPartVisibility;
+use jianpu_generator::{NoteLabels, ResolvedPartVisibility};
 use types::DiagnosticSeverity;
 
 #[test]
@@ -20,7 +20,12 @@ fn ok_response_has_svgs() {
         "[Melody] 1 2 3 4\n",
         "[Melodyv1] a b c d\n",
     );
-    let resp = render_response(input, &ResolvedPartVisibility::default(), &[]);
+    let resp = render_response(
+        input,
+        &ResolvedPartVisibility::default(),
+        &[],
+        NoteLabels::Degrees,
+    );
     match resp {
         RenderResponse::Ok { documents, .. } => {
             assert_eq!(documents.len(), 1);
@@ -50,7 +55,12 @@ fn render_without_a_lyric_part_hides_its_lyrics() {
         "[Alto] 5 6 7 1\n",
         "[Altov1] alt alt alt alt\n",
     );
-    let all = match render_response(input, &ResolvedPartVisibility::default(), &[]) {
+    let all = match render_response(
+        input,
+        &ResolvedPartVisibility::default(),
+        &[],
+        NoteLabels::Degrees,
+    ) {
         RenderResponse::Ok { documents, .. } => documents,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
@@ -61,6 +71,7 @@ fn render_without_a_lyric_part_hides_its_lyrics() {
             ..Default::default()
         },
         &[],
+        NoteLabels::Degrees,
     ) {
         RenderResponse::Ok { documents, .. } => documents,
         RenderResponse::Err { .. } => panic!("expected ok"),
@@ -85,7 +96,12 @@ fn render_with_enabled_tracks_filters_parts() {
         "[Soprano] 1 2 3 4\n",
         "[Alto] 5 6 7 1\n",
     );
-    let all = match render_response(input, &ResolvedPartVisibility::default(), &[]) {
+    let all = match render_response(
+        input,
+        &ResolvedPartVisibility::default(),
+        &[],
+        NoteLabels::Degrees,
+    ) {
         RenderResponse::Ok { documents, .. } => documents,
         RenderResponse::Err { .. } => panic!("expected ok"),
     };
@@ -96,6 +112,7 @@ fn render_with_enabled_tracks_filters_parts() {
             ..Default::default()
         },
         &[],
+        NoteLabels::Degrees,
     ) {
         RenderResponse::Ok { documents, .. } => documents,
         RenderResponse::Err { .. } => panic!("expected ok"),
@@ -107,7 +124,12 @@ fn render_with_enabled_tracks_filters_parts() {
 #[test]
 fn err_response_has_structured_diagnostic() {
     // Missing sections are now recoverable; render returns Ok with error diagnostics.
-    let resp = render_response("not valid jianpu", &ResolvedPartVisibility::default(), &[]);
+    let resp = render_response(
+        "not valid jianpu",
+        &ResolvedPartVisibility::default(),
+        &[],
+        NoteLabels::Degrees,
+    );
     let diagnostics = match resp {
         RenderResponse::Err { diagnostics, .. } | RenderResponse::Ok { diagnostics, .. } => {
             diagnostics
@@ -135,7 +157,12 @@ fn recoverable_error_produces_warning_severity_view_zone() {
         "[Melody] 1 2 3 4\n",
         "[Melodyv1] a b\n",
     );
-    let resp = render_response(input, &ResolvedPartVisibility::default(), &[]);
+    let resp = render_response(
+        input,
+        &ResolvedPartVisibility::default(),
+        &[],
+        NoteLabels::Degrees,
+    );
     match resp {
         RenderResponse::Ok {
             diagnostics,
@@ -159,7 +186,12 @@ fn recoverable_error_produces_warning_severity_view_zone() {
 fn reference_jianpu_renders() {
     for path in demo_file_paths() {
         let source = read_demo_file(&path);
-        let resp = render_response(&source, &ResolvedPartVisibility::default(), &[]);
+        let resp = render_response(
+            &source,
+            &ResolvedPartVisibility::default(),
+            &[],
+            NoteLabels::Degrees,
+        );
         match resp {
             RenderResponse::Ok {
                 documents,
@@ -209,7 +241,12 @@ fn diagnostic_span_is_utf8_byte_offset() {
         "[Melodyv1] a b c d\n",
     );
     let token_byte_start = source.find('z').expect("error token in source");
-    let resp = render_response(source, &ResolvedPartVisibility::default(), &[]);
+    let resp = render_response(
+        source,
+        &ResolvedPartVisibility::default(),
+        &[],
+        NoteLabels::Degrees,
+    );
     let diagnostics = match resp {
         RenderResponse::Ok { diagnostics, .. } => diagnostics,
         RenderResponse::Err { diagnostics, .. } => diagnostics,
@@ -263,7 +300,12 @@ fn follow_part_with_explicit_override_in_some_sections_renders_ok() {
         "[s1] 5---\n",
         "[a] 1---\n",
     );
-    let resp = render_response(input, &ResolvedPartVisibility::default(), &[]);
+    let resp = render_response(
+        input,
+        &ResolvedPartVisibility::default(),
+        &[],
+        NoteLabels::Degrees,
+    );
     match resp {
         RenderResponse::Ok {
             documents,
@@ -318,7 +360,12 @@ fn two_parts_with_non_four_four_first_section_has_no_diagnostics() {
         "[a] 5\n",
         "[b] 1\n",
     );
-    let resp = render_response(input, &ResolvedPartVisibility::default(), &[]);
+    let resp = render_response(
+        input,
+        &ResolvedPartVisibility::default(),
+        &[],
+        NoteLabels::Degrees,
+    );
     match resp {
         RenderResponse::Ok {
             documents,

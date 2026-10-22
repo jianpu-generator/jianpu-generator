@@ -1,4 +1,5 @@
 use crate::ast::grouped::Score;
+use crate::compiler::NoteLabels;
 use crate::error::IrrecoverableError;
 use crate::filters::ResolvedPartVisibility;
 use crate::part_info::PartInfo;
@@ -23,10 +24,12 @@ struct DocumentsResult {
 fn render_documents(
     score: &Score,
     parts: &[PartInfo],
+    note_labels: NoteLabels,
 ) -> Result<DocumentsResult, IrrecoverableError> {
     let config = crate::render_config::RenderConfig::from_metadata(&score.metadata);
     let header = crate::build_header(score, parts);
-    let compile_result = crate::compiler::compile(score);
+    let compile_result =
+        crate::compiler::label_note_heads(crate::compiler::compile(score), score, note_labels);
     let compile_result = crate::consolidator::consolidate(compile_result);
     let crate::grid_layout::LayoutOutput {
         pages: grid_pages,
@@ -77,10 +80,12 @@ fn render_documents_with_range(
     score: &Score,
     parts: &[PartInfo],
     measure_ranges: &[crate::grid_layout::MeasureRange],
+    note_labels: NoteLabels,
 ) -> Result<DocumentsResult, IrrecoverableError> {
     let config = crate::render_config::RenderConfig::from_metadata(&score.metadata);
     let header = crate::build_header(score, parts);
-    let compile_result = crate::compiler::compile(score);
+    let compile_result =
+        crate::compiler::label_note_heads(crate::compiler::compile(score), score, note_labels);
     let compile_result = crate::consolidator::consolidate(compile_result);
     let crate::grid_layout::LayoutOutput {
         pages: grid_pages,
@@ -138,11 +143,13 @@ fn render_documents_with_range(
 ///
 /// Parts outside `visibility.rendered_tracks` are not rendered; a lyric part
 /// shown while its target is hidden still draws against the target's columns.
+/// Note heads read as `note_labels` says.
 pub fn render_documents_from_source_with_visibility(
     source: &str,
     filename: &str,
     visibility: &ResolvedPartVisibility,
     instruments: &[crate::parser::parts_parser::InstrumentInfo],
+    note_labels: NoteLabels,
 ) -> Result<RenderDocumentOutput, IrrecoverableError> {
     let enabled_tracks = visibility.rendered_tracks.as_deref();
     let parts = crate::filter_part_list(
@@ -152,7 +159,7 @@ pub fn render_documents_from_source_with_visibility(
     let mut score = crate::compile(source, filename, instruments)?;
     crate::apply_track_filter(&mut score, enabled_tracks);
     let mut diagnostics = crate::collect_measure_diagnostics(&score);
-    let result = render_documents(&score, &parts)?;
+    let result = render_documents(&score, &parts, note_labels)?;
     diagnostics.extend(result.diagnostics);
     Ok(RenderDocumentOutput {
         documents: result.documents,
@@ -190,6 +197,7 @@ pub fn render_documents_with_highlight_range_and_visibility(
     measure_ranges: &[crate::grid_layout::MeasureRange],
     visibility: &ResolvedPartVisibility,
     instruments: &[crate::parser::parts_parser::InstrumentInfo],
+    note_labels: NoteLabels,
 ) -> Result<RenderDocumentOutput, IrrecoverableError> {
     let enabled_tracks = visibility.rendered_tracks.as_deref();
     let parts = crate::filter_part_list(
@@ -199,7 +207,7 @@ pub fn render_documents_with_highlight_range_and_visibility(
     let mut score = crate::compile(source, filename, instruments)?;
     crate::apply_track_filter(&mut score, enabled_tracks);
     let mut diagnostics = crate::collect_measure_diagnostics(&score);
-    let result = render_documents_with_range(&score, &parts, measure_ranges)?;
+    let result = render_documents_with_range(&score, &parts, measure_ranges, note_labels)?;
     diagnostics.extend(result.diagnostics);
     Ok(RenderDocumentOutput {
         documents: result.documents,

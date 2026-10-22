@@ -63,6 +63,7 @@ fn make_block_with_notes(row_id: &str, note_count: u32, bar_col: u32) -> Measure
                 octave: 0,
                 dotted: false,
                 double_dotted: false,
+                letter_name: None,
             },
             note_id: None,
         })
@@ -107,6 +108,7 @@ fn make_block_with_dash(row_id: &str, bar_col: u32) -> MeasureBlock {
                         octave: 0,
                         dotted: false,
                         double_dotted: false,
+                        letter_name: None,
                     },
                     note_id: None,
                 },
