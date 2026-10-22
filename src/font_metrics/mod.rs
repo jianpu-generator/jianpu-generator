@@ -356,6 +356,9 @@ pub(crate) fn directive_line_width(
                 .max(label_box_right)
                 .max(spans_x_offset + spans_width)
         }
+        None if bar_number.is_some() && !spans.is_empty() => {
+            bar_number_width + DIRECTIVE_LINE_ELEMENT_GAP + spans_width
+        }
         None => bar_number_width + spans_width,
     }
 }
