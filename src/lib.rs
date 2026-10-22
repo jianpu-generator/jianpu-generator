@@ -67,6 +67,7 @@ pub mod wav;
 
 #[cfg(feature = "midi")]
 pub use audio_source::*;
+pub use compiler::NoteLabels;
 pub use document_render::{
     render_documents_from_source_with_visibility,
     render_documents_with_highlight_range_and_visibility, render_mei_from_source_with_visibility,
@@ -215,10 +216,11 @@ struct SvgDocsResult {
 fn render_svg_docs_with_parts(
     score: &Score,
     parts: &[PartInfo],
+    note_labels: NoteLabels,
 ) -> Result<SvgDocsResult, IrrecoverableError> {
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
     let header = build_header(score, parts);
-    let compile_result = compiler::compile(score);
+    let compile_result = compiler::label_note_heads(compiler::compile(score), score, note_labels);
     let compile_result = consolidator::consolidate(compile_result);
     let grid_layout::LayoutOutput {
         pages: grid_pages,
@@ -276,8 +278,9 @@ pub(crate) fn render_svgs_with_parts(
     score: &Score,
     parts: &[PartInfo],
     source: Option<&str>,
+    note_labels: NoteLabels,
 ) -> Result<SvgsResult, IrrecoverableError> {
-    let result = render_svg_docs_with_parts(score, parts)?;
+    let result = render_svg_docs_with_parts(score, parts, note_labels)?;
     Ok(SvgsResult {
         svgs: serializer::serialize(&result.documents, source),
         diagnostics: result.diagnostics,
@@ -286,7 +289,7 @@ pub(crate) fn render_svgs_with_parts(
 
 /// Layout and render a [`Score`] into one SVG string per page.
 pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
-    Ok(render_svgs_with_parts(score, &[], None)?.svgs)
+    Ok(render_svgs_with_parts(score, &[], None, NoteLabels::Degrees)?.svgs)
 }
 
 /// Parse, group, and render a `.jianpu` source string into SVG page strings.
@@ -316,6 +319,7 @@ pub fn render_svgs_from_source_filtered(
             ..Default::default()
         },
         instruments,
+        NoteLabels::Degrees,
     )
 }
 
@@ -337,6 +341,7 @@ pub fn write_pdf_from_source_filtered(
         },
         fonts,
         instruments,
+        NoteLabels::Degrees,
     )
 }
 

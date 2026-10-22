@@ -1,4 +1,3 @@
-use crate::ast::parsed::{Accidental, JianPuPitch};
 use crate::compiler::types::BarLineKind;
 use crate::compositor::types::AbsoluteElement;
 use crate::compositor::types::{DominantBaseline, FontFamily, FontWeight, TextAnchor};
@@ -108,8 +107,7 @@ pub(super) fn augmentation_dot_glyphs(
 
 pub(super) fn render_note_head(
     elem: &AbsoluteElement,
-    pitch: &JianPuPitch,
-    accidental: &Accidental,
+    glyph: &NoteHeadGlyph<'_>,
     octave: i8,
     dots: &DotState,
     params: &NoteRenderParams<'_>,
@@ -132,14 +130,10 @@ pub(super) fn render_note_head(
     // layout pass reserved ahead of every glyph in this column (see
     // `ColumnGeometry::glyph_left_anchor_x`). The augmentation dot(s), if
     // any, are drawn separately as circles (see `augmentation_dot_glyphs`)
-    // rather than appended onto this text run.
-    let content = format!(
-        "{}{}",
-        font_metrics::accidental_symbol(accidental),
-        pitch.to_digit()
-    );
-    let run_x = elem.x
-        - font_metrics::accidental_width_for_family(*font_family, accidental, **base_font_size);
+    // rather than appended onto this text run. A letter name's accidental
+    // trails its letter (`F♯`), so its run starts at `elem.x` itself.
+    let content = glyph.content();
+    let run_x = glyph.run_x(elem.x, *font_family, **base_font_size);
 
     results.push(SvgElement {
         x: run_x,
@@ -178,6 +172,10 @@ pub(super) fn render_note_head(
 
     results
 }
+
+#[path = "glyph_renderers_note_head_glyph.rs"]
+mod note_head_glyph;
+pub(super) use note_head_glyph::NoteHeadGlyph;
 
 #[path = "glyph_renderers_octave_dots.rs"]
 mod octave_dots;

@@ -52,6 +52,14 @@ world jianpu-wasm {
 
     // ==================== svg_types.rs ====================
 
+    /// What the jianpu layout's note heads read as
+    /// (`jianpu_generator::NoteLabels`): degree digits, or the letter names
+    /// of the letter-name view.
+    enum note-labels {
+        degrees,
+        letter-names,
+    }
+
     enum text-anchor {
         start,
         middle,
@@ -439,9 +447,9 @@ world jianpu-wasm {
     // `list-note-spans`, `rename-symbol`, ...) was safe by accident, since
     // hyphens vs. underscores kept the two mechanisms' literal export names
     // distinct — this was the first single-word export.
-    export render-svg: func(source: string, visibility: resolved-part-visibility, raw-instruments: list<instrument-info>) -> render-response;
+    export render-svg: func(source: string, visibility: resolved-part-visibility, raw-instruments: list<instrument-info>, note-labels: note-labels) -> render-response;
 
-    export render-svg-with-highlight-range: func(source: string, raw-measure-ranges: list<measure-range-in>, visibility: resolved-part-visibility, raw-instruments: list<instrument-info>) -> render-response;
+    export render-svg-with-highlight-range: func(source: string, raw-measure-ranges: list<measure-range-in>, visibility: resolved-part-visibility, raw-instruments: list<instrument-info>, note-labels: note-labels) -> render-response;
 
     /// Which `<measure>` in the MEI (and so which `id` in Verovio's SVG)
     /// engraves which score measure — the staff view's only way to map
@@ -1185,7 +1193,7 @@ world jianpu-wasm {
     }
 
     // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
-    export generate-pdf: func(source: string, visibility: resolved-part-visibility, fonts: font-bytes-by-family) -> generate-pdf-response;
+    export generate-pdf: func(source: string, visibility: resolved-part-visibility, fonts: font-bytes-by-family, note-labels: note-labels) -> generate-pdf-response;
 
     record generate-split-pdfs-success {
         zip: list<u8>,
@@ -1197,7 +1205,7 @@ world jianpu-wasm {
     }
 
     // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
-    export generate-split-pdfs: func(source: string, base-name: string, fonts: font-bytes-by-family) -> generate-split-pdfs-response;
+    export generate-split-pdfs: func(source: string, base-name: string, fonts: font-bytes-by-family, note-labels: note-labels) -> generate-split-pdfs-response;
 
     record generate-midi-success {
         midi: list<u8>,

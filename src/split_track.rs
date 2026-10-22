@@ -133,6 +133,7 @@ pub fn write_split_pdfs_from_source(
     base_name: &str,
     tracks_filter: &[String],
     fonts: &crate::fonts::FontBytesByFamily,
+    note_labels: crate::compiler::NoteLabels,
 ) -> Result<Vec<SplitPdfEntry>, IrrecoverableError> {
     let score = crate::compile(source, filename, &[])?;
     let track_names = split_track_names(source, filename, &score, tracks_filter)?;
@@ -144,7 +145,7 @@ pub fn write_split_pdfs_from_source(
         let enabled_tracks = track_with_its_lyric_parts(&score, &track);
         filter_tracks(&mut score_clone, &enabled_tracks);
         let parts = filter_part_list(all_parts.clone(), Some(&enabled_tracks));
-        let svgs = render_svgs_with_parts(&score_clone, &parts, None)?.svgs;
+        let svgs = render_svgs_with_parts(&score_clone, &parts, None, note_labels)?.svgs;
         let pdf = crate::pdf::write_pdf(&svgs, fonts, None)?;
         let label = split_track_label(&display_names, &track);
         entries.push(SplitPdfEntry {

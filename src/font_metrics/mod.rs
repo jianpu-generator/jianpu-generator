@@ -213,7 +213,7 @@ pub(crate) fn accidental_width_for_family(
 }
 
 /// The sharp/flat glyph a chord symbol's text leads with (see
-/// `GroupedChordNote::format_symbol`), or `""` when its root has none.
+/// `ChordDegrees::degree_symbol`), or `""` when its root has none.
 pub(crate) fn chord_leading_accidental(text: &str) -> &str {
     text.chars()
         .next()

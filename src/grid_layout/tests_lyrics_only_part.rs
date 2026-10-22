@@ -42,6 +42,7 @@ fn notes_row(note_count: u32, bar_col: u32) -> MeasureRow {
                 octave: 0,
                 dotted: false,
                 double_dotted: false,
+                letter_name: None,
             },
             note_id: None,
         })

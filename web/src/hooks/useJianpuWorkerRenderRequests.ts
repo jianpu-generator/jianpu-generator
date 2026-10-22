@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { SvgDocument } from '../jianpuWasm'
 import type { Diagnostic, MeasureSpan, ResolvedPartVisibility } from '../types'
 import type { WorkerRequest } from '../worker/jianpu.worker'
+import type { Notation } from '../worker/messages'
 import { measureRangeInSpanWithReveal } from './workerHelpers'
 
 interface UseJianpuWorkerRenderRequestsParams {
@@ -12,6 +13,8 @@ interface UseJianpuWorkerRenderRequestsParams {
   activeFile: string
   debounceMs: number
   visibility: ResolvedPartVisibility
+  /** The preview's notation; the ABC view renders letter names. */
+  notation: Notation
   renderedTracks: string[] | undefined
   setDocuments: (value: SvgDocument[]) => void
   setNextWavUrl: (value: string | null) => void
@@ -67,6 +70,7 @@ export function useJianpuWorkerRenderRequests({
   activeFile,
   debounceMs,
   visibility,
+  notation,
   renderedTracks,
   setDocuments,
   setNextWavUrl,
@@ -146,9 +150,10 @@ export function useJianpuWorkerRenderRequests({
       source,
       id,
       visibility,
+      notation,
     }
     worker.postMessage(payload)
-  }, [source, activeFile, visibility])
+  }, [source, activeFile, visibility, notation])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: lastSelectionRef/cursorOffsetTimerRef/measureSpansRef are stable refs passed in as params
   const notifySelection = useCallback(
@@ -238,8 +243,9 @@ export function useJianpuWorkerRenderRequests({
       id,
       ranges: highlightRanges,
       visibility,
+      notation,
     } satisfies WorkerRequest)
-  }, [selectedMeasureRange, visibility])
+  }, [selectedMeasureRange, visibility, notation])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: workerRef/measureSpansRequestIdRef/latestMeasureSpansIdRef are stable refs passed in as params
   useEffect(() => {

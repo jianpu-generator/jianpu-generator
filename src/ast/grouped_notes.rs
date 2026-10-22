@@ -120,66 +120,6 @@ impl GroupedChordNote {
     }
 }
 
-impl GroupedChordNote {
-    pub fn format_symbol(&self) -> String {
-        use crate::ast::parsed::{Accidental, Extension, JianPuPitch, TriadQuality};
-
-        let degree = match self.degree {
-            JianPuPitch::One => '1',
-            JianPuPitch::Two => '2',
-            JianPuPitch::Three => '3',
-            JianPuPitch::Four => '4',
-            JianPuPitch::Five => '5',
-            JianPuPitch::Six => '6',
-            JianPuPitch::Seven => '7',
-        };
-        let accidental = match self.accidental {
-            Accidental::Sharp => "♯",
-            Accidental::Flat => "♭",
-            Accidental::Natural => "",
-        };
-        let triad = match self.triad {
-            TriadQuality::Major => "",
-            TriadQuality::Minor => "m",
-            TriadQuality::Diminished => "°",
-            TriadQuality::Augmented => "⁺",
-            TriadQuality::Sus2 => "sus2",
-            TriadQuality::Sus4 => "sus4",
-        };
-        let extension = match &self.extension {
-            Some(Extension::DominantSeventh) => "⁷",
-            Some(Extension::MajorSeventh) => "△⁷",
-            None => "",
-        };
-        // Accidentals lead their degree (`♯1m`, not `1♯m`), matching note
-        // heads — see `render_chord_symbol`, which hangs the leading
-        // accidental into the column's accidental lead.
-        let mut result = format!("{accidental}{degree}{triad}{extension}");
-
-        if let Some(bass) = &self.bass {
-            let bass_degree = match bass.degree {
-                JianPuPitch::One => '1',
-                JianPuPitch::Two => '2',
-                JianPuPitch::Three => '3',
-                JianPuPitch::Four => '4',
-                JianPuPitch::Five => '5',
-                JianPuPitch::Six => '6',
-                JianPuPitch::Seven => '7',
-            };
-            let bass_acc = match bass.accidental {
-                Accidental::Sharp => "♯",
-                Accidental::Flat => "♭",
-                Accidental::Natural => "",
-            };
-            result.push('/');
-            result.push_str(bass_acc);
-            result.push(bass_degree);
-        }
-
-        result
-    }
-}
-
 #[derive(Clone)]
 pub struct GroupedRest {
     /// Duration in quarter-beats, including any beats added by `-` extensions.

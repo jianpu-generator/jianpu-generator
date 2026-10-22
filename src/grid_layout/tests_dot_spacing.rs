@@ -97,6 +97,7 @@ fn note_head(dotted: bool, double_dotted: bool) -> ElementContent {
         octave: 0,
         dotted,
         double_dotted,
+        letter_name: None,
     }
 }
 

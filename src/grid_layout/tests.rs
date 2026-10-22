@@ -75,6 +75,7 @@ fn note_row(id: &str) -> MeasureRow {
                 octave: 0,
                 dotted: false,
                 double_dotted: false,
+                letter_name: None,
             },
             note_id: None,
         }],
@@ -92,6 +93,7 @@ fn chord_row(id: &str) -> MeasureRow {
             column: 0,
             content: ElementContent::ChordSymbol {
                 text: "Am".to_string(),
+                degrees: crate::compiler::test_chord_degrees::tonic_major(),
                 dotted: false,
                 double_dotted: false,
             },
@@ -143,6 +145,7 @@ pub(crate) fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
                         octave: 0,
                         dotted: false,
                         double_dotted: false,
+                        letter_name: None,
                     },
                     note_id: None,
                 },

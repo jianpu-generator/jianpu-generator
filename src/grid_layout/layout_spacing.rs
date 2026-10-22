@@ -102,10 +102,15 @@ pub(crate) struct ColumnSizing {
 /// column's widest such lead (see `ColumnGeometry::glyph_left_anchor_x`),
 /// keeping every part's digits vertically aligned on the same beat. A chord
 /// symbol whose root carries a sharp/flat (`♯1m`) leads with it the same
-/// way (see `render_chord_symbol`). `0.0` for anything else.
+/// way (see `render_chord_symbol`). `0.0` for anything else, including a
+/// letter name, whose accidental trails its letter (`F♯`).
 fn accidental_lead(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
-        ElementContent::NoteHead { accidental, .. } => accidental_extra_weight(accidental, config),
+        ElementContent::NoteHead {
+            accidental,
+            letter_name: None,
+            ..
+        } => accidental_extra_weight(accidental, config),
         ElementContent::ChordSymbol { text, .. } => {
             crate::font_metrics::chord_leading_accidental_width_for_family(
                 config.glyph_font_families.chords,

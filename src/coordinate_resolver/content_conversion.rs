@@ -202,12 +202,14 @@ pub(super) fn grid_to_absolute(
             octave,
             dotted,
             double_dotted,
+            letter_name,
         } => Some(AbsoluteContent::NoteHead {
             pitch: pitch.clone(),
             accidental: accidental.clone(),
             octave: *octave,
             dotted: *dotted,
             double_dotted: *double_dotted,
+            letter_name: letter_name.clone(),
         }),
         PostArcGridContent::Rest {
             dotted,

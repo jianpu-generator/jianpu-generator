@@ -72,6 +72,7 @@ fn note_head(column: u32) -> ColumnElement {
             octave: 0,
             dotted: false,
             double_dotted: false,
+            letter_name: None,
         },
         note_id: None,
     }
@@ -94,6 +95,7 @@ fn chord(column: u32, text: &str) -> ColumnElement {
         column,
         content: ElementContent::ChordSymbol {
             text: text.to_string(),
+            degrees: crate::compiler::test_chord_degrees::tonic_major(),
             dotted: false,
             double_dotted: false,
         },

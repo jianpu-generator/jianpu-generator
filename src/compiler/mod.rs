@@ -18,6 +18,14 @@ mod tuplet_spans;
 mod rest_runs;
 use rest_runs::merge_rest_runs;
 
+mod chord_degrees;
+pub use chord_degrees::ChordDegrees;
+#[cfg(test)]
+pub(crate) mod test_chord_degrees;
+
+mod letter_names;
+pub use letter_names::{label_note_heads, NoteLabels};
+
 use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartRow, Score};
 use crate::ast::parsed::{Accidental, KeyChange, NoteName, PartKind};
 use itertools::Itertools;
@@ -292,6 +300,8 @@ mod tests_blank_lyric_rows;
 mod tests_directive_mid_score;
 #[cfg(test)]
 mod tests_implicit_fill_rest;
+#[cfg(test)]
+mod tests_letter_names;
 #[cfg(test)]
 mod tests_lyrics_and_diagnostics;
 #[cfg(test)]

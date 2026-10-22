@@ -17,10 +17,16 @@ const SOURCE: &str = concat!(
 );
 
 fn render(visibility: &ResolvedPartVisibility) -> String {
-    render_svgs_from_source_with_visibility(SOURCE, "test.jianpu", visibility, &[])
-        .unwrap()
-        .svgs
-        .concat()
+    render_svgs_from_source_with_visibility(
+        SOURCE,
+        "test.jianpu",
+        visibility,
+        &[],
+        NoteLabels::Degrees,
+    )
+    .unwrap()
+    .svgs
+    .concat()
 }
 
 fn melody_lyrics_only() -> ResolvedPartVisibility {
@@ -117,11 +123,16 @@ fn lyrics_only_measure_without_lyrics_is_a_blank_lyric_row_not_a_rest() {
         "[Mv1] la la la la\n",
     );
 
-    let svg =
-        render_svgs_from_source_with_visibility(source, "test.jianpu", &melody_lyrics_only(), &[])
-            .unwrap()
-            .svgs
-            .concat();
+    let svg = render_svgs_from_source_with_visibility(
+        source,
+        "test.jianpu",
+        &melody_lyrics_only(),
+        &[],
+        NoteLabels::Degrees,
+    )
+    .unwrap()
+    .svgs
+    .concat();
 
     // The blank first measure draws no syllable text (and no rest).
     assert_eq!(

@@ -88,11 +88,13 @@ pub(super) fn generate_pdf(
     source: String,
     visibility: ResolvedPartVisibility,
     fonts: FontBytesByFamily,
+    note_labels: NoteLabels,
 ) -> GeneratePdfResponse {
     generate_pdf_response_to_wit(crate::responses::generate_pdf_response(
         &source,
         &resolved_part_visibility_from_wit(visibility),
         &font_bytes_by_family_from_wit(fonts),
+        note_labels_from_wit(note_labels),
     ))
 }
 
@@ -100,11 +102,13 @@ pub(super) fn generate_split_pdfs(
     source: String,
     base_name: String,
     fonts: FontBytesByFamily,
+    note_labels: NoteLabels,
 ) -> GenerateSplitPdfsResponse {
     generate_split_pdfs_response_to_wit(crate::responses::generate_split_pdfs_response(
         &source,
         &base_name,
         &font_bytes_by_family_from_wit(fonts),
+        note_labels_from_wit(note_labels),
     ))
 }
 

@@ -244,6 +244,7 @@ fn push_low_octave_note_head(
         octave,
         dotted,
         double_dotted,
+        letter_name,
     } = content
     else {
         return;
@@ -262,6 +263,7 @@ fn push_low_octave_note_head(
             octave: 0,
             dotted: *dotted,
             double_dotted: *double_dotted,
+            letter_name: letter_name.clone(),
         },
     );
     push_head(
@@ -271,6 +273,7 @@ fn push_low_octave_note_head(
         GridContent::LowOctaveDots {
             count: octave.unsigned_abs(),
             pitch: pitch.clone(),
+            letter_name: letter_name.clone(),
         },
     );
 }
@@ -290,6 +293,7 @@ fn push_note_element(
             octave,
             dotted,
             double_dotted,
+            letter_name,
         } => push_head(
             sub_rows,
             head_sub,
@@ -300,6 +304,7 @@ fn push_note_element(
                 octave: *octave,
                 dotted: *dotted,
                 double_dotted: *double_dotted,
+                letter_name: letter_name.clone(),
             },
         ),
         ElementContent::Rest {
@@ -338,6 +343,7 @@ fn push_note_element(
             text,
             dotted,
             double_dotted,
+            ..
         } => push_head(
             sub_rows,
             head_sub,

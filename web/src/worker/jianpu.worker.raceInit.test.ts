@@ -104,7 +104,13 @@ vi.mock('../../../crates/jianpu-wasm/pkg-component/jianpu_wasm.js', () => ({
 }))
 
 const raceMessages: WorkerRequest[] = [
-  { type: 'render', source: '', id: 1, visibility: ALL_PARTS_VISIBLE },
+  {
+    type: 'render',
+    source: '',
+    id: 1,
+    visibility: ALL_PARTS_VISIBLE,
+    notation: 'jianpu',
+  },
   { type: 'listParts', source: '', id: 2 },
   {
     type: 'updatePartDeclaration',
@@ -152,6 +158,7 @@ const raceMessages: WorkerRequest[] = [
     id: 11,
     ranges: [{ start: 0, end: 0 }],
     visibility: ALL_PARTS_VISIBLE,
+    notation: 'jianpu',
   },
   { type: 'listMeasureSpans', source: '', id: 12 },
   { type: 'previewInstrument', id: 13, programNumber: 0 },

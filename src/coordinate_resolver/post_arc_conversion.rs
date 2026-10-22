@@ -16,12 +16,14 @@ pub(super) fn to_post_arc_content(content: &GridContent) -> Option<PostArcGridCo
             octave,
             dotted,
             double_dotted,
+            letter_name,
         } => Some(PostArcGridContent::NoteHead {
             pitch: pitch.clone(),
             accidental: accidental.clone(),
             octave: *octave,
             dotted: *dotted,
             double_dotted: *double_dotted,
+            letter_name: letter_name.clone(),
         }),
         GridContent::Rest {
             dotted,

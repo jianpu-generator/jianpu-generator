@@ -1,3 +1,4 @@
+use super::ChordDegrees;
 use crate::ast::parsed::{Accidental, JianPuPitch, PartKind};
 use crate::error::{Diagnostic, Span};
 
@@ -117,6 +118,7 @@ pub enum ElementContent {
         octave: i8,
         dotted: bool,
         double_dotted: bool,
+        letter_name: Option<String>,
     },
     Rest {
         dotted: bool,
@@ -133,6 +135,9 @@ pub enum ElementContent {
     },
     ChordSymbol {
         text: String,
+        /// The chord `text` was formatted from, kept so the letter-name pass
+        /// (`label_note_heads`) can respell it.
+        degrees: ChordDegrees,
         dotted: bool,
         double_dotted: bool,
     },

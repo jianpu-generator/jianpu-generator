@@ -1,3 +1,4 @@
+use crate::ast::parsed::JianPuPitch;
 use crate::grid_layout::types::GridContent;
 
 use super::resolve::RowResolveConfig;
@@ -35,11 +36,16 @@ pub(super) fn is_flush_left_glyph(content: &GridContent) -> bool {
 /// padding/bearing's font/size/leading-char differ per type.
 pub(super) fn flush_left_padding(content: &GridContent, config: RowResolveConfig) -> f32 {
     let (padding, bearing) = match content {
-        GridContent::NoteHead { pitch, .. } | GridContent::LowOctaveDots { pitch, .. } => (
+        GridContent::NoteHead {
+            pitch, letter_name, ..
+        }
+        | GridContent::LowOctaveDots {
+            pitch, letter_name, ..
+        } => (
             config.paddings.notes,
             crate::font_metrics::glyph_left_bearing_for_family(
                 config.glyph_font_families.notes,
-                pitch.to_digit(),
+                note_head_leading_char(pitch, letter_name.as_deref()),
                 config.notes_font_size,
             ),
         ),
@@ -99,4 +105,13 @@ pub(super) fn flush_left_padding(content: &GridContent, config: RowResolveConfig
         _ => return config.paddings.notes,
     };
     (padding - bearing).max(0.0)
+}
+
+/// The first character a note head draws: its letter name's letter in the
+/// letter-name view (see `compiler::label_note_heads`), its digit
+/// otherwise.
+fn note_head_leading_char(pitch: &JianPuPitch, letter_name: Option<&str>) -> char {
+    letter_name
+        .and_then(|name| name.chars().next())
+        .unwrap_or_else(|| pitch.to_digit())
 }

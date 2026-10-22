@@ -173,6 +173,7 @@ pub(super) fn render_svg(
     source: String,
     visibility: ResolvedPartVisibility,
     raw_instruments: Vec<InstrumentInfo>,
+    note_labels: NoteLabels,
 ) -> RenderResponse {
     let instruments: Vec<jianpu_generator::parser::parts_parser::InstrumentInfo> = raw_instruments
         .into_iter()
@@ -182,6 +183,7 @@ pub(super) fn render_svg(
         &source,
         &resolved_part_visibility_from_wit(visibility),
         &instruments,
+        note_labels_from_wit(note_labels),
     ))
 }
 
@@ -190,6 +192,7 @@ pub(super) fn render_svg_with_highlight_range(
     raw_measure_ranges: Vec<MeasureRangeIn>,
     visibility: ResolvedPartVisibility,
     raw_instruments: Vec<InstrumentInfo>,
+    note_labels: NoteLabels,
 ) -> RenderResponse {
     let instruments: Vec<jianpu_generator::parser::parts_parser::InstrumentInfo> = raw_instruments
         .into_iter()
@@ -204,6 +207,7 @@ pub(super) fn render_svg_with_highlight_range(
         &measure_ranges,
         &resolved_part_visibility_from_wit(visibility),
         &instruments,
+        note_labels_from_wit(note_labels),
     ))
 }
 

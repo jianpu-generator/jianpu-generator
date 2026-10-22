@@ -5,7 +5,7 @@ mod chord_template;
 mod guitar_diagram_svg;
 mod guitar_voicing;
 mod piano_diagram_svg;
-mod spelling;
+pub(crate) mod spelling;
 
 use itertools::Itertools;
 

@@ -133,13 +133,16 @@ Then('the staff PDF is named {string}', async ({}, name: string) => {
   expect(exportedFiles.get('staff')?.name).toBe(name)
 })
 
-Then('the staff PDF differs from the jianpu PDF', async () => {
-  const staff = exportedFiles.get('staff')?.bytes
-  const jianpu = exportedFiles.get('jianpu')?.bytes
-  expect(staff?.subarray(0, 4).toString()).toBe('%PDF')
-  expect(jianpu?.subarray(0, 4).toString()).toBe('%PDF')
-  expect(staff?.equals(jianpu as Buffer)).toBe(false)
-})
+Then(
+  'the {word} PDF differs from the jianpu PDF',
+  async ({}, notation: string) => {
+    const exported = exportedFiles.get(notation)?.bytes
+    const jianpu = exportedFiles.get('jianpu')?.bytes
+    expect(exported?.subarray(0, 4).toString()).toBe('%PDF')
+    expect(jianpu?.subarray(0, 4).toString()).toBe('%PDF')
+    expect(exported?.equals(jianpu as Buffer)).toBe(false)
+  },
+)
 
 Then(
   'the staff ZIP holds {string} and {string}',

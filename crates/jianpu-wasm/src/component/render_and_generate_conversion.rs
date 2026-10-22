@@ -171,3 +171,10 @@ pub(super) fn font_bytes_by_family_from_wit(
         monospace,
     }
 }
+
+pub(super) fn note_labels_from_wit(labels: NoteLabels) -> jianpu_generator::NoteLabels {
+    match labels {
+        NoteLabels::Degrees => jianpu_generator::NoteLabels::Degrees,
+        NoteLabels::LetterNames => jianpu_generator::NoteLabels::LetterNames,
+    }
+}

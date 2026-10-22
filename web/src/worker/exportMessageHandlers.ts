@@ -4,6 +4,7 @@ import {
   jianpuWasm,
 } from '../jianpuWasm'
 import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
+import { noteLabelsFor } from './noteLabels'
 
 type LoadedFonts = FontBytesByFamily | null
 
@@ -31,6 +32,7 @@ export function handleGeneratePdf(
     msg.source,
     msg.visibility,
     loadedFonts,
+    noteLabelsFor(msg.notation),
   )
   if (result.tag === 'ok') {
     const pdfBuffer = binaryBufferFromResult(result.val.pdf)
@@ -68,6 +70,7 @@ export function handleGenerateSplitPdf(
     msg.source,
     msg.baseName,
     loadedFonts,
+    noteLabelsFor(msg.notation),
   )
   if (result.tag === 'ok') {
     const zipBuffer = binaryBufferFromResult(result.val.zip)
