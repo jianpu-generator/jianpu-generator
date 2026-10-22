@@ -17,6 +17,8 @@ mod tests_bar_number_click_target;
 #[cfg(test)]
 mod tests_basic_resolve;
 #[cfg(test)]
+mod tests_directive_line_gap;
+#[cfg(test)]
 mod tests_highlights;
 #[cfg(test)]
 mod tests_left_edge_alignment;

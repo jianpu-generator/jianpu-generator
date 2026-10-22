@@ -48,3 +48,23 @@ fn glyph_left_bearing_for_family_is_zero_for_a_character_missing_from_the_font()
     let bearing = glyph_left_bearing_for_family(FontFamily::Monospace, '\u{E000}', 12.0);
     assert_eq!(bearing, 0.0);
 }
+
+/// Must mirror `coordinate_resolver::directive_line_conversion`'s offsets:
+/// with no section label, a gap separates the bar number from the spans.
+#[test]
+fn labelless_directive_line_width_includes_the_gap_after_the_bar_number() {
+    let span = |content: &str| crate::compositor::types::TextSpan {
+        content: content.to_string(),
+        bold: false,
+        italic: false,
+        underline: false,
+        font_size: 12.0,
+    };
+    let bar_number = span("3");
+    let spans = [span("  1=D")];
+    let width = super::directive_line_width(Some(&bar_number), None, &spans, 12.0, false);
+    let expected = super::span_width(&bar_number)
+        + super::DIRECTIVE_LINE_ELEMENT_GAP
+        + super::span_width(&spans[0]);
+    assert_eq!(width, expected);
+}
