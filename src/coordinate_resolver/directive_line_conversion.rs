@@ -100,6 +100,12 @@ fn directive_line_content(
                 )
                 + crate::font_metrics::DIRECTIVE_LINE_ELEMENT_GAP
         }
+        // The spans' own leading spaces don't render (SVG drops leading
+        // whitespace in a `<text>` without `xml:space="preserve"`), so the
+        // gap after the bar number must be measured, as in the label case.
+        None if bar_number_span.is_some() && !spans.is_empty() => {
+            bar_number_width + crate::font_metrics::DIRECTIVE_LINE_ELEMENT_GAP
+        }
         None => bar_number_width,
     };
 
