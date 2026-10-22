@@ -443,6 +443,21 @@ world jianpu-wasm {
 
     export render-svg-with-highlight-range: func(source: string, raw-measure-ranges: list<measure-range-in>, visibility: resolved-part-visibility, raw-instruments: list<instrument-info>) -> render-response;
 
+    record render-mei-success {
+        mei: string,
+    }
+
+    variant render-mei-response {
+        ok(render-mei-success),
+        err(diagnostics-error),
+    }
+
+    // The staff-notation view: the score as MEI
+    // (`jianpu_generator::render_mei_from_source_with_visibility`), for the
+    // worker to engrave with Verovio. Takes the same visibility as
+    // `render-svg`, so hidden parts get no staff.
+    export render-mei: func(source: string, visibility: resolved-part-visibility, raw-instruments: list<instrument-info>) -> render-mei-response;
+
     // Phase 3, group 3 of PLAN-wit-bindgen-migration.md.
     export list-parts: func(source: string, raw-instruments: list<instrument-info>) -> list-parts-response;
 

@@ -1,4 +1,5 @@
 import type { RefObject } from 'react'
+import type { StaffNotation } from '../hooks/useStaffNotation'
 import type {
   MetadataEdit,
   MetadataFields,
@@ -160,4 +161,5 @@ export interface AppWorkspaceProps {
   measureAudioNoteTimings: NoteTiming[]
   measureAudioElement: HTMLAudioElement | null
   noPartsSelected: boolean
+  staffNotation: StaffNotation
 }

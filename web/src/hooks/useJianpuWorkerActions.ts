@@ -13,6 +13,7 @@ import { useJianpuWorkerRenderRequests } from './useJianpuWorkerRenderRequests'
 import { useJianpuWorkerShiftOctave } from './useJianpuWorkerShiftOctave'
 import type { useJianpuWorkerState } from './useJianpuWorkerState'
 import { useMeasureAudioPlayback } from './useMeasureAudioPlayback'
+import { useStaffNotation } from './useStaffNotation'
 
 interface UseJianpuWorkerActionsParams {
   state: ReturnType<typeof useJianpuWorkerState>
@@ -131,6 +132,7 @@ export function useJianpuWorkerActions({
     shiftPartOctaveTracker: state.shiftPartOctaveTracker,
     editRangeTracker: state.editRangeTracker,
     describeSelectionTracker: state.describeSelectionTracker,
+    staffRenderTracker: state.staffRenderTracker,
     latestPdfIdRef: state.latestPdfIdRef,
     setPdfExporting: state.setPdfExporting,
     activeFileRef: state.activeFileRef,
@@ -289,6 +291,14 @@ export function useJianpuWorkerActions({
     describeSelectionTracker: state.describeSelectionTracker,
   })
 
+  const staffNotation = useStaffNotation({
+    workerRef: state.workerRef,
+    source,
+    visibility: state.visibility,
+    staffRenderTracker: state.staffRenderTracker,
+    debounceMs,
+  })
+
   const { importFromFile } = useJianpuWorkerImport({
     workerRef: state.workerRef,
     importRequestIdRef: state.importRequestIdRef,
@@ -322,6 +332,7 @@ export function useJianpuWorkerActions({
     editRange,
     describeSelection,
     importFromFile,
+    staffNotation,
     previewInstrument,
     previewPercussion,
     stopPreviewInstrument,

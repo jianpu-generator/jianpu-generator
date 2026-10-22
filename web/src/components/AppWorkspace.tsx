@@ -9,6 +9,7 @@ import { EditMetadataModal } from './EditMetadataModal'
 import { Editor } from './Editor'
 import { EditorToolbarButton } from './EditorToolbarButton'
 import { EditPartsModal } from './EditPartsModal'
+import { NotationToggle } from './NotationToggle'
 import { PitchDrawer } from './PitchDrawer'
 import { Preview } from './Preview'
 import { PartStreamModal } from './partStream/PartStreamModal'
@@ -80,7 +81,9 @@ export function AppWorkspace({
   measureAudioNoteTimings,
   measureAudioElement,
   noPartsSelected,
+  staffNotation,
 }: AppWorkspaceProps) {
+  const staffView = staffNotation.notation === 'staff'
   const [editorPaneEl, setEditorPaneEl] = useState<HTMLDivElement | null>(null)
   // The editor's current selection, in byte offsets — `null` for a plain
   // caret (nothing to shift), tracked purely to enable/disable the "Octave
@@ -305,10 +308,15 @@ export function AppWorkspace({
           .filter(Boolean)
           .join(' ')}
       >
+        <NotationToggle
+          notation={staffNotation.notation}
+          onChange={staffNotation.setNotation}
+        />
         <Preview
           documents={documents}
+          staffPages={staffView ? staffNotation.pages : null}
           highlightedDocuments={highlightedDocuments}
-          rendering={rendering}
+          rendering={staffView ? staffNotation.loading : rendering}
           onSectionLabelClick={handleSectionJump}
           onNoteRangeSelect={handleNoteRangeSelect}
           selectedNoteCells={selectedNoteCells}
@@ -329,7 +337,9 @@ export function AppWorkspace({
           measureAudioNoteTimings={measureAudioNoteTimings}
           measureAudioElement={measureAudioElement}
           emptyMessage={
-            noPartsSelected ? 'No parts selected.' : 'No preview yet.'
+            noPartsSelected
+              ? 'No parts selected.'
+              : ((staffView ? staffNotation.error : null) ?? 'No preview yet.')
           }
           onPendingSecondClickChange={setPreviewSelectionPending}
         />

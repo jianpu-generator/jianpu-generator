@@ -43,3 +43,12 @@ cd crates/live-share-worker
 pnpm exec cf d1 query "$(jq -r .d1DatabaseId deploy.json)" \
   --sql="$(cat queries/observability/auth_rejections.sql)"
 ```
+
+## Credits
+
+The staff-notation view engraves scores with
+[Verovio](https://www.verovio.org) (`verovio@6.3.0`, pinned in
+[`web/package.json`](web/package.json)), licensed under the
+[LGPL-3.0](https://github.com/rism-digital/verovio/blob/develop/COPYING). It is
+loaded unmodified, as a separate module, only when the staff view is first
+opened.

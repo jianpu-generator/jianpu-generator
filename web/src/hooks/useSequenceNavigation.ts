@@ -2,7 +2,7 @@ import type { RefObject } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { EditorHandle, MeasureSpan, SequenceEntry } from '../types'
 
-interface SelectedSequenceRange {
+export interface SelectedSequenceRange {
   start: number
   end: number
   entryStartIndex: number

@@ -110,3 +110,21 @@ fn lyric_parts_become_verses_on_their_target() {
     assert!(mei.contains(r#"<verse n="1"><syl>你</syl></verse>"#));
     assert!(mei.contains(r#"<verse n="1"><syl>好</syl></verse>"#));
 }
+
+#[test]
+fn hidden_parts_get_no_staff() {
+    let source = "# parts\nSoprano [S] = notes\nAlto [A] = notes\nWords [w] = lyrics[A]\n\n# score\nkey=C4 time=2/4\n[S] 1 2\n[A] 5 6\n[w] 你好\n";
+    let mei = crate::render_mei_from_source_with_visibility(
+        source,
+        "test.jianpu",
+        &crate::ResolvedPartVisibility {
+            rendered_tracks: Some(vec!["S".into()]),
+            ..Default::default()
+        },
+        &[],
+    )
+    .unwrap();
+    assert!(mei.contains("<label>Soprano</label>"), "{mei}");
+    assert!(!mei.contains("<label>Alto</label>"), "{mei}");
+    assert!(!mei.contains("<syl>"), "{mei}");
+}

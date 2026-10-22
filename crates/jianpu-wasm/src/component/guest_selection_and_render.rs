@@ -206,3 +206,25 @@ pub(super) fn render_svg_with_highlight_range(
         &instruments,
     ))
 }
+
+pub(super) fn render_mei(
+    source: String,
+    visibility: ResolvedPartVisibility,
+    raw_instruments: Vec<InstrumentInfo>,
+) -> RenderMeiResponse {
+    let instruments: Vec<jianpu_generator::parser::parts_parser::InstrumentInfo> = raw_instruments
+        .into_iter()
+        .map(instrument_info_from_wit)
+        .collect();
+    match jianpu_generator::render_mei_from_source_with_visibility(
+        &source,
+        "input.jianpu",
+        &resolved_part_visibility_from_wit(visibility),
+        &instruments,
+    ) {
+        Ok(mei) => RenderMeiResponse::Ok(RenderMeiSuccess { mei }),
+        Err(error) => RenderMeiResponse::Err(diagnostics_error_to_wit(&[
+            crate::diagnostics::diagnostic_from_error(&error),
+        ])),
+    }
+}

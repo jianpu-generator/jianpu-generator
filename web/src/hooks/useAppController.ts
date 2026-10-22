@@ -12,6 +12,7 @@ import { useJianpuWorker } from './useJianpuWorker'
 import { usePartTogglePruning } from './usePartTogglePruning'
 import { usePartToggles } from './usePartToggles'
 import { useScoreSource } from './useScoreSource'
+import type { SelectedSequenceRange } from './useSequenceNavigation'
 import { useStorageBackend } from './useStorageBackend'
 import { useUrlFileSync } from './useUrlFileSync'
 import { useWasmLoader } from './useWasmLoader'
@@ -75,12 +76,7 @@ export function useAppController() {
   const fileId = sharedFolder?.fileId ?? fileIdForName(store, store.active)
   useDocumentTitle(store.active)
   const editorRef = useRef<EditorHandle>(null)
-  const selectedSequenceRangeRef = useRef<{
-    start: number
-    end: number
-    entryStartIndex: number
-    entryEndIndex: number
-  } | null>(null)
+  const selectedSequenceRangeRef = useRef<SelectedSequenceRange | null>(null)
   const measureRangeSelectedPartNamesRef = useRef<string[] | undefined>(
     undefined,
   )
@@ -166,6 +162,7 @@ export function useAppController() {
     editRange,
     describeSelection,
     importFromFile,
+    staffNotation,
   } = useJianpuWorker(
     source,
     partToggles,
@@ -396,5 +393,6 @@ export function useAppController() {
     handleMeasureRangeSelect,
     handlePlayNoteSelection,
     noPartsSelected,
+    staffNotation,
   }
 }

@@ -98,6 +98,14 @@ impl Guest for Component {
         render_svg_with_highlight_range(source, raw_measure_ranges, visibility, raw_instruments)
     }
 
+    fn render_mei(
+        source: String,
+        visibility: ResolvedPartVisibility,
+        raw_instruments: Vec<InstrumentInfo>,
+    ) -> RenderMeiResponse {
+        render_mei(source, visibility, raw_instruments)
+    }
+
     fn generate_split_wavs(
         source: String,
         base_name: String,

@@ -22,6 +22,7 @@ import {
   handlePreviewInstrument,
   handlePreviewPercussion,
 } from './previewMessageHandlers'
+import { handleRenderStaff } from './staffMessageHandlers'
 
 export type { WorkerRequest, WorkerResponse } from './messages'
 
@@ -261,6 +262,11 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       id: msg.id,
       diagnostics: result.val.diagnostics,
     } satisfies WorkerResponse)
+    return
+  }
+
+  if (msg.type === 'renderStaff') {
+    void handleRenderStaff(msg)
     return
   }
 

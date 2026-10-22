@@ -17,6 +17,7 @@ import type {
   DescribeSelectionRequestTracker,
   PendingDownload,
   RangeEditRequestTracker,
+  StaffRenderRequestTracker,
   TextRequestTracker,
 } from './useJianpuWorkerTypes'
 import {
@@ -115,6 +116,11 @@ export function useJianpuWorkerState(
     pendingRequestsRef: useRef(new Map<number, (source: string) => void>()),
   }
   const describeSelectionTracker: DescribeSelectionRequestTracker = {
+    requestIdRef: useRef(0),
+    latestIdRef: useRef(0),
+    pendingRequestsRef: useRef(new Map()),
+  }
+  const staffRenderTracker: StaffRenderRequestTracker = {
     requestIdRef: useRef(0),
     latestIdRef: useRef(0),
     pendingRequestsRef: useRef(new Map()),
@@ -320,6 +326,7 @@ export function useJianpuWorkerState(
     shiftPartOctaveTracker,
     editRangeTracker,
     describeSelectionTracker,
+    staffRenderTracker,
     importRequestIdRef,
     pendingImportsRef,
     renderRequestIdRef,

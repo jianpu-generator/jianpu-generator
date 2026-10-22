@@ -14,8 +14,12 @@ hands the MEI string Rust produced to Verovio and displays the SVG.
 |---|---|
 | `src/mei_export/` (Score → MEI) | Done, experimental, unit-tested (`src/mei_export/tests.rs`) |
 | CLI `jianpu generate mei <file>` | Done |
-| Verovio rendering | Proven out-of-tree with Node (script below); **not wired into the app** |
-| Web toggle / worker integration | Not started |
+| Verovio rendering | Wired into the web worker (`web/src/worker/staffMessageHandlers.ts`), lazily `import()`ed on first staff render; Vite emits it as its own ~8 MB chunk (`jianpu.worker` stays ~465 kB) |
+| WASM `render_mei` (TODO 1) | Done — part visibility filtered in Rust (`render_mei_from_source_with_visibility`) |
+| Web toggle (TODO 3) | Done — Jianpu/Staff toggle above the preview, remembered **globally per browser** (`localStorage` `jianpu:preview-notation:v1`, `useStaffNotation.ts`); switch to per-file if wanted |
+| e2e (TODO 5) | Partly — `web/e2e/features/staff-notation-view.feature` (toggle, hidden part, remembered after reload); the click-to-cursor scenario waits on TODO 4 |
+| Click / selection / playback (TODO 4) | Not started |
+| Licence note (TODO 18) | Done — README "Credits", pinned `verovio@6.3.0` |
 
 Spike result on the production score `choir/把根留住.jianpu` (16 parts:
 SATB + divisi, sustain, pluck, chords, 3 lyric lines; 69 measures): Verovio
@@ -59,6 +63,14 @@ console.log(tk.getLog());
 for (let p = 1; p <= tk.getPageCount(); p++)
   fs.writeFileSync(`${outPrefix}-${p}.svg`, tk.renderToSVG(p));
 ```
+
+## Local e2e quirk
+
+If e2e global setup fails with `no such table: password_credentials`, the
+local `cf dev` D1 state is behind the migrations (`cf d1 migrations apply`
+printed `[]` without applying 0006/0007). Apply the missing
+`live-share-worker/migrations/*.sql` files to the Miniflare sqlite file under
+`crates/live-share-worker/.wrangler/state/v3/d1/` with `sqlite3`.
 
 ## Verovio gotchas already learned
 

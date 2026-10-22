@@ -68,7 +68,8 @@ pub mod wav;
 pub use audio_source::*;
 pub use document_render::{
     render_documents_from_source_with_visibility,
-    render_documents_with_highlight_range_and_visibility, RenderDocumentOutput,
+    render_documents_with_highlight_range_and_visibility, render_mei_from_source_with_visibility,
+    RenderDocumentOutput,
 };
 pub use filters::*;
 pub use lyric_spans::*;

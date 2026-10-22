@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { NoteTiming, SvgDocument } from '../jianpuWasm'
 import type { LyricSpan, NoteSpan } from '../types'
-import { renderSvgDocument } from './PreviewSvgRenderer'
+import { PreviewPages } from './PreviewPages'
 import { handlePreviewClick } from './previewClickHandler'
 import {
   applyPersistedLyricLabelHighlights,
@@ -20,6 +20,9 @@ export type { LyricCell, NoteCell } from './previewSelection'
 
 interface PreviewProps {
   documents: SvgDocument[]
+  /** Verovio-engraved staff-notation pages; when set, shown instead of the
+   * jianpu `documents` (see `useStaffNotation`). */
+  staffPages?: string[] | null
   highlightedDocuments?: SvgDocument[]
   rendering: boolean
   audioGenerating?: boolean
@@ -122,6 +125,7 @@ interface PreviewProps {
 
 export function Preview({
   documents,
+  staffPages = null,
   highlightedDocuments = [],
   rendering,
   audioGenerating = false,
@@ -366,17 +370,10 @@ export function Preview({
             })
           }
         >
-          {documents.length === 0 &&
-          highlightedDocuments.length === 0 &&
-          !rendering ? (
+          {(staffPages ?? activeDocs).length === 0 && !rendering ? (
             <p className="preview-empty">{emptyMessage}</p>
           ) : null}
-          {activeDocs.map((doc, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: pages have no stable identifier
-            <div key={i} className="preview-page">
-              {renderSvgDocument(doc, i)}
-            </div>
-          ))}
+          <PreviewPages documents={activeDocs} staffPages={staffPages} />
         </div>
         {rendering ? (
           <div

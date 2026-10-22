@@ -17,6 +17,12 @@ import type {
 } from '../types'
 import type { NoteCell } from '../utils/noteSpanSelection'
 
+/** The staff-notation view's pages, engraved by Verovio from the MEI Rust
+ * exported (see `staffMessageHandlers.ts`). */
+export type StaffRenderResult =
+  | { status: 'ok'; pages: string[] }
+  | { status: 'err'; message: string }
+
 export type WorkerRequest =
   | { type: 'wasmModule'; module: WebAssembly.Module }
   | {
@@ -199,6 +205,12 @@ export type WorkerRequest =
       ranges: EditorSelection[]
       id: number
     }
+  | {
+      type: 'renderStaff'
+      source: string
+      id: number
+      visibility: ResolvedPartVisibility
+    }
 
 export type WorkerResponse =
   | {
@@ -308,3 +320,4 @@ export type WorkerResponse =
       id: number
       description: PitchDescription | null
     }
+  | { type: 'staffRendered'; id: number; result: StaffRenderResult }
