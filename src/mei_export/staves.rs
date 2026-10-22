@@ -3,15 +3,20 @@
 use super::pitch::sounding_midi;
 use crate::ast::grouped::{NoteEvent, Score};
 use crate::ast::parsed::{KeyChange, PartKind};
+use itertools::Itertools;
 use std::collections::HashMap;
 
-/// One staff of the output: a `notes` part, in declaration order.
+/// One staff of the output: a `notes` part, in declaration order, then the
+/// hidden targets of shown lyric parts.
 pub(super) struct StaffPart {
     /// The part's abbreviation, which `PartSlice::name` carries.
     pub(super) name: String,
     pub(super) label: String,
     pub(super) octave_offset: i8,
     pub(super) clef: Clef,
+    /// A hidden part kept only to carry the verses of a shown lyric part
+    /// that targets it: an invisible staff with invisible notes.
+    pub(super) lyrics_only: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -44,7 +49,7 @@ pub(super) fn collect_staves(
     let Some(first) = score.measures.first() else {
         return Vec::new();
     };
-    first
+    let note_staves = first
         .parts
         .iter()
         .map(|row| row.slice())
@@ -60,8 +65,33 @@ pub(super) fn collect_staves(
                 label,
                 octave_offset: slice.octave_offset,
                 name,
+                lyrics_only: false,
             })
         })
+        .collect_vec();
+    let lyrics_only_staves = lyric_targets(score)
+        .into_iter()
+        .filter(|target| note_staves.iter().all(|staff| staff.name != *target))
+        .map(|name| StaffPart {
+            name,
+            label: String::new(),
+            octave_offset: 0,
+            clef: Clef::Treble,
+            lyrics_only: true,
+        })
+        .collect_vec();
+    note_staves.into_iter().chain(lyrics_only_staves).collect()
+}
+
+/// Targets of the score's lyric parts, in lyric part declaration order.
+fn lyric_targets(score: &Score) -> Vec<String> {
+    score
+        .measures
+        .iter()
+        .flat_map(|measure| measure.parts.iter().map(|row| row.slice()))
+        .filter_map(|slice| slice.lyrics.as_ref())
+        .map(|lyrics| lyrics.target_name.clone())
+        .unique()
         .collect()
 }
 

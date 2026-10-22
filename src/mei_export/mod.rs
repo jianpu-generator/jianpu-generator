@@ -17,7 +17,7 @@ use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartSlice, Score, TimeSig
 use crate::ast::parsed::{Accidental, KeyChange, NoteName, PartKind};
 use harmony::{harm_xml, HarmonyPlacement};
 use itertools::Itertools;
-use layer::{layer_xml, LayerContext, Slur, StaffState};
+use layer::{layer_xml, lyrics_only_layer_xml, LayerContext, Slur, StaffState};
 use lyrics::{collect_verses, measure_syllables, Verse};
 use pitch::key_signature;
 use staves::{collect_staves, StaffPart};
@@ -112,24 +112,28 @@ fn measure_xml(
         .zip(state.staves.iter_mut())
         .map(|((staff_index, staff), staff_state)| {
             let staff_number = staff_index + 1;
-            let layer = part_slice(measure, &staff.name).map_or_else(
-                || "<mRest/>".to_string(),
-                |slice| {
-                    let syllables = parts
-                        .verses
-                        .get(&staff.name)
-                        .map(|verses| measure_syllables(verses, measure_index))
-                        .unwrap_or_default();
-                    let context = LayerContext {
-                        staff,
-                        staff_number,
-                        measure_index,
-                        key: &state.key,
-                        verses: &syllables,
-                    };
-                    layer_xml(slice, &context, staff_state, &mut state.slurs)
-                },
-            );
+            let syllables = parts
+                .verses
+                .get(&staff.name)
+                .map(|verses| measure_syllables(verses, measure_index))
+                .unwrap_or_default();
+            let layer = if staff.lyrics_only {
+                lyrics_only_layer(measure, &staff.name, &syllables)
+            } else {
+                part_slice(measure, &staff.name).map_or_else(
+                    || "<mRest/>".to_string(),
+                    |slice| {
+                        let context = LayerContext {
+                            staff,
+                            staff_number,
+                            measure_index,
+                            key: &state.key,
+                            verses: &syllables,
+                        };
+                        layer_xml(slice, &context, staff_state, &mut state.slurs)
+                    },
+                )
+            };
             format!("<staff n=\"{staff_number}\"><layer n=\"1\">{layer}</layer></staff>\n")
         })
         .join("");
@@ -217,6 +221,25 @@ fn measure_controls(
     format!("{rehearsal}{harmony}")
 }
 
+/// The verses of a hidden part, on its rhythm as copied into the lyric parts
+/// that target it.
+fn lyrics_only_layer(
+    measure: &MultiPartMeasure,
+    target: &str,
+    syllables: &[lyrics::MeasureSyllables],
+) -> String {
+    measure
+        .parts
+        .iter()
+        .map(|row| row.slice())
+        .find_map(|slice| {
+            let lyrics = slice.lyrics.as_ref()?;
+            (lyrics.target_name == target)
+                .then(|| lyrics_only_layer_xml(lyrics, slice.resolution_multiplier, syllables))
+        })
+        .unwrap_or_else(|| "<mSpace/>".to_string())
+}
+
 fn part_slice<'a>(measure: &'a MultiPartMeasure, name: &str) -> Option<&'a PartSlice> {
     measure
         .parts
@@ -230,6 +253,9 @@ fn score_def_xml(staves: &[StaffPart], key: &KeyChange, time: &TimeSignature) ->
         .iter()
         .enumerate()
         .map(|(index, staff)| {
+            if staff.lyrics_only {
+                return lyrics_only_staff_def(index + 1, key, time);
+            }
             format!(
                 "<staffDef n=\"{}\" lines=\"5\" {}><label>{}</label><labelAbbr>{}</labelAbbr></staffDef>",
                 index + 1,
@@ -242,6 +268,18 @@ fn score_def_xml(staves: &[StaffPart], key: &KeyChange, time: &TimeSignature) ->
     // `optimize` lets Verovio's `condense: "encoded"` hide empty staves per system.
     format!(
         "<scoreDef optimize=\"true\" key.sig=\"{}\" meter.count=\"{}\" meter.unit=\"{}\">\n<staffGrp symbol=\"bracket\" bar.thru=\"false\">\n{staff_defs}\n</staffGrp>\n</scoreDef>",
+        key_signature(key),
+        time.numerator,
+        time.denominator
+    )
+}
+
+/// A one-line staff with its line, clef, key and meter hidden, so only the
+/// verses on its invisible notes show. Its own `takt` group shrinks its
+/// barlines to a short tick, the least Verovio draws.
+fn lyrics_only_staff_def(staff_number: usize, key: &KeyChange, time: &TimeSignature) -> String {
+    format!(
+        "<staffGrp bar.method=\"takt\"><staffDef n=\"{staff_number}\" lines=\"1\" lines.visible=\"false\"><clef shape=\"G\" line=\"1\" visible=\"false\"/><keySig sig=\"{}\" visible=\"false\"/><meterSig count=\"{}\" unit=\"{}\" visible=\"false\"/></staffDef></staffGrp>",
         key_signature(key),
         time.numerator,
         time.denominator

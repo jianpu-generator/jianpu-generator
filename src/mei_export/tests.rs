@@ -1,4 +1,4 @@
-use super::duration::split_duration;
+use super::duration::{split_duration, split_undotted_duration};
 use super::pitch::{key_signature, spell, AccidentalTracker, Letter};
 use super::score_to_mei;
 use crate::ast::parsed::{Accidental, JianPuPitch, KeyChange, Note, NoteName};
@@ -70,6 +70,21 @@ fn durations_split_into_writable_values() {
 }
 
 #[test]
+fn undotted_durations_split_dotted_values_in_two() {
+    let durs = |total| -> Vec<u32> {
+        split_undotted_duration(total)
+            .iter()
+            .map(|d| {
+                assert_eq!(d.dots, 0);
+                d.dur
+            })
+            .collect()
+    };
+    assert_eq!(durs(12), vec![2, 4]);
+    assert_eq!(durs(7), vec![4, 8, 16]);
+}
+
+#[test]
 fn notes_carry_their_source_span_as_id() {
     let source = "# parts\nMelody [m] = notes\n\n# score\nkey=C4 time=4/4\n[m] 1 2 3 4\n";
     let start = source.find("1 2").unwrap();
@@ -127,4 +142,34 @@ fn hidden_parts_get_no_staff() {
     assert!(mei.contains("<label>Soprano</label>"), "{mei}");
     assert!(!mei.contains("<label>Alto</label>"), "{mei}");
     assert!(!mei.contains("<syl>"), "{mei}");
+}
+
+#[test]
+fn shown_lyrics_of_a_hidden_part_ride_an_invisible_staff() {
+    let source = "# parts\nSustain [sus] = notes\nBass [B] = notes\nWords [w] = lyrics[B]\n\n# score\nkey=C4 time=2/4\n[sus] 3~\n[B] 1 2\n[w] 你好\n";
+    let mei = crate::render_mei_from_source_with_visibility(
+        source,
+        "test.jianpu",
+        &crate::ResolvedPartVisibility {
+            rendered_tracks: Some(vec!["sus".into(), "w".into()]),
+            ..Default::default()
+        },
+        &[],
+    )
+    .unwrap();
+    assert!(mei.contains("<label>Sustain</label>"), "{mei}");
+    assert!(!mei.contains("<label>Bass</label>"), "{mei}");
+    assert!(
+        mei.contains(r#"<verse n="1"><syl>你</syl></verse>"#),
+        "{mei}"
+    );
+    assert!(
+        mei.contains(r#"<verse n="1"><syl>好</syl></verse>"#),
+        "{mei}"
+    );
+    assert!(mei.contains(r#"lines.visible="false""#), "{mei}");
+    assert!(
+        mei.contains(r#"stem.visible="false" dur="4"><verse n="1"><syl>你</syl>"#),
+        "{mei}"
+    );
 }

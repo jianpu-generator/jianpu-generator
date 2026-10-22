@@ -62,3 +62,21 @@ fn largest_fitting(sixteenths: u32) -> SimpleDuration {
         .copied()
         .unwrap_or(SIXTEENTH)
 }
+
+/// Like [`split_duration`], but a dotted value becomes its undotted value
+/// plus the dot's half, for notes whose dots must not be drawn.
+pub(super) fn split_undotted_duration(sixteenths: u32) -> Vec<SimpleDuration> {
+    split_duration(sixteenths)
+        .into_iter()
+        .flat_map(|piece| match piece.dots {
+            0 => vec![piece],
+            _ => {
+                let main = piece.sixteenths * 2 / 3;
+                vec![
+                    simple(main, piece.dur, 0),
+                    simple(main / 2, piece.dur * 2, 0),
+                ]
+            }
+        })
+        .collect()
+}

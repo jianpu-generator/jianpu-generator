@@ -1,11 +1,11 @@
 //! One part's measure as an MEI `<layer>`: notes, rests, ties, beams and the
 //! slurs its `( )` groups open and close.
 
-use super::duration::{split_duration, SimpleDuration};
+use super::duration::{split_duration, split_undotted_duration, SimpleDuration};
 use super::lyrics::{verses_xml, MeasureSyllables};
 use super::pitch::{spell, AccidentalTracker};
 use super::staves::StaffPart;
-use crate::ast::grouped::{GroupedNote, NoteEvent, PartSlice};
+use crate::ast::grouped::{GroupedNote, LyricsSlice, NoteEvent, PartSlice};
 use crate::ast::parsed::KeyChange;
 use itertools::Itertools;
 
@@ -247,3 +247,44 @@ fn track_slurs(
     }
     state.previous_continuation = note.group_continuation;
 }
+
+/// A lyrics-only staff's layer: its target's rhythm as invisible notes
+/// carrying the verses, with rests as spaces. No beams, ties or slurs, so
+/// nothing but the syllables is drawn.
+pub(super) fn lyrics_only_layer_xml(
+    lyrics: &LyricsSlice,
+    resolution_multiplier: u32,
+    verses: &[MeasureSyllables],
+) -> String {
+    let events = &lyrics.target_events;
+    if events
+        .iter()
+        .all(|event| !matches!(event, NoteEvent::Note(_)))
+    {
+        return "<mSpace/>".to_string();
+    }
+    let multiplier = resolution_multiplier.max(1);
+    events
+        .iter()
+        .enumerate()
+        .flat_map(|(event_index, event)| {
+            let is_note = matches!(event, NoteEvent::Note(_));
+            let syllables = verses_xml(verses, event_index);
+            split_undotted_duration(event.duration() / multiplier)
+                .into_iter()
+                .enumerate()
+                .map(move |(index, duration)| {
+                    let dur = format!("dur=\"{}\"", duration.dur);
+                    match (is_note, index == 0 && !syllables.is_empty()) {
+                        (false, _) => format!("<space {dur}/>"),
+                        (true, true) => format!("<note {INVISIBLE_NOTE} {dur}>{syllables}</note>"),
+                        (true, false) => format!("<note {INVISIBLE_NOTE} {dur}/>"),
+                    }
+                })
+                .collect_vec()
+        })
+        .join("")
+}
+
+/// Sits on the single line of a lyrics-only staff, so no ledger lines.
+const INVISIBLE_NOTE: &str = r#"pname="g" oct="4" head.visible="false" stem.visible="false""#;
