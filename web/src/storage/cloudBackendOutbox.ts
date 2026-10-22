@@ -7,7 +7,7 @@ import type { CloudBackendError } from './cloudBackendTypes'
 import { type BaseSnapshots, createBaseSnapshots } from './outbox/baseSnapshots'
 import { createMemoryOutboxStore } from './outbox/memoryOutboxStore'
 import { broadcastChanges } from './outbox/outboxChanges'
-import { runAsLeader } from './outbox/outboxLock'
+import { runAsLeader, storeLock } from './outbox/outboxLock'
 import {
   createOutboxLooper,
   type OutboxLooper,
@@ -117,6 +117,7 @@ function createCloudOutboxLooper(config: CloudOutboxConfig): CloudOutbox {
         onWake,
       }),
     runAsLeader,
+    withStoreLock: storeLock(config.account),
     changes: broadcastChanges(config.account),
     now: () => Date.now(),
     random: () => Math.random(),

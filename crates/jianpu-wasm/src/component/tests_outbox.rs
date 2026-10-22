@@ -92,6 +92,15 @@ fn encode_then_decode_round_trips_the_queue() {
 }
 
 #[test]
+fn decode_stored_keeps_the_message_in_flight() {
+    let begun = Component::outbox_begin_send(queue_with_save("1 2 3"), 0);
+    let records = Component::outbox_encode_queue(begun.queue);
+    let decoded = Component::outbox_decode_stored_queue(records).ok();
+    let in_flight = decoded.and_then(|queue| queue.lanes.first().cloned()?.in_flight);
+    assert!(in_flight.is_some());
+}
+
+#[test]
 fn decode_rejects_an_unsupported_version() {
     let records = vec![StoredRecord {
         key: "meta:version".to_string(),

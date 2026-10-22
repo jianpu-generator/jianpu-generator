@@ -58,6 +58,17 @@ jobs:
       - name: syntax-md-examples
         run: python3 scripts/check-syntax-md-examples.py
 
+  # Model-checks the TLA+ specs under specs/ (see specs/README.md).
+  tla:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+        with:
+          install_args: java just
+      - name: tlc
+        run: just tla
+
   sqruff:
     runs-on: ubuntu-latest
     steps:

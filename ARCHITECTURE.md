@@ -776,7 +776,7 @@ or the network (`now_ms` and `jitter_unit` are passed in).
 | `scheduling` | `begin_send(queue: Queue, now_ms: u64) -> BeginSend` (`BeginSend { queue, request: Option<SendRequest> }`); `next_wake_ms(queue: &Queue) -> Option<u64>` |
 | `transitions` | `on_result(queue: Queue, file_id: &str, message_id: &str, result: SendResult, now_ms: u64, jitter_unit: f64) -> Queue`; `resolve(queue: Queue, file_id: &str, resolution: Resolution) -> Queue`; `resolve_signed_in(queue: Queue) -> Queue`; `record_revision(queue: Queue, file_id: &str, revision: i64) -> Queue` |
 | `backoff` | `backoff_ms(consecutive_failures: u32, jitter_unit: f64) -> u64` |
-| `codec` | `encode_queue(queue: &Queue) -> Vec<StoredRecord>`; `decode_queue(records: &[StoredRecord]) -> Result<Queue, DecodeError>` |
+| `codec` | `encode_queue(queue: &Queue) -> Vec<StoredRecord>`; `decode_stored_queue(records: &[StoredRecord]) -> Result<Queue, DecodeError>` (exactly as stored); `decode_queue(records: &[StoredRecord]) -> Result<Queue, DecodeError>` (recovers interrupted work: clears every `in_flight`, `Waiting` becomes `Draining`; only for a tab taking over as leader) |
 | `summary` | `summarize(queue: &Queue, now_ms: u64) -> QueueSummary` |
 | `history` | `record_sent(queue_before: &Queue, existing: &[StoredRecord], file_id: &str, message_id: &str, revision: i64, now_ms: u64) -> HistoryWrite`; `rows(queue: &Queue, sent_records: &[StoredRecord], file_names: &[FileName], filter: &HistoryFilter, now_ms: u64) -> Vec<HistoryRow>`; `expired_keys(records: &[StoredRecord], now_ms: u64) -> Vec<String>` |
 | `merge` | `merge_three_way(base: &str, mine: &str, theirs: &str, accepts: impl Fn(&str) -> bool) -> MergeOutcome` |
@@ -785,7 +785,7 @@ The WIT exports are `outbox-enqueue`, `outbox-begin-send`,
 `outbox-next-wake-ms`, `outbox-on-result` (its result parameter is named
 `send-result`), `outbox-resolve`, `outbox-resolve-signed-in`,
 `outbox-record-revision`, `outbox-encode-queue`, `outbox-decode-queue`,
-`outbox-summarize`, `outbox-record-sent` and `outbox-history-rows`
+`outbox-decode-stored-queue`, `outbox-summarize`, `outbox-record-sent` and `outbox-history-rows`
 (conversions in `history_conversion.rs`). `merge_three_way` has no `outbox-*`
 WIT export.
 
@@ -838,8 +838,16 @@ camelCase, enums are tagged with `kind`.
 The shell only does I/O, timers and rendering; every decision is a wasm call.
 
 - Existing: `outboxStore.ts` (persists `StoredRecord`s), `memoryOutboxStore.ts`
-  (in-memory store), `outboxLock.ts` (single-tab lock), `outboxScheduler.ts`
-  (timer driven by `next_wake_ms`).
+  (in-memory store), `outboxLock.ts` (`runAsLeader`, the leader-tab lock, and
+  `storeLock`, the short lock every tab holds around a Store transaction),
+  `outboxScheduler.ts` (timer driven by `next_wake_ms`).
+- `outboxTransaction.ts`: `transact(store, withStoreLock, change, options)`
+  is the only way any tab changes the stored queue. It reads the store,
+  decodes it (`outbox-decode-stored-queue`, or `outbox-decode-queue` when the
+  leader takes over), applies `change`, and writes back only the records that
+  differ, all under the store lock. The in-memory queue a Looper keeps is
+  only what its UI shows; it is never written back. The multi-tab behaviour
+  is model-checked in `specs/outbox-tabs` (see `specs/README.md`).
 - `sendMessage.ts` (performs a `SendRequest` over HTTP and maps the
   response to a `SendResult`), `outboxLooper.ts` (the Looper; runs on the
   leader tab only), `baseSnapshots.ts` (Base snapshot storage under
@@ -847,9 +855,9 @@ The shell only does I/O, timers and rendering; every decision is a wasm call.
   `merge_three_way`: a clean merge is saved at once, a conflicting one is kept
   for the merge editor) and `keepBoth.ts` (saves the local text as a
   `(conflicted copy <date>)` file, then discards the original lane).
-- The Looper calls `outbox-record-sent` just before a successful result is
-  applied, writes the returned record and expired-key deletes to the store,
-  and serves `historyRows(fileNames, filter)` from the cached `sent:` records
+- The Looper calls `outbox-record-sent` in the same Store transaction that
+  applies a successful result, writes the returned record and expired-key
+  deletes with it, and serves `historyRows(fileNames, filter)` from the cached `sent:` records
   (`refreshHistory()` re-reads them, e.g. for a follower tab).
 - `web/src/storage/cloudBackend.ts` enqueues every remote update; structural
   operations apply locally at once and queue `create-file`, `rename-file`,
@@ -874,5 +882,7 @@ The shell only does I/O, timers and rendering; every decision is a wasm call.
 | **Message** | One queued cloud operation (`Message`) with a `message_id` and its recorded attempts (`QueuedMessage`). A `SaveContent` coalesces into a directly preceding, not in-flight `SaveContent`. |
 | **History** | Every message the outbox knows about, newest first: those still queued plus the delivered ones kept under `sent:` keys until retention prunes them. Shown in the outbox history dialog. |
 | **Looper** | The TS loop (`outboxLooper.ts`) that repeatedly calls `begin_send`, performs the request, and feeds the `SendResult` to `on_result`, sleeping until `next_wake_ms`. |
+| **Store transaction** | One read-change-write of the stored queue by any tab under the account's store lock (`outboxTransaction.ts`), so no tab writes over a change it has not read. |
+| **Leader tab** | The one tab holding the `runAsLeader` lock; only its Looper sends. On taking over it recovers the previous leader's interrupted work (`decode_queue`). |
 | **Halt** | A lane stopping instead of retrying: `NeedsSignIn`, `NeedsMerge` or `Failed`. It stays halted until a `Resolution` (or `resolve_signed_in`) moves it back to `Draining`. |
 | **Base snapshot** | The last content known to match the server for a file (kept by `baseSnapshots.ts`); the `base` input of `merge_three_way` when a revision conflict needs merging. |

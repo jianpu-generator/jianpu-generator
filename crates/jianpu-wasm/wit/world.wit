@@ -1642,6 +1642,7 @@ world jianpu-wasm {
     export outbox-record-revision: func(queue: queue, file-id: string, revision: s64) -> queue;
     export outbox-encode-queue: func(queue: queue) -> list<stored-record>;
     export outbox-decode-queue: func(records: list<stored-record>) -> result<queue, decode-error>;
+    export outbox-decode-stored-queue: func(records: list<stored-record>) -> result<queue, decode-error>;
     export outbox-summarize: func(queue: queue, now-ms: u64) -> queue-summary;
     export outbox-record-sent: func(queue-before: queue, existing: list<stored-record>, file-id: string, message-id: string, revision: s64, now-ms: u64) -> history-write;
     export outbox-history-rows: func(queue: queue, sent-records: list<stored-record>, file-names: list<file-name>, filter: history-filter, now-ms: u64) -> list<history-row>;

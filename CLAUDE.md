@@ -42,6 +42,12 @@ Never use tuple in new data structures, always use struct instead.
 
 Keep the TypeScript web frontend as dumb as possible; put logic in Rust (compiled to wasm for the worker). The web layer passes raw UI state (e.g. hidden/soloed sets) to Rust and renders what comes back. Don't derive effective state (solo resolution, track filtering) in TS hooks.
 
+## TLA+ specs
+
+The cloud outbox's cross-tab behaviour is model-checked in `specs/` (see `specs/README.md`; run with `just tla`).
+
+- When a change touches `crates/cloud-outbox`, `web/src/storage/outbox/`, or the server's file-write queries, **MUST update the matching spec and `specs/README.md`** in the same commit if the modelled behaviour changes, and run `just tla`.
+
 ## Architecture documentation
 
 The rendering pipeline layers, entry points, key types, and domain glossary are documented in `ARCHITECTURE.md`.
