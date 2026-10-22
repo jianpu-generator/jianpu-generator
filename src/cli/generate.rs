@@ -322,3 +322,16 @@ pub fn generate_mp3(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
     println!("written to {output_path:?}");
     Ok(())
 }
+
+/// Experimental: write the score as MEI for Verovio to engrave as staff notation.
+pub fn generate_mei(opts: &GenerateInput) -> Result<(), jg::error::IrrecoverableError> {
+    let mut score = super::parse_and_group(&opts.input)?;
+    jg::filter_tracks(&mut score, &opts.tracks);
+    let display_names = read_display_names(&opts.input)?;
+    let mei = jg::mei_export::score_to_mei(&score, &display_names);
+    let output_path =
+        output_stem(&opts.input, &opts.tracks, opts.output.as_deref()).with_extension("mei");
+    super::write_file(&output_path, mei.as_bytes())?;
+    println!("written to {output_path:?}");
+    Ok(())
+}

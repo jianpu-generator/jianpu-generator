@@ -108,6 +108,16 @@ source (&str)
 - When `source` is `Some`, each emitted `<svg>` gets a base64-encoded, non-rendering `<metadata id="jianpu-source">` child holding the original `.jianpu` text, so a lost source file can be recovered from a previously exported SVG. `source_embed::extract_embedded_source(svg: &str) -> Option<String>` (`src/source_embed.rs`) reverses this. Only call sites with source in scope (e.g. `render_svgs_from_source_filtered`, `render_svgs_with_highlight_range`) pass `Some`; the `Score`-only `render_svgs` path passes `None` and emits no metadata tag.
 - PDF export (`pdf::write_pdf(svgs: &[String], fonts: &fonts::FontBytesByFamily, source: Option<&str>) -> Result<Vec<u8>, IrrecoverableError>`, `src/pdf.rs`) can't reuse this `<metadata>` embedding — `usvg` (which parses each page's SVG string before `svg2pdf` conversion) strips `<metadata>` tags. Instead, when `source` is `Some`, it base64-encodes the source into a custom `/JianpuSource` key in the PDF's `/Info` dictionary via `pdf_writer`'s `DocumentInfo`. `source_embed::extract_embedded_source_from_pdf(pdf: &[u8]) -> Option<String>` reverses this by string-searching the (uncompressed) `/Info` dictionary bytes. `write_pdf_from_source_filtered_with_lyrics` and the CLI's non-split `generate_pdf` pass `Some`; `write_split_pdfs_from_source` (split-track export) passes `None`, matching split-track SVG export's `None` for the same reason.
 
+### MEI export (experimental, staff notation)
+- Module: `src/mei_export/`
+- Entry: `mei_export::score_to_mei(score: &Score, display_names: &HashMap<String, String>) -> String`; CLI: `jianpu generate mei <file>`.
+- A side branch off the grouped `Score`, parallel to the compiler → renderer path: it emits MEI for [Verovio](https://www.verovio.org) to engrave as western staff notation. Nothing in the jianpu grid pipeline is reused past the grouper.
+- One `<staff>` per `notes` part (clef picked from the part's average sounding pitch: bass below MIDI 53, octave-down treble when `octave_offset < 0`, else treble); a `chords` part becomes `<harm>` letter-name symbols (degrees spelled in the key, `6m` in F → `Dm`) over the top staff that has notes in that measure; each `lyrics[X]` part becomes a `<verse>` on X's notes, paired via `lyric_slots::measure_lyric_slots`.
+- Pitches are spelled by letter from the key's tonic (`pitch::spell`), so `#4` in C is F♯, never G♭; `pitch::AccidentalTracker` writes `@accid` only against the key signature or an earlier accidental in the measure. Durations that one MEI note can't write are split into tied pieces (`duration::split_duration`); eighths and shorter are beamed per `beat_group_size`; slurs come from `( )` group depth and are encoded in the measure of their start note.
+- Each note's `xml:id` is `n{start}-{end}`, its `event_span`, and Verovio keeps it in the SVG, which is how a staff view can map clicks/playback back to source.
+- The `scoreDef` carries `optimize="true"` so Verovio's `condense: "encoded"` hides empty staves per system (`condense: "auto"` does not).
+- Key types: `StaffPart`/`Clef` (`staves.rs`), `SpelledPitch`/`Letter` (`pitch.rs`), `SimpleDuration` (`duration.rs`), `LayerContext`/`StaffState`/`Slur` (`layer.rs`), `Verse`/`MeasureSyllables` (`lyrics.rs`), `HarmonyPlacement` (`harmony.rs`).
+
 ## Glossary
 
 | Term | Definition |

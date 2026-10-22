@@ -38,6 +38,7 @@ pub mod layout;
 mod lyric_slots;
 pub mod lyric_spans;
 pub mod measure_spans;
+pub mod mei_export;
 pub mod migrate_lyrics;
 pub mod note_spans;
 pub mod parser;
