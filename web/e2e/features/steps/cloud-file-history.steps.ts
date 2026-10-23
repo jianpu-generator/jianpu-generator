@@ -8,12 +8,22 @@ import { Then, When } from './fixtures'
 
 const historyPanel = (page: Page) => page.getByTestId('file-history')
 
-const DIFF_MARKS = { removed: '-', added: '+' } as const
+/** The text on one side of the History diff: `original` is the editor's
+ * current text, `modified` the chosen version. */
+function diffSide(page: Page, side: 'original' | 'modified') {
+  return page.evaluate((which) => {
+    const container = document.querySelector(
+      `[data-testid="file-history-diff"] .editor.${which}`,
+    )
+    const editor = window.monaco?.editor
+      .getEditors()
+      .find((candidate) => container?.contains(candidate.getContainerDomNode()))
+    return editor?.getModel()?.getValue() ?? null
+  }, side)
+}
 
-const diffLine = (page: Page, kind: 'removed' | 'added', text: string) =>
-  historyPanel(page)
-    .locator(`.file-history__line--${kind}`)
-    .getByText(`${DIFF_MARKS[kind]} ${text}`, { exact: true })
+const diffEditor = (page: Page) =>
+  historyPanel(page).locator('.monaco-diff-editor')
 
 When('I open the History panel', async ({ page }) => {
   await openFileActions(page)
@@ -32,12 +42,29 @@ Then(
   },
 )
 
-Then('the History diff removes {string}', async ({ page }, text: string) => {
-  await expect(diffLine(page, 'removed', text)).toHaveCount(1)
+Then(
+  'the History diff compares the current text ending in {string} with the version ending in {string}',
+  async ({ page }, current: string, version: string) => {
+    await expect
+      .poll(() => diffSide(page, 'original'))
+      .toMatch(new RegExp(`${current}\\n?$`))
+    await expect
+      .poll(() => diffSide(page, 'modified'))
+      .toMatch(new RegExp(`${version}\\n?$`))
+  },
+)
+
+Then('the History diff marks the removed characters', async ({ page }) => {
+  await expect(diffEditor(page).locator('.char-delete').first()).toBeVisible()
 })
 
-Then('the History diff adds {string}', async ({ page }, text: string) => {
-  await expect(diffLine(page, 'added', text)).toHaveCount(1)
+When('I switch the History diff to inline', async ({ page }) => {
+  await page.getByTestId('file-history-layout-toggle').click()
+})
+
+Then('the History diff is inline', async ({ page }) => {
+  // Monaco sets `side-by-side` on the diff editor root only in that layout.
+  await expect(diffEditor(page)).not.toHaveClass(/\bside-by-side\b/)
 })
 
 When('I click Restore in the History panel', async ({ page }) => {

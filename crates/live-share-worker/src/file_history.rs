@@ -15,9 +15,6 @@
 
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-
 /// How many versions of a file are kept; older ones are pruned on each save.
 pub const MAX_VERSIONS_PER_FILE: i64 = 100;
 
@@ -84,50 +81,4 @@ pub fn rebuild(
                 apply_patch(&row.reverse_patch, &text)
             }),
     )
-}
-
-/// Whether a line of a `line_diff` is in both texts, only the old one, or
-/// only the new one.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub enum DiffLineKind {
-    Same,
-    Removed,
-    Added,
-}
-
-/// One line of a `line_diff`, without its line break.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct DiffLine {
-    pub kind: DiffLineKind,
-    pub text: String,
-}
-
-/// Every line of `old` and `new`, each marked as kept, removed or added.
-pub fn line_diff(old: &str, new: &str) -> Vec<DiffLine> {
-    let line = |kind, text: &str| DiffLine {
-        kind,
-        text: text.trim_end_matches(['\n', '\r']).to_string(),
-    };
-    if old == new {
-        return old
-            .lines()
-            .map(|text| line(DiffLineKind::Same, text))
-            .collect();
-    }
-    let context = old.lines().count().max(new.lines().count()) + 1;
-    let patch = diffy::DiffOptions::new()
-        .set_context_len(context)
-        .create_patch(old, new);
-    patch
-        .hunks()
-        .iter()
-        .flat_map(|hunk| hunk.lines())
-        .map(|diff_line| match diff_line {
-            diffy::Line::Context(text) => line(DiffLineKind::Same, text),
-            diffy::Line::Delete(text) => line(DiffLineKind::Removed, text),
-            diffy::Line::Insert(text) => line(DiffLineKind::Added, text),
-        })
-        .collect()
 }

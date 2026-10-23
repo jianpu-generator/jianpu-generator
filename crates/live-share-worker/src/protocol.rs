@@ -246,14 +246,11 @@ pub struct GetFileVersionRequest {
     pub revision: i64,
 }
 
-/// `200` response of `POST /files/{id}/versions/get`: the version's text,
-/// and the change restoring it would make to the file's current text
-/// (removed = only in the current text, added = only in the version).
+/// `200` response of `POST /files/{id}/versions/get`: the version's text.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FileVersionResponse {
     pub content: String,
-    pub diff: Vec<crate::file_history::DiffLine>,
 }
 
 /// Body of `POST /files/{id}/rename`. No revision gate -- rename has no

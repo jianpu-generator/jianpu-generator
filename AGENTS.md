@@ -31,6 +31,7 @@ Reuse the shared components in `web/src/components/` before building a new contr
 - **`ResponsiveMenu`**: every dropdown or menu, including pickers like the notation view. It renders a Radix `DropdownMenu` on desktop and a full-screen `vaul` drawer on mobile, so mobile is handled for you. Style the trigger with `.preview-export-btn` and the content with `.export-menu-list` / `.export-menu-item` (`web/src/preview-toolbar.css`). See `ExportMenuButton` and `NotationToggle` for examples. Don't use a native `<select>` or a bare Radix `DropdownMenu` for these.
 - **`ExportMenuButton`**: a button that opens a sectioned menu of actions (built on `ResponsiveMenu`).
 - **`RadixSelectItem`** (`RadixTableSelect.tsx`): items for a Radix `Select` inside a table cell.
+- **`JianpuDiffEditor`** / **`DiffLayoutToggle`**: a Monaco diff of two `.jianpu` texts (read-only, or with an editable right side) and its inline / side-by-side switch, whose choice `useDiffLayout` remembers. Used by the part stream editor and the History modal.
 - **`EditorToolbarButton`**: an icon button with a tooltip for the editor toolbar.
 - **`SpinnerLabel`**: a button label with the shared pending spinner.
 - **`accountDialogParts.tsx`**: `AccountDialogFrame`, `Field`, `ErrorBanner` and friends for account modals.

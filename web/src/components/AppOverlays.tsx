@@ -1,4 +1,4 @@
-import { displayFileName, type FileStoreState } from '../fileStore'
+import { displayFileName, type FileStoreState, fileContent } from '../fileStore'
 import { binEntries } from '../fileStoreQueries'
 import type { FileOpError } from '../hooks/useFileOperations'
 import type { PendingDownload } from '../hooks/useJianpuWorkerTypes'
@@ -149,6 +149,7 @@ export function AppOverlays({
           backend={backend as CloudBackend}
           fileId={fileId}
           fileName={displayFileName(store.active)}
+          currentContent={fileContent(store, store.active)}
           onRestore={onRestoreVersion}
         />
       ) : null}

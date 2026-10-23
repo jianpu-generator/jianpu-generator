@@ -572,8 +572,7 @@ migrations (see "Storage" below), nothing else.
   `handlers::auth` (the four account routes); `app_log::LogEvent` /
   `app_log::AuthEvent` / `app_log::Outcome` / `app_log::LogRow` (the typed
   `app_log` rows, see "App log (observability)" below);
-  `file_history::VersionRow` / `file_history::DiffLine` /
-  `file_history::DiffLineKind` (see "Version history" below); `db` (crate-private raw D1 query
+  `file_history::VersionRow` (see "Version history" below); `db` (crate-private raw D1 query
   functions, one `.sql` file per query under `queries/`, loaded via
   `include_str!`).
 - Ownership model: a share's `owner_user_id` column (backfilled from the
@@ -682,8 +681,7 @@ previous one (`live-share-worker/migrations/0008_file_versions.sql`).
   `reverse_patch`, `apply_patch` (diffy unified diffs),
   `reachable_versions(head_revision, rows)` (follows `newer_revision`
   links from the head and stops at the first gap),
-  `rebuild(head_content, head_revision, rows, revision)` and
-  `line_diff(old, new) -> Vec<DiffLine>`.
+  and `rebuild(head_content, head_revision, rows, revision)`.
 - Writes: `handlers::files::update_file_content` reads the previous head
   before the compare-and-swap. Once the CAS applies, it records the version
   as a best-effort step (any error is logged and does not fail the save). A
@@ -694,11 +692,14 @@ previous one (`live-share-worker/migrations/0008_file_versions.sql`).
   `file_history::MAX_VERSIONS_PER_FILE` (100) rows.
 - Reads: `POST /files/{id}/versions` lists the reachable versions
   (`protocol::ListFileVersionsResponse`). `POST /files/{id}/versions/get`
-  rebuilds one revision and returns its `content` plus a `diff` against
-  the head (`protocol::FileVersionResponse`). Both routes are owner-scoped
+  rebuilds one revision and returns its `content`
+  (`protocol::FileVersionResponse`). Both routes are owner-scoped
   in SQL (`queries/list_file_versions.sql`).
 - Web: `web/src/components/fileHistory/FileHistoryModal.tsx`, opened from
-  the file actions menu's "History" item (cloud backend only). Restore puts
+  the file actions menu's "History" item (cloud backend only). It diffs the
+  editor's current text against the chosen version with
+  `web/src/components/JianpuDiffEditor.tsx`, the Monaco diff the part stream
+  editor also uses (inline or side by side, `hooks/useDiffLayout.ts`). Restore puts
   the version's text in the editor, and the normal save path stores it as a
   new head, so a restore adds a version and never rewrites history.
 

@@ -103,44 +103,15 @@
 
 .file-history__diff {
   flex: 1;
-  margin: 0;
-  padding: 8px 0;
-  overflow: auto;
-  font-size: 0.75rem;
-  line-height: 1.5;
-}
-
-.file-history__line {
-  padding: 0 16px;
-  white-space: pre;
-}
-
-.file-history__line--removed {
-  background: #fde8e8;
-  color: #9b1c1c;
-}
-
-.file-history__line--added {
-  background: #def7ec;
-  color: #03543f;
+  min-height: 0;
 }
 
 .file-history__actions {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   padding: 10px 16px;
   border-top: 1px solid var(--border);
-}
-
-.file-history__restore {
-  padding: 6px 14px;
-  border: 1px solid var(--accent);
-  border-radius: 4px;
-  background: var(--accent);
-  color: #fff;
-  font: inherit;
-  font-size: 0.8rem;
-  cursor: pointer;
 }
 
 @media (max-width: 768px) {

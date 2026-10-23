@@ -228,8 +228,7 @@ pub(super) async fn get_file_version(
         .map_err(|error| ApiError::Internal {
             message: error.message,
         })?;
-    let diff = file_history::line_diff(&file.content, &content);
-    Ok(Json(FileVersionResponse { content, diff }))
+    Ok(Json(FileVersionResponse { content }))
 }
 
 /// `POST /files/{id}/rename` -- atomic rename, no revision gate (matches the

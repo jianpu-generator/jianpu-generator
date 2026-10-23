@@ -1,19 +1,15 @@
-import { DiffEditor, type Monaco } from '@monaco-editor/react'
+import type { Monaco } from '@monaco-editor/react'
 import type { editor } from 'monaco-editor'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useDiffLayout } from '../../hooks/useDiffLayout'
 import {
   jianpuWasm,
   type PartStream,
   type StreamablePart,
 } from '../../jianpuWasm'
-import {
-  JIANPU_LANGUAGE_ID,
-  registerJianpuLanguage,
-} from '../../monacoJianpuLanguage'
 import { buildDiagnosticMarkers } from '../editorDiagnosticViewZones'
-import { EDITOR_THEME } from '../editorTheme'
 import '../FileDialogs.css'
-import { usePartStreamDiffLayout } from './usePartStreamDiffLayout'
+import { DiffLayoutToggle, JianpuDiffEditor } from '../JianpuDiffEditor'
 
 const MARKER_OWNER = 'part-stream'
 
@@ -52,7 +48,7 @@ export function PartStreamDiffEditor({
   const [editedText, setEditedText] = useState(stream.text)
   const [mounted, setMounted] = useState<MountedEditor | null>(null)
   const mountedRef = useRef<MountedEditor | null>(null)
-  const { layout, toggle: toggleLayout } = usePartStreamDiffLayout()
+  const { layout, toggle: toggleLayout } = useDiffLayout()
   const result = useMemo(
     () => jianpuWasm().applyPartStream(source, part.abbreviation, editedText),
     [source, part.abbreviation, editedText],
@@ -85,28 +81,11 @@ export function PartStreamDiffEditor({
   return (
     <div className="part-stream-editor" data-testid="part-stream-editor">
       <div className="part-stream-editor__diff">
-        <DiffEditor
-          height="100%"
-          language={JIANPU_LANGUAGE_ID}
-          theme={EDITOR_THEME}
+        <JianpuDiffEditor
           original={stream.text}
           modified={stream.text}
-          beforeMount={registerJianpuLanguage}
-          options={{
-            readOnly: false,
-            originalEditable: false,
-            renderSideBySide: layout === 'side-by-side',
-            // Otherwise Monaco forces inline below ~900px, overriding the toggle.
-            useInlineViewWhenSpaceIsLimited: false,
-            wordWrap: 'on',
-            diffWordWrap: 'on',
-            minimap: { enabled: false },
-            fontFamily: 'var(--mono)',
-            fontSize: 14,
-            lineHeight: 24,
-            renderValidationDecorations: 'on',
-            scrollBeyondLastLine: false,
-          }}
+          layout={layout}
+          editable
           onMount={(diffEditor, monacoApi) => {
             const modified = diffEditor.getModifiedEditor()
             modified.onDidChangeModelContent(() => {
@@ -130,14 +109,11 @@ export function PartStreamDiffEditor({
             ` · ${errorCount} ${errorCount === 1 ? 'error' : 'errors'}`}
         </span>
         <div className="part-stream-editor__actions">
-          <button
-            type="button"
-            className="file-dialog-button"
-            data-testid="part-stream-layout-toggle"
-            onClick={toggleLayout}
-          >
-            {layout === 'inline' ? 'Side by side' : 'Inline'}
-          </button>
+          <DiffLayoutToggle
+            layout={layout}
+            onToggle={toggleLayout}
+            testId="part-stream-layout-toggle"
+          />
           <button
             type="button"
             className="file-dialog-button"

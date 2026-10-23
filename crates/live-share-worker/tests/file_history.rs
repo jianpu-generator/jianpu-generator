@@ -5,7 +5,7 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use live_share_worker::file_history::{
-    apply_patch, line_diff, reachable_versions, rebuild, reverse_patch, DiffLineKind, VersionRow,
+    apply_patch, reachable_versions, rebuild, reverse_patch, VersionRow,
 };
 use proptest::prelude::*;
 
@@ -224,19 +224,6 @@ proptest! {
             versions.len() + 1
         );
         history.assert_every_version_rebuilds()?;
-    }
-
-    #[test]
-    fn a_line_diff_holds_both_texts(old in text(), new in text()) {
-        let diff = line_diff(&old, &new);
-        let side = |skip: DiffLineKind| -> Vec<String> {
-            diff.iter().filter(|line| line.kind != skip).map(|line| line.text.clone()).collect()
-        };
-        let lines = |text: &str| -> Vec<String> {
-            text.lines().map(|line| line.trim_end_matches('\r').to_string()).collect()
-        };
-        prop_assert_eq!(side(DiffLineKind::Added), lines(&old));
-        prop_assert_eq!(side(DiffLineKind::Removed), lines(&new));
     }
 }
 

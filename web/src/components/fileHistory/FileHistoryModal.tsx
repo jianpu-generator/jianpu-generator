@@ -1,11 +1,13 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { type ReactElement, useEffect, useState } from 'react'
+import { useDiffLayout } from '../../hooks/useDiffLayout'
 import type {
   CloudBackend,
   FileVersion,
   FileVersionSummary,
 } from '../../storage/cloudBackendTypes'
 import { WorkerRequestError } from '../../syncedShare/workerClient'
+import { DiffLayoutToggle, JianpuDiffEditor } from '../JianpuDiffEditor'
 import { SpinnerLabel } from '../SpinnerLabel'
 import './FileHistory.css'
 
@@ -15,6 +17,8 @@ export interface FileHistoryModalProps {
   backend: CloudBackend
   fileId: string
   fileName: string
+  /** The editor's current text, which a version is diffed against. */
+  currentContent: string
   /** Puts `content` in the editor; it is saved like any edit, as a new
    * version. */
   onRestore: (content: string) => void
@@ -67,6 +71,7 @@ export function FileHistoryModal({
   backend,
   fileId,
   fileName,
+  currentContent,
   onRestore,
 }: FileHistoryModalProps): ReactElement {
   const versions = useLoad<FileVersionSummary[]>(open ? fileId : null, () =>
@@ -131,6 +136,7 @@ export function FileHistoryModal({
               </ul>
               <VersionPane
                 version={version}
+                currentContent={currentContent}
                 onRestore={(content) => {
                   onOpenChange(false)
                   onRestore(content)
@@ -144,15 +150,16 @@ export function FileHistoryModal({
   )
 }
 
-const DIFF_MARKS = { same: ' ', removed: '-', added: '+' } as const
-
 function VersionPane({
   version,
+  currentContent,
   onRestore,
 }: {
   version: Load<FileVersion>
+  currentContent: string
   onRestore: (content: string) => void
 }): ReactElement {
+  const { layout, toggle } = useDiffLayout()
   if (version.status === 'loading') {
     return (
       <div className="file-history__pane">
@@ -173,22 +180,22 @@ function VersionPane({
   }
   return (
     <div className="file-history__pane">
-      <pre className="file-history__diff" data-testid="file-history-diff">
-        {version.value.diff.map((line, index) => (
-          <div
-            // Lines repeat, so their position is their identity.
-            // biome-ignore lint/suspicious/noArrayIndexKey: see above
-            key={index}
-            className={`file-history__line file-history__line--${line.kind}`}
-          >
-            {`${DIFF_MARKS[line.kind]} ${line.text}`}
-          </div>
-        ))}
-      </pre>
+      <div className="file-history__diff" data-testid="file-history-diff">
+        <JianpuDiffEditor
+          original={currentContent}
+          modified={version.value.content}
+          layout={layout}
+        />
+      </div>
       <div className="file-history__actions">
+        <DiffLayoutToggle
+          layout={layout}
+          onToggle={toggle}
+          testId="file-history-layout-toggle"
+        />
         <button
           type="button"
-          className="file-history__restore"
+          className="file-dialog-button file-dialog-button--primary"
           onClick={() => onRestore(version.value.content)}
         >
           Restore
