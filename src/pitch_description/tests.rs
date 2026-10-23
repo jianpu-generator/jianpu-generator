@@ -120,13 +120,52 @@ fn minor_seventh_chord_tones_and_name() {
 }
 
 #[test]
-fn minor_seventh_chord_has_chords_db_first_voicing() {
+fn minor_seventh_chord_has_chords_db_first_voicing_first() {
     let source = chords_score("C4", "1m7 - - -");
     let svg = describe_chord_token(&source, "1m7")
-        .guitar_diagram_svg
+        .guitar_diagram_svgs
+        .into_iter()
+        .next()
         .unwrap();
     assert!(svg.contains(r#"data-guitar-frets="x 3 1 3 4 x""#), "{svg}");
     assert!(svg.contains(r#"data-guitar-base-fret="1""#), "{svg}");
+}
+
+fn guitar_diagram_frets(chord: &ChordDescription) -> Vec<String> {
+    chord
+        .guitar_diagram_svgs
+        .iter()
+        .map(|svg| {
+            let (_, after) = svg.split_once(r#"data-guitar-frets=""#).unwrap();
+            let (frets, _) = after.split_once('"').unwrap();
+            frets.to_string()
+        })
+        .collect()
+}
+
+#[test]
+fn major_chord_shows_every_chords_db_voicing_open_shape_first() {
+    let source = chords_score("C4", "1 - - -");
+    let chord = describe_chord_token(&source, "1");
+    assert_eq!(
+        guitar_diagram_frets(&chord),
+        ["x 3 2 0 1 0", "3 3 5 5 5 3", "x x 5 5 5 8", "8 10 10 9 8 8",]
+    );
+}
+
+#[test]
+fn chord_without_open_shape_shows_every_barred_voicing() {
+    let source = chords_score("C4", "4 - - -");
+    let chord = describe_chord_token(&source, "4");
+    assert_eq!(
+        guitar_diagram_frets(&chord),
+        [
+            "1 3 3 2 1 1",
+            "x 3 3 5 6 5",
+            "5 8 7 5 6 5",
+            "8 8 10 10 10 8",
+        ]
+    );
 }
 
 #[test]
@@ -134,7 +173,9 @@ fn barre_voicing_up_the_neck_reports_absolute_frets() {
     // chords-db's first Gm7 position is a barre with base fret 3.
     let source = chords_score("C4", "5m7 - - -");
     let svg = describe_chord_token(&source, "5m7")
-        .guitar_diagram_svg
+        .guitar_diagram_svgs
+        .into_iter()
+        .next()
         .unwrap();
     assert!(svg.contains(r#"data-guitar-frets="3 5 3 3 3 3""#), "{svg}");
     assert!(svg.contains(r#"data-guitar-base-fret="3""#), "{svg}");
@@ -156,7 +197,7 @@ fn diminished_seventh_symbol_is_half_diminished_like_midi_playback() {
     let chord = describe_chord_token(&source, "7o7");
     assert_eq!(chord.chord_name, "Bm7b5");
     assert_eq!(chord.tone_names, ["B", "D", "F", "A"]);
-    assert!(chord.guitar_diagram_svg.is_some());
+    assert!(!chord.guitar_diagram_svgs.is_empty());
 }
 
 #[test]
@@ -166,7 +207,7 @@ fn slash_chord_reports_bass_separately() {
     assert_eq!(chord.chord_name, "C/G");
     assert_eq!(chord.tone_names, ["C", "E", "G"]);
     assert_eq!(chord.bass_note.as_deref(), Some("G"));
-    assert!(chord.guitar_diagram_svg.is_some());
+    assert!(!chord.guitar_diagram_svgs.is_empty());
 }
 
 #[test]
@@ -175,7 +216,7 @@ fn slash_chord_without_slash_voicing_falls_back_to_plain_chord() {
     let source = chords_score("F4", "4/6 - - -");
     let chord = describe_chord_token(&source, "4/6");
     assert_eq!(chord.chord_name, "Bb/D");
-    assert!(chord.guitar_diagram_svg.is_some());
+    assert!(!chord.guitar_diagram_svgs.is_empty());
 }
 
 #[test]
@@ -184,7 +225,7 @@ fn chord_kind_missing_from_chords_db_has_no_diagram() {
     let chord = describe_chord_token(&source, "1sus27");
     assert_eq!(chord.chord_name, "C7sus2");
     assert_eq!(chord.tone_names, ["C", "D", "G", "Bb"]);
-    assert_eq!(chord.guitar_diagram_svg, None);
+    assert!(chord.guitar_diagram_svgs.is_empty());
 }
 
 #[test]
