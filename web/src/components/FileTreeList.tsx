@@ -6,7 +6,7 @@ import {
   DividerHorizontalIcon,
   Link2Icon,
 } from '@radix-ui/react-icons'
-import type { CSSProperties } from 'react'
+import { type CSSProperties, useState } from 'react'
 import { displayFileName } from '../fileStore'
 import type { CheckState, FileTreeViewRow } from '../jianpuWasm'
 import { FileTabName } from './FileTabName'
@@ -116,6 +116,14 @@ function rowSelectionClass(
   return ` file-tree-row--selecting${check === 'checked' ? ' file-tree-row--checked' : ''}`
 }
 
+/** A row's identity in the list; keys alone repeat across kinds (a demo
+ * file and a top-level file can share a name). */
+function rowId(row: FileTreeViewRow): string {
+  return row.kind === 'empty-folder-hint'
+    ? `hint:${row.depth}:${row.name}:${row.key}`
+    : `${row.kind}:${row.key}`
+}
+
 export function FileTreeList({
   rows,
   readOnly = false,
@@ -130,10 +138,21 @@ export function FileTreeList({
   importing = false,
   onToggleSelect,
 }: FileTreeListProps) {
+  // The hovered row, else the active file, has its folders highlighted.
+  const [hoveredRowId, setHoveredRowId] = useState<string | null>(null)
+  const focusRow =
+    rows.find((row) => rowId(row) === hoveredRowId) ??
+    rows.find((row) => row.isActive)
+  const ancestorKeys = new Set(focusRow?.ancestorKeys ?? [])
   return (
-    <ul className="file-tabs" aria-label="Files">
+    <ul
+      className="file-tabs"
+      aria-label="Files"
+      onMouseLeave={() => setHoveredRowId(null)}
+    >
       {rows.map((row) => {
         const rowStyle = { '--tree-depth': row.depth } as CSSProperties
+        const onMouseEnter = () => setHoveredRowId(rowId(row))
         switch (row.kind) {
           case 'folder':
           case 'demo-folder': {
@@ -147,9 +166,10 @@ export function FileTreeList({
             )
             return (
               <li
-                key={`${row.kind}:${row.key}`}
-                className={`file-tree-row file-tree-folder-row${demo ? ' file-tree-demo-row' : ''}${rowSelectionClass(selecting, row.check)}`}
+                key={rowId(row)}
+                className={`file-tree-row file-tree-folder-row${demo ? ' file-tree-demo-row' : ''}${ancestorKeys.has(row.key) ? ' file-tree-row--ancestor' : ''}${rowSelectionClass(selecting, row.check)}`}
                 style={rowStyle}
+                onMouseEnter={onMouseEnter}
               >
                 {selecting ? (
                   <>
@@ -203,9 +223,10 @@ export function FileTreeList({
           case 'empty-folder-hint':
             return (
               <li
-                key={`hint:${row.depth}:${row.name}:${row.key}`}
+                key={rowId(row)}
                 className="file-tree-row file-tree-empty-hint"
                 style={rowStyle}
+                onMouseEnter={onMouseEnter}
               >
                 {row.name}
               </li>
@@ -215,9 +236,10 @@ export function FileTreeList({
               onToggleSelect !== undefined && row.check !== undefined
             return (
               <li
-                key={`${row.kind}:${row.key}`}
+                key={rowId(row)}
                 className={`file-tab file-tree-row${row.isActive ? ' file-tab--active' : ''}${rowSelectionClass(selecting, row.check)}`}
                 style={rowStyle}
+                onMouseEnter={onMouseEnter}
               >
                 {selecting ? (
                   <RowCheckbox
