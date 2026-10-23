@@ -6,12 +6,14 @@ use worker::RouteContext;
 use crate::api_error::ApiError;
 use crate::app_log::RequestMeta;
 use crate::db;
+use crate::file_history::{self, VersionRow};
 use crate::files::{self, ContentWriteAttempt, ContentWriteOutcome, PublicFile};
 use crate::folder_share;
 use crate::protocol::{
-    CreateFileRequest, DeleteFileRequest, FileIdPath, ListFilesRequest, ListFilesResponse,
-    RenameBatchRequest, RenameFileRequest, RestoreFileRequest, UpdateFileContentRequest,
-    UpdateFileContentResponse,
+    CreateFileRequest, DeleteFileRequest, FileIdPath, FileVersionResponse, FileVersionSummary,
+    GetFileVersionRequest, ListFileVersionsRequest, ListFileVersionsResponse, ListFilesRequest,
+    ListFilesResponse, RenameBatchRequest, RenameFileRequest, RestoreFileRequest,
+    UpdateFileContentRequest, UpdateFileContentResponse,
 };
 
 use super::routes::{HandlerResult, Json, NoContent, NoPathParams};
@@ -99,7 +101,8 @@ pub(super) async fn create_file(
 /// on success, `ApiError::RevisionConflict` when the row moved on since the
 /// caller last saw it (or was trashed out from under the write),
 /// `ApiError::NotFound` when the file doesn't exist or isn't the caller's --
-/// see `crate::files::classify_content_write`.
+/// see `crate::files::classify_content_write`. An applied save is also
+/// recorded in the file's version history (`record_version`).
 pub(super) async fn update_file_content(
     ctx: RouteContext<()>,
     path: FileIdPath,
@@ -109,6 +112,7 @@ pub(super) async fn update_file_content(
     let d1 = ctx.d1(D1_BINDING)?;
     let owner_user_id = resolve_files_caller(&d1, &body.identity_token, &request_meta).await?;
 
+    let previous = db::get_file_by_id(&d1, &path.id, &owner_user_id).await?;
     let now = worker::Date::now().as_millis() as i64;
     let attempt = db::update_file_content(
         &d1,
@@ -127,14 +131,105 @@ pub(super) async fn update_file_content(
     };
 
     match files::classify_content_write(attempt, body.expected_revision, current.as_ref()) {
-        ContentWriteOutcome::Applied { new_revision } => Ok(Json(UpdateFileContentResponse {
-            revision: new_revision,
-        })),
+        ContentWriteOutcome::Applied { new_revision } => {
+            // The text at `expected_revision` is the one read above: every
+            // content write bumps the revision, so the CAS pins it.
+            if let Some(previous) = previous.filter(|file| file.revision == body.expected_revision)
+            {
+                if let Err(error) =
+                    record_version(&d1, &previous, &body.content, new_revision).await
+                {
+                    worker::console_error!("file_versions: failed to record: {error}");
+                }
+            }
+            Ok(Json(UpdateFileContentResponse {
+                revision: new_revision,
+            }))
+        }
         ContentWriteOutcome::Conflict { current_revision } => {
             Err(ApiError::RevisionConflict { current_revision })
         }
         ContentWriteOutcome::NotFound => Err(ApiError::NotFound),
     }
+}
+
+/// Records the save that took `previous` to `content` at `new_revision`. A
+/// failure here never fails the save: the caller only logs it, and the gap
+/// it leaves hides older versions rather than corrupting them (see
+/// `crate::file_history`).
+async fn record_version(
+    d1: &worker::D1Database,
+    previous: &files::StoredFile,
+    content: &str,
+    new_revision: i64,
+) -> worker::Result<()> {
+    if previous.content == content {
+        return db::advance_file_version_link(d1, &previous.id, previous.revision, new_revision)
+            .await;
+    }
+    let version = VersionRow {
+        revision: previous.revision,
+        newer_revision: new_revision,
+        reverse_patch: file_history::reverse_patch(content, &previous.content),
+        saved_at: previous.updated_at,
+    };
+    db::insert_file_version(
+        d1,
+        &previous.id,
+        &version,
+        file_history::MAX_VERSIONS_PER_FILE,
+    )
+    .await
+}
+
+/// `POST /files/{id}/versions` -- the caller's file's earlier versions,
+/// newest first (`file_history::reachable_versions`).
+pub(super) async fn list_file_versions(
+    ctx: RouteContext<()>,
+    path: FileIdPath,
+    body: ListFileVersionsRequest,
+    request_meta: RequestMeta,
+) -> HandlerResult<Json<ListFileVersionsResponse>> {
+    let d1 = ctx.d1(D1_BINDING)?;
+    let owner_user_id = resolve_files_caller(&d1, &body.identity_token, &request_meta).await?;
+
+    let file = db::get_file_by_id(&d1, &path.id, &owner_user_id)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+    let rows = db::list_file_versions(&d1, &path.id, &owner_user_id).await?;
+    let versions = file_history::reachable_versions(file.revision, &rows)
+        .into_iter()
+        .map(|row| FileVersionSummary {
+            revision: row.revision,
+            saved_at: row.saved_at,
+        })
+        .collect();
+    Ok(Json(ListFileVersionsResponse { versions }))
+}
+
+/// `POST /files/{id}/versions/get` -- one earlier version rebuilt from the
+/// head, with the diff restoring it would apply. Restoring is an ordinary
+/// content save of that text, so it becomes a new head and is itself undoable.
+pub(super) async fn get_file_version(
+    ctx: RouteContext<()>,
+    path: FileIdPath,
+    body: GetFileVersionRequest,
+    request_meta: RequestMeta,
+) -> HandlerResult<Json<FileVersionResponse>> {
+    let d1 = ctx.d1(D1_BINDING)?;
+    let owner_user_id = resolve_files_caller(&d1, &body.identity_token, &request_meta).await?;
+
+    let file = db::get_file_by_id(&d1, &path.id, &owner_user_id)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+    let rows = db::list_file_versions(&d1, &path.id, &owner_user_id).await?;
+    let content = file_history::rebuild(&file.content, file.revision, &rows, body.revision)
+        .ok_or(ApiError::NotFound)?
+        .map_err(|error| ApiError::Internal {
+            message: error.message,
+        })?;
+    let diff = file_history::line_diff(&file.content, &content);
+    Ok(Json(FileVersionResponse { content, diff }))
 }
 
 /// `POST /files/{id}/rename` -- atomic rename, no revision gate (matches the

@@ -1,0 +1,7 @@
+--- original
++++ modified
+@@ -1,2 +1,2 @@
+ title: A
+-1 2 3 4
++1 2 3
+\ No newline at end of file

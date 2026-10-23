@@ -1,4 +1,5 @@
 import type { FileStoreState } from '../fileStore'
+import type { WorkerSchemas } from '../syncedShare/workerClient'
 import type { BaseSnapshots } from './outbox/baseSnapshots'
 import type { ConflictFlow } from './outbox/conflictFlow'
 import type { OutboxLooper } from './outbox/outboxLooper'
@@ -72,7 +73,14 @@ export interface CloudBackend extends StorageBackend {
   /** The server's current revision and content of `fileId`, or `undefined`
    * when the server does not list it. */
   fetchServerFile(fileId: string): Promise<ServerFile | undefined>
+  /** The earlier versions of `fileId`, newest first. */
+  listVersions(fileId: string): Promise<FileVersionSummary[]>
+  /** One earlier version of `fileId`, with the diff restoring it would make. */
+  fetchVersion(fileId: string, revision: number): Promise<FileVersion>
 }
+
+export type FileVersionSummary = WorkerSchemas['FileVersionSummary']
+export type FileVersion = WorkerSchemas['FileVersionResponse']
 
 export interface ServerFile {
   revision: number

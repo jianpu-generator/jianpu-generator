@@ -4,7 +4,7 @@ import type { PartSettings } from '../types'
 import { useMetadataFields } from './useMetadataFields'
 
 /** Open/closed state for the edit-parts, edit-metadata, storage-settings,
- * and bin panels, plus the handlers that route their edits back to the
+ * bin, sync and history panels, plus the handlers that route their edits back to the
  * `.jianpu` source. */
 export function useAppPanels(
   source: string,
@@ -20,6 +20,7 @@ export function useAppPanels(
   const [storageSettingsOpen, setStorageSettingsOpen] = useState(false)
   const [binOpen, setBinOpen] = useState(false)
   const [syncPanelOpen, setSyncPanelOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const handlePartDeclarationChange = useCallback(
     (abbreviation: string, settings: PartSettings) => {
@@ -59,6 +60,8 @@ export function useAppPanels(
     setBinOpen,
     syncPanelOpen,
     setSyncPanelOpen,
+    historyOpen,
+    setHistoryOpen,
     handlePartDeclarationChange,
     handleShiftPartOctave,
     parsedMetadata,
