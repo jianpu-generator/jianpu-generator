@@ -1,4 +1,6 @@
+import { CheckIcon, ChevronDownIcon } from '@radix-ui/react-icons'
 import type { Notation } from '../hooks/useStaffNotation'
+import { ResponsiveMenu } from './ResponsiveMenu'
 
 interface NotationToggleProps {
   notation: Notation
@@ -15,32 +17,64 @@ const OPTIONS: { value: Notation; icon?: string; label: string }[] = [
   { value: 'harmonica', label: 'Harmonica' },
 ]
 
+function OptionLabel({ icon, label }: { icon?: string; label: string }) {
+  return (
+    <>
+      {icon && (
+        <span className="notation-toggle-icon" aria-hidden="true">
+          {icon}
+        </span>
+      )}
+      {label}
+    </>
+  )
+}
+
 /** Switches the preview between jianpu, western staff notation, ABC (the
  * jianpu layout with letter names in place of degree numbers), Guitar (the
  * jianpu layout with each degree followed by its letter name, `1 (C)`, and
  * a chord diagram at each chord symbol), and Harmonica
- * (the jianpu layout with diatonic harmonica tabs). */
+ * (the jianpu layout with diatonic harmonica tabs). A dropdown rather than a
+ * row of buttons so it stays compact as views are added; `ResponsiveMenu`
+ * opens it as a full-screen drawer on mobile. */
 export function NotationToggle({ notation, onChange }: NotationToggleProps) {
+  const current = OPTIONS.find((option) => option.value === notation)
   return (
-    <fieldset className="notation-toggle" data-testid="notation-toggle">
-      <legend className="notation-toggle-legend">Notation</legend>
-      {OPTIONS.map(({ value, icon, label }) => (
+    <ResponsiveMenu.Root>
+      <ResponsiveMenu.Trigger asChild>
         <button
-          key={value}
           type="button"
-          className={`notation-toggle-btn${notation === value ? ' notation-toggle-btn--on' : ''}`}
-          aria-pressed={notation === value}
-          data-testid={`notation-toggle-${value}`}
-          onClick={() => onChange(value)}
+          className="preview-export-btn notation-toggle-trigger"
+          aria-label={`Notation: ${current?.label ?? notation}`}
+          data-testid="notation-toggle"
         >
-          {icon && (
-            <span className="notation-toggle-icon" aria-hidden="true">
-              {icon}
-            </span>
-          )}
-          {label}
+          {current && <OptionLabel icon={current.icon} label={current.label} />}
+          <ChevronDownIcon className="export-menu-caret" aria-hidden="true" />
         </button>
-      ))}
-    </fieldset>
+      </ResponsiveMenu.Trigger>
+      <ResponsiveMenu.Content
+        className="export-menu-list"
+        align="end"
+        sideOffset={4}
+        title="Notation"
+      >
+        {OPTIONS.map(({ value, icon, label }) => (
+          <ResponsiveMenu.Item
+            key={value}
+            className="export-menu-item notation-toggle-item"
+            onSelect={() => onChange(value)}
+            data-testid={`notation-toggle-${value}`}
+          >
+            <OptionLabel icon={icon} label={label} />
+            {value === notation && (
+              <CheckIcon
+                className="notation-toggle-check"
+                aria-label="selected"
+              />
+            )}
+          </ResponsiveMenu.Item>
+        ))}
+      </ResponsiveMenu.Content>
+    </ResponsiveMenu.Root>
   )
 }

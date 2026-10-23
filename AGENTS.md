@@ -26,6 +26,19 @@ Node scripts (`web/scripts/`, e2e mock/static servers, Playwright reporters, any
 
 Prefer Radix UI primitives over DIY implementations for interactive controls (sliders, selects, dialogs, checkboxes, tooltips, etc.). Available packages: `@radix-ui/react-dialog`, `@radix-ui/react-select`, `@radix-ui/react-slider`, `@radix-ui/react-tooltip`, `@radix-ui/react-progress`. Install additional Radix packages as needed rather than rolling custom components.
 
+Reuse the shared components in `web/src/components/` before building a new control. That folder is flat (shared primitives sit next to feature components), so these are the ones to know:
+
+- **`ResponsiveMenu`**: every dropdown or menu, including pickers like the notation view. It renders a Radix `DropdownMenu` on desktop and a full-screen `vaul` drawer on mobile, so mobile is handled for you. Style the trigger with `.preview-export-btn` and the content with `.export-menu-list` / `.export-menu-item` (`web/src/preview-toolbar.css`). See `ExportMenuButton` and `NotationToggle` for examples. Don't use a native `<select>` or a bare Radix `DropdownMenu` for these.
+- **`ExportMenuButton`**: a button that opens a sectioned menu of actions (built on `ResponsiveMenu`).
+- **`RadixSelectItem`** (`RadixTableSelect.tsx`): items for a Radix `Select` inside a table cell.
+- **`EditorToolbarButton`**: an icon button with a tooltip for the editor toolbar.
+- **`SpinnerLabel`**: a button label with the shared pending spinner.
+- **`accountDialogParts.tsx`**: `AccountDialogFrame`, `Field`, `ErrorBanner` and friends for account modals.
+- **Icons**: `@radix-ui/react-icons` first; app-specific icons live in `components/icons/`.
+- **Mobile branching**: in TypeScript, `useMediaQuery(MOBILE_BREAKPOINT_QUERY)` (`web/src/hooks/useMediaQuery.ts`) rather than a hard-coded width; in CSS, `@media (max-width: 768px)`.
+
+When you add a new reusable primitive, add it to this list (in both `CLAUDE.md` and `AGENTS.md`).
+
 ## Browser storage
 
 `localStorage`/`sessionStorage` in the web app is only for:
