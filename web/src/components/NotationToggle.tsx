@@ -1,5 +1,8 @@
 import { CheckIcon, ChevronDownIcon } from '@radix-ui/react-icons'
+import { CaseUpper, Guitar } from 'lucide-react'
+import type { ReactNode } from 'react'
 import type { Notation } from '../hooks/useStaffNotation'
+import { HarmonicaIcon } from './icons/HarmonicaIcon'
 import { ResponsiveMenu } from './ResponsiveMenu'
 
 interface NotationToggleProps {
@@ -7,25 +10,23 @@ interface NotationToggleProps {
   onChange: (notation: Notation) => void
 }
 
-// ABC, Guitar and Harmonica have no icon: their labels already read on their
-// own.
-const OPTIONS: { value: Notation; icon?: string; label: string }[] = [
+// Jianpu and the clefs are notation glyphs; the rest are line icons sized to
+// match them (see `.notation-toggle-icon svg`).
+const OPTIONS: { value: Notation; icon: ReactNode; label: string }[] = [
   { value: 'jianpu', icon: '簡', label: '123' },
   { value: 'violin', icon: '𝄞', label: 'Violin' },
   { value: 'cello', icon: '𝄢', label: 'Cello' },
-  { value: 'abc', label: 'ABC' },
-  { value: 'guitar', label: 'Guitar' },
-  { value: 'harmonica', label: 'Harmonica' },
+  { value: 'abc', icon: <CaseUpper />, label: 'ABC' },
+  { value: 'guitar', icon: <Guitar />, label: 'Guitar' },
+  { value: 'harmonica', icon: <HarmonicaIcon />, label: 'Harmonica' },
 ]
 
-function OptionLabel({ icon, label }: { icon?: string; label: string }) {
+function OptionLabel({ icon, label }: { icon: ReactNode; label: string }) {
   return (
     <>
-      {icon && (
-        <span className="notation-toggle-icon" aria-hidden="true">
-          {icon}
-        </span>
-      )}
+      <span className="notation-toggle-icon" aria-hidden="true">
+        {icon}
+      </span>
       {label}
     </>
   )
