@@ -7,25 +7,23 @@ interface NotationToggleProps {
   onChange: (notation: Notation) => void
 }
 
-// ABC, Guitar and Harmonica have no icon: their labels already read on their
-// own.
-const OPTIONS: { value: Notation; icon?: string; label: string }[] = [
+// Unicode has no harmonica emoji, so Harmonica borrows the accordion, its
+// free-reed cousin.
+const OPTIONS: { value: Notation; icon: string; label: string }[] = [
   { value: 'jianpu', icon: '簡', label: '123' },
   { value: 'violin', icon: '𝄞', label: 'Violin' },
   { value: 'cello', icon: '𝄢', label: 'Cello' },
-  { value: 'abc', label: 'ABC' },
-  { value: 'guitar', label: 'Guitar' },
-  { value: 'harmonica', label: 'Harmonica' },
+  { value: 'abc', icon: '🔤', label: 'ABC' },
+  { value: 'guitar', icon: '🎸', label: 'Guitar' },
+  { value: 'harmonica', icon: '🪗', label: 'Harmonica' },
 ]
 
-function OptionLabel({ icon, label }: { icon?: string; label: string }) {
+function OptionLabel({ icon, label }: { icon: string; label: string }) {
   return (
     <>
-      {icon && (
-        <span className="notation-toggle-icon" aria-hidden="true">
-          {icon}
-        </span>
-      )}
+      <span className="notation-toggle-icon" aria-hidden="true">
+        {icon}
+      </span>
       {label}
     </>
   )
