@@ -2,6 +2,7 @@ import {
   type Diagnostic,
   type FontBytesByFamily,
   jianpuWasm,
+  type StaffClef,
 } from '../jianpuWasm'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
 import {
@@ -20,6 +21,7 @@ const FONTS_NOT_LOADED = 'Fonts are not yet loaded.'
  * with the same `pdf`/`pdfErr` messages as the jianpu export. */
 export async function handleGenerateStaffPdf(
   msg: Extract<WorkerRequest, { type: 'generatePdf' }>,
+  clef: StaffClef,
   loadedFonts: LoadedFonts,
 ): Promise<void> {
   const fail = (diagnostics: Diagnostic[]) =>
@@ -29,7 +31,12 @@ export async function handleGenerateStaffPdf(
       diagnostics,
     } satisfies WorkerResponse)
   if (!loadedFonts) return fail(singleErrorDiagnostic(FONTS_NOT_LOADED))
-  const mei = jianpuWasm().renderMei(msg.source, msg.visibility, GM_INSTRUMENTS)
+  const mei = jianpuWasm().renderMei(
+    msg.source,
+    msg.visibility,
+    GM_INSTRUMENTS,
+    clef,
+  )
   if (mei.tag === 'err') return fail(mei.val.diagnostics)
   const engraved = await engraveMei(mei.val.mei)
   if (engraved.status === 'err') {
@@ -50,6 +57,7 @@ export async function handleGenerateStaffPdf(
 /** The staff counterpart of the per-part PDF ZIP export. */
 export async function handleGenerateSplitStaffPdf(
   msg: Extract<WorkerRequest, { type: 'generateSplitPdf' }>,
+  clef: StaffClef,
   loadedFonts: LoadedFonts,
 ): Promise<void> {
   const fail = (diagnostics: Diagnostic[]) =>
@@ -63,6 +71,7 @@ export async function handleGenerateSplitStaffPdf(
     msg.source,
     msg.baseName,
     GM_INSTRUMENTS,
+    clef,
   )
   if (meis.tag === 'err') return fail(meis.val.diagnostics)
   const parts = []

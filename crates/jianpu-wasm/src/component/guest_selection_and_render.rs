@@ -215,6 +215,7 @@ pub(super) fn render_mei(
     source: String,
     visibility: ResolvedPartVisibility,
     raw_instruments: Vec<InstrumentInfo>,
+    clef: StaffClef,
 ) -> RenderMeiResponse {
     let instruments: Vec<jianpu_generator::parser::parts_parser::InstrumentInfo> = raw_instruments
         .into_iter()
@@ -225,6 +226,7 @@ pub(super) fn render_mei(
         "input.jianpu",
         &resolved_part_visibility_from_wit(visibility),
         &instruments,
+        clef_choice_from_wit(clef),
     ) {
         Ok(document) => RenderMeiResponse::Ok(RenderMeiSuccess {
             mei: document.mei,

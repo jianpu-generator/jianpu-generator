@@ -3,7 +3,8 @@ import type { Notation } from './messages'
 
 const NOTE_LABELS: Record<Notation, NoteLabels> = {
   jianpu: 'degrees',
-  staff: 'degrees',
+  violin: 'degrees',
+  cello: 'degrees',
   abc: 'letter-names',
   guitar: 'guitar-chords',
   harmonica: 'harmonica-tabs',

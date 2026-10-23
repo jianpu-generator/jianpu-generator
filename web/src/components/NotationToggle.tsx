@@ -11,7 +11,8 @@ interface NotationToggleProps {
 // own.
 const OPTIONS: { value: Notation; icon?: string; label: string }[] = [
   { value: 'jianpu', icon: '簡', label: '123' },
-  { value: 'staff', icon: '𝄞', label: 'Staff' },
+  { value: 'violin', icon: '𝄞', label: 'Violin' },
+  { value: 'cello', icon: '𝄢', label: 'Cello' },
   { value: 'abc', label: 'ABC' },
   { value: 'guitar', label: 'Guitar' },
   { value: 'harmonica', label: 'Harmonica' },
@@ -30,7 +31,8 @@ function OptionLabel({ icon, label }: { icon?: string; label: string }) {
   )
 }
 
-/** Switches the preview between jianpu, western staff notation, ABC (the
+/** Switches the preview between jianpu, western staff notation for a violin
+ * (treble clef) or a cello (bass clef), ABC (the
  * jianpu layout with letter names in place of degree numbers), Guitar (the
  * jianpu layout with each degree followed by its letter name, `1 (C)`, and
  * a chord diagram at each chord symbol), and Harmonica

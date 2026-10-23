@@ -2,6 +2,7 @@
 //! Verovio, in the web worker, engraves it into SVG pages, which come back
 //! here to be written as PDFs the same way the jianpu pages are.
 use crate::error::IrrecoverableError;
+use crate::mei_export::ClefChoice;
 use crate::parser::parts_parser::InstrumentInfo;
 use crate::split_track::{
     part_display_name_map, split_pdf_filename, split_track_label, split_track_names,
@@ -24,6 +25,7 @@ pub fn render_split_meis_from_source(
     filename: &str,
     base_name: &str,
     instruments: &[InstrumentInfo],
+    clef_choice: ClefChoice,
 ) -> Result<Vec<SplitMeiEntry>, IrrecoverableError> {
     let score = crate::compile(source, filename, instruments)?;
     let labels = part_display_name_map(source, filename)?;
@@ -40,7 +42,7 @@ pub fn render_split_meis_from_source(
                 .collect();
             SplitMeiEntry {
                 filename: split_pdf_filename(base_name, &split_track_label(&labels, &track)),
-                mei: crate::mei_export::score_to_mei(&part_score, &display_names).mei,
+                mei: crate::mei_export::score_to_mei(&part_score, &display_names, clef_choice).mei,
                 track_name: track,
             }
         })

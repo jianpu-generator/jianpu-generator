@@ -1,10 +1,13 @@
 use super::render_split_meis_from_source;
+use crate::mei_export::ClefChoice;
 
 const SOURCE: &str = "# parts\nSoprano [S] = notes\nAlto [A] = notes\nWords [w] = lyrics[A]\n\n# score\nkey=C4 time=2/4\n[S] 1 2\n[A] 5 6\n[w] 你好\n";
 
 #[test]
 fn split_meis_give_each_sounding_part_its_own_score_and_lyrics() {
-    let entries = render_split_meis_from_source(SOURCE, "test.jianpu", "song", &[]).unwrap();
+    let entries =
+        render_split_meis_from_source(SOURCE, "test.jianpu", "song", &[], ClefChoice::Automatic)
+            .unwrap();
     let summary: Vec<(&str, &str)> = entries
         .iter()
         .map(|entry| (entry.track_name.as_str(), entry.filename.as_str()))

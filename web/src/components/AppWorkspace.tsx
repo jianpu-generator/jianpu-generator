@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { MOBILE_BREAKPOINT_QUERY, useMediaQuery } from '../hooks/useMediaQuery'
 import { useSelectionPitchDescription } from '../hooks/useSelectionPitchDescription'
 import type { EditorSelection } from '../types'
+import { staffClefFor } from '../worker/staffClef'
 import type { AppWorkspaceProps } from './AppWorkspace.types'
 import { EditMetadataModal } from './EditMetadataModal'
 import { Editor } from './Editor'
@@ -83,7 +84,7 @@ export function AppWorkspace({
   noPartsSelected,
   staffNotation,
 }: AppWorkspaceProps) {
-  const staffView = staffNotation.notation === 'staff'
+  const staffView = staffClefFor(staffNotation.notation) !== undefined
   const [editorPaneEl, setEditorPaneEl] = useState<HTMLDivElement | null>(null)
   // The editor's current selection, in byte offsets — `null` for a plain
   // caret (nothing to shift), tracked purely to enable/disable the "Octave

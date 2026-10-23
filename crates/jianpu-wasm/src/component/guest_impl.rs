@@ -94,8 +94,9 @@ impl Guest for Component {
         source: String,
         visibility: ResolvedPartVisibility,
         raw_instruments: Vec<InstrumentInfo>,
+        clef: StaffClef,
     ) -> RenderMeiResponse {
-        render_mei(source, visibility, raw_instruments)
+        render_mei(source, visibility, raw_instruments, clef)
     }
 
     fn generate_split_wavs(
@@ -332,7 +333,7 @@ impl Guest for Component {
 
     forward_to_free_functions! {
         render_svg_with_highlight_range(source: String, raw_measure_ranges: Vec<MeasureRangeIn>, visibility: ResolvedPartVisibility, raw_instruments: Vec<InstrumentInfo>, note_labels: NoteLabels) -> RenderResponse;
-        render_split_meis(source: String, base_name: String, raw_instruments: Vec<InstrumentInfo>) -> RenderSplitMeisResponse;
+        render_split_meis(source: String, base_name: String, raw_instruments: Vec<InstrumentInfo>, clef: StaffClef) -> RenderSplitMeisResponse;
         generate_staff_pdf(pages: Vec<String>, source: String, fonts: FontBytesByFamily) -> GeneratePdfResponse;
         generate_split_staff_pdfs(parts: Vec<StaffPdfPart>, fonts: FontBytesByFamily) -> GenerateSplitPdfsResponse;
         generate_wav(source: String, enabled_tracks: Option<Vec<String>>, metronome: bool, soundfont: Vec<u8>) -> GenerateWavResponse;

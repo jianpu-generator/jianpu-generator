@@ -180,3 +180,10 @@ pub(super) fn note_labels_from_wit(labels: NoteLabels) -> jianpu_generator::Note
         NoteLabels::GuitarChords => jianpu_generator::NoteLabels::GuitarChords,
     }
 }
+
+pub(super) fn clef_choice_from_wit(clef: StaffClef) -> jianpu_generator::mei_export::ClefChoice {
+    match clef {
+        StaffClef::Violin => jianpu_generator::mei_export::ClefChoice::Violin,
+        StaffClef::Cello => jianpu_generator::mei_export::ClefChoice::Cello,
+    }
+}

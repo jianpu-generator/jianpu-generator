@@ -23,6 +23,7 @@ import {
   handlePreviewInstrument,
   handlePreviewPercussion,
 } from './previewMessageHandlers'
+import { staffClefFor } from './staffClef'
 import {
   handleGenerateSplitStaffPdf,
   handleGenerateStaffPdf,
@@ -193,14 +194,16 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   }
 
   if (msg.type === 'generatePdf') {
-    if (msg.notation === 'staff') void handleGenerateStaffPdf(msg, loadedFonts)
+    const clef = staffClefFor(msg.notation)
+    if (clef) void handleGenerateStaffPdf(msg, clef, loadedFonts)
     else handleGeneratePdf(msg, loadedFonts)
     return
   }
 
   if (msg.type === 'generateSplitPdf') {
-    if (msg.notation === 'staff') {
-      void handleGenerateSplitStaffPdf(msg, loadedFonts)
+    const clef = staffClefFor(msg.notation)
+    if (clef) {
+      void handleGenerateSplitStaffPdf(msg, clef, loadedFonts)
     } else handleGenerateSplitPdf(msg, loadedFonts)
     return
   }
