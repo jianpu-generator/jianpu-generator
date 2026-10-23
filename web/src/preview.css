@@ -92,8 +92,16 @@
 }
 
 .notation-toggle-icon {
+  display: inline-flex;
+  justify-content: center;
+  width: 1em;
   font-size: 1.2em;
   line-height: 1;
+}
+
+.notation-toggle-icon svg {
+  width: 1em;
+  height: 1em;
 }
 
 .notation-toggle-check {
