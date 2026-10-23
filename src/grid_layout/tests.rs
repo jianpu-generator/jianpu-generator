@@ -227,7 +227,7 @@ fn chord_part_sub_row_heights_has_four_rows() {
 #[test]
 fn single_block_is_one_system() {
     let blocks = vec![make_block("S", 3)]; // 4 columns
-    let systems = pack_into_systems(&blocks, &cfg());
+    let systems = pack_into_systems(&blocks, &cfg(), f32::INFINITY);
     assert_eq!(systems.len(), 1);
     assert_eq!(systems[0].len(), 1);
 }
@@ -236,7 +236,7 @@ fn single_block_is_one_system() {
 fn blocks_exceeding_max_measures_per_system_split_into_two_systems() {
     // max_measures_per_system=2 → fits 2 blocks per system
     let blocks = vec![make_block("S", 3), make_block("S", 3), make_block("S", 3)];
-    let systems = pack_into_systems(&blocks, &cfg());
+    let systems = pack_into_systems(&blocks, &cfg(), f32::INFINITY);
     assert_eq!(systems.len(), 2);
     assert_eq!(systems[0].len(), 2);
     assert_eq!(systems[1].len(), 1);

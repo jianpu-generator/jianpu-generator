@@ -29,6 +29,8 @@ mod tests_render_rendering_tuplets;
 #[cfg(feature = "pdf")]
 #[path = "tests_render_split_pdf.rs"]
 mod tests_render_split_pdf;
+#[path = "tests_render_width_break.rs"]
+mod tests_render_width_break;
 #[path = "tests_section_label_alignment.rs"]
 mod tests_section_label_alignment;
 #[path = "tests_source_embed.rs"]

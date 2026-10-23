@@ -57,7 +57,7 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 | `title` | no | none | Piece title (rendered in header) |
 | `author` | no | none | Author name (rendered in header) |
 | `subtitle` | no | none | Subtitle line |
-| `max_measures_per_system` | no | `4` | Maximum number of measures per system line before wrapping |
+| `max_measures_per_system` | no | `4` | Maximum number of measures per system line before wrapping. A ceiling, not a fixed count: a system also wraps early when the next measure wouldn't fit the page width (e.g. in the guitar view, whose note heads are wider) |
 | `row_height` | no | `24` | Vertical spacing of one part row (pixels) |
 | `note_number_width` | no | `8` | Horizontal space per note column (pixels) |
 | `parts_list_columns` | no | `4` | Number of columns in the parts list header |
@@ -820,7 +820,7 @@ When a part is **not mentioned** in a measure (no `[Key]` line covers it), it is
 
 - A `follow[X]` part that is not mentioned copies `X`'s content (audio plays the same as X).
 - A non-follow part that is not mentioned is filled with rests (`0`) or no-lyrics (`_`).
-- Measures sharing a system line no longer need to render identical rows. A system's rows are the union of every part (and, per part, every verse) across all of its measures, in `[parts]` declaration order then verse order. A measure missing a row its system has (a part it doesn't mention, a resting part hidden via `hide_resting_parts`, or a verse it lacks) gets that row padded in as a full-measure rest or blank verse — it isn't clickable or selectable there, since no note/syllable actually sounds. Systems are otherwise packed purely by count, up to `max_measures_per_system` measures. Two things still start a new system line early: a `merge_duplicate_measures_across_parts=` change between measures — since that setting controls whether identical parts merge into one shared row, a change partway through would make the union ambiguous — and a `break` directive, which forces the boundary explicitly (see [Directive lines](#directive-lines)).
+- Measures sharing a system line no longer need to render identical rows. A system's rows are the union of every part (and, per part, every verse) across all of its measures, in `[parts]` declaration order then verse order. A measure missing a row its system has (a part it doesn't mention, a resting part hidden via `hide_resting_parts`, or a verse it lacks) gets that row padded in as a full-measure rest or blank verse — it isn't clickable or selectable there, since no note/syllable actually sounds. Systems are otherwise packed greedily, up to `max_measures_per_system` measures, ending a system early when the next measure wouldn't fit the page width; a single measure too wide for the page on its own still gets a system to itself, with a `measure_overflow` warning. Two things still start a new system line early: a `merge_duplicate_measures_across_parts=` change between measures — since that setting controls whether identical parts merge into one shared row, a change partway through would make the union ambiguous — and a `break` directive, which forces the boundary explicitly (see [Directive lines](#directive-lines)).
 
 ### Omitted lines — fill table
 
