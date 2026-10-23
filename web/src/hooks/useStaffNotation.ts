@@ -7,6 +7,7 @@ import type {
   StaffScore,
   WorkerRequest,
 } from '../worker/messages'
+import { staffClefFor } from '../worker/staffClef'
 import type { StaffRenderRequestTracker } from './useJianpuWorkerTypes'
 
 export type { Notation }
@@ -31,7 +32,10 @@ const STORAGE_KEY = 'jianpu:preview-notation:v1'
 function load(): Notation {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    return stored === 'staff' ||
+    // Before the violin/cello split, the staff view was stored as `staff`.
+    if (stored === 'staff') return 'violin'
+    return stored === 'violin' ||
+      stored === 'cello' ||
       stored === 'abc' ||
       stored === 'guitar' ||
       stored === 'harmonica'
@@ -82,7 +86,8 @@ export function useStaffNotation({
 
   useEffect(() => {
     const worker = workerRef.current
-    if (notation !== 'staff' || !worker) return
+    const clef = staffClefFor(notation)
+    if (!clef || !worker) return
     setLoading(true)
     const timer = window.setTimeout(() => {
       const id = ++requestIdRef.current
@@ -101,6 +106,7 @@ export function useStaffNotation({
         source,
         id,
         visibility,
+        clef,
       } satisfies WorkerRequest)
     }, debounceMs)
     return () => window.clearTimeout(timer)

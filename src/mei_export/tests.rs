@@ -1,6 +1,6 @@
 use super::duration::{split_duration, split_undotted_duration};
 use super::pitch::{key_signature, spell, AccidentalTracker, Letter};
-use super::{score_to_mei, StaffMeasure};
+use super::{score_to_mei, ClefChoice, StaffMeasure};
 use crate::ast::parsed::{Accidental, JianPuPitch, KeyChange, Note, NoteName};
 use std::collections::HashMap;
 
@@ -17,7 +17,7 @@ fn key(name: NoteName, accidental: Accidental) -> KeyChange {
 fn mei_of(source: &str) -> String {
     let doc = crate::parser::parse(source, "test.jianpu", &[]).unwrap();
     let score = crate::grouper::group(doc).unwrap();
-    score_to_mei(&score, &HashMap::new()).mei
+    score_to_mei(&score, &HashMap::new(), ClefChoice::Automatic).mei
 }
 
 #[test]
@@ -103,7 +103,7 @@ fn every_measure_is_listed_with_its_element_id() {
         "# parts\nMelody [m] = notes\n\n# score\nkey=C4 time=2/4\n[m] 1 2\n\n[m] 3 4\n\n[m] 5 6\n";
     let doc = crate::parser::parse(source, "test.jianpu", &[]).unwrap();
     let score = crate::grouper::group(doc).unwrap();
-    let document = score_to_mei(&score, &HashMap::new());
+    let document = score_to_mei(&score, &HashMap::new(), ClefChoice::Automatic);
     assert_eq!(
         document
             .measures
@@ -163,6 +163,7 @@ fn hidden_parts_get_no_staff() {
             ..Default::default()
         },
         &[],
+        ClefChoice::Automatic,
     )
     .unwrap()
     .mei;
@@ -182,6 +183,7 @@ fn shown_lyrics_of_a_hidden_part_ride_an_invisible_staff() {
             ..Default::default()
         },
         &[],
+        ClefChoice::Automatic,
     )
     .unwrap()
     .mei;
@@ -200,4 +202,49 @@ fn shown_lyrics_of_a_hidden_part_ride_an_invisible_staff() {
         mei.contains(r#"stem.visible="false" dur="4"><verse n="1"><syl>你</syl>"#),
         "{mei}"
     );
+}
+
+fn mei_with_clef(source: &str, clef_choice: ClefChoice) -> String {
+    let doc = crate::parser::parse(source, "test.jianpu", &[]).unwrap();
+    let score = crate::grouper::group(doc).unwrap();
+    score_to_mei(&score, &HashMap::new(), clef_choice).mei
+}
+
+const HIGH_AND_LOW_PARTS: &str = "# parts\nMelody [m] = notes\nBass [b] = notes\n\n# score\nkey=C4 time=2/4\n[m] 1' 2'\n[b] 1,, 5,,\n";
+
+#[test]
+fn automatic_clefs_follow_each_parts_range() {
+    let mei = mei_with_clef(HIGH_AND_LOW_PARTS, ClefChoice::Automatic);
+    assert_eq!(
+        mei.matches(r#"clef.shape="G" clef.line="2""#).count(),
+        1,
+        "{mei}"
+    );
+    assert_eq!(
+        mei.matches(r#"clef.shape="F" clef.line="4""#).count(),
+        1,
+        "{mei}"
+    );
+}
+
+#[test]
+fn the_violin_view_puts_every_staff_in_treble_clef() {
+    let mei = mei_with_clef(HIGH_AND_LOW_PARTS, ClefChoice::Violin);
+    assert_eq!(
+        mei.matches(r#"clef.shape="G" clef.line="2""#).count(),
+        2,
+        "{mei}"
+    );
+    assert!(!mei.contains(r#"clef.shape="F""#), "{mei}");
+}
+
+#[test]
+fn the_cello_view_puts_every_staff_in_bass_clef() {
+    let mei = mei_with_clef(HIGH_AND_LOW_PARTS, ClefChoice::Cello);
+    assert_eq!(
+        mei.matches(r#"clef.shape="F" clef.line="4""#).count(),
+        2,
+        "{mei}"
+    );
+    assert!(!mei.contains(r#"clef.shape="G""#), "{mei}");
 }

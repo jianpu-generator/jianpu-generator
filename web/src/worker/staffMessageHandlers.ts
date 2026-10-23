@@ -67,7 +67,12 @@ export async function engraveMei(mei: string): Promise<StaffEngraveResult> {
 async function renderStaff(
   msg: Extract<WorkerRequest, { type: 'renderStaff' }>,
 ): Promise<StaffRenderResult> {
-  const mei = jianpuWasm().renderMei(msg.source, msg.visibility, GM_INSTRUMENTS)
+  const mei = jianpuWasm().renderMei(
+    msg.source,
+    msg.visibility,
+    GM_INSTRUMENTS,
+    msg.clef,
+  )
   if (mei.tag === 'err') {
     return {
       status: 'err',

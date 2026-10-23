@@ -16,6 +16,7 @@ pub(super) fn render_split_meis(
     source: String,
     base_name: String,
     raw_instruments: Vec<InstrumentInfo>,
+    clef: StaffClef,
 ) -> RenderSplitMeisResponse {
     let instruments: Vec<jianpu_generator::parser::parts_parser::InstrumentInfo> = raw_instruments
         .into_iter()
@@ -26,6 +27,7 @@ pub(super) fn render_split_meis(
         "input.jianpu",
         &base_name,
         &instruments,
+        clef_choice_from_wit(clef),
     ) {
         Ok(entries) => RenderSplitMeisResponse::Ok(
             entries

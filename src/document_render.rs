@@ -175,6 +175,7 @@ pub fn render_mei_from_source_with_visibility(
     filename: &str,
     visibility: &ResolvedPartVisibility,
     instruments: &[crate::parser::parts_parser::InstrumentInfo],
+    clef_choice: crate::mei_export::ClefChoice,
 ) -> Result<crate::mei_export::MeiDocument, IrrecoverableError> {
     let enabled_tracks = visibility.rendered_tracks.as_deref();
     let display_names = crate::filter_part_list(
@@ -186,7 +187,11 @@ pub fn render_mei_from_source_with_visibility(
     .collect();
     let mut score = crate::compile(source, filename, instruments)?;
     crate::apply_track_filter(&mut score, enabled_tracks);
-    Ok(crate::mei_export::score_to_mei(&score, &display_names))
+    Ok(crate::mei_export::score_to_mei(
+        &score,
+        &display_names,
+        clef_choice,
+    ))
 }
 
 /// Like [`render_documents_from_source_with_visibility`], with `measure_ranges`

@@ -39,12 +39,23 @@ impl Clef {
     }
 }
 
+/// Which clef every staff gets: the staff view is engraved for a violin
+/// (every staff in treble clef) or a cello (every staff in bass clef), while
+/// the CLI's MEI export picks each part's clef from its range.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ClefChoice {
+    Automatic,
+    Violin,
+    Cello,
+}
+
 /// MIDI pitch below which a part's average sits on a bass staff.
 const BASS_CLEF_AVERAGE_BELOW: f32 = 53.0;
 
 pub(super) fn collect_staves(
     score: &Score,
     display_names: &HashMap<String, String>,
+    clef_choice: ClefChoice,
 ) -> Vec<StaffPart> {
     let Some(first) = score.measures.first() else {
         return Vec::new();
@@ -61,7 +72,11 @@ pub(super) fn collect_staves(
                 .cloned()
                 .unwrap_or_else(|| name.clone());
             Some(StaffPart {
-                clef: choose_clef(score, &name, slice.octave_offset),
+                clef: match clef_choice {
+                    ClefChoice::Automatic => choose_clef(score, &name, slice.octave_offset),
+                    ClefChoice::Violin => Clef::Treble,
+                    ClefChoice::Cello => Clef::Bass,
+                },
                 label,
                 octave_offset: slice.octave_offset,
                 name,

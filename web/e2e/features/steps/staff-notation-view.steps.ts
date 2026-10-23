@@ -81,6 +81,25 @@ Then(
   },
 )
 
+/** Verovio draws each clef as a `<use>` of its SMuFL glyph. */
+const CLEF_GLYPHS: Record<string, string> = { treble: 'E050', bass: 'E062' }
+
+Then(
+  'every staff on the staff notation page is in {word} clef',
+  async ({ page }, clef: string) => {
+    const clefs = staffPage(page).locator('g.clef use')
+    await expect(clefs.first()).toBeVisible({ timeout: STAFF_RENDER_TIMEOUT })
+    const glyphs = await clefs.evaluateAll((uses) =>
+      uses.map(
+        (use) =>
+          use.getAttribute('href') ?? use.getAttribute('xlink:href') ?? '',
+      ),
+    )
+    expect(glyphs.length).toBeGreaterThan(0)
+    for (const glyph of glyphs) expect(glyph).toContain(CLEF_GLYPHS[clef])
+  },
+)
+
 When(
   'I hide the {string} part from the staff view',
   async ({ page }, abbreviation: string) => {

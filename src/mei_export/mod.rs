@@ -21,6 +21,7 @@ use itertools::Itertools;
 use layer::{layer_xml, lyrics_only_layer_xml, LayerContext, Slur, StaffState};
 use lyrics::{collect_verses, measure_syllables, Verse};
 use pitch::key_signature;
+pub use staves::ClefChoice;
 use staves::{collect_staves, StaffPart};
 use std::collections::HashMap;
 
@@ -66,8 +67,12 @@ fn measure_element_id(measure_index: usize) -> String {
     format!("measure-{measure_index}")
 }
 
-pub fn score_to_mei(score: &Score, display_names: &HashMap<String, String>) -> MeiDocument {
-    let staves = collect_staves(score, display_names);
+pub fn score_to_mei(
+    score: &Score,
+    display_names: &HashMap<String, String>,
+    clef_choice: ClefChoice,
+) -> MeiDocument {
+    let staves = collect_staves(score, display_names, clef_choice);
     let verses = collect_verses(score);
     let parts = ScoreParts {
         staves: &staves,

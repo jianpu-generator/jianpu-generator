@@ -1,6 +1,7 @@
 import type {
   FontBytesByFamily,
   NoteTiming,
+  StaffClef,
   StaffMeasure,
   SvgDocument,
 } from '../jianpuWasm'
@@ -22,12 +23,19 @@ import type {
 } from '../types'
 import type { NoteCell } from '../utils/noteSpanSelection'
 
-/** Which notation the preview (and so PDF export) shows. `abc` is the jianpu
+/** Which notation the preview (and so PDF export) shows. `violin` and `cello`
+ * are western staff notation, every staff in treble or bass clef. `abc` is the jianpu
  * layout with letter names (`D E F♯`) in place of degree numbers; `guitar` is
  * the jianpu layout with each degree followed by its letter name (`1 (D)`)
  * and a guitar chord diagram at each chord symbol; and
  * `harmonica` the jianpu layout with diatonic harmonica tabs (`4 -4 5`). */
-export type Notation = 'jianpu' | 'staff' | 'abc' | 'guitar' | 'harmonica'
+export type Notation =
+  | 'jianpu'
+  | 'violin'
+  | 'cello'
+  | 'abc'
+  | 'guitar'
+  | 'harmonica'
 
 /** Verovio's pages for MEI Rust exported (see `staffMessageHandlers.ts`). */
 export type StaffEngraveResult =
@@ -237,6 +245,7 @@ export type WorkerRequest =
       source: string
       id: number
       visibility: ResolvedPartVisibility
+      clef: StaffClef
     }
 
 export type WorkerResponse =

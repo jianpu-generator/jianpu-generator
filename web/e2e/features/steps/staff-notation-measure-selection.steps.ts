@@ -56,7 +56,7 @@ Given(
           fileIds: { 'staff-selection.jianpu': crypto.randomUUID() },
         }),
       )
-      localStorage.setItem('jianpu:preview-notation:v1', 'staff')
+      localStorage.setItem('jianpu:preview-notation:v1', 'violin')
       // Records the range of every measure-audio request (see
       // `useMeasureAudioPlayback`), so playback can be checked without
       // waiting on real-time audio.

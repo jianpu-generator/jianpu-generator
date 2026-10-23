@@ -329,7 +329,12 @@ pub fn generate_mei(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
     let mut score = super::parse_and_group(&opts.input)?;
     jg::filter_tracks(&mut score, &opts.tracks);
     let display_names = read_display_names(&opts.input)?;
-    let mei = jg::mei_export::score_to_mei(&score, &display_names).mei;
+    let mei = jg::mei_export::score_to_mei(
+        &score,
+        &display_names,
+        jg::mei_export::ClefChoice::Automatic,
+    )
+    .mei;
     let output_path =
         output_stem(&opts.input, &opts.tracks, opts.output.as_deref()).with_extension("mei");
     super::write_file(&output_path, mei.as_bytes())?;
