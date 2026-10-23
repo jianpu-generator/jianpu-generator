@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test'
 import { rectVariantSelector, tagSelector } from '../../../src/dataAttributes'
+import { waitForAssetLoadingBannerGone } from '../../assetLoadingHelpers'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -177,6 +178,7 @@ Given(
 
     // Section buttons appear once the worker has processed the source and returned measureSpans.
     await page.waitForSelector('button.section-jump-btn', { timeout: 15_000 })
+    await waitForAssetLoadingBannerGone(page)
   },
 )
 

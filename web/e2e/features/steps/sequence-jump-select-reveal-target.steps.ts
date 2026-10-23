@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { waitForAssetLoadingBannerGone } from '../../assetLoadingHelpers'
 import { Given, Then, When } from './fixtures'
 
 // Padded with filler measures so "Intro" (lines 11-12) and "C" (near the
@@ -61,6 +62,7 @@ When(
     await expect(sequenceToolbarButtons(page)).toHaveCount(3, {
       timeout: 15_000,
     })
+    await waitForAssetLoadingBannerGone(page)
   },
 )
 

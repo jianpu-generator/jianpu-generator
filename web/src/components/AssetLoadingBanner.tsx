@@ -104,6 +104,7 @@ export function AssetLoadingBanner({
     <>
       <style>{indeterminateStyle}</style>
       <div
+        data-testid="asset-loading-banner"
         style={{
           flexShrink: 0,
           background: '#1e1e2e',
