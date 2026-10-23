@@ -58,6 +58,8 @@ export interface FileSwitcherProps {
   /** Opens the Bin modal, which lists `binNames` and handles restoring. */
   onOpenBin: () => void
   onOpenSyncPanel?: () => void
+  /** Opens the active file's version history; cloud storage only. */
+  onOpenHistory?: () => void
   /** See `ShareModalProps.canSync`. */
   canSync: boolean
   isSynced: boolean

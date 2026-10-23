@@ -30,6 +30,22 @@ use sqlx::{ConnectOptions, Executor};
 
 const QUERIES: &[(&str, &str)] = &[
     (
+        "prune_file_versions.sql",
+        include_str!("../queries/prune_file_versions.sql"),
+    ),
+    (
+        "list_file_versions.sql",
+        include_str!("../queries/list_file_versions.sql"),
+    ),
+    (
+        "insert_file_version.sql",
+        include_str!("../queries/insert_file_version.sql"),
+    ),
+    (
+        "advance_file_version_link.sql",
+        include_str!("../queries/advance_file_version_link.sql"),
+    ),
+    (
         "delete_files_of_users.sql",
         include_str!("../queries/delete_files_of_users.sql"),
     ),

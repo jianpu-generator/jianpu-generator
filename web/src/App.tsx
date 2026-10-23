@@ -133,20 +133,7 @@ export default function App() {
     describeSelection,
     importingFile,
     handleImportFile,
-    editPartsOpen,
-    setEditPartsOpen,
-    editMetadataOpen,
-    setEditMetadataOpen,
-    storageSettingsOpen,
-    setStorageSettingsOpen,
-    binOpen,
-    setBinOpen,
-    syncPanelOpen,
-    setSyncPanelOpen,
-    handlePartDeclarationChange,
-    handleShiftPartOctave,
-    parsedMetadata,
-    handleMetadataFieldChange,
+    panels,
     setSelectedLineRange,
     handleSectionJump,
     sectionJumpToolbarProps,
@@ -221,7 +208,7 @@ export default function App() {
         onDeleteFolder={handleDeleteFolder}
         onMoveSelection={handleMoveSelection}
         onDeleteSelection={handleDeleteSelection}
-        onOpenStorageSettings={() => setStorageSettingsOpen(true)}
+        onOpenStorageSettings={() => panels.setStorageSettingsOpen(true)}
         saveStatus={saveStatus}
         saveLabel={saveLabel}
         autosaveDeadline={autosaveDeadline}
@@ -231,9 +218,16 @@ export default function App() {
         duplicatingFile={duplicatingFile}
         renamingFileName={renamingFileName}
         isLoadingCloud={isLoadingCloud}
-        onOpenBin={() => setBinOpen(true)}
+        onOpenBin={() => panels.setBinOpen(true)}
         onOpenSyncPanel={
-          backend.kind === 'cloud' ? () => setSyncPanelOpen(true) : undefined
+          backend.kind === 'cloud'
+            ? () => panels.setSyncPanelOpen(true)
+            : undefined
+        }
+        onOpenHistory={
+          backend.kind === 'cloud'
+            ? () => panels.setHistoryOpen(true)
+            : undefined
         }
         hasDocuments={documents.length > 0}
         rendering={rendering}
@@ -268,8 +262,8 @@ export default function App() {
       <AppOverlays
         fileOpError={fileOpError}
         setFileOpError={setFileOpError}
-        storageSettingsOpen={storageSettingsOpen}
-        setStorageSettingsOpen={setStorageSettingsOpen}
+        storageSettingsOpen={panels.storageSettingsOpen}
+        setStorageSettingsOpen={panels.setStorageSettingsOpen}
         backend={backend}
         isLoadingCloud={isLoadingCloud}
         preference={preference}
@@ -278,11 +272,15 @@ export default function App() {
         setStore={setStore}
         refreshSaveStatus={refreshSaveStatus}
         selectedMeasureRange={selectedMeasureRange}
-        binOpen={binOpen}
-        setBinOpen={setBinOpen}
-        syncPanelOpen={syncPanelOpen}
+        binOpen={panels.binOpen}
+        setBinOpen={panels.setBinOpen}
+        syncPanelOpen={panels.syncPanelOpen}
         hasUnsavedEdits={autosaveDeadline !== null}
-        setSyncPanelOpen={setSyncPanelOpen}
+        setSyncPanelOpen={panels.setSyncPanelOpen}
+        historyOpen={panels.historyOpen}
+        setHistoryOpen={panels.setHistoryOpen}
+        fileId={fileId}
+        onRestoreVersion={handleSourceChange}
         onRestore={handleRestore}
         restoringFileName={restoringFileName}
         pendingDownload={pendingDownload}
@@ -339,8 +337,8 @@ export default function App() {
           measureSpans={measureSpans}
           setSelectedLineRange={setSelectedLineRange}
           notifySelection={notifySelection}
-          setEditPartsOpen={setEditPartsOpen}
-          setEditMetadataOpen={setEditMetadataOpen}
+          setEditPartsOpen={panels.setEditPartsOpen}
+          setEditMetadataOpen={panels.setEditMetadataOpen}
           forceSave={forceSave}
           measureAudioPlaying={measureAudioPlaying}
           stopMeasurePlayback={stopMeasurePlayback}
@@ -350,18 +348,18 @@ export default function App() {
           playSelectedMeasures={playSelectedMeasures}
           notePlaybackSelectionActive={selectedNoteRangePlaybackInfo !== null}
           playNoteSelection={handlePlayNoteSelection}
-          editPartsOpen={editPartsOpen}
+          editPartsOpen={panels.editPartsOpen}
           partDeclarations={partDeclarations}
           parts={parts}
-          handlePartDeclarationChange={handlePartDeclarationChange}
-          handleShiftPartOctave={handleShiftPartOctave}
+          handlePartDeclarationChange={panels.handlePartDeclarationChange}
+          handleShiftPartOctave={panels.handleShiftPartOctave}
           previewInstrument={previewInstrument}
           previewPercussion={previewPercussion}
           stopPreviewInstrument={stopPreviewInstrument}
           previewAudioPlaying={previewAudioPlaying}
-          editMetadataOpen={editMetadataOpen}
-          parsedMetadata={parsedMetadata}
-          handleMetadataFieldChange={handleMetadataFieldChange}
+          editMetadataOpen={panels.editMetadataOpen}
+          parsedMetadata={panels.parsedMetadata}
+          handleMetadataFieldChange={panels.handleMetadataFieldChange}
           // The preview's click/hover resolvers call `jianpuWasm()`
           // synchronously, so its SVG only appears once the main-thread
           // component is instantiated — a click can never land before then.

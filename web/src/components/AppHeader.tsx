@@ -112,6 +112,7 @@ interface AppHeaderProps {
   isLoadingCloud?: boolean
   onOpenBin: () => void
   onOpenSyncPanel?: () => void
+  onOpenHistory?: () => void
   hasDocuments: boolean
   rendering: boolean
   audioGenerating?: boolean
@@ -184,6 +185,7 @@ export function AppHeader({
   isLoadingCloud,
   onOpenBin,
   onOpenSyncPanel,
+  onOpenHistory,
   hasDocuments,
   rendering,
   audioGenerating,
@@ -332,6 +334,7 @@ export function AppHeader({
             binNames={sortedBinNames(store)}
             onOpenBin={onOpenBin}
             onOpenSyncPanel={onOpenSyncPanel}
+            onOpenHistory={onOpenHistory}
             canSync={syncedShare.canSync}
             isSynced={syncedShare.isSynced}
             syncedShareLink={syncedShare.syncedShareLink}

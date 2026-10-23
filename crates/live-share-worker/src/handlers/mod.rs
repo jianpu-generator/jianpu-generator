@@ -60,6 +60,8 @@ pub(crate) fn routes(e2e_reset_enabled: bool) -> worker::Result<Routes> {
         .post("/files/list", files::list_files)?
         .post("/files", files::create_file)?
         .post("/files/{id}/content", files::update_file_content)?
+        .post("/files/{id}/versions", files::list_file_versions)?
+        .post("/files/{id}/versions/get", files::get_file_version)?
         .post("/files/rename-batch", files::rename_files_batch)?
         .post("/files/{id}/rename", files::rename_file)?
         .post("/files/{id}/delete", files::delete_file)?

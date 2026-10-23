@@ -213,6 +213,46 @@ pub struct UpdateFileContentResponse {
     pub revision: i64,
 }
 
+/// Body of `POST /files/{id}/versions`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ListFileVersionsRequest {
+    pub identity_token: String,
+}
+
+/// One earlier version of a file, as the History panel lists it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FileVersionSummary {
+    pub revision: i64,
+    /// When this version was saved (epoch millis).
+    pub saved_at: i64,
+}
+
+/// `200` response of `POST /files/{id}/versions`: the file's earlier
+/// versions, newest first. The current text is not one of them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ListFileVersionsResponse {
+    pub versions: Vec<FileVersionSummary>,
+}
+
+/// Body of `POST /files/{id}/versions/get`. `ApiError::NotFound` when the
+/// file is not the caller's or `revision` is not in its history.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GetFileVersionRequest {
+    pub identity_token: String,
+    pub revision: i64,
+}
+
+/// `200` response of `POST /files/{id}/versions/get`: the version's text.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FileVersionResponse {
+    pub content: String,
+}
+
 /// Body of `POST /files/{id}/rename`. No revision gate -- rename has no
 /// conflict semantics (matches the old GitHub backend's actual behavior,
 /// decision #3). `ApiError::NotFound` on zero rows affected; a name

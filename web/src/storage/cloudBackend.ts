@@ -32,6 +32,7 @@ import type {
   CloudBackendError,
   LocalRename,
 } from './cloudBackendTypes'
+import { createVersionCalls } from './cloudBackendVersions'
 import type { BaseSnapshots } from './outbox/baseSnapshots'
 import { type ConflictFlow, createConflictFlow } from './outbox/conflictFlow'
 import type { OutboxLooper, OutboxSnapshot } from './outbox/outboxLooper'
@@ -339,6 +340,8 @@ export function createCloudBackend(
     saveContent,
 
     fetchServerFile,
+
+    ...createVersionCalls(client, identityToken),
 
     conflicts: () => conflictFlow,
 

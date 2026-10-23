@@ -53,6 +53,7 @@ export function FileSwitcher({
   binNames,
   onOpenBin,
   onOpenSyncPanel,
+  onOpenHistory,
   canSync,
   isSynced,
   syncedShareLink,
@@ -205,6 +206,7 @@ export function FileSwitcher({
         onShare={() => setShareModalOpen(true)}
         onDelete={onDelete}
         onOpenBin={onOpenBin}
+        onOpenHistory={onOpenHistory}
         onOpenStorageSettings={onOpenStorageSettings}
       />
       <RenameFileDialog

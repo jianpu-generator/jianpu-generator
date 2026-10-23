@@ -1,4 +1,4 @@
-import type { FileStoreState } from '../fileStore'
+import { displayFileName, type FileStoreState, fileContent } from '../fileStore'
 import { binEntries } from '../fileStoreQueries'
 import type { FileOpError } from '../hooks/useFileOperations'
 import type { PendingDownload } from '../hooks/useJianpuWorkerTypes'
@@ -8,11 +8,13 @@ import type {
 } from '../hooks/useStorageBackend'
 import type { AccountDialog } from '../hooks/useSyncedShareOwner'
 import { withRenamedKey } from '../storage/cloudBackendNaming'
+import type { CloudBackend } from '../storage/cloudBackendTypes'
 import type { StorageBackend } from '../storage/types'
 import { AccountDialogs } from './AccountDialogs'
 import { BinModal } from './BinModal'
 import { DownloadRenameModal } from './DownloadRenameModal'
 import { ErrorModal } from './ErrorModal'
+import { FileHistoryModal } from './fileHistory/FileHistoryModal'
 import { StorageSettingsModal } from './StorageSettingsModal'
 import { SyncPanelContainer } from './syncPanel/SyncPanelContainer'
 import { withServerContent } from './syncPanel/withServerContent'
@@ -37,6 +39,11 @@ interface AppOverlaysProps {
   syncPanelOpen: boolean
   hasUnsavedEdits: boolean
   setSyncPanelOpen: (open: boolean) => void
+  historyOpen: boolean
+  setHistoryOpen: (open: boolean) => void
+  /** Id of the active file, whose history the History panel shows. */
+  fileId: string
+  onRestoreVersion: (content: string) => void
   onRestore: (name: string) => void
   restoringFileName?: string | null
   pendingDownload: PendingDownload | null
@@ -70,6 +77,10 @@ export function AppOverlays({
   syncPanelOpen,
   hasUnsavedEdits,
   setSyncPanelOpen,
+  historyOpen,
+  setHistoryOpen,
+  fileId,
+  onRestoreVersion,
   onRestore,
   restoringFileName,
   pendingDownload,
@@ -131,6 +142,17 @@ export function AppOverlays({
           setStore((previous) => withRenamedKey(previous, from, to))
         }
       />
+      {backend.kind === 'cloud' ? (
+        <FileHistoryModal
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          backend={backend as CloudBackend}
+          fileId={fileId}
+          fileName={displayFileName(store.active)}
+          currentContent={fileContent(store, store.active)}
+          onRestore={onRestoreVersion}
+        />
+      ) : null}
       <DownloadRenameModal
         pending={pendingDownload}
         onConfirm={onConfirmDownload}

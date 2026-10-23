@@ -10,7 +10,7 @@
 //! through `identity::resolve_verified_user_id`, a session lookup.
 //!
 //! `api_error`, `app_log`, `auth`, `e2e_reset`, `e2e_worker_config`,
-//! `files`, `folder_share`, `protocol`, `share` and `share_id` are `pub`
+//! `file_history`, `files`, `folder_share`, `protocol`, `share` and `share_id` are `pub`
 //! (and D1/JsValue-free) so `tests/*.rs` can unit-test them directly, per
 //! this repo's convention of keeping tests in separate files rather than inline
 //! `#[cfg(test)]` modules. Everything else here is D1- or
@@ -28,6 +28,7 @@ pub mod app_log;
 pub mod auth;
 pub mod e2e_reset;
 pub mod e2e_worker_config;
+pub mod file_history;
 pub mod files;
 pub mod folder_share;
 pub mod protocol;

@@ -530,8 +530,9 @@ migrations (see "Storage" below), nothing else.
   `sign_in_lockouts` (`email`, `failed_count`, `locked_until`,
   `lockout_level`) — all three since `0007_password_auth.sql`, which also
   dropped GitHub's `oauth_sessions` verification cache; see "Accounts
-  (email + password)" below — and `app_log` (since `0006_app_log.sql`; see "App log
-  (observability)" below). `live-share-worker/migrations/0004_shares_reference_files.sql`
+  (email + password)" below — `app_log` (since `0006_app_log.sql`; see "App log
+  (observability)" below) and `file_versions` (since `0008_file_versions.sql`;
+  see "Version history" below). `live-share-worker/migrations/0004_shares_reference_files.sql`
   replaced the old `docs` table (a share's own copy of
   `filename`/`content`/`revision`, pushed by the owner's browser separately
   from autosave — a stale-render race in that push could write one file's
@@ -570,7 +571,8 @@ migrations (see "Storage" below), nothing else.
   D1-free account rules) / `crypto` (WebCrypto PBKDF2 and random bytes) /
   `handlers::auth` (the four account routes); `app_log::LogEvent` /
   `app_log::AuthEvent` / `app_log::Outcome` / `app_log::LogRow` (the typed
-  `app_log` rows, see "App log (observability)" below); `db` (crate-private raw D1 query
+  `app_log` rows, see "App log (observability)" below);
+  `file_history::VersionRow` (see "Version history" below); `db` (crate-private raw D1 query
   functions, one `.sql` file per query under `queries/`, loaded via
   `include_str!`).
 - Ownership model: a share's `owner_user_id` column (backfilled from the
@@ -665,6 +667,41 @@ query that hands a former GitHub user's `users` row to a new email.
   last `POST /files/{id}/share/status` answer, so every device sees the same
   live/stopped state and link; `startSync`/`stopSync` send only
   `identityToken`, never content.
+
+### Version history
+
+`files.content` stays the head. Each accepted content save that changes the
+text also inserts a `file_versions` row (`file_id` — `REFERENCES files(id)
+ON DELETE CASCADE` — `revision`, `newer_revision`, `reverse_patch`,
+`saved_at`) holding the **reverse patch** from the new text back to the
+previous one (`live-share-worker/migrations/0008_file_versions.sql`).
+
+- Pure logic lives in `src/file_history.rs` (D1-free, property-tested in
+  `tests/file_history.rs`, golden fixtures in `tests/file_history_golden.rs`):
+  `reverse_patch`, `apply_patch` (diffy unified diffs),
+  `reachable_versions(head_revision, rows)` (follows `newer_revision`
+  links from the head and stops at the first gap),
+  and `rebuild(head_content, head_revision, rows, revision)`.
+- Writes: `handlers::files::update_file_content` reads the previous head
+  before the compare-and-swap. Once the CAS applies, it records the version
+  as a best-effort step (any error is logged and does not fail the save). A
+  save that leaves the text unchanged moves the newest row's
+  `newer_revision` forward (`queries/advance_file_version_link.sql`)
+  instead of storing an empty patch. Each insert is batched with
+  `queries/prune_file_versions.sql`, which keeps the newest
+  `file_history::MAX_VERSIONS_PER_FILE` (100) rows.
+- Reads: `POST /files/{id}/versions` lists the reachable versions
+  (`protocol::ListFileVersionsResponse`). `POST /files/{id}/versions/get`
+  rebuilds one revision and returns its `content`
+  (`protocol::FileVersionResponse`). Both routes are owner-scoped
+  in SQL (`queries/list_file_versions.sql`).
+- Web: `web/src/components/fileHistory/FileHistoryModal.tsx`, opened from
+  the file actions menu's "History" item (cloud backend only). It diffs the
+  editor's current text against the chosen version with
+  `web/src/components/JianpuDiffEditor.tsx`, the Monaco diff the part stream
+  editor also uses (inline or side by side, `hooks/useDiffLayout.ts`). Restore puts
+  the version's text in the editor, and the normal save path stores it as a
+  new head, so a restore adds a version and never rewrites history.
 
 ### App log (observability)
 
