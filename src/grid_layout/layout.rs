@@ -88,6 +88,12 @@ fn system_total_height(
     musical + lyric + deco
 }
 
+/// The page's usable music width (see [`super::usable_music_width_pt`]),
+/// net of `config`'s part-label column.
+fn usable_music_width_pt(page_width_pt: f32, config: &RenderConfig) -> f32 {
+    super::usable_music_width_pt(page_width_pt, config.part_label_width_pt as f32)
+}
+
 /// One system's summed column rods against the page's usable music width —
 /// the overflow check for the spring-and-rod spacing model (see **Rod and
 /// spring** in `ARCHITECTURE.md`). `None` when the system fits; `Some` with
@@ -101,7 +107,7 @@ fn system_overflow_diagnostic(
     config: &RenderConfig,
 ) -> Option<Diagnostic> {
     let total_rod: f32 = measure_layout.iter().map(|m| m.rod_pt).sum();
-    let available = super::usable_music_width_pt(page_width_pt, config.part_label_width_pt as f32);
+    let available = usable_music_width_pt(page_width_pt, config);
     if total_rod <= available {
         return None;
     }
@@ -278,7 +284,7 @@ pub fn layout(
 ) -> LayoutOutput {
     let base = config.row_height as f32;
     let blocks = &compile_result.blocks;
-    let systems = pack_into_systems(blocks, config);
+    let systems = pack_into_systems(blocks, config, usable_music_width_pt(page_width_pt, config));
 
     let measure_placements = build_measure_placements(&systems);
     let arc_map = resolve_slur_spans(&compile_result.slur_spans, &measure_placements, &systems);

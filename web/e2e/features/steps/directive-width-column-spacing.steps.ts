@@ -122,7 +122,9 @@ Then(
  * Three measures, each under its own `label=` directive (mirroring the
  * user's hand-confirmed repro): measure 0 additionally carries
  * bpm/key/time, measures 1 and 2 each trigger their own directive line via
- * a fresh `label=`.
+ * a fresh `label=`. Those labels are too wide for all three measures to fit
+ * one system, so measure 2 wraps onto its own system; only measures that
+ * share a system are checked against each other.
  */
 const twoAdjacentDirectivesSource = [
   '# metadata',
@@ -223,10 +225,22 @@ Then(
       return Math.min(...boxes.map((box) => box.x))
     }
 
+    // A measure that wraps onto the next system starts back at the left
+    // margin, so only compare neighbours drawn on the same line.
+    async function top(groupIndex: number): Promise<number> {
+      const boxes = await groupBoxes(groupIndex)
+      expect(boxes.length).toBeGreaterThan(0)
+      return Math.min(...boxes.map((box) => box.y))
+    }
+
+    let sameSystemPairs = 0
     for (let i = 0; i < groupCount - 1; i++) {
+      if (Math.abs((await top(i)) - (await top(i + 1))) > 1) continue
+      sameSystemPairs++
       const currentRightEdge = await rightEdge(i)
       const nextLeftEdge = await leftEdge(i + 1)
       expect(currentRightEdge).toBeLessThanOrEqual(nextLeftEdge)
     }
+    expect(sameSystemPairs).toBeGreaterThan(0)
   },
 )

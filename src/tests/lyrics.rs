@@ -143,7 +143,8 @@ time=4/4 key=C4 bpm=120
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
-    let systems = grid_layout::layout::pack_into_systems(&compile_result.blocks, &config);
+    let systems =
+        grid_layout::layout::pack_into_systems(&compile_result.blocks, &config, f32::INFINITY);
     assert_eq!(
         systems.len(),
         1,

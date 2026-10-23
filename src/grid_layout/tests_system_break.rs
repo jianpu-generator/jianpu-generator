@@ -80,7 +80,7 @@ fn break_directive_forces_early_system_split() {
         make_block("S", 3, true),
         make_block("S", 3, false),
     ];
-    let systems = pack_into_systems(&blocks, &cfg(4));
+    let systems = pack_into_systems(&blocks, &cfg(4), f32::INFINITY);
     assert_eq!(systems.len(), 2);
     assert_eq!(systems[0].len(), 2);
     assert_eq!(systems[1].len(), 2);
@@ -94,7 +94,7 @@ fn no_break_directive_packs_purely_by_count() {
         make_block("S", 3, false),
         make_block("S", 3, false),
     ];
-    let systems = pack_into_systems(&blocks, &cfg(4));
+    let systems = pack_into_systems(&blocks, &cfg(4), f32::INFINITY);
     assert_eq!(systems.len(), 1);
     assert_eq!(systems[0].len(), 4);
 }
@@ -107,7 +107,7 @@ fn break_directive_on_first_measure_of_system_is_noop() {
         make_block("S", 3, false),
         make_block("S", 3, false),
     ];
-    let systems = pack_into_systems(&blocks, &cfg(4));
+    let systems = pack_into_systems(&blocks, &cfg(4), f32::INFINITY);
     assert_eq!(systems.len(), 1);
     assert_eq!(systems[0].len(), 4);
 }
@@ -122,7 +122,7 @@ fn multiple_break_directives_produce_multiple_early_splits() {
         make_block("S", 3, true),
         make_block("S", 3, false),
     ];
-    let systems = pack_into_systems(&blocks, &cfg(6));
+    let systems = pack_into_systems(&blocks, &cfg(6), f32::INFINITY);
     assert_eq!(systems.len(), 3);
     assert_eq!(systems[0].len(), 2);
     assert_eq!(systems[1].len(), 2);
@@ -141,7 +141,7 @@ fn break_directive_interacts_with_max_measures_per_system() {
         make_block("S", 3, false),
         make_block("S", 3, false),
     ];
-    let systems = pack_into_systems(&blocks, &cfg(2));
+    let systems = pack_into_systems(&blocks, &cfg(2), f32::INFINITY);
     assert_eq!(systems.len(), 3);
     assert_eq!(systems[0].len(), 2);
     assert_eq!(systems[1].len(), 2);
@@ -160,8 +160,34 @@ fn break_directive_does_not_persist_to_later_measures() {
         make_block("S", 3, false),
         make_block("S", 3, false),
     ];
-    let systems = pack_into_systems(&blocks, &cfg(4));
+    let systems = pack_into_systems(&blocks, &cfg(4), f32::INFINITY);
     assert_eq!(systems.len(), 2);
     assert_eq!(systems[0].len(), 2);
     assert_eq!(systems[1].len(), 4);
+}
+
+// ── Width: a system breaks early when the next measure wouldn't fit ─────────
+
+/// Summed column rods of `block` laid out as a system of its own.
+fn single_block_rod_pt(block: &MeasureBlock) -> f32 {
+    crate::grid_layout::layout::build_measure_column_layout(std::slice::from_ref(block), &cfg(4))
+        .iter()
+        .map(|m| m.rod_pt)
+        .sum()
+}
+
+#[test]
+fn system_breaks_early_when_the_next_measure_would_overflow_the_width() {
+    let blocks = vec![make_block("S", 3, false); 4];
+    let width = 2.5 * single_block_rod_pt(&blocks[0]);
+    let systems = pack_into_systems(&blocks, &cfg(4), width);
+    assert_eq!(systems.iter().map(Vec::len).collect::<Vec<_>>(), [2, 2]);
+}
+
+#[test]
+fn a_measure_wider_than_the_page_still_gets_a_system_of_its_own() {
+    let blocks = vec![make_block("S", 3, false); 3];
+    let width = 0.5 * single_block_rod_pt(&blocks[0]);
+    let systems = pack_into_systems(&blocks, &cfg(4), width);
+    assert_eq!(systems.iter().map(Vec::len).collect::<Vec<_>>(), [1, 1, 1]);
 }
