@@ -24,7 +24,8 @@ import type { NoteCell } from '../utils/noteSpanSelection'
 
 /** Which notation the preview (and so PDF export) shows. `abc` is the jianpu
  * layout with letter names (`D E F♯`) in place of degree numbers; `guitar` is
- * the jianpu layout with a guitar chord diagram at each chord symbol; and
+ * the jianpu layout with each degree followed by its letter name (`1 (D)`)
+ * and a guitar chord diagram at each chord symbol; and
  * `harmonica` the jianpu layout with diatonic harmonica tabs (`4 -4 5`). */
 export type Notation = 'jianpu' | 'staff' | 'abc' | 'guitar' | 'harmonica'
 

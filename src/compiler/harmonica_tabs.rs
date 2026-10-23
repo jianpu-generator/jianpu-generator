@@ -8,7 +8,7 @@
 //! hole 7 blow. A later key change doesn't swap harmonicas: its notes are
 //! tabbed by pitch on the same one.
 
-use super::types::{ElementContent, NoteHeadLabel};
+use super::types::{ElementContent, HeadLabelPlacement, NoteHeadLabel};
 use crate::ast::parsed::{Accidental, JianPuPitch, KeyChange, NoteName};
 
 /// Every pitch the harmonica plays, by semitones above hole 1 blow (its
@@ -71,6 +71,7 @@ impl HarmonicaTabs {
                         None => NoteHeadLabel {
                             text: UNPLAYABLE.to_string(),
                             unplayable: true,
+                            placement: HeadLabelPlacement::InPlaceOfDegree,
                         },
                     }),
                     pitch,

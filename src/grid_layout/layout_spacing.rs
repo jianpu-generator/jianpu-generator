@@ -116,11 +116,18 @@ pub(crate) struct ColumnSizing {
 /// letter name, whose accidental trails its letter (`F♯`).
 fn accidental_lead(content: &ElementContent, config: &RenderConfig) -> f32 {
     match content {
+        // The guitar chord view's label follows the digit (`♯4 (F♯)`), so
+        // its digit still leads with the accidental.
         ElementContent::NoteHead {
             accidental,
-            head_label: None,
+            head_label,
             ..
-        } => accidental_extra_weight(accidental, config),
+        } if head_label
+            .as_ref()
+            .is_none_or(|label| !label.replaces_degree()) =>
+        {
+            accidental_extra_weight(accidental, config)
+        }
         ElementContent::ChordSymbol { text, .. } => {
             crate::font_metrics::chord_leading_accidental_width_for_family(
                 config.glyph_font_families.chords,

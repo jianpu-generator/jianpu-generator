@@ -2,12 +2,15 @@
 //! replaced by its pitch's letter name (`F♯`) or its harmonica tab (`-4`),
 //! resolved against the key in effect at its measure. The letter-name view
 //! also respells chord symbols (`F♯m⁷/C♯`). Everything else about the layout
-//! stays as in the jianpu view. Also home to `label_note_heads`, which
+//! stays as in the jianpu view. The guitar chord view spells the same letter
+//! names after the degrees instead (`3 (F♯)`, `6m (Bm)`). Also home to
+//! `label_note_heads`, which
 //! dispatches to every view that keeps the jianpu layout — see `NoteLabels`.
 
 use super::harmonica_tabs::HarmonicaTabs;
 use super::types::{
-    ColumnElement, CompileResult, ElementContent, MeasureBlock, MeasureRow, NoteHeadLabel,
+    ColumnElement, CompileResult, ElementContent, HeadLabelPlacement, MeasureBlock, MeasureRow,
+    NoteHeadLabel,
 };
 use crate::ast::grouped::Score;
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
@@ -23,19 +26,24 @@ pub enum NoteLabels {
     Degrees,
     LetterNames,
     HarmonicaTabs,
-    /// Degrees, plus a guitar chord diagram above every chord symbol (see
-    /// `guitar_chords`).
+    /// Degrees followed by their letter names (`1 (C)`, `6m (Am)`), plus a
+    /// guitar chord diagram above every chord symbol (see `guitar_chords`).
     GuitarChords,
 }
 
 /// `result`, compiled from `score`, labelled as `labels` says: unchanged for
 /// degrees, each note head's `head_label` set for letter names and harmonica
-/// tabs, each chord symbol's `guitar_voicing` set for guitar chords.
+/// tabs, and for guitar chords each note head's `head_label` set to follow
+/// its degree and each chord symbol's `guitar_voicing` set.
 pub fn label_note_heads(result: CompileResult, score: &Score, labels: NoteLabels) -> CompileResult {
     match labels {
         NoteLabels::Degrees => result,
         NoteLabels::LetterNames => relabel_blocks(result, score, |content, key| {
-            spell_content(content, SpelledPitch::key_tonic(key))
+            spell_content(
+                content,
+                SpelledPitch::key_tonic(key),
+                HeadLabelPlacement::InPlaceOfDegree,
+            )
         }),
         NoteLabels::HarmonicaTabs => {
             let harmonica = HarmonicaTabs::tuned_to(opening_key(score));
@@ -43,7 +51,17 @@ pub fn label_note_heads(result: CompileResult, score: &Score, labels: NoteLabels
                 harmonica.tab_content(content, key)
             })
         }
-        NoteLabels::GuitarChords => super::guitar_chords::place_guitar_voicings(result, score),
+        NoteLabels::GuitarChords => relabel_blocks(
+            super::guitar_chords::place_guitar_voicings(result, score),
+            score,
+            |content, key| {
+                spell_content(
+                    content,
+                    SpelledPitch::key_tonic(key),
+                    HeadLabelPlacement::AfterDegree,
+                )
+            },
+        ),
     }
 }
 
@@ -142,7 +160,11 @@ fn relabel_block(
     }
 }
 
-fn spell_content(content: ElementContent, tonic: SpelledPitch) -> ElementContent {
+fn spell_content(
+    content: ElementContent,
+    tonic: SpelledPitch,
+    placement: HeadLabelPlacement,
+) -> ElementContent {
     match content {
         ElementContent::NoteHead {
             pitch,
@@ -152,9 +174,10 @@ fn spell_content(content: ElementContent, tonic: SpelledPitch) -> ElementContent
             double_dotted,
             head_label: _,
         } => ElementContent::NoteHead {
-            head_label: Some(NoteHeadLabel::playable(
-                tonic.scale_degree(&pitch, &accidental).engraved_name(),
-            )),
+            head_label: Some(NoteHeadLabel {
+                placement,
+                ..NoteHeadLabel::playable(tonic.scale_degree(&pitch, &accidental).engraved_name())
+            }),
             pitch,
             accidental,
             octave,
@@ -162,13 +185,18 @@ fn spell_content(content: ElementContent, tonic: SpelledPitch) -> ElementContent
             double_dotted,
         },
         ElementContent::ChordSymbol {
-            text: _,
+            text,
             degrees,
             dotted,
             double_dotted,
             guitar_voicing,
         } => ElementContent::ChordSymbol {
-            text: degrees.letter_symbol(tonic),
+            text: match placement {
+                HeadLabelPlacement::InPlaceOfDegree => degrees.letter_symbol(tonic),
+                HeadLabelPlacement::AfterDegree => {
+                    format!("{text} ({})", degrees.letter_symbol(tonic))
+                }
+            },
             degrees,
             dotted,
             double_dotted,

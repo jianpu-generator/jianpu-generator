@@ -32,7 +32,8 @@ function OptionLabel({ icon, label }: { icon?: string; label: string }) {
 
 /** Switches the preview between jianpu, western staff notation, ABC (the
  * jianpu layout with letter names in place of degree numbers), Guitar (the
- * jianpu layout with a chord diagram at each chord symbol), and Harmonica
+ * jianpu layout with each degree followed by its letter name, `1 (C)`, and
+ * a chord diagram at each chord symbol), and Harmonica
  * (the jianpu layout with diatonic harmonica tabs). A dropdown rather than a
  * row of buttons so it stays compact as views are added; `ResponsiveMenu`
  * opens it as a full-screen drawer on mobile. */

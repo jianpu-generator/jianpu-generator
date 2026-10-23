@@ -111,14 +111,27 @@ pub struct ColumnElement {
     pub note_id: Option<usize>,
 }
 
-/// What a note head reads as in place of its jianpu digit: its letter name
-/// (`F♯`) or its harmonica tab (`-4`), as set by `label_note_heads`.
+/// What a note head reads as besides, or in place of, its jianpu digit: its
+/// letter name (`F♯`) or its harmonica tab (`-4`), as set by
+/// `label_note_heads`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct NoteHeadLabel {
     pub text: String,
     /// True when the pitch can't be played on the instrument the label is
     /// for (a harmonica tab with no hole for it), drawn as a warning.
     pub unplayable: bool,
+    pub placement: HeadLabelPlacement,
+}
+
+/// Where a `NoteHeadLabel` is drawn relative to the note head's degree.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HeadLabelPlacement {
+    /// Drawn in place of the degree: the letter-name (`F♯`) and
+    /// harmonica-tab (`-4`) views.
+    InPlaceOfDegree,
+    /// Drawn after the degree, in parentheses: the guitar chord view
+    /// (`3 (F♯)`).
+    AfterDegree,
 }
 
 impl NoteHeadLabel {
@@ -126,6 +139,22 @@ impl NoteHeadLabel {
         Self {
             text,
             unplayable: false,
+            placement: HeadLabelPlacement::InPlaceOfDegree,
+        }
+    }
+
+    /// Whether the label is drawn in place of the degree rather than after
+    /// it.
+    pub fn replaces_degree(&self) -> bool {
+        self.placement == HeadLabelPlacement::InPlaceOfDegree
+    }
+
+    /// What the note head's text run reads after its leading sharp/flat (if
+    /// any): the label alone, or `digit` followed by it in parentheses.
+    pub fn run_text(&self, digit: char) -> String {
+        match self.placement {
+            HeadLabelPlacement::InPlaceOfDegree => self.text.clone(),
+            HeadLabelPlacement::AfterDegree => format!("{digit} ({})", self.text),
         }
     }
 }

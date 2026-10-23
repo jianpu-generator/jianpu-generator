@@ -10,8 +10,9 @@ const NOTE_LABELS: Record<Notation, NoteLabels> = {
 }
 
 /** What the jianpu layout's note heads read as for the preview's notation:
- * the ABC view swaps each degree for its letter name, the guitar view keeps
- * degrees but draws a chord diagram at each chord symbol, and the harmonica
+ * the ABC view swaps each degree for its letter name, the guitar view
+ * follows each degree with its letter name (`1 (C)`) and draws a chord
+ * diagram at each chord symbol, and the harmonica
  * view swaps each degree for its harmonica tab. */
 export function noteLabelsFor(notation: Notation): NoteLabels {
   return NOTE_LABELS[notation]

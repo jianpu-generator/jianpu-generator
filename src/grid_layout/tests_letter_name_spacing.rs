@@ -1,7 +1,10 @@
 // ── Letter-name view column widths ────────────────────────────────────────────
 
 use crate::ast::parsed::{Accidental, JianPuPitch, Offset};
-use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
+use crate::compiler::types::{
+    ColumnElement, ElementContent, HeadLabelPlacement, MeasureBlock, MeasureRow, NoteHeadLabel,
+    RowId,
+};
 use crate::font_metrics;
 use crate::grid_layout::layout::{build_measure_column_layout, measure_column_weights};
 use crate::render_config::RenderConfig;
@@ -19,7 +22,18 @@ fn test_config() -> RenderConfig {
     }
 }
 
-fn block_with_note(head_label: Option<&str>, accidental: Accidental) -> MeasureBlock {
+fn in_place_of_degree(text: &str) -> Option<NoteHeadLabel> {
+    Some(NoteHeadLabel::playable(text.to_string()))
+}
+
+fn after_degree(text: &str) -> Option<NoteHeadLabel> {
+    Some(NoteHeadLabel {
+        placement: HeadLabelPlacement::AfterDegree,
+        ..NoteHeadLabel::playable(text.to_string())
+    })
+}
+
+fn block_with_note(head_label: Option<NoteHeadLabel>, accidental: Accidental) -> MeasureBlock {
     MeasureBlock {
         rows: vec![MeasureRow {
             kind: crate::ast::parsed::PartKind::Notes,
@@ -35,8 +49,7 @@ fn block_with_note(head_label: Option<&str>, accidental: Accidental) -> MeasureB
                         octave: 0,
                         dotted: false,
                         double_dotted: false,
-                        head_label: head_label
-                            .map(|text| crate::compiler::NoteHeadLabel::playable(text.to_string())),
+                        head_label,
                     },
                     note_id: None,
                 },
@@ -70,7 +83,7 @@ fn a_letter_name_s_column_is_measured_from_the_letter_name_itself() {
     let config = test_config();
     let digit = measure_column_weights(&block_with_note(None, Accidental::Natural), 2, &config)[0];
     let letter = measure_column_weights(
-        &block_with_note(Some("F\u{266F}"), Accidental::Natural),
+        &block_with_note(in_place_of_degree("F\u{266F}"), Accidental::Natural),
         2,
         &config,
     )[0];
@@ -88,7 +101,10 @@ fn a_letter_name_reserves_no_accidental_lead_since_its_accidental_trails() {
     // column needs no room ahead of the glyph, unlike the jianpu `♯4`.
     let config = test_config();
     let layout = build_measure_column_layout(
-        &[block_with_note(Some("F\u{266F}"), Accidental::Sharp)],
+        &[block_with_note(
+            in_place_of_degree("F\u{266F}"),
+            Accidental::Sharp,
+        )],
         &config,
     );
 
@@ -96,4 +112,32 @@ fn a_letter_name_reserves_no_accidental_lead_since_its_accidental_trails() {
         .column_accidental_leads
         .iter()
         .all(|&lead| lead == 0.0));
+}
+
+#[test]
+fn a_guitar_view_note_head_s_column_is_measured_from_its_digit_and_letter_name() {
+    let config = test_config();
+    let weight = measure_column_weights(
+        &block_with_note(after_degree("E"), Accidental::Natural),
+        2,
+        &config,
+    )[0];
+
+    assert_eq!(weight, notes_text_width("3 (E)", &config));
+}
+
+#[test]
+fn a_guitar_view_note_head_still_leads_with_its_digit_s_accidental() {
+    // A written `3b` in C reads `♭3 (E♭)`: the flat still leads the digit,
+    // so the column reserves room ahead of the glyph as in the jianpu view.
+    let config = test_config();
+    let layout = build_measure_column_layout(
+        &[block_with_note(after_degree("E\u{266D}"), Accidental::Flat)],
+        &config,
+    );
+    // Skip the system's leading placeholder column (see
+    // `build_measure_column_layout`), which never carries a lead.
+    let note_col = layout[0].column_rods.len() - 2;
+
+    assert!(layout[0].column_accidental_leads[note_col] > 0.0);
 }
