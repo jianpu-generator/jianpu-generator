@@ -330,15 +330,6 @@ Then(
 )
 
 Then(
-  'the pitch drawer shows a guitar diagram with frets {string}',
-  async ({ page }, frets: string) => {
-    await expect(
-      page.getByTestId('pitch-drawer-guitar-diagram').locator('svg'),
-    ).toHaveAttribute('data-guitar-frets', frets, { timeout: 10_000 })
-  },
-)
-
-Then(
   'the pitch drawer shows a keyboard with tones {string}',
   async ({ page }, tones: string) => {
     await expect(
@@ -365,15 +356,6 @@ Then(
     )
   },
 )
-
-Then('the pitch drawer shows no guitar diagram', async ({ page }) => {
-  // Wait for the drawer's content to be in place first, so this doesn't
-  // pass before the description arrives.
-  await expect(page.getByTestId('pitch-drawer-letter-names')).toBeVisible({
-    timeout: 10_000,
-  })
-  await expect(page.getByTestId('pitch-drawer-guitar-diagram')).toHaveCount(0)
-})
 
 Then(
   'the note {string} on the M line is still range-selected',

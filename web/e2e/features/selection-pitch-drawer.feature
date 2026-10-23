@@ -4,7 +4,8 @@ Feature: Show the selected note/chord's letter names in a bottom drawer
   # note (notes part) or one chord (chords part), a drawer slides up from the
   # bottom of the preview showing what that jianpu symbol means in letter
   # names, resolved against the key in effect at that measure. Chords also
-  # get a guitar chord diagram.
+  # get a guitar chord diagram for every
+  # voicing chords-db knows.
 
   Scenario: Selecting a single note shows its letter name in the key of C
     Given a score in key C4 with "[M] 1 2 3 4" is loaded
@@ -48,6 +49,16 @@ Feature: Show the selected note/chord's letter names in a bottom drawer
     Given a score in key C4 with "[C] 1m7 - - -" on a chords part is loaded
     When I click-and-click select the chord "1m7" on the C line
     Then the pitch drawer shows a guitar diagram with frets "x 3 1 3 4 x"
+
+  Scenario: Selecting a chord shows every guitar voicing, open shape first
+    Given a score in key C4 with "[C] 1 - - -" on a chords part is loaded
+    When I click-and-click select the chord "1" on the C line
+    Then the pitch drawer shows guitar diagrams with frets:
+      | frets          |
+      | x 3 2 0 1 0    |
+      | 3 3 5 5 5 3    |
+      | x x 5 5 5 8    |
+      | 8 10 10 9 8 8  |
 
   Scenario: Selecting a chord shows a keyboard labelled with each tone's interval from the root
     Given a score in key C4 with "[C] 1m7 - - -" on a chords part is loaded

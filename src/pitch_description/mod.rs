@@ -46,10 +46,11 @@ pub struct ChordDescription {
     pub tone_names: Vec<String>,
     /// A slash chord's bass note, e.g. `"G"` for `C/G`.
     pub bass_note: Option<String>,
-    /// Chord-box SVG from chords-db's first voicing; `None` when chords-db
+    /// One chord-box SVG per chords-db voicing, most common first (usually
+    /// the open shape, then shapes further up the neck); empty when chords-db
     /// has no voicing for this chord kind (e.g. `7sus2`). A slash chord with
     /// no slash-specific voicing falls back to its plain chord's.
-    pub guitar_diagram_svg: Option<String>,
+    pub guitar_diagram_svgs: Vec<String>,
     /// Keyboard SVG spanning just the chord tones plus padding; each tone is
     /// labelled with its interval from the chord root (`1 3 5`, `1 b3 5`).
     /// Always root position, unless the slash bass is one of the triad's
@@ -188,9 +189,10 @@ fn describe_chord(chord: &GroupedChordNote, tonic: SpelledPitch) -> ChordDescrip
         bass.map(|bass| format!("/{}", bass.name()))
             .unwrap_or_default(),
     );
-    let guitar_diagram_svg = guitar_voicings(&chord.triad, chord.extension.as_ref(), root, bass)
-        .first()
-        .map(|voicing| render_guitar_diagram_svg(voicing, &chord_name));
+    let guitar_diagram_svgs = guitar_voicings(&chord.triad, chord.extension.as_ref(), root, bass)
+        .into_iter()
+        .map(|voicing| render_guitar_diagram_svg(voicing, &chord_name))
+        .collect();
     let piano_diagram_svg =
         render_piano_diagram_svg(&piano_tones(root, &template.intervals, bass), &chord_name);
     ChordDescription {
@@ -201,7 +203,7 @@ fn describe_chord(chord: &GroupedChordNote, tonic: SpelledPitch) -> ChordDescrip
             .map(|&interval| root.up(interval).name())
             .collect(),
         bass_note: bass.map(SpelledPitch::name),
-        guitar_diagram_svg,
+        guitar_diagram_svgs,
         chord_name,
     }
 }

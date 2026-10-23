@@ -94,14 +94,19 @@ function PitchDrawerContent({
       </div>
       <div className="pitch-drawer-diagrams">
         <PianoDiagram svg={chord.pianoDiagramSvg} />
-        {chord.guitarDiagramSvg === undefined ? null : (
-          <div
-            className="pitch-drawer-guitar-diagram"
-            data-testid="pitch-drawer-guitar-diagram"
-            // Our own Rust-generated SVG (`guitar_diagram_svg.rs`), not user input.
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: see above
-            dangerouslySetInnerHTML={{ __html: chord.guitarDiagramSvg }}
-          />
+        {chord.guitarDiagramSvgs.length === 0 ? null : (
+          <div className="pitch-drawer-guitar-diagrams">
+            {chord.guitarDiagramSvgs.map((svg) => (
+              <div
+                key={svg}
+                className="pitch-drawer-guitar-diagram"
+                data-testid="pitch-drawer-guitar-diagram"
+                // Our own Rust-generated SVG (`guitar_diagram_svg.rs`), not user input.
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: see above
+                dangerouslySetInnerHTML={{ __html: svg }}
+              />
+            ))}
+          </div>
         )}
       </div>
     </div>

@@ -1152,7 +1152,7 @@ world jianpu-wasm {
         chord-name: string,
         tone-names: list<string>,
         bass-note: option<string>,
-        guitar-diagram-svg: option<string>,
+        guitar-diagram-svgs: list<string>,
         piano-diagram-svg: string,
     }
 
