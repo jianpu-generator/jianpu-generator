@@ -1795,6 +1795,8 @@ world jianpu-wasm {
         name-match: option<name-match>,
         // The row's checkbox; none for rows that cannot be selected (demo files, the empty-folder hint).
         check: option<check-state>,
+        // Keys of the folder rows the row lies inside, outermost first; empty at the top level.
+        ancestor-keys: list<string>,
     }
 
     // A half-open range of UTF-16 code units in a row's displayed name (no `.jianpu`).

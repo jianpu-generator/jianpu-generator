@@ -252,6 +252,7 @@ pub(super) fn view_row(row: tree::TreeViewRow) -> FileTreeViewRow {
             end: u32::try_from(found.end).unwrap_or(u32::MAX),
         }),
         check: row.check.map(check_state),
+        ancestor_keys: row.ancestor_keys,
     }
 }
 

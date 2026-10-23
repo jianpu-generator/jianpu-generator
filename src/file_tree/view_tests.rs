@@ -301,3 +301,33 @@ fn a_matching_row_reports_where_the_query_occurs_in_its_displayed_name() {
         ]
     );
 }
+
+#[test]
+fn every_row_lists_the_keys_of_the_folders_it_lies_inside() {
+    let rows = tree().view_rows(&TreeViewInput {
+        active: "Hymns/Advent/Rejoice.jianpu",
+        expanded: &strings(&["Empty"]),
+        demo_file_names: &strings(&["01.jianpu"]),
+        shares: &ShareOverview::default(),
+        query: "",
+        selected: &[],
+    });
+    let ancestors: Vec<String> = rows
+        .iter()
+        .map(|row| format!("{} <- [{}]", row.name, row.ancestor_keys.join(", ")))
+        .collect();
+    assert_eq!(
+        ancestors,
+        vec![
+            "Empty <- []",
+            "Empty folder <- [Empty]",
+            "Hymns <- []",
+            "Advent <- [Hymns]",
+            "O Come.jianpu <- [Hymns, Hymns/Advent]",
+            "Rejoice.jianpu <- [Hymns, Hymns/Advent]",
+            "Amazing.jianpu <- [Hymns]",
+            "Scratch.jianpu <- []",
+            "Demo <- []",
+        ]
+    );
+}
