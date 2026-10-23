@@ -13,16 +13,16 @@ Feature: Version history of a cloud file
     When I open the History panel
     Then the History panel lists 1 earlier version
 
-  Scenario: The diff shows what restoring a version would change
+  Scenario: The diff shows what changed since a version
     Given a cloud file named "history-diff.jianpu" is seeded for the signed-in account
     And I open and edit "history-diff" with suffix " 5"
     And the content save lands for "history-diff.jianpu" containing "1 2 3 4 5"
     When I open the History panel
-    Then the History diff compares the current text ending in "1 2 3 4 5" with the version ending in "1 2 3 4"
-    And the History diff marks the removed characters
+    Then the History diff compares the version ending in "1 2 3 4" with the current text ending in "1 2 3 4 5"
+    And the History diff marks the added characters
     When I switch the History diff to inline
     Then the History diff is inline
-    And the History diff marks the removed characters
+    And the History diff marks the added characters
 
   Scenario: Restoring a version saves it as a new version
     Given a cloud file named "history-restore.jianpu" is seeded for the signed-in account

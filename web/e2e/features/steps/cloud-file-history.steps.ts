@@ -8,8 +8,8 @@ import { Then, When } from './fixtures'
 
 const historyPanel = (page: Page) => page.getByTestId('file-history')
 
-/** The text on one side of the History diff: `original` is the editor's
- * current text, `modified` the chosen version. */
+/** The text on one side of the History diff: `original` is the chosen
+ * version, `modified` the editor's current text. */
 function diffSide(page: Page, side: 'original' | 'modified') {
   return page.evaluate((which) => {
     const container = document.querySelector(
@@ -43,19 +43,19 @@ Then(
 )
 
 Then(
-  'the History diff compares the current text ending in {string} with the version ending in {string}',
-  async ({ page }, current: string, version: string) => {
+  'the History diff compares the version ending in {string} with the current text ending in {string}',
+  async ({ page }, version: string, current: string) => {
     await expect
       .poll(() => diffSide(page, 'original'))
-      .toMatch(new RegExp(`${current}\\n?$`))
+      .toMatch(new RegExp(`${version}\\n?$`))
     await expect
       .poll(() => diffSide(page, 'modified'))
-      .toMatch(new RegExp(`${version}\\n?$`))
+      .toMatch(new RegExp(`${current}\\n?$`))
   },
 )
 
-Then('the History diff marks the removed characters', async ({ page }) => {
-  await expect(diffEditor(page).locator('.char-delete').first()).toBeVisible()
+Then('the History diff marks the added characters', async ({ page }) => {
+  await expect(diffEditor(page).locator('.char-insert').first()).toBeVisible()
 })
 
 When('I switch the History diff to inline', async ({ page }) => {
