@@ -155,3 +155,7 @@ fn mapped_offset(offset: usize, edits: &[StreamTextEdit]) -> usize {
 #[cfg(test)]
 #[path = "format_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "format_properties_tests.rs"]
+mod properties;

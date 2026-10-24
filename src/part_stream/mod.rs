@@ -25,6 +25,8 @@ mod focus;
 mod format;
 mod lyrics;
 mod split;
+#[cfg(test)]
+mod stream_generator;
 mod timing;
 
 use crate::ast::parsed::{PartDecl, PartKind};
