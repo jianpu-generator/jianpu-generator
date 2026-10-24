@@ -212,9 +212,9 @@ fn is_chord_only_row_detects_chord() {
 fn note_part_sub_row_heights_sums_correctly() {
     let heights = note_part_sub_row_heights(30.0, 0.0);
     // tuplet_bracket + arc + above_dot + note_head + below_dot + ul + ul
-    // = 30.0 + 9.0 + 7.5 + 30.0 + 7.5 + 4.5 + 4.5 = 93.0
+    // = 30.0 + 9.0 + 7.5 + 30.0 + 7.5 + 7.5 + 7.5 = 99.0
     let sum: f32 = heights.iter().sum();
-    assert!((sum - 93.0).abs() < 0.001, "sum={sum}");
+    assert!((sum - 99.0).abs() < 0.001, "sum={sum}");
     assert_eq!(heights.len(), 7);
 }
 
