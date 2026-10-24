@@ -9,6 +9,7 @@ import { useFileImport } from './useFileImport'
 import { useFileOperations } from './useFileOperations'
 import { useFontsLoader } from './useFontsLoader'
 import { useJianpuWorker } from './useJianpuWorker'
+import { useKeyboardShortcuts } from './useKeyboardShortcuts'
 import { usePartTogglePruning } from './usePartTogglePruning'
 import { usePartToggles } from './usePartToggles'
 import { useScoreSource } from './useScoreSource'
@@ -85,6 +86,11 @@ export function useAppController() {
   const wasm = useWasmLoader()
   const soundfontReady = soundfont.status === 'ready'
   const pdfFontsReady = fonts.status === 'ready'
+
+  // The part focus editor's last good draft. While it is set, everything
+  // that reads the score (preview, spans, playback, pitch description)
+  // follows it instead of the untouched `source`.
+  const [partFocusDraft, setPartFocusDraft] = useState<string | null>(null)
 
   const {
     partToggles,
@@ -164,7 +170,7 @@ export function useAppController() {
     importFromFile,
     staffNotation,
   } = useJianpuWorker(
-    source,
+    partFocusDraft ?? source,
     partToggles,
     wasm.status === 'ready',
     store.active,
@@ -237,6 +243,20 @@ export function useAppController() {
     measureRangeSelectedPartNamesRef,
   )
 
+  useKeyboardShortcuts({
+    measureAudioPlaying,
+    measureAudioGenerating,
+    soundfontReady,
+    selectedMeasureRange,
+    selectedSequenceRange,
+    playSelectedMeasures,
+    playFromCurrentMeasure,
+    notePlaybackSelectionActive: selectedNoteRangePlaybackInfo !== null,
+    playNoteSelection: handlePlayNoteSelection,
+    stopMeasurePlayback,
+    forceSave,
+  })
+
   const noPartsSelected = computeNoPartsSelected(parts, visibility)
   return {
     store,
@@ -252,6 +272,7 @@ export function useAppController() {
     refreshSaveStatus,
     editorCollapsed,
     setEditorCollapsed,
+    setPartFocusDraft,
     creatingFile,
     creatingFolder,
     deletingFileName,

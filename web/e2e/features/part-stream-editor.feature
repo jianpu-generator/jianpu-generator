@@ -113,6 +113,30 @@ Feature: Part focus editor
     Then the part focus editor has an error marker
     And the part focus Apply button is disabled
 
+  Scenario: The preview follows the draft as I type
+    When I choose part "W" from the Edit part as stream menu
+    And I place the cursor at the start of part focus line 1
+    And I type "x" in the part focus editor
+    Then the preview shows the text "xa"
+
+  Scenario: The preview keeps the last good draft while the stream has an error
+    When I choose part "W" from the Edit part as stream menu
+    And I place the cursor at the start of part focus line 1
+    And I type "x" in the part focus editor
+    And I place the cursor at the end of the part focus stream
+    And I type " extra" in the part focus editor
+    Then the part focus editor has an error marker
+    And the preview shows the text "xa"
+
+  Scenario: Cancel restores the preview to the original source
+    When I choose part "W" from the Edit part as stream menu
+    And I place the cursor at the start of part focus line 1
+    And I type "x" in the part focus editor
+    And the preview shows the text "xa"
+    And I click Cancel in the part focus editor
+    Then the preview shows the text "a"
+    And the preview does not show the text "xa"
+
   Scenario: Apply writes the stream back and returns to the main editor
     When I choose part "M" from the Edit part as stream menu
     And I place the cursor at the start of part focus line 1

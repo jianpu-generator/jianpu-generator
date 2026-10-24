@@ -12,7 +12,6 @@ import {
   showsSharedViewerNotice,
 } from './components/SharedViewerNotice'
 import { useAppController } from './hooks/useAppController'
-import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import './App.css'
 import './file-switcher.css'
 import './preview.css'
@@ -34,6 +33,7 @@ export default function App() {
     forceSave,
     refreshSaveStatus,
     editorCollapsed,
+    setPartFocusDraft,
     setEditorCollapsed,
     creatingFile,
     creatingFolder,
@@ -156,20 +156,6 @@ export default function App() {
     syncedShare.onSignOut()
     if (preference.backend === 'cloud') void switchBackend({ kind: 'local' })
   }, [syncedShare, preference, switchBackend])
-
-  useKeyboardShortcuts({
-    measureAudioPlaying,
-    measureAudioGenerating,
-    soundfontReady,
-    selectedMeasureRange,
-    selectedSequenceRange,
-    playSelectedMeasures,
-    playFromCurrentMeasure,
-    notePlaybackSelectionActive: selectedNoteRangePlaybackInfo !== null,
-    playNoteSelection: handlePlayNoteSelection,
-    stopMeasurePlayback,
-    forceSave,
-  })
   return (
     <div className="app">
       <AssetLoadingBanner
@@ -393,6 +379,7 @@ export default function App() {
           noPartsSelected={noPartsSelected}
           staffNotation={staffNotation}
           partToggles={partToggles}
+          onPartFocusDraftChange={setPartFocusDraft}
         />
       )}
     </div>

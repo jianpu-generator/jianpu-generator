@@ -27,6 +27,9 @@ interface PartFocusEditorProps {
   /** The stream as extracted when the part was chosen. */
   initialStream: string
   partToggles: PartToggleState
+  /** The last good draft source, so the preview can follow it; `null` once
+   * the editor closes. */
+  onDraftChange: (draftSource: string | null) => void
   onApply: (newSource: string) => void
   onCancel: () => void
 }
@@ -53,6 +56,7 @@ export function PartFocusEditor({
   part,
   initialStream,
   partToggles,
+  onDraftChange,
   onApply,
   onCancel,
 }: PartFocusEditorProps) {
@@ -83,6 +87,12 @@ export function PartFocusEditor({
     () => jianpuWasm().applyPartStream(source, abbreviation, text),
     [source, abbreviation, text],
   )
+  // A draft with errors has no source; the preview keeps the last good one.
+  useEffect(() => {
+    if (result.source !== undefined) onDraftChange(result.source)
+  }, [result.source, onDraftChange])
+  useEffect(() => () => onDraftChange(null), [onDraftChange])
+
   const focusMeasures = useMemo(() => {
     const response = jianpuWasm().partFocusMeasures(
       source,
