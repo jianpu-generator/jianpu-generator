@@ -79,6 +79,9 @@ fn written_chunk(
         return Err("has an inline directive; move it to the measure's directive line".to_string());
     }
     let layout = timed_layout(&parsed.events);
+    if !layout.orphan_extensions.is_empty() {
+        return Err("starts with a `-` that has no note to extend".to_string());
+    }
     let mixes_tuplet_and_extension =
         layout.multiplier > 1 && layout.clusters.iter().any(|cluster| cluster.has_extension);
     if mixes_tuplet_and_extension {

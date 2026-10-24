@@ -1,8 +1,9 @@
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { AlignLeft, ChevronDown, ChevronUp, ListMusic } from 'lucide-react'
+import { AlignLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { MOBILE_BREAKPOINT_QUERY, useMediaQuery } from '../hooks/useMediaQuery'
 import { useSelectionPitchDescription } from '../hooks/useSelectionPitchDescription'
+import type { StreamablePart } from '../jianpuWasm'
 import type { EditorSelection } from '../types'
 import { staffClefFor } from '../worker/staffClef'
 import type { AppWorkspaceProps } from './AppWorkspace.types'
@@ -13,7 +14,8 @@ import { EditPartsModal } from './EditPartsModal'
 import { NotationToggle } from './NotationToggle'
 import { PitchDrawer } from './PitchDrawer'
 import { Preview } from './Preview'
-import { PartStreamModal } from './partStream/PartStreamModal'
+import { PartFocusEditor } from './partFocus/PartFocusEditor'
+import { PartFocusMenu } from './partFocus/PartFocusMenu'
 import { SlurIcon } from './SlurIcon'
 import { TieIcon } from './TieIcon'
 
@@ -83,6 +85,7 @@ export function AppWorkspace({
   measureAudioElement,
   noPartsSelected,
   staffNotation,
+  partToggles,
 }: AppWorkspaceProps) {
   const staffView = staffClefFor(staffNotation.notation) !== undefined
   const [editorPaneEl, setEditorPaneEl] = useState<HTMLDivElement | null>(null)
@@ -98,7 +101,10 @@ export function AppWorkspace({
     EditorSelection[] | null
   >(null)
   const [previewSelectionPending, setPreviewSelectionPending] = useState(false)
-  const [partStreamOpen, setPartStreamOpen] = useState(false)
+  const [focusedPart, setFocusedPart] = useState<{
+    part: StreamablePart
+    stream: string
+  } | null>(null)
   const describedSelection = useSelectionPitchDescription(
     // Synced/shared views never mount the editor, so its selection never
     // reports in; fall back to the preview's own note selection there.
@@ -146,105 +152,110 @@ export function AppWorkspace({
         <div className="editor-layout">
           <div className="editor-main" ref={setEditorPaneEl}>
             {hideEditor ? null : (
-              <Editor
-                ref={editorRef}
-                path={fileId}
-                value={source}
-                onChange={handleSourceChange}
-                toolbar={
-                  <Tooltip.Provider delayDuration={0}>
-                    <EditorToolbarButton
-                      label="Format score"
-                      icon={<AlignLeft size={14} aria-hidden="true" />}
-                      onClick={handleFormatScore}
-                    />
-                    <EditorToolbarButton
-                      label="Edit part as stream"
-                      icon={<ListMusic size={14} aria-hidden="true" />}
-                      onClick={() => setPartStreamOpen(true)}
-                    />
-                    <EditorToolbarButton
-                      label="Octave up"
-                      icon={<ChevronUp size={14} aria-hidden="true" />}
-                      disabled={selectionByteRanges === null}
-                      onClick={() => {
-                        if (selectionByteRanges === null) return
-                        handleEditSelection(selectionByteRanges, {
-                          kind: 'shiftOctave',
-                          delta: 1,
-                        })
-                      }}
-                    />
-                    <EditorToolbarButton
-                      label="Octave down"
-                      icon={<ChevronDown size={14} aria-hidden="true" />}
-                      disabled={selectionByteRanges === null}
-                      onClick={() => {
-                        if (selectionByteRanges === null) return
-                        handleEditSelection(selectionByteRanges, {
-                          kind: 'shiftOctave',
-                          delta: -1,
-                        })
-                      }}
-                    />
-                    <EditorToolbarButton
-                      label="Slur/Unslur"
-                      icon={<SlurIcon size={14} />}
-                      disabled={selectionByteRanges === null}
-                      onClick={() => {
-                        if (selectionByteRanges === null) return
-                        handleEditSelection(selectionByteRanges, {
-                          kind: 'toggleSlur',
-                        })
-                      }}
-                    />
-                    <EditorToolbarButton
-                      label="Tie/Untie"
-                      icon={<TieIcon size={14} />}
-                      disabled={selectionByteRanges === null}
-                      onClick={() => {
-                        if (selectionByteRanges === null) return
-                        handleEditSelection(selectionByteRanges, {
-                          kind: 'toggleTie',
-                        })
-                      }}
-                    />
-                  </Tooltip.Provider>
-                }
-                readOnly={readOnly}
-                diagnostics={diagnostics}
-                diagnosticViewZones={diagnosticViewZones}
-                measureSpans={measureSpans}
-                onSelectionChange={(firstLine, lastLine, isEmpty) => {
-                  setSelectedLineRange(null)
-                  notifySelection(firstLine, lastLine, isEmpty)
-                }}
-                onSelectionOffsetChange={(ranges, isEmpty) => {
-                  // Every disjoint range is passed through, not just the
-                  // primary one — a multicursor selection (e.g. a clicked
-                  // part label's per-measure ranges, or the "shift
-                  // selection octave" toolbar action's remapped ranges)
-                  // must keep every range's notes/lyrics highlighted, not
-                  // just whichever one Monaco calls the anchor.
-                  handleEditorSelectionChange(ranges)
-                  handleLyricEditorSelectionChange(ranges)
-                  setSelectionByteRanges(isEmpty ? null : ranges)
-                }}
-                onEditPartsClick={() => setEditPartsOpen(true)}
-                onEditMetadataClick={() => setEditMetadataOpen(true)}
-                onForceSave={forceSave}
-                onPlayMeasure={
-                  measureAudioPlaying
-                    ? stopMeasurePlayback
-                    : !measureAudioGenerating && soundfontReady
-                      ? notePlaybackSelectionActive
-                        ? playNoteSelection
-                        : selectedMeasureRange !== null
-                          ? playSelectedMeasures
-                          : undefined
-                      : undefined
-                }
-              />
+              // Stays mounted under the part focus editor, so its model and
+              // undo history survive; `inert` keeps focus out of it.
+              <div className="editor-main-source" inert={focusedPart !== null}>
+                <Editor
+                  ref={editorRef}
+                  path={fileId}
+                  value={source}
+                  onChange={handleSourceChange}
+                  toolbar={
+                    <Tooltip.Provider delayDuration={0}>
+                      <EditorToolbarButton
+                        label="Format score"
+                        icon={<AlignLeft size={14} aria-hidden="true" />}
+                        onClick={handleFormatScore}
+                      />
+                      <PartFocusMenu
+                        source={source}
+                        onChoose={(part, stream) =>
+                          setFocusedPart({ part, stream })
+                        }
+                      />
+                      <EditorToolbarButton
+                        label="Octave up"
+                        icon={<ChevronUp size={14} aria-hidden="true" />}
+                        disabled={selectionByteRanges === null}
+                        onClick={() => {
+                          if (selectionByteRanges === null) return
+                          handleEditSelection(selectionByteRanges, {
+                            kind: 'shiftOctave',
+                            delta: 1,
+                          })
+                        }}
+                      />
+                      <EditorToolbarButton
+                        label="Octave down"
+                        icon={<ChevronDown size={14} aria-hidden="true" />}
+                        disabled={selectionByteRanges === null}
+                        onClick={() => {
+                          if (selectionByteRanges === null) return
+                          handleEditSelection(selectionByteRanges, {
+                            kind: 'shiftOctave',
+                            delta: -1,
+                          })
+                        }}
+                      />
+                      <EditorToolbarButton
+                        label="Slur/Unslur"
+                        icon={<SlurIcon size={14} />}
+                        disabled={selectionByteRanges === null}
+                        onClick={() => {
+                          if (selectionByteRanges === null) return
+                          handleEditSelection(selectionByteRanges, {
+                            kind: 'toggleSlur',
+                          })
+                        }}
+                      />
+                      <EditorToolbarButton
+                        label="Tie/Untie"
+                        icon={<TieIcon size={14} />}
+                        disabled={selectionByteRanges === null}
+                        onClick={() => {
+                          if (selectionByteRanges === null) return
+                          handleEditSelection(selectionByteRanges, {
+                            kind: 'toggleTie',
+                          })
+                        }}
+                      />
+                    </Tooltip.Provider>
+                  }
+                  readOnly={readOnly}
+                  diagnostics={diagnostics}
+                  diagnosticViewZones={diagnosticViewZones}
+                  measureSpans={measureSpans}
+                  onSelectionChange={(firstLine, lastLine, isEmpty) => {
+                    setSelectedLineRange(null)
+                    notifySelection(firstLine, lastLine, isEmpty)
+                  }}
+                  onSelectionOffsetChange={(ranges, isEmpty) => {
+                    // Every disjoint range is passed through, not just the
+                    // primary one — a multicursor selection (e.g. a clicked
+                    // part label's per-measure ranges, or the "shift
+                    // selection octave" toolbar action's remapped ranges)
+                    // must keep every range's notes/lyrics highlighted, not
+                    // just whichever one Monaco calls the anchor.
+                    handleEditorSelectionChange(ranges)
+                    handleLyricEditorSelectionChange(ranges)
+                    setSelectionByteRanges(isEmpty ? null : ranges)
+                  }}
+                  onEditPartsClick={() => setEditPartsOpen(true)}
+                  onEditMetadataClick={() => setEditMetadataOpen(true)}
+                  onForceSave={forceSave}
+                  onPlayMeasure={
+                    measureAudioPlaying
+                      ? stopMeasurePlayback
+                      : !measureAudioGenerating && soundfontReady
+                        ? notePlaybackSelectionActive
+                          ? playNoteSelection
+                          : selectedMeasureRange !== null
+                            ? playSelectedMeasures
+                            : undefined
+                        : undefined
+                  }
+                />
+              </div>
             )}
             <EditPartsModal
               open={editPartsOpen}
@@ -258,14 +269,20 @@ export function AppWorkspace({
               stopPreviewInstrument={stopPreviewInstrument}
               previewAudioPlaying={previewAudioPlaying}
             />
-            <PartStreamModal
-              open={partStreamOpen}
-              onOpenChange={setPartStreamOpen}
-              source={source}
-              onApply={(newSource) =>
-                editorRef.current?.replaceContent(newSource)
-              }
-            />
+            {focusedPart !== null && !hideEditor && (
+              <PartFocusEditor
+                fileId={fileId}
+                source={source}
+                part={focusedPart.part}
+                initialStream={focusedPart.stream}
+                partToggles={partToggles}
+                onApply={(newSource) => {
+                  editorRef.current?.replaceContent(newSource)
+                  setFocusedPart(null)
+                }}
+                onCancel={() => setFocusedPart(null)}
+              />
+            )}
             <EditMetadataModal
               open={editMetadataOpen}
               onOpenChange={setEditMetadataOpen}
@@ -320,14 +337,22 @@ export function AppWorkspace({
           staffScore={staffView ? staffNotation.score : null}
           highlightedDocuments={highlightedDocuments}
           rendering={staffView ? staffNotation.loading : rendering}
-          onSectionLabelClick={handleSectionJump}
-          onNoteRangeSelect={handleNoteRangeSelect}
+          onSectionLabelClick={
+            focusedPart === null ? handleSectionJump : undefined
+          }
+          onNoteRangeSelect={
+            focusedPart === null ? handleNoteRangeSelect : undefined
+          }
           selectedNoteCells={selectedNoteCells}
           noteSpans={noteSpans}
-          onLyricRangeSelect={handleLyricRangeSelect}
+          onLyricRangeSelect={
+            focusedPart === null ? handleLyricRangeSelect : undefined
+          }
           selectedLyricCells={selectedLyricCells}
           lyricSpans={lyricSpans}
-          onMeasureRangeSelect={handleMeasureRangeSelect}
+          onMeasureRangeSelect={
+            focusedPart === null ? handleMeasureRangeSelect : undefined
+          }
           selectedMeasureRange={selectedMeasureRange}
           audioGenerating={audioGenerating}
           wavUrl={wavUrl}

@@ -21,14 +21,20 @@ mod diagnostics;
 mod document;
 mod editable;
 mod extract;
+mod focus;
+mod format;
 mod lyrics;
 mod split;
+#[cfg(test)]
+mod stream_generator;
 mod timing;
 
 use crate::ast::parsed::{PartDecl, PartKind};
 use crate::error::Span;
 use document::ScoreDocument;
 use editable::editable_part;
+pub use focus::{part_focus_measures, FocusMeasure};
+pub use format::{format_part_stream, FormattedPartStream, StreamCursor, StreamTextEdit};
 
 /// A follow part's measure that it doesn't write, so it copies its target.
 const FOLLOW_PLACEHOLDER: &str = "@";

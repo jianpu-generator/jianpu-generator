@@ -4,7 +4,7 @@ use crate::ast::parsed::PartDecl;
 use crate::desugar::{desugar_groups, parse_key_prefix};
 use crate::parser::load_document_sections;
 use crate::parser::parts_parser::parse_parts;
-use crate::parser::score::interleaved_parser::measure_capacities;
+use crate::parser::score::interleaved_parser::{directive_line_label, measure_capacities};
 use crate::parser::score::measure_group::{collect_groups, directive_line_count};
 
 use super::PartStreamError;
@@ -28,6 +28,15 @@ impl ScoreLine {
     }
 }
 
+/// One physical line of a measure group, as written.
+#[derive(Debug, Clone)]
+pub(super) struct GroupLine {
+    /// Trimmed, trailing comment included.
+    pub(super) text: String,
+    /// The declared part a `[Key]` line writes; `None` for a directive or comment line.
+    pub(super) part_index: Option<usize>,
+}
+
 #[derive(Debug, Clone)]
 pub(super) struct ScoreMeasure {
     /// Beat capacity in quarter-beats.
@@ -36,6 +45,10 @@ pub(super) struct ScoreMeasure {
     /// declaration index: follow-copies and implicit fills resolved.
     pub(super) resolved_contents: Vec<String>,
     pub(super) data_lines: Vec<ScoreLine>,
+    /// Every physical line of the group, in source order.
+    pub(super) lines: Vec<GroupLine>,
+    /// The `label="..."` on the group's directive line.
+    pub(super) section_label: Option<String>,
     /// End of the group's last physical line.
     pub(super) end: usize,
 }
@@ -76,31 +89,48 @@ impl ScoreDocument {
         if let Some(error) = group_errors.iter().flatten().next() {
             return Err(does_not_parse(error.message()));
         }
+        let group_ends = groups
+            .iter()
+            .map(|group| {
+                group
+                    .last()
+                    .map(|(_, offset)| physical_line_end(source, score_offset + offset))
+                    .unwrap_or(score_offset)
+            })
+            .collect::<Vec<_>>();
+        let previous_ends = std::iter::once(score_offset).chain(group_ends.iter().copied());
         let measures = groups
             .iter()
             .zip(measure_capacities(&desugared, score_offset))
             .zip(&desugared)
-            .map(|((group, capacity), resolved)| ScoreMeasure {
-                capacity,
-                resolved_contents: resolved
-                    .get(directive_line_count(group)..)
-                    .unwrap_or(&[])
-                    .iter()
-                    .map(|line| line.content.clone())
-                    .collect(),
-                data_lines: group
-                    .get(directive_line_count(group)..)
-                    .unwrap_or(&[])
-                    .iter()
-                    .filter_map(|(line, offset)| {
-                        locate_line(source, &declarations, line, score_offset + offset)
-                    })
-                    .collect(),
-                end: group
-                    .last()
-                    .map(|(_, offset)| physical_line_end(source, score_offset + offset))
-                    .unwrap_or(score_offset),
-            })
+            .zip(group_ends.iter().zip(previous_ends))
+            .map(
+                |(((group, capacity), resolved), (&end, previous_end))| ScoreMeasure {
+                    capacity,
+                    resolved_contents: resolved
+                        .get(directive_line_count(group)..)
+                        .unwrap_or(&[])
+                        .iter()
+                        .map(|line| line.content.clone())
+                        .collect(),
+                    data_lines: group
+                        .get(directive_line_count(group)..)
+                        .unwrap_or(&[])
+                        .iter()
+                        .filter_map(|(line, offset)| {
+                            locate_line(source, &declarations, line, score_offset + offset)
+                        })
+                        .collect(),
+                    lines: comment_lines(source, previous_end, score_offset + group_start(group))
+                        .chain(group_lines(source, &declarations, group, score_offset))
+                        .collect(),
+                    section_label: group
+                        .get(..directive_line_count(group))
+                        .and_then(<[_]>::first)
+                        .and_then(|(line, _)| directive_line_label(line)),
+                    end,
+                },
+            )
             .collect::<Vec<_>>();
         let append_offset = measures
             .last()
@@ -126,6 +156,56 @@ pub(super) fn declarations_of(source: &str) -> Vec<PartDecl> {
     let (sections, _) = load_document_sections(source);
     let (parts_content, parts_offset) = sections.parts;
     parse_parts(&parts_content, parts_offset, &[]).0
+}
+
+fn group_start(group: &[(String, usize)]) -> usize {
+    group.first().map_or(0, |(_, offset)| *offset)
+}
+
+/// The comment-only lines between `from` and `to`, which the parser blanks
+/// out, so they belong to no group.
+fn comment_lines(source: &str, from: usize, to: usize) -> impl Iterator<Item = GroupLine> + '_ {
+    source
+        .get(from..to)
+        .unwrap_or_default()
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with("//"))
+        .map(|line| GroupLine {
+            text: line.to_string(),
+            part_index: None,
+        })
+}
+
+/// Every line of `group`, read from `source` so trailing comments are kept.
+fn group_lines<'a>(
+    source: &'a str,
+    declarations: &'a [PartDecl],
+    group: &'a [(String, usize)],
+    score_offset: usize,
+) -> impl Iterator<Item = GroupLine> + 'a {
+    let directive_lines = directive_line_count(group);
+    group
+        .iter()
+        .enumerate()
+        .map(move |(index, (line, offset))| {
+            let start = score_offset + offset;
+            GroupLine {
+                text: source
+                    .get(start..physical_line_end(source, start))
+                    .unwrap_or(line)
+                    .trim()
+                    .to_string(),
+                part_index: (index >= directive_lines)
+                    .then(|| parse_key_prefix(line))
+                    .flatten()
+                    .and_then(|(key, _)| {
+                        declarations
+                            .iter()
+                            .position(|declaration| declaration.abbreviation == key)
+                    }),
+            }
+        })
 }
 
 fn does_not_parse(message: impl Into<String>) -> PartStreamError {

@@ -4,6 +4,7 @@ import type {
   MetadataEdit,
   MetadataFields,
   NoteTiming,
+  PartToggleState,
   SvgDocument,
 } from '../jianpuWasm'
 import type {
@@ -162,4 +163,6 @@ export interface AppWorkspaceProps {
   measureAudioElement: HTMLAudioElement | null
   noPartsSelected: boolean
   staffNotation: StaffNotation
+  /** Passed through to the part focus editor's ghost lines. */
+  partToggles: PartToggleState
 }

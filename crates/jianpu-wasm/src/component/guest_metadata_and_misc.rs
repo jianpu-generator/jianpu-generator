@@ -79,20 +79,90 @@ pub(super) fn extract_part_stream(
             text: stream.text,
             measure_starts: offsets_to_wit(&stream.measure_starts),
         }),
-        Err(error) => ExtractPartStreamResponse::Err(PartStreamFailure {
-            message: error.describe(),
-            reason: match error {
-                part_stream::PartStreamError::SourceDoesNotParse { message } => {
-                    PartStreamError::SourceDoesNotParse(message)
-                }
-                part_stream::PartStreamError::UnknownPart { abbreviation } => {
-                    PartStreamError::UnknownPart(abbreviation)
-                }
-                part_stream::PartStreamError::Ineligible { reason } => {
-                    PartStreamError::Ineligible(reason)
-                }
-            },
-        }),
+        Err(error) => ExtractPartStreamResponse::Err(part_stream_failure_to_wit(error)),
+    }
+}
+
+fn part_stream_failure_to_wit(
+    error: jianpu_generator::part_stream::PartStreamError,
+) -> PartStreamFailure {
+    use jianpu_generator::part_stream;
+    PartStreamFailure {
+        message: error.describe(),
+        reason: match error {
+            part_stream::PartStreamError::SourceDoesNotParse { message } => {
+                PartStreamError::SourceDoesNotParse(message)
+            }
+            part_stream::PartStreamError::UnknownPart { abbreviation } => {
+                PartStreamError::UnknownPart(abbreviation)
+            }
+            part_stream::PartStreamError::Ineligible { reason } => {
+                PartStreamError::Ineligible(reason)
+            }
+        },
+    }
+}
+
+pub(super) fn format_part_stream(
+    source: String,
+    abbreviation: String,
+    edited_stream: String,
+    cursors: Vec<u32>,
+) -> FormattedPartStream {
+    use jianpu_generator::part_stream::StreamCursor;
+    let cursors: Vec<StreamCursor> = cursors
+        .iter()
+        .map(|&offset| StreamCursor {
+            offset: offset as usize,
+        })
+        .collect();
+    let formatted = jianpu_generator::part_stream::format_part_stream(
+        &source,
+        &abbreviation,
+        &edited_stream,
+        &cursors,
+    );
+    FormattedPartStream {
+        edits: formatted
+            .edits
+            .into_iter()
+            .map(|edit| StreamTextEdit {
+                span: Span {
+                    start: edit.span.start as u32,
+                    end: edit.span.end as u32,
+                },
+                replacement: edit.replacement,
+            })
+            .collect(),
+        cursors: formatted
+            .cursors
+            .iter()
+            .map(|cursor| cursor.offset as u32)
+            .collect(),
+    }
+}
+
+pub(super) fn part_focus_measures(
+    source: String,
+    abbreviation: String,
+    toggles: PartToggleState,
+) -> PartFocusMeasuresResponse {
+    match jianpu_generator::part_stream::part_focus_measures(
+        &source,
+        &abbreviation,
+        &part_toggle_state_from_wit(toggles),
+    ) {
+        Ok(measures) => PartFocusMeasuresResponse::Ok(
+            measures
+                .into_iter()
+                .map(|measure| FocusMeasure {
+                    section_label: measure.section_label,
+                    lines_above: measure.lines_above,
+                    lines_below: measure.lines_below,
+                })
+                .collect(),
+        ),
+        Err(error) => PartFocusMeasuresResponse::Err(part_stream_failure_to_wit(error)),
     }
 }
 

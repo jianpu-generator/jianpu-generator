@@ -254,14 +254,6 @@ impl Guest for Component {
         extract_part_stream(source, abbreviation)
     }
 
-    fn apply_part_stream(
-        source: String,
-        abbreviation: String,
-        edited_stream: String,
-    ) -> PartStreamApplyResult {
-        apply_part_stream(source, abbreviation, edited_stream)
-    }
-
     fn shift_range_octave(source: String, ranges: Vec<ByteRange>, delta: i32) -> RangeEditResponse {
         shift_range_octave(source, ranges, delta)
     }
@@ -332,6 +324,9 @@ impl Guest for Component {
     }
 
     forward_to_free_functions! {
+        apply_part_stream(source: String, abbreviation: String, edited_stream: String) -> PartStreamApplyResult;
+        format_part_stream(source: String, abbreviation: String, edited_stream: String, cursors: Vec<u32>) -> FormattedPartStream;
+        part_focus_measures(source: String, abbreviation: String, toggles: PartToggleState) -> PartFocusMeasuresResponse;
         render_svg_with_highlight_range(source: String, raw_measure_ranges: Vec<MeasureRangeIn>, visibility: ResolvedPartVisibility, raw_instruments: Vec<InstrumentInfo>, note_labels: NoteLabels) -> RenderResponse;
         render_split_meis(source: String, base_name: String, raw_instruments: Vec<InstrumentInfo>, clef: StaffClef) -> RenderSplitMeisResponse;
         generate_staff_pdf(pages: Vec<String>, source: String, fonts: FontBytesByFamily) -> GeneratePdfResponse;

@@ -119,6 +119,24 @@ Bass [B] = notes
 }
 
 #[test]
+fn a_measure_starting_with_an_extension_makes_the_part_ineligible() {
+    let source = r"# parts
+Melody [M] = notes
+
+# score
+[M] - 1 2 3
+";
+    let reason = list_streamable_parts(source)[0]
+        .ineligible_reason
+        .clone()
+        .unwrap();
+    assert!(
+        reason.contains("`-` that has no note to extend"),
+        "{reason}"
+    );
+}
+
+#[test]
 fn lists_every_part_with_its_kind_and_eligibility() {
     let source = r"# parts
 Melody [M] = notes

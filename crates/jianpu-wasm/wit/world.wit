@@ -1141,6 +1141,43 @@ world jianpu-wasm {
     // editor calls it on every keystroke and uses `source` only on Apply.
     export apply-part-stream: func(source: string, abbreviation: string, edited-stream: string) -> part-stream-apply-result;
 
+    // `part_stream::StreamTextEdit`: replace `span` (UTF-8 byte offsets of
+    // the edited stream) with `replacement`.
+    record stream-text-edit {
+        span: span,
+        replacement: string,
+    }
+
+    // `part_stream::FormattedPartStream`. `edits` are sorted and
+    // non-overlapping (empty when already formatted, or when the stream has
+    // errors); `cursors` are the input cursors mapped into the formatted
+    // stream, as UTF-8 byte offsets.
+    record formatted-part-stream {
+        edits: list<stream-text-edit>,
+        cursors: list<u32>,
+    }
+
+    // Re-bars `edited-stream` one measure per line by changing whitespace
+    // only; the part focus editor calls it on every keystroke.
+    export format-part-stream: func(source: string, abbreviation: string, edited-stream: string, cursors: list<u32>) -> formatted-part-stream;
+
+    // `part_stream::FocusMeasure`: one score measure's ghost lines around
+    // the focused part's line, verbatim from the source.
+    record focus-measure {
+        section-label: option<string>,
+        lines-above: list<string>,
+        lines-below: list<string>,
+    }
+
+    variant part-focus-measures-response {
+        ok(list<focus-measure>),
+        err(part-stream-failure),
+    }
+
+    // Every measure's ghost lines (index = stream measure index), keeping
+    // only the parts `toggles` draw.
+    export part-focus-measures: func(source: string, abbreviation: string, toggles: part-toggle-state) -> part-focus-measures-response;
+
     // The editor's pitch drawer (see `pitch_description::describe_selection`):
     // what a selection covering exactly one note/chord means in letter names,
     // or `none` for any other selection (several notes, a rest, a caret).

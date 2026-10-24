@@ -389,3 +389,7 @@
   border-color: #3b82f6;
   color: #1d4ed8;
 }
+
+.editor-main-source {
+  display: contents;
+}

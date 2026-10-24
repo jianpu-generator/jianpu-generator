@@ -1,18 +1,23 @@
 //! Which parts can be stream-edited, and the grammar each one's stream uses.
 
+use itertools::Itertools;
+
 use crate::ast::parsed::{PartDecl, PartKind};
+use crate::error::Span;
 
 use super::chord_lyrics::{
     chord_attacks_per_measure, extract_chord_lyric_chunks, join_chord_lyric_chunks,
     split_chord_lyric_stream, MeasureChordAttacks,
 };
+use super::diagnostics::error_at;
 use super::document::ScoreDocument;
 use super::extract::extract_timed_chunks;
 use super::lyrics::{extract_lyric_chunks, lyric_slot_counts, split_lyric_stream};
 use super::split::{split_timed_stream, SplitStream};
 use super::timing::{rest_fill, TimedLineKind};
 use super::{
-    join_chunks, PartStream, PartStreamError, StreamDiagnosticSeverity, NO_LYRICS_MEASURE,
+    join_chunks, PartStream, PartStreamError, StreamDiagnosticSeverity, FOLLOW_PLACEHOLDER,
+    NO_LYRICS_MEASURE,
 };
 
 /// A notes / chords / percussion stream; a follow part's may also hold `@`.
@@ -40,7 +45,24 @@ pub(super) enum StreamGrammar {
 impl StreamGrammar {
     pub(super) fn split(&self, stream: &str, document: &ScoreDocument) -> SplitStream {
         match self {
-            Self::Timed { grammar } => split_timed_stream(stream, *grammar, &document.capacities()),
+            Self::Timed { grammar } => {
+                let mut split = split_timed_stream(stream, *grammar, &document.capacities());
+                let follows_past_the_end = split
+                    .chunks
+                    .iter()
+                    .zip(&split.measure_starts)
+                    .skip(document.measures.len())
+                    .filter(|(chunk, _)| chunk.as_str() == FOLLOW_PLACEHOLDER)
+                    .map(|(_, &start)| {
+                        error_at(
+                            Span::new(start, start + FOLLOW_PLACEHOLDER.len()),
+                            "`@` can't add a measure past the end of the score",
+                        )
+                    })
+                    .collect_vec();
+                split.diagnostics.extend(follows_past_the_end);
+                split
+            }
             Self::Lyrics { slot_counts } => split_lyric_stream(stream, slot_counts),
             Self::ChordLyrics { attacks } => split_chord_lyric_stream(stream, attacks),
         }
