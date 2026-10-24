@@ -34,8 +34,8 @@ pub(crate) fn note_part_sub_row_heights(base: f32, vertical_padding_pt: f32) -> 
         base * 0.30,                // tie/slur arc
         base * 0.25,                // above-octave dots
         base + vertical_padding_pt, // note head (main)
-        base * 0.15,                // half-beat underline
-        base * 0.15,                // quarter-beat underline
+        base * 0.25,                // half-beat underline
+        base * 0.25,                // quarter-beat underline
         base * 0.25,                // below-octave dots
     ]
 }
@@ -64,8 +64,8 @@ pub(crate) fn chord_part_sub_row_heights(base: f32) -> [f32; 4] {
     [
         base * 0.30, // tie/slur arc
         base * 0.75, // chord symbol (main)
-        base * 0.15, // half-beat underline
-        base * 0.15, // quarter-beat underline
+        base * 0.25, // half-beat underline
+        base * 0.25, // quarter-beat underline
     ]
 }
 
