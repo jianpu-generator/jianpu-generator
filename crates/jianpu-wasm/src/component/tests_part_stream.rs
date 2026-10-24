@@ -128,3 +128,45 @@ fn a_leftover_cjk_syllable_is_spanned_in_utf8_bytes() {
     assert_eq!((diagnostic.span.start, diagnostic.span.end), (32, 35));
     assert!(diagnostic.message.contains("can't add measures"));
 }
+
+#[test]
+fn formats_an_overflowing_stream_and_maps_its_cursor() {
+    let formatted = Component::format_part_stream(
+        SCORE.to_string(),
+        "M".to_string(),
+        "0 1 2 3 4 5 6 7 1".to_string(),
+        vec![1],
+    );
+    let edits: Vec<(u32, u32, String)> = formatted
+        .edits
+        .iter()
+        .map(|edit| (edit.span.start, edit.span.end, edit.replacement.clone()))
+        .collect();
+    assert_eq!(
+        edits,
+        vec![(7, 8, "\n".to_string()), (15, 16, "\n".to_string())]
+    );
+    assert_eq!(formatted.cursors, vec![1]);
+}
+
+#[test]
+fn lists_focus_measures_without_hidden_parts() {
+    let response = Component::part_focus_measures(
+        SCORE.to_string(),
+        "M".to_string(),
+        PartToggleState {
+            hidden_parts: vec!["H".to_string()],
+            soloed_parts: Vec::new(),
+        },
+    );
+    let PartFocusMeasuresResponse::Ok(measures) = response else {
+        panic!("expected focus measures");
+    };
+    assert_eq!(
+        measures[0].lines_below,
+        vec![
+            "[W] 你 好 世 界".to_string(),
+            "[C] (la) (la) (la) (la) (la)".to_string()
+        ]
+    );
+}

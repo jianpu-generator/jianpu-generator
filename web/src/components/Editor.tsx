@@ -145,7 +145,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
       measureSpans.forEach((span, index) => {
         const lineNumber = measureViewZoneLineNumber(model, source, span)
-        const domNode = createMeasureViewZoneDomNode(span, index)
+        const domNode = createMeasureViewZoneDomNode(
+          span.sectionLabel ?? null,
+          index,
+        )
 
         const id = accessor.addZone({
           afterLineNumber: lineNumber - 1,

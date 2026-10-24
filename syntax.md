@@ -854,7 +854,9 @@ Measure 2: A plays `1 - - -`, B plays `1 2 3 4`.
 
 ## Part stream editor
 
-The web editor's **Edit part as stream** button edits **one part** of the `# score` as a single continuous stream: no measure groups, no barlines, no directives. Inserting or deleting a note shifts every later note across the following barlines. The stream is written back into the measure-grouped source only on **Apply**, and only the measures whose content changed are rewritten — every other line (other parts, directives, comments) stays byte-for-byte.
+The web editor's **Edit part as stream** menu picks **one part** of the `# score` and edits it as a single continuous stream: no measure groups, no barlines, no directives. The stream replaces the source in the editor pane, one measure per line, each line prefixed by a read-only `[Abbrev]`. Around each measure, the other parts' lines show as dimmed, read-only **ghost lines**, exactly as the source writes them (a measure that doesn't write a part has no line for it), and the part toggles (hide/solo) choose which parts appear. Section labels and bar numbers show as read-only header rows above each measure. Parts that can't be streamed are listed but disabled, with the reason.
+
+Inserting or deleting a note shifts every later note across the following barlines. The stream is written back into the measure-grouped source only on **Apply** (Cancel or Escape discards it), and only the measures whose content changed are rewritten — every other line (other parts, directives, comments) stays byte-for-byte.
 
 ```jianpu
 # parts
@@ -869,7 +871,7 @@ time=4/4
 [M] 5 6 7 1'
 ```
 
-Streams of this score (the editor puts each measure on its own line when it opens the stream; the line breaks are just whitespace and aren't re-flowed as you edit):
+Streams of this score, one measure per line:
 
 ```
 M:  1 2 - -
@@ -877,6 +879,15 @@ M:  1 2 - -
 H:  3 4 5 6
     @
 ```
+
+### Live re-barring
+
+The editor re-bars the stream on every keystroke, so each line always holds exactly one measure:
+
+- Only whitespace changes: the break before each measure becomes one newline, and any other line break becomes a space. Notes that overflow a measure move to the next line, and deleting a note pulls the following notes back, rippling through every later measure. A newline typed mid-measure is collapsed.
+- Notes past the last measure become new lines (new measures, with a header row and no ghost lines).
+- While the stream has an error (e.g. an unclosed `(`), or during IME composition, it is left as typed.
+- The keystroke and its re-barring undo as one step.
 
 ### Stream syntax
 

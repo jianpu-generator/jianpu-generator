@@ -284,6 +284,7 @@ export function useAppController() {
     pdfFontsReady,
     disabledParts,
     soloedParts,
+    partToggles,
     handlePartToggle,
     handleSoloToggle,
     parts,

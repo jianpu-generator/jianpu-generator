@@ -77,7 +77,8 @@ pub(super) fn split_timed_stream(
         Vec::new()
     };
     let sanitized = without_forbidden_characters(stream);
-    let parsed = match grammar.kind.parse(&sanitized, &mut GroupStack::default()) {
+    let mut groups = GroupStack::default();
+    let parsed = match grammar.kind.parse(&sanitized, &mut groups) {
         Ok(parsed) => parsed,
         Err(error) => {
             let span = error.span().copied().unwrap_or(Span::new(0, stream.len()));
@@ -98,6 +99,12 @@ pub(super) fn split_timed_stream(
     );
     diagnostics.extend(parsed.chord_errors.iter().map(stream_diagnostic));
     diagnostics.extend(inline_directive_errors(&parsed.events));
+    diagnostics.extend(
+        groups
+            .frames
+            .iter()
+            .map(|frame| error_at(frame.open_paren_span, "this `(` is never closed")),
+    );
 
     let timed = timed_layout(&parsed.events);
     let capacity_of = |measure: usize| {

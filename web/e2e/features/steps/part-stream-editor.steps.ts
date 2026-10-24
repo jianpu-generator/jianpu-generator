@@ -1,5 +1,12 @@
 import { expect, type Page } from '@playwright/test'
 import { Given, Then, When } from './fixtures'
+import {
+  CHORD_BOUND_LYRICS_SOURCE,
+  EXPECTED_SOURCES,
+  OVER_BRACKETED_CHORD_LYRICS_SOURCE,
+  OVERFLOWING_MELODY_SOURCE,
+  SOURCE,
+} from './part-stream-editor-sources'
 
 declare global {
   interface Window {
@@ -7,125 +14,8 @@ declare global {
   }
 }
 
-const SOURCE = `# parts
-Melody [M] = notes
-Alto [A] = follow[M]
-Words [W] = lyrics[M]
-
-# score
-[M] 1 2 3 4
-[W] a b c d
-
-[M] 5 6 7 1
-[A] 3 4 5 6
-[W] e f g h
-`
-
-const SHIFTED_MELODY_SOURCE = `# parts
-Melody [M] = notes
-Alto [A] = follow[M]
-Words [W] = lyrics[M]
-
-# score
-[M] 0 1 2 3
-[W] a b c d
-
-[M] 4 5 6 7
-[A] 3 4 5 6
-[W] e f g h
-
-[M] 1 0 0 0
-`
-
-const SHORTENED_MELODY_SOURCE = `# parts
-Melody [M] = notes
-Alto [A] = follow[M]
-Words [W] = lyrics[M]
-
-# score
-[M] 2 3 4 5
-[W] a b c d
-
-[M] 6 7 1 0
-[A] 3 4 5 6
-[W] e f g h
-`
-
-const SHIFTED_LYRICS_SOURCE = `# parts
-Melody [M] = notes
-Alto [A] = follow[M]
-Words [W] = lyrics[M]
-
-# score
-[M] 1 2 3 4
-[W] z a b c
-
-[M] 5 6 7 1
-[A] 3 4 5 6
-[W] d e f g
-`
-
-const CHORD_BOUND_LYRICS_SOURCE = `# parts
-Harmony [H] = chords
-Chant [C] = lyrics[H]
-
-# score
-[H] 1 - 4 -
-[C] (a) b c (d)
-
-[H] 5 - - -
-[C] (e) f
-`
-
-const SHIFTED_CHORD_BOUND_LYRICS_SOURCE = `# parts
-Harmony [H] = chords
-Chant [C] = lyrics[H]
-
-# score
-[H] 1 - 4 -
-[C] (a) b c
-
-[H] 5 - - -
-[C] (d) e f
-`
-
-const OVER_BRACKETED_CHORD_LYRICS_SOURCE = `# parts
-Harmony [H] = chords
-Chant [C] = lyrics[H]
-
-# score
-[H] 1 - 4 -
-[C] (a) (b) (c)
-`
-
-const OVERFLOWING_MELODY_SOURCE = `# parts
-Melody [M] = notes
-
-# score
-[M] 1 2 3 4 5
-
-[M] 6 7 1 2
-`
-
-const RE_BARRED_MELODY_SOURCE = `# parts
-Melody [M] = notes
-
-# score
-[M] 1 2 3 4
-
-[M] 5 6 7 1
-
-[M] 2 0 0 0
-`
-
-const EXPECTED_SOURCES: Record<string, string> = {
-  'original fixture': SOURCE,
-  'shifted melody': SHIFTED_MELODY_SOURCE,
-  'shortened melody': SHORTENED_MELODY_SOURCE,
-  'shifted lyrics': SHIFTED_LYRICS_SOURCE,
-  'shifted chord-bound lyrics': SHIFTED_CHORD_BOUND_LYRICS_SOURCE,
-  're-barred melody': RE_BARRED_MELODY_SOURCE,
-}
+const MENU_BUTTON = '.editor-toolbar-button[aria-label="Edit part as stream"]'
+const FOCUS_EDITOR = '[data-testid="part-focus-editor"]'
 
 async function loadSource(page: Page, source: string) {
   await page.addInitScript((src) => {
@@ -145,24 +35,91 @@ async function loadSource(page: Page, source: string) {
   })
 }
 
-/** Reads one of the three Monaco editors on the page: the main source
- * editor, or the part stream diff editor's original/modified side. */
+/** Reads the main source editor, or the part focus editor's stream. */
 async function editorValue(
   page: Page,
-  which: 'main' | 'original' | 'modified',
+  which: 'main' | 'focus',
 ): Promise<string | null> {
-  return page.evaluate((side) => {
-    const container =
-      side === 'main'
-        ? document.querySelector('.editor-surface')
-        : document.querySelector(
-            `[data-testid="part-stream-editor"] .editor.${side}`,
-          )
-    const editor = window.monaco?.editor
-      .getEditors()
-      .find((candidate) => container?.contains(candidate.getContainerDomNode()))
-    return editor?.getModel()?.getValue() ?? null
-  }, which)
+  return page.evaluate(
+    ([side, focusSelector]) => {
+      const container = document.querySelector(
+        side === 'main' ? '.editor-surface' : focusSelector,
+      )
+      const editor = window.monaco?.editor
+        .getEditors()
+        .find((candidate) =>
+          container?.contains(candidate.getContainerDomNode()),
+        )
+      return editor?.getModel()?.getValue() ?? null
+    },
+    [which, FOCUS_EDITOR] as const,
+  )
+}
+
+/** Puts the part focus editor's caret at a 1-based line and column. */
+async function placeFocusCursor(
+  page: Page,
+  position: 'start' | 'end' | { line: number; column: number },
+) {
+  await page.evaluate(
+    ([where, focusSelector]) => {
+      const container = document.querySelector(focusSelector)
+      const editor = window.monaco?.editor
+        .getEditors()
+        .find((candidate) =>
+          container?.contains(candidate.getContainerDomNode()),
+        )
+      const model = editor?.getModel()
+      if (!editor || !model) throw new Error('no part focus editor')
+      const target =
+        where === 'start'
+          ? { lineNumber: 1, column: 1 }
+          : where === 'end'
+            ? model.getFullModelRange().getEndPosition()
+            : { lineNumber: where.line, column: where.column }
+      editor.setPosition(target)
+      editor.focus()
+    },
+    [position, FOCUS_EDITOR] as const,
+  )
+}
+
+function focusLines(page: Page) {
+  return editorValue(page, 'focus').then((text) => text?.split('\n') ?? [])
+}
+
+function header(page: Page, measureIndex: number) {
+  return page.locator(
+    `${FOCUS_EDITOR} [data-testid="part-focus-header"][data-measure-index="${measureIndex}"]`,
+  )
+}
+
+function ghosts(page: Page, measureIndex?: number) {
+  const index =
+    measureIndex === undefined ? '' : `[data-measure-index="${measureIndex}"]`
+  return page.locator(
+    `${FOCUS_EDITOR} [data-testid="part-focus-ghost"]${index} .part-focus-ghost-line`,
+  )
+}
+
+function belowGhosts(page: Page, measureIndex: number) {
+  return page.locator(
+    `${FOCUS_EDITOR} [data-testid="part-focus-ghost"][data-measure-index="${measureIndex}"][data-position="below"] .part-focus-ghost-line`,
+  )
+}
+
+function menuItem(page: Page, abbreviation: string) {
+  return page.locator(
+    `[data-testid="part-focus-part-item"][data-abbreviation="${abbreviation}"]`,
+  )
+}
+
+function partPill(page: Page, abbreviation: string) {
+  return page.locator('.part-toggle-pill').filter({
+    has: page.locator('.part-toggle-abbr', {
+      hasText: new RegExp(`^${abbreviation}$`),
+    }),
+  })
 }
 
 Given('the part stream editor fixture is loaded', async ({ page }) => {
@@ -184,79 +141,178 @@ Given(
   },
 )
 
-When('I open the part stream picker', async ({ page }) => {
-  await page.click('.editor-toolbar-button[aria-label="Edit part as stream"]')
-  await expect(page.getByTestId('part-stream-modal')).toBeVisible()
+When('I open the Edit part as stream menu', async ({ page }) => {
+  await page.click(MENU_BUTTON)
+  await expect(page.getByTestId('part-focus-part-item').first()).toBeVisible()
 })
 
 When(
-  'I open the part stream editor for part {string}',
+  'I choose part {string} from the Edit part as stream menu',
   async ({ page }, abbreviation: string) => {
-    await page.click('.editor-toolbar-button[aria-label="Edit part as stream"]')
-    await page
-      .locator(
-        `[data-testid="part-stream-part-row"][data-abbreviation="${abbreviation}"]`,
-      )
-      .click()
+    await page.click(MENU_BUTTON)
+    await menuItem(page, abbreviation).click()
     await expect
-      .poll(() => editorValue(page, 'modified'), { timeout: 15_000 })
+      .poll(() => editorValue(page, 'focus'), { timeout: 15_000 })
       .not.toBeNull()
   },
 )
 
-When(
-  'I replace the edited part stream with {string}',
-  async ({ page }, text: string) => {
-    await page.evaluate((replacement) => {
-      const container = document.querySelector(
-        '[data-testid="part-stream-editor"] .editor.modified',
-      )
-      const editor = window.monaco?.editor
-        .getEditors()
-        .find((candidate) =>
-          container?.contains(candidate.getContainerDomNode()),
-        )
-      const model = editor?.getModel()
-      if (!editor || !model) throw new Error('no modified stream editor')
-      editor.executeEdits('e2e', [
-        { range: model.getFullModelRange(), text: replacement },
-      ])
-    }, text)
-    await expect.poll(() => editorValue(page, 'modified')).toBe(text)
+Then(
+  'the part focus editor is shown in place of the main editor',
+  async ({ page }) => {
+    const focusBox = await page.locator(FOCUS_EDITOR).boundingBox()
+    const mainBox = await page.locator('.editor-main').boundingBox()
+    expect(focusBox).toEqual(mainBox)
   },
 )
 
-Then('the original part stream is:', async ({ page }, text: string) => {
-  await expect.poll(() => editorValue(page, 'original')).toBe(text)
+Then('the part focus header says {string}', async ({ page }, text: string) => {
+  await expect(page.getByTestId('part-focus-title')).toHaveText(text)
 })
 
-Then('the edited part stream is:', async ({ page }, text: string) => {
-  await expect.poll(() => editorValue(page, 'modified')).toBe(text)
+Then('the part focus stream is:', async ({ page }, text: string) => {
+  await expect.poll(() => editorValue(page, 'focus')).toBe(text)
 })
 
-Then('the part stream footer says {string}', async ({ page }, text: string) => {
-  await expect(page.getByTestId('part-stream-footer')).toContainText(text)
+Then(
+  'part focus line {int} is {string}',
+  async ({ page }, line: number, text: string) => {
+    await expect.poll(async () => (await focusLines(page))[line - 1]).toBe(text)
+  },
+)
+
+Then(
+  'measure {int} shows the header row {string}',
+  async ({ page }, measure: number, text: string) => {
+    await expect(header(page, measure - 1)).toHaveText(text)
+  },
+)
+
+Then(
+  'measure {int} shows the ghost lines below {string} and {string}',
+  async ({ page }, measure: number, first: string, second: string) => {
+    await expect(belowGhosts(page, measure - 1)).toHaveText([first, second])
+  },
+)
+
+Then(
+  'measure {int} shows the ghost lines below {string}',
+  async ({ page }, measure: number, text: string) => {
+    await expect(belowGhosts(page, measure - 1)).toHaveText([text])
+  },
+)
+
+Then(
+  'measure {int} shows no ghost line for part {string}',
+  async ({ page }, measure: number, abbreviation: string) => {
+    await expect(ghosts(page, measure - 1).first()).toBeVisible()
+    await expect(
+      ghosts(page, measure - 1).filter({ hasText: `[${abbreviation}]` }),
+    ).toHaveCount(0)
+  },
+)
+
+Then(
+  'no measure shows a ghost line for part {string}',
+  async ({ page }, abbreviation: string) => {
+    await expect(ghosts(page).first()).toBeVisible()
+    await expect(
+      ghosts(page).filter({ hasText: `[${abbreviation}]` }),
+    ).toHaveCount(0)
+  },
+)
+
+Then('the ghost lines cannot be selected or edited', async ({ page }) => {
+  const ghost = page.locator(`${FOCUS_EDITOR} [data-testid="part-focus-ghost"]`)
+  await expect(ghost.first()).toHaveCSS('pointer-events', 'none')
+  await expect(ghost.first()).toHaveCSS('user-select', 'none')
+  await expect.poll(() => editorValue(page, 'focus')).not.toContain('[W]')
 })
 
-Then('the part stream Apply button is enabled', async ({ page }) => {
-  await expect(
-    page.getByRole('button', { name: 'Apply', exact: true }),
-  ).toBeEnabled()
+When(
+  'I hide part {string} with its toggle',
+  async ({ page }, abbreviation: string) => {
+    await partPill(page, abbreviation)
+      .locator('.part-toggle-segment--eye')
+      .click()
+  },
+)
+
+When(
+  'I solo part {string} with its toggle',
+  async ({ page }, abbreviation: string) => {
+    await partPill(page, abbreviation)
+      .locator('.part-toggle-segment--headphones')
+      .click()
+  },
+)
+
+When(
+  'I place the cursor at the start of part focus line {int}',
+  async ({ page }, line: number) => {
+    await placeFocusCursor(page, { line, column: 1 })
+  },
+)
+
+When(
+  'I place the cursor after {string} on part focus line {int}',
+  async ({ page }, text: string, line: number) => {
+    const lineText = (await focusLines(page))[line - 1] ?? ''
+    const index = lineText.indexOf(text)
+    if (index < 0) throw new Error(`"${text}" is not on line ${line}`)
+    await placeFocusCursor(page, { line, column: index + text.length + 1 })
+  },
+)
+
+When(
+  'I place the cursor at the end of the part focus stream',
+  async ({ page }) => {
+    await placeFocusCursor(page, 'end')
+  },
+)
+
+When(
+  'I type {string} in the part focus editor',
+  async ({ page }, text: string) => {
+    await page.keyboard.type(text)
+  },
+)
+
+When('I press Delete in the part focus editor', async ({ page }) => {
+  await page.keyboard.press('Delete')
 })
 
-Then('the part stream Apply button is disabled', async ({ page }) => {
-  await expect(
-    page.getByRole('button', { name: 'Apply', exact: true }),
-  ).toBeDisabled()
+When('I press Enter in the part focus editor', async ({ page }) => {
+  await page.keyboard.press('Enter')
 })
 
-Then('the edited part stream has an error marker', async ({ page }) => {
+When('I press undo in the part focus editor', async ({ page }) => {
+  // Monaco's undo keybinding is the `Control` chord on every host OS.
+  await page.keyboard.press('Control+z')
+})
+
+When('I press Escape in the part focus editor', async ({ page }) => {
+  await placeFocusCursor(page, 'start')
+  await page.keyboard.press('Escape')
+})
+
+Then(
+  'part focus line {int} shows the header row {string} and no ghost lines',
+  async ({ page }, line: number, text: string) => {
+    await expect(header(page, line - 1)).toHaveText(text)
+    await expect(ghosts(page, line - 1)).toHaveCount(0)
+  },
+)
+
+Then('the part focus status says {string}', async ({ page }, text: string) => {
+  await expect(page.getByTestId('part-focus-status')).toHaveText(text)
+})
+
+Then('the part focus editor has an error marker', async ({ page }) => {
   await expect
     .poll(() =>
-      page.evaluate(() => {
-        const container = document.querySelector(
-          '[data-testid="part-stream-editor"] .editor.modified',
-        )
+      page.evaluate((focusSelector) => {
+        const container = document.querySelector(focusSelector)
         const monaco = window.monaco
         const model = monaco?.editor
           .getEditors()
@@ -269,51 +325,28 @@ Then('the edited part stream has an error marker', async ({ page }) => {
           .getModelMarkers({ resource: model.uri })
           .filter((marker) => marker.severity === monaco.MarkerSeverity.Error)
           .length
-      }),
+      }, FOCUS_EDITOR),
     )
     .toBeGreaterThan(0)
 })
 
-When('I apply the part stream', async ({ page }) => {
+Then('the part focus Apply button is disabled', async ({ page }) => {
+  await expect(
+    page.getByRole('button', { name: 'Apply', exact: true }),
+  ).toBeDisabled()
+})
+
+When('I apply the part focus editor', async ({ page }) => {
   await page.getByRole('button', { name: 'Apply', exact: true }).click()
 })
 
-When('I press Escape in the part stream editor', async ({ page }) => {
-  await page
-    .locator('[data-testid="part-stream-editor"] .editor.modified .view-lines')
-    .click()
-  await page.keyboard.press('Escape')
-})
-
-When('I click Cancel in the part stream editor', async ({ page }) => {
+When('I click Cancel in the part focus editor', async ({ page }) => {
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
 })
 
-When('I resize the window to a phone screen', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 800 })
-})
-
-When('I toggle the part stream diff layout', async ({ page }) => {
-  await page.getByTestId('part-stream-layout-toggle').click()
-})
-
-Then(
-  'the part stream diff is shown {}',
-  async ({ page }, layout: 'side by side' | 'inline') => {
-    const diffEditor = page.locator(
-      '[data-testid="part-stream-editor"] .monaco-diff-editor',
-    )
-    // Monaco sets `side-by-side` on the diff editor root only in that layout.
-    if (layout === 'side by side') {
-      await expect(diffEditor).toHaveClass(/\bside-by-side\b/)
-    } else {
-      await expect(diffEditor).not.toHaveClass(/\bside-by-side\b/)
-    }
-  },
-)
-
-Then('the part stream editor is closed', async ({ page }) => {
-  await expect(page.getByTestId('part-stream-modal')).toBeHidden()
+Then('the main editor is shown', async ({ page }) => {
+  await expect(page.locator(FOCUS_EDITOR)).toHaveCount(0)
+  await expect(page.locator('.editor-surface .monaco-editor')).toBeVisible()
 })
 
 Then(
@@ -327,33 +360,31 @@ Then(
 
 When('I press undo in the main editor', async ({ page, focusEditor }) => {
   await focusEditor()
-  // Monaco's undo keybinding is the `Control` chord on every host OS.
   await page.keyboard.press('Control+z')
 })
 
 Then(
-  'the part stream picker row for part {string} is disabled',
+  'the menu item for part {string} is disabled',
   async ({ page }, abbreviation: string) => {
-    await expect(partRow(page, abbreviation)).toBeDisabled()
+    await expect(menuItem(page, abbreviation)).toHaveAttribute(
+      'data-disabled',
+      '',
+    )
   },
 )
 
 Then(
-  'the part stream picker row for part {string} is enabled',
+  'the menu item for part {string} is enabled',
   async ({ page }, abbreviation: string) => {
-    await expect(partRow(page, abbreviation)).toBeEnabled()
+    await expect(menuItem(page, abbreviation)).not.toHaveAttribute(
+      'data-disabled',
+    )
   },
 )
 
 Then(
-  'the part stream picker row for part {string} explains {string}',
+  'the menu item for part {string} explains {string}',
   async ({ page }, abbreviation: string, reason: string) => {
-    await expect(partRow(page, abbreviation)).toContainText(reason)
+    await expect(menuItem(page, abbreviation)).toContainText(reason)
   },
 )
-
-function partRow(page: Page, abbreviation: string) {
-  return page.locator(
-    `[data-testid="part-stream-part-row"][data-abbreviation="${abbreviation}"]`,
-  )
-}

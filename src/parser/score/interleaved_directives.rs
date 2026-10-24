@@ -231,6 +231,24 @@ fn parse_label_value(
     ))
 }
 
+/// The section label a directive line sets with `label="..."`, if any.
+pub(crate) fn directive_line_label(line: &str) -> Option<String> {
+    tokenize_directive_tokens(line)
+        .ok()?
+        .iter()
+        .find_map(|(token, _)| match classify_directive_token(token)? {
+            DirectiveToken::Assignment {
+                key: DirectiveKey::Label,
+                value,
+            } => value
+                .strip_prefix('"')
+                .and_then(|value| value.strip_suffix('"'))
+                .filter(|text| !text.is_empty())
+                .map(str::to_string),
+            _ => None,
+        })
+}
+
 /// Spans of every directive keyword (`bpm` in `bpm=92`, `break`) on the
 /// directive lines of a `# score` section's `content`.
 pub(crate) fn directive_keyword_spans(content: &str, base_offset: usize) -> Vec<Span> {

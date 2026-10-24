@@ -23,7 +23,7 @@ use accumulators::{build_parse_result, build_slot_actions, init_accumulators};
 use beat_padding::{beats_per_measure, validate_and_pad_group_lines};
 pub(crate) use beat_padding::{can_implicitly_pad, padded_measure_events, timed_beats};
 use column_lines::process_padded_columns;
-pub(crate) use directives::directive_keyword_spans;
+pub(crate) use directives::{directive_keyword_spans, directive_line_label};
 use directives::{split_directive, SplitDirective};
 
 /// One entry per bar group: all directive events emitted by that group's directive row.

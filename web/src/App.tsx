@@ -67,6 +67,7 @@ export default function App() {
     pdfFontsReady,
     disabledParts,
     soloedParts,
+    partToggles,
     handlePartToggle,
     handleSoloToggle,
     parts,
@@ -391,6 +392,7 @@ export default function App() {
           measureAudioElement={measureAudioElement}
           noPartsSelected={noPartsSelected}
           staffNotation={staffNotation}
+          partToggles={partToggles}
         />
       )}
     </div>
