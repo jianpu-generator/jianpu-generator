@@ -86,6 +86,7 @@ export function AppWorkspace({
   noPartsSelected,
   staffNotation,
   partToggles,
+  onPartFocusDraftChange,
 }: AppWorkspaceProps) {
   const staffView = staffClefFor(staffNotation.notation) !== undefined
   const [editorPaneEl, setEditorPaneEl] = useState<HTMLDivElement | null>(null)
@@ -276,6 +277,7 @@ export function AppWorkspace({
                 part={focusedPart.part}
                 initialStream={focusedPart.stream}
                 partToggles={partToggles}
+                onDraftChange={onPartFocusDraftChange}
                 onApply={(newSource) => {
                   editorRef.current?.replaceContent(newSource)
                   setFocusedPart(null)
