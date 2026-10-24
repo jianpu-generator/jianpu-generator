@@ -4,7 +4,7 @@ use itertools::Itertools;
 
 use crate::error::Span;
 
-use super::diagnostics::{error_at, has_error};
+use super::diagnostics::has_error;
 use super::document::{ScoreDocument, ScoreLine, ScoreMeasure};
 use super::editable::{editable_part, EditablePart};
 use super::{
@@ -37,22 +37,7 @@ pub(super) fn apply(source: &str, abbreviation: &str, stream: &str) -> PartStrea
         Ok(loaded) => loaded,
         Err(error) => return refused(&error),
     };
-    let mut split = part.grammar.split(stream, &document);
-    split.diagnostics.extend(
-        split
-            .chunks
-            .iter()
-            .zip(&split.measure_starts)
-            .skip(document.measures.len())
-            .filter(|(chunk, _)| chunk.as_str() == FOLLOW_PLACEHOLDER)
-            .map(|(_, &start)| {
-                error_at(
-                    Span::new(start, start + FOLLOW_PLACEHOLDER.len()),
-                    "`@` can't add a measure past the end of the score",
-                )
-            })
-            .collect::<Vec<_>>(),
-    );
+    let split = part.grammar.split(stream, &document);
     if has_error(&split.diagnostics) {
         return PartStreamApplyResult {
             source: None,

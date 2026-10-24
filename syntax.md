@@ -886,7 +886,7 @@ The editor re-bars the stream on every keystroke, so each line always holds exac
 
 - Only whitespace changes: the break before each measure becomes one newline, and any other line break becomes a space. Notes that overflow a measure move to the next line, and deleting a note pulls the following notes back, rippling through every later measure. A newline typed mid-measure is collapsed.
 - Notes past the last measure become new lines (new measures, with a header row and no ghost lines).
-- While the stream has an error (e.g. an unclosed `(`), or during IME composition, it is left as typed.
+- While the stream has an error (e.g. an unclosed `(`, or an `@` past the end of the score), or during IME composition, it is left as typed.
 - The keystroke and its re-barring undo as one step.
 
 ### Stream syntax
@@ -899,6 +899,7 @@ The editor re-bars the stream on every keystroke, so each line always holds exac
 - A measure the part doesn't write shows as rests that fill it (`0 0 0 0` in 4/4).
 - A misbarred measure — more beats than its time signature, or fewer that can't be implicitly padded — shows as written. Re-barring moves its extra (or missing) beats across the following barlines, so applying the stream untouched fixes the barring: `1 2 3 4 5` / `6 7 1 2` in 4/4 becomes `1 2 3 4` / `5 6 7 1` / `2 0 0 0`.
 - A note together with its `-` extensions can't cross a barline (error: *crosses the barline of measure N; split it with a tie (`~`)*). Write `1 2 3 4~ 4 5 6` rather than `1 2 3 4 - 5 6`.
+- A `-` with no note before it to extend (at the start of the stream) is an error. A part whose source measure starts with such a `-` can't be streamed.
 - A tuplet `N:{…}` can't cross a barline either, and a measure can't contain both a tuplet and a `-` extension (the stream would be re-barred differently than the measure renders).
 - An opening `(` or `N:{` right before a measure's first note belongs to that measure; `)`, `}` and `~` stay with the measure before.
 - Bare `_` / `=` keep their usual meaning (repeat the last note/chord) in notes, chords and percussion streams.

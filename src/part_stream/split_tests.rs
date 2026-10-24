@@ -113,3 +113,18 @@ fn an_unclosed_slur_is_an_error() {
     assert_eq!(error_spans(&result), vec![Span::new(2, 3)]);
     assert_eq!(result.source, None);
 }
+
+#[test]
+fn a_leading_extension_is_an_error() {
+    let result = apply("- 1 2 3 4");
+    assert_eq!(result.source, None);
+    assert_eq!(error_spans(&result), vec![Span::new(0, 1)]);
+    assert!(error_messages(&result)[0].contains("no note before it to extend"));
+}
+
+#[test]
+fn a_stream_of_only_extensions_is_an_error_rather_than_deleting_the_part() {
+    let result = apply("- -");
+    assert_eq!(result.source, None);
+    assert_eq!(error_spans(&result), vec![Span::new(0, 1), Span::new(2, 3)]);
+}

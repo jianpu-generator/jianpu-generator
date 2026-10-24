@@ -219,3 +219,14 @@ fn notes_past_the_end_of_the_score_become_new_lines() {
         "1 2 3 4\n5 6 7 1\n3 4 5 6\n1 2"
     );
 }
+
+#[test]
+fn a_follow_placeholder_past_the_end_of_the_score_is_left_as_typed() {
+    let stream = "1 1 1 1 1 1 1 1 1 1 1 1 @";
+    assert_eq!(formatted(THREE_MEASURES, "A", stream), stream);
+}
+
+#[test]
+fn a_leading_extension_is_left_as_typed() {
+    assert_eq!(formatted(THREE_MEASURES, "M", " - 1 2 3 4"), " - 1 2 3 4");
+}

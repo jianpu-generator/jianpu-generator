@@ -4,13 +4,14 @@ use itertools::Itertools;
 
 use crate::error::{Span, Spanned};
 use crate::parser::score::timed_parser::{GroupStack, TimedLexToken};
+use crate::parser::score::token_parser::TimedLineParse;
 
 use super::diagnostics::{
     error_at, forbidden_character_errors, inline_directive_errors, placeholder_offsets,
     stream_diagnostic, AllowedMarkers,
 };
 use super::editable::TimedGrammar;
-use super::timing::{normalize_whitespace, rest_fill, timed_layout, TimedCluster};
+use super::timing::{normalize_whitespace, rest_fill, timed_layout, TimedCluster, TimedLayout};
 use super::{StreamDiagnostic, FOLLOW_PLACEHOLDER};
 
 /// Capacity used past the last measure group when no capacity is known at all.
@@ -91,22 +92,8 @@ pub(super) fn split_timed_stream(
         }
     };
     let tokens = grammar.kind.lex(&sanitized).unwrap_or_default();
-    diagnostics.extend(
-        parsed
-            .lex_errors
-            .iter()
-            .map(|error| error_at(error.span, error.message())),
-    );
-    diagnostics.extend(parsed.chord_errors.iter().map(stream_diagnostic));
-    diagnostics.extend(inline_directive_errors(&parsed.events));
-    diagnostics.extend(
-        groups
-            .frames
-            .iter()
-            .map(|frame| error_at(frame.open_paren_span, "this `(` is never closed")),
-    );
-
     let timed = timed_layout(&parsed.events);
+    diagnostics.extend(parse_errors(&parsed, &groups, &timed));
     let capacity_of = |measure: usize| {
         capacities
             .get(measure)
@@ -144,6 +131,32 @@ pub(super) fn split_timed_stream(
             .collect(),
         diagnostics,
     }
+}
+
+/// What the line parser and the timing layout found wrong with the stream.
+fn parse_errors(
+    parsed: &TimedLineParse,
+    groups: &GroupStack,
+    timed: &TimedLayout,
+) -> Vec<StreamDiagnostic> {
+    let lex_errors = parsed
+        .lex_errors
+        .iter()
+        .map(|error| error_at(error.span, error.message()));
+    let unclosed_groups = groups
+        .frames
+        .iter()
+        .map(|frame| error_at(frame.open_paren_span, "this `(` is never closed"));
+    let orphan_extensions = timed
+        .orphan_extensions
+        .iter()
+        .map(|&span| error_at(span, "this `-` has no note before it to extend"));
+    lex_errors
+        .chain(parsed.chord_errors.iter().map(stream_diagnostic))
+        .chain(inline_directive_errors(&parsed.events))
+        .chain(unclosed_groups)
+        .chain(orphan_extensions)
+        .collect()
 }
 
 /// `|` and `@` become spaces so the line parser never sees them; offsets stay put.
