@@ -64,6 +64,7 @@ mod guest_generate_and_timings;
 mod guest_impl;
 mod guest_metadata_and_misc;
 mod guest_outbox;
+mod guest_part_stream_selection;
 mod guest_selection_and_render;
 mod guest_staff_export;
 
@@ -88,6 +89,7 @@ use guest_folder_share::*;
 use guest_generate_and_timings::*;
 use guest_metadata_and_misc::*;
 use guest_outbox::*;
+use guest_part_stream_selection::*;
 use guest_selection_and_render::*;
 use guest_staff_export::*;
 use highlight_conversion::*;

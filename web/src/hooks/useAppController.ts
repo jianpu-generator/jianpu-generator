@@ -10,6 +10,7 @@ import { useFileOperations } from './useFileOperations'
 import { useFontsLoader } from './useFontsLoader'
 import { useJianpuWorker } from './useJianpuWorker'
 import { useKeyboardShortcuts } from './useKeyboardShortcuts'
+import { usePartFocusSelectionRouting } from './usePartFocusSelectionRouting'
 import { usePartTogglePruning } from './usePartTogglePruning'
 import { usePartToggles } from './usePartToggles'
 import { useScoreSource } from './useScoreSource'
@@ -77,6 +78,8 @@ export function useAppController() {
   const fileId = sharedFolder?.fileId ?? fileIdForName(store, store.active)
   useDocumentTitle(store.active)
   const editorRef = useRef<EditorHandle>(null)
+  const { partFocusHandleRef, selectionEditorRef } =
+    usePartFocusSelectionRouting(editorRef)
   const selectedSequenceRangeRef = useRef<SelectedSequenceRange | null>(null)
   const measureRangeSelectedPartNamesRef = useRef<string[] | undefined>(
     undefined,
@@ -230,7 +233,7 @@ export function useAppController() {
     handleEditSelection,
   } = useAppSelectionAndNavigation(
     sectionRanges,
-    editorRef,
+    selectionEditorRef,
     notifySelection,
     sequenceEntries,
     measureSpans,
@@ -298,6 +301,7 @@ export function useAppController() {
     syncedShare,
     fileId,
     editorRef,
+    partFocusHandleRef,
     soundfont,
     fonts,
     wasm,

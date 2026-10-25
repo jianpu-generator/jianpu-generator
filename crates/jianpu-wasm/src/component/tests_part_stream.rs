@@ -170,3 +170,30 @@ fn lists_focus_measures_without_hidden_parts() {
         ]
     );
 }
+
+#[test]
+fn maps_selections_between_the_stream_and_the_draft() {
+    let stream = "1 2 3 4\n5 6 7 1";
+    let to_source = Component::part_stream_ranges_to_source(
+        SCORE.to_string(),
+        "M".to_string(),
+        stream.to_string(),
+        vec![Span { start: 2, end: 5 }],
+    );
+    let selected: Vec<&str> = to_source
+        .iter()
+        .map(|span| &SCORE[span.start as usize..span.end as usize])
+        .collect();
+    assert_eq!(selected, vec!["2 3"]);
+    let to_stream = Component::source_ranges_to_part_stream(
+        SCORE.to_string(),
+        "M".to_string(),
+        stream.to_string(),
+        to_source,
+    );
+    let round_trip: Vec<(u32, u32)> = to_stream
+        .iter()
+        .map(|span| (span.start, span.end))
+        .collect();
+    assert_eq!(round_trip, vec![(2, 5)]);
+}

@@ -92,3 +92,11 @@ export interface EditorHandle {
   focus: () => void
   getEditor: () => import('monaco-editor').editor.IStandaloneCodeEditor | null
 }
+
+/** The calls the preview makes to select in the editor, as the part focus
+ * editor answers them: it takes draft source offsets and lines, and selects
+ * the matching text in its part stream. */
+export type PartFocusSelectionHandle = Pick<
+  EditorHandle,
+  'setSelections' | 'setSelectionByLines' | 'setSelectionsByLines' | 'focus'
+>

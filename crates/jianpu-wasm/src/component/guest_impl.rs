@@ -327,6 +327,8 @@ impl Guest for Component {
         apply_part_stream(source: String, abbreviation: String, edited_stream: String) -> PartStreamApplyResult;
         format_part_stream(source: String, abbreviation: String, edited_stream: String, cursors: Vec<u32>) -> FormattedPartStream;
         part_focus_measures(source: String, abbreviation: String, toggles: PartToggleState) -> PartFocusMeasuresResponse;
+        part_stream_ranges_to_source(source: String, abbreviation: String, edited_stream: String, ranges: Vec<Span>) -> Vec<Span>;
+        source_ranges_to_part_stream(source: String, abbreviation: String, edited_stream: String, ranges: Vec<Span>) -> Vec<Span>;
         render_svg_with_highlight_range(source: String, raw_measure_ranges: Vec<MeasureRangeIn>, visibility: ResolvedPartVisibility, raw_instruments: Vec<InstrumentInfo>, note_labels: NoteLabels) -> RenderResponse;
         render_split_meis(source: String, base_name: String, raw_instruments: Vec<InstrumentInfo>, clef: StaffClef) -> RenderSplitMeisResponse;
         generate_staff_pdf(pages: Vec<String>, source: String, fonts: FontBytesByFamily) -> GeneratePdfResponse;

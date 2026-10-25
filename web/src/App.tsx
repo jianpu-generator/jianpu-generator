@@ -60,6 +60,7 @@ export default function App() {
     syncedShare,
     fileId,
     editorRef,
+    partFocusHandleRef,
     soundfont,
     fonts,
     wasm,
@@ -312,6 +313,7 @@ export default function App() {
           setEditorCollapsed={setEditorCollapsed}
           hideEditor={sharedPreview !== null || syncedShareViewerActive}
           editorRef={editorRef}
+          partFocusHandleRef={partFocusHandleRef}
           fileId={fileId}
           source={source}
           handleSourceChange={handleSourceChange}

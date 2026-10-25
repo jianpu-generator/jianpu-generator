@@ -49,6 +49,8 @@ pub(super) struct ScoreMeasure {
     pub(super) lines: Vec<GroupLine>,
     /// The `label="..."` on the group's directive line.
     pub(super) section_label: Option<String>,
+    /// Start of the group's first line.
+    pub(super) start: usize,
     /// End of the group's last physical line.
     pub(super) end: usize,
 }
@@ -128,6 +130,7 @@ impl ScoreDocument {
                         .get(..directive_line_count(group))
                         .and_then(<[_]>::first)
                         .and_then(|(line, _)| directive_line_label(line)),
+                    start: score_offset + group_start(group),
                     end,
                 },
             )
