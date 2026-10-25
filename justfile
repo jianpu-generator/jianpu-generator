@@ -31,3 +31,40 @@ dev-worker:
 [private]
 dev-web:
     cd web && pnpm dev
+
+# Replaces the local D1 database's rows (what `just dev`'s worker serves)
+# with production's, so local dev runs against real accounts and files.
+# Skips if this checkout already has a copy; `just copy-prod-db force`
+# copies again. Every table except `app_log` and the migration/internal
+# bookkeeping is copied. Reads production through wrangler's stored login
+# (`pnpm exec wrangler whoami`); a running `just dev` picks the rows up
+# without a restart.
+copy-prod-db force="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd crates/live-share-worker
+    marker=.wrangler/state/prod-data-copied-at
+    if [[ -f "$marker" && "{{force}}" != "force" ]]; then
+      echo "Production data already copied at $(cat "$marker"); run \`just copy-prod-db force\` to copy again."
+      exit 0
+    fi
+    # Not `cf d1 migrations apply` here: it can hang after finishing (see
+    # `dev-worker`), and `just dev` already applies the migrations.
+    db=$(ls .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite 2>/dev/null | grep -v /metadata.sqlite || true)
+    if [[ -z "$db" ]]; then
+      echo "No local D1 database yet; start \`just dev\` once so it applies the migrations, then rerun." >&2
+      exit 1
+    fi
+    tables=$(sqlite3 "$db" "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT IN ('app_log', 'd1_migrations', 'sqlite_sequence') AND name NOT LIKE '\_cf\_%' ESCAPE '\' ORDER BY name")
+    dump=$(mktemp)
+    trap 'rm -f "$dump"' EXIT
+    pnpm exec wrangler d1 export jianpu-live-share --remote --no-schema $(printf -- '--table %s ' $tables) --output "$dump"
+    cp "$db" "$db.before-prod-copy"
+    {
+      echo "PRAGMA foreign_keys = OFF; BEGIN;"
+      printf 'DELETE FROM "%s";\n' $tables
+      grep -v '^PRAGMA' "$dump"
+      echo "COMMIT;"
+    } | sqlite3 -bail "$db"
+    date -u +%Y-%m-%dT%H:%M:%SZ > "$marker"
+    for table in $tables; do echo "$table: $(sqlite3 "$db" "SELECT count(*) FROM \"$table\"")"; done
