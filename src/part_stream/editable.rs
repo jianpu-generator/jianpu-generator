@@ -60,6 +60,7 @@ impl StreamGrammar {
                         )
                     })
                     .collect_vec();
+                split.blocks_rebarring |= !follows_past_the_end.is_empty();
                 split.diagnostics.extend(follows_past_the_end);
                 split
             }

@@ -7,7 +7,7 @@ use quickcheck::{QuickCheck, TestResult};
 use crate::part_stream::{apply_part_stream, extract_part_stream};
 
 use super::super::stream_generator::GeneratedStream;
-use super::{format_part_stream, FormattedPartStream};
+use super::{format_part_stream, split_part_stream, FormattedPartStream};
 
 fn apply_edits(stream: &str, formatted: &FormattedPartStream) -> String {
     formatted
@@ -130,11 +130,12 @@ fn formatting_does_not_change_what_applies() {
 }
 
 #[test]
-fn a_stream_with_an_error_is_left_as_typed() {
+fn a_stream_with_an_error_re_barring_cant_cause_is_left_as_typed() {
     check(|stream| {
         let fixture = stream.fixture();
-        let applied = apply_part_stream(fixture.source, fixture.abbreviation, &stream.text());
-        if applied.source.is_some() {
+        let blocked = split_part_stream(fixture.source, fixture.abbreviation, &stream.text())
+            .is_none_or(|split| split.blocks_rebarring);
+        if !blocked {
             return TestResult::discard();
         }
         let formatted = stream.formatted();

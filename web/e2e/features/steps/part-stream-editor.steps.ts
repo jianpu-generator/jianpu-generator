@@ -3,6 +3,7 @@ import { Given, Then, When } from './fixtures'
 import {
   CHORD_BOUND_LYRICS_SOURCE,
   EXPECTED_SOURCES,
+  HELD_NOTE_MELODY_SOURCE,
   OVER_BRACKETED_CHORD_LYRICS_SOURCE,
   OVERFLOWING_MELODY_SOURCE,
   SOURCE,
@@ -132,6 +133,10 @@ Given('the chord-bound lyrics fixture is loaded instead', async ({ page }) => {
 
 Given('the overflowing melody fixture is loaded instead', async ({ page }) => {
   await loadSource(page, OVERFLOWING_MELODY_SOURCE)
+})
+
+Given('the held note melody fixture is loaded instead', async ({ page }) => {
+  await loadSource(page, HELD_NOTE_MELODY_SOURCE)
 })
 
 Given(

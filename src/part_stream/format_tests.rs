@@ -100,8 +100,40 @@ fn leading_whitespace_is_removed_and_trailing_whitespace_kept() {
 fn a_stream_with_an_error_is_left_as_typed() {
     let unclosed = format_part_stream(THREE_MEASURES, "M", "(1 2 3 4 5 6", &[]);
     assert_eq!(unclosed.edits, vec![]);
-    let crossing = format_part_stream(THREE_MEASURES, "M", "1 2 3 4. 5 6 7", &[]);
-    assert_eq!(crossing.edits, vec![]);
+}
+
+#[test]
+fn deleting_a_note_pulls_a_held_note_back_across_the_barline() {
+    let source = r"# parts
+Melody [M] = notes
+
+# score
+[M] 1 2 3 4
+
+[M] 5 - 6 7
+
+[M] 1 2 3 4
+";
+    assert_eq!(
+        formatted(source, "M", "2 3 4\n5 - 6 7\n1 2 3 4"),
+        "2 3 4 5 -\n6 7 1 2\n3 4"
+    );
+}
+
+#[test]
+fn a_note_crossing_a_barline_stays_on_the_line_it_starts() {
+    assert_eq!(
+        formatted(THREE_MEASURES, "M", "1 2 3 4. 5 6 7"),
+        "1 2 3 4.\n5 6 7"
+    );
+}
+
+#[test]
+fn a_tuplet_crossing_a_barline_does_not_block_re_barring() {
+    assert_eq!(
+        formatted(THREE_MEASURES, "M", "1 2\n3 1_ 2:{1 1} 4 5"),
+        "1 2 3 1_ 2:{1\n1} 4 5"
+    );
 }
 
 #[test]

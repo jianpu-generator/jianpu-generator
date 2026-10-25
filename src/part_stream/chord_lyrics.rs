@@ -13,7 +13,9 @@ use crate::parser::score::interleaved_parser::padded_measure_events;
 use crate::parser::score::timed_parser::GroupStack;
 use crate::parser::score::token_parser::parse_chord_line;
 
-use super::diagnostics::{error_at, forbidden_character_errors, warning_at, AllowedMarkers};
+use super::diagnostics::{
+    error_at, forbidden_character_errors, has_error, warning_at, AllowedMarkers,
+};
 use super::document::ScoreDocument;
 use super::split::SplitStream;
 use super::timing::normalize_whitespace;
@@ -179,6 +181,7 @@ pub(super) fn split_chord_lyric_stream(
             .map(|piece| normalize_whitespace(piece.text))
             .collect(),
         measure_starts: pieces.iter().map(|piece| piece.start).collect(),
+        blocks_rebarring: has_error(&diagnostics),
         diagnostics,
     }
 }

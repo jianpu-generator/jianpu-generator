@@ -64,6 +64,19 @@ Feature: Part focus editor
       4 5 6
       """
 
+  Scenario: Deleting a note pulls a held note back across the barline
+    Given the held note melody fixture is loaded instead
+    When I choose part "M" from the Edit part as stream menu
+    And I place the cursor at the start of part focus line 1
+    And I press Delete in the part focus editor
+    Then the part focus stream is:
+      """
+      2 3 4 5 -
+      6 7 1 2
+      3 4
+      """
+    And the part focus editor has an error marker
+
   Scenario: The reformat undoes together with the keystroke
     When I choose part "M" from the Edit part as stream menu
     And I place the cursor at the start of part focus line 1

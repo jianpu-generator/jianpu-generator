@@ -7,7 +7,7 @@ use crate::parser::score::timed_parser::{GroupStack, TimedLexToken};
 use crate::parser::score::token_parser::TimedLineParse;
 
 use super::diagnostics::{
-    error_at, forbidden_character_errors, inline_directive_errors, placeholder_offsets,
+    error_at, forbidden_character_errors, has_error, inline_directive_errors, placeholder_offsets,
     stream_diagnostic, AllowedMarkers,
 };
 use super::editable::TimedGrammar;
@@ -22,6 +22,10 @@ pub(super) struct SplitStream {
     pub(super) chunks: Vec<String>,
     pub(super) measure_starts: Vec<usize>,
     pub(super) diagnostics: Vec<StreamDiagnostic>,
+    /// An error that re-barring can't cause or fix, so the stream should be
+    /// left as typed. A note or tuplet crossing a barline doesn't count: the
+    /// re-bar itself can move it there, and it stays a diagnostic.
+    pub(super) blocks_rebarring: bool,
 }
 
 /// Where a measure starts in the stream: the first cluster's index and the
@@ -88,12 +92,14 @@ pub(super) fn split_timed_stream(
                 chunks: Vec::new(),
                 measure_starts: Vec::new(),
                 diagnostics,
+                blocks_rebarring: true,
             };
         }
     };
     let tokens = grammar.kind.lex(&sanitized).unwrap_or_default();
     let timed = timed_layout(&parsed.events);
     diagnostics.extend(parse_errors(&parsed, &groups, &timed));
+    let mut blocks_rebarring = has_error(&diagnostics);
     let capacity_of = |measure: usize| {
         capacities
             .get(measure)
@@ -111,6 +117,7 @@ pub(super) fn split_timed_stream(
     );
     let trailing_rest = layout.trailing_rest / timed.multiplier;
     if layout.trailing_rest % timed.multiplier != 0 {
+        blocks_rebarring = true;
         diagnostics.push(error_at(
             Span::new(stream.len(), stream.len()),
             "the stream ends partway through a tuplet beat",
@@ -130,6 +137,7 @@ pub(super) fn split_timed_stream(
             .map(|range| first_non_whitespace(stream, range.start))
             .collect(),
         diagnostics,
+        blocks_rebarring,
     }
 }
 
