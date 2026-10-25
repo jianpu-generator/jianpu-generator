@@ -1178,6 +1178,17 @@ world jianpu-wasm {
     // only the parts `toggles` draw.
     export part-focus-measures: func(source: string, abbreviation: string, toggles: part-toggle-state) -> part-focus-measures-response;
 
+    // `part_stream::part_stream_ranges_to_source`: the part focus editor's
+    // selections (UTF-8 byte ranges in `edited-stream`) as ranges in the
+    // draft source, for the preview to highlight. Empty when the stream has
+    // errors.
+    export part-stream-ranges-to-source: func(source: string, abbreviation: string, edited-stream: string, ranges: list<span>) -> list<span>;
+
+    // `part_stream::source_ranges_to_part_stream`: draft source ranges (the
+    // preview's selection) as selections in `edited-stream`. Empty when the
+    // stream has errors.
+    export source-ranges-to-part-stream: func(source: string, abbreviation: string, edited-stream: string, ranges: list<span>) -> list<span>;
+
     // The editor's pitch drawer (see `pitch_description::describe_selection`):
     // what a selection covering exactly one note/chord means in letter names,
     // or `none` for any other selection (several notes, a rest, a caret).

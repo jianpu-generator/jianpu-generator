@@ -16,6 +16,7 @@ import type {
   MeasureSpan,
   NoteSpan,
   PartDeclaration,
+  PartFocusSelectionHandle,
   PartInfo,
   PartSettings,
   PitchDescription,
@@ -42,6 +43,9 @@ export interface AppWorkspaceProps {
    * nothing to edit or expand back into. */
   hideEditor: boolean
   editorRef: RefObject<EditorHandle | null>
+  /** Set by the part focus editor while it is open, so the preview selects
+   * in it. */
+  partFocusHandleRef: RefObject<PartFocusSelectionHandle | null>
   fileId: string
   source: string
   handleSourceChange: (value: string) => void

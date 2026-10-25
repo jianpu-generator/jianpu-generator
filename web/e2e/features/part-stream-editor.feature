@@ -205,3 +205,31 @@ Feature: Part focus editor
     And the part focus status says "3 measures changed"
     When I apply the part focus editor
     Then the main editor source is the re-barred melody source
+
+  Scenario: Selecting stream text highlights the matching notes in the preview
+    When I choose part "M" from the Edit part as stream menu
+    And I select "2 3" on part focus line 1
+    Then the preview range-selects 2 notes of part "M"
+
+  Scenario: Selecting a lyric stream highlights the matching syllables in the preview
+    When I choose part "W" from the Edit part as stream menu
+    And I select "f g" on part focus line 2
+    Then the preview range-selects 2 lyrics
+
+  Scenario: Clicking a note of the focused part selects it in the stream
+    When I choose part "M" from the Edit part as stream menu
+    And I click note 6 of part "M" in the preview
+    Then the part focus editor selects "6" on line 2
+
+  Scenario: Clicking another part's note jumps the stream to that measure
+    When I choose part "M" from the Edit part as stream menu
+    And I click note 3 of part "B" in the preview
+    Then the part focus caret is at the start of line 2
+
+  Scenario: Selection keeps working while the stream has errors
+    When I choose part "M" from the Edit part as stream menu
+    And I place the cursor at the start of part focus line 3
+    And I type "(" in the part focus editor
+    Then the part focus editor has an error marker
+    When I select "2 3" on part focus line 1
+    Then the preview range-selects 2 notes of part "M"

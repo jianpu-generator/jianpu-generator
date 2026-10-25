@@ -24,6 +24,7 @@ export function AppWorkspace({
   setEditorCollapsed,
   hideEditor,
   editorRef,
+  partFocusHandleRef,
   fileId,
   source,
   handleSourceChange,
@@ -118,6 +119,29 @@ export function AppWorkspace({
     describeSelection,
   )
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT_QUERY)
+  // Shared by the main editor and the part focus editor, which reports in
+  // draft source terms.
+  const handleSelectionLinesChange = (
+    firstLine: number,
+    lastLine: number,
+    isEmpty: boolean,
+  ) => {
+    setSelectedLineRange(null)
+    notifySelection(firstLine, lastLine, isEmpty)
+  }
+  const handleSelectionOffsetChange = (
+    ranges: EditorSelection[],
+    isEmpty: boolean,
+  ) => {
+    // Every disjoint range is passed through, not just the primary one — a
+    // multicursor selection (e.g. a clicked part label's per-measure ranges,
+    // or the "shift selection octave" toolbar action's remapped ranges) must
+    // keep every range's notes/lyrics highlighted, not just whichever one
+    // Monaco calls the anchor.
+    handleEditorSelectionChange(ranges)
+    handleLyricEditorSelectionChange(ranges)
+    setSelectionByteRanges(isEmpty ? null : ranges)
+  }
   // Below the mobile breakpoint only one pane is visible at a time, so
   // showing the editor must collapse the preview instead of sitting beside it.
   const previewCollapsed = isMobile && !hideEditor && !editorCollapsed
@@ -226,21 +250,8 @@ export function AppWorkspace({
                   diagnostics={diagnostics}
                   diagnosticViewZones={diagnosticViewZones}
                   measureSpans={measureSpans}
-                  onSelectionChange={(firstLine, lastLine, isEmpty) => {
-                    setSelectedLineRange(null)
-                    notifySelection(firstLine, lastLine, isEmpty)
-                  }}
-                  onSelectionOffsetChange={(ranges, isEmpty) => {
-                    // Every disjoint range is passed through, not just the
-                    // primary one — a multicursor selection (e.g. a clicked
-                    // part label's per-measure ranges, or the "shift
-                    // selection octave" toolbar action's remapped ranges)
-                    // must keep every range's notes/lyrics highlighted, not
-                    // just whichever one Monaco calls the anchor.
-                    handleEditorSelectionChange(ranges)
-                    handleLyricEditorSelectionChange(ranges)
-                    setSelectionByteRanges(isEmpty ? null : ranges)
-                  }}
+                  onSelectionChange={handleSelectionLinesChange}
+                  onSelectionOffsetChange={handleSelectionOffsetChange}
                   onEditPartsClick={() => setEditPartsOpen(true)}
                   onEditMetadataClick={() => setEditMetadataOpen(true)}
                   onForceSave={forceSave}
@@ -283,6 +294,9 @@ export function AppWorkspace({
                   setFocusedPart(null)
                 }}
                 onCancel={() => setFocusedPart(null)}
+                handleRef={partFocusHandleRef}
+                onSelectionChange={handleSelectionLinesChange}
+                onSelectionOffsetChange={handleSelectionOffsetChange}
               />
             )}
             <EditMetadataModal
@@ -339,22 +353,14 @@ export function AppWorkspace({
           staffScore={staffView ? staffNotation.score : null}
           highlightedDocuments={highlightedDocuments}
           rendering={staffView ? staffNotation.loading : rendering}
-          onSectionLabelClick={
-            focusedPart === null ? handleSectionJump : undefined
-          }
-          onNoteRangeSelect={
-            focusedPart === null ? handleNoteRangeSelect : undefined
-          }
+          onSectionLabelClick={handleSectionJump}
+          onNoteRangeSelect={handleNoteRangeSelect}
           selectedNoteCells={selectedNoteCells}
           noteSpans={noteSpans}
-          onLyricRangeSelect={
-            focusedPart === null ? handleLyricRangeSelect : undefined
-          }
+          onLyricRangeSelect={handleLyricRangeSelect}
           selectedLyricCells={selectedLyricCells}
           lyricSpans={lyricSpans}
-          onMeasureRangeSelect={
-            focusedPart === null ? handleMeasureRangeSelect : undefined
-          }
+          onMeasureRangeSelect={handleMeasureRangeSelect}
           selectedMeasureRange={selectedMeasureRange}
           audioGenerating={audioGenerating}
           wavUrl={wavUrl}
