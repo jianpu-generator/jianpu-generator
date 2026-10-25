@@ -76,6 +76,17 @@ Melody [M] = notes
 [M] 6 7 1 2
 `
 
+export const HELD_NOTE_MELODY_SOURCE = `# parts
+Melody [M] = notes
+
+# score
+[M] 1 2 3 4
+
+[M] 5 - 6 7
+
+[M] 1 2 3 4
+`
+
 export const RE_BARRED_MELODY_SOURCE = `# parts
 Melody [M] = notes
 

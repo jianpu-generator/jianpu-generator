@@ -9,7 +9,9 @@ use crate::parser::score::timed_parser::GroupStack;
 use crate::parser::score::token_parser::parse_notes_line;
 use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics, LyricTieState};
 
-use super::diagnostics::{error_at, forbidden_character_errors, warning_at, AllowedMarkers};
+use super::diagnostics::{
+    error_at, forbidden_character_errors, has_error, warning_at, AllowedMarkers,
+};
 use super::document::ScoreDocument;
 use super::split::SplitStream;
 use super::timing::normalize_whitespace;
@@ -136,6 +138,7 @@ pub(super) fn split_lyric_stream(stream: &str, slot_counts: &[usize]) -> SplitSt
     SplitStream {
         chunks,
         measure_starts,
+        blocks_rebarring: has_error(&diagnostics),
         diagnostics,
     }
 }
