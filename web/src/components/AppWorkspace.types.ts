@@ -165,4 +165,6 @@ export interface AppWorkspaceProps {
   staffNotation: StaffNotation
   /** Passed through to the part focus editor's ghost lines. */
   partToggles: PartToggleState
+  /** The part focus editor's draft source, which the preview follows. */
+  onPartFocusDraftChange: (draftSource: string | null) => void
 }
