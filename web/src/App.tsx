@@ -25,6 +25,7 @@ export default function App() {
     setStore,
     backend,
     isLoadingCloud,
+    cloudLoadFailure,
     saveStatus,
     saveLabel,
     autosaveDeadline,
@@ -206,6 +207,7 @@ export default function App() {
         duplicatingFile={duplicatingFile}
         renamingFileName={renamingFileName}
         isLoadingCloud={isLoadingCloud}
+        cloudLoadFailure={cloudLoadFailure}
         onOpenBin={() => panels.setBinOpen(true)}
         onOpenSyncPanel={
           backend.kind === 'cloud'
@@ -306,7 +308,10 @@ export default function App() {
       />
       {syncedShareViewerActive &&
       showsSharedViewerNotice(syncedShare.viewerStatus) ? (
-        <SharedViewerNotice status={syncedShare.viewerStatus} />
+        <SharedViewerNotice
+          status={syncedShare.viewerStatus}
+          traceId={syncedShare.viewerTraceId}
+        />
       ) : (
         <AppWorkspace
           editorCollapsed={editorCollapsed}

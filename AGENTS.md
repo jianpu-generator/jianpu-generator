@@ -35,6 +35,7 @@ Reuse the shared components in `web/src/components/` before building a new contr
 - **`EditorToolbarButton`**: an icon button with a tooltip for the editor toolbar.
 - **`SpinnerLabel`**: a button label with the shared pending spinner.
 - **`accountDialogParts.tsx`**: `AccountDialogFrame`, `Field`, `ErrorBanner` and friends for account modals.
+- **`TraceId`**: the worker's trace ID for a failed request, with a copy button. Show it beside every request error (`ErrorBanner` takes a `traceId`).
 - **Icons**: `@radix-ui/react-icons` first; app-specific icons live in `components/icons/`.
 - **Mobile branching**: in TypeScript, `useMediaQuery(MOBILE_BREAKPOINT_QUERY)` (`web/src/hooks/useMediaQuery.ts`) rather than a hard-coded width; in CSS, `@media (max-width: 768px)`.
 

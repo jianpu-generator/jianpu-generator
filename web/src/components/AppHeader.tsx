@@ -1,5 +1,6 @@
 import type { FileStoreState } from '../fileStore'
 import { sortedBinNames } from '../fileStore'
+import type { CloudLoadFailure } from '../hooks/useCloudStoreLoader'
 import type { FolderShares } from '../hooks/useFolderShares'
 import type { SharedFolderViewer } from '../hooks/useSharedFolderViewer'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
@@ -110,6 +111,7 @@ interface AppHeaderProps {
   duplicatingFile?: boolean
   renamingFileName?: string | null
   isLoadingCloud?: boolean
+  cloudLoadFailure?: CloudLoadFailure | null
   onOpenBin: () => void
   onOpenSyncPanel?: () => void
   onOpenHistory?: () => void
@@ -183,6 +185,7 @@ export function AppHeader({
   duplicatingFile,
   renamingFileName,
   isLoadingCloud,
+  cloudLoadFailure,
   onOpenBin,
   onOpenSyncPanel,
   onOpenHistory,
@@ -329,6 +332,7 @@ export function AppHeader({
             duplicating={duplicatingFile}
             renamingName={renamingFileName}
             isLoadingCloud={isLoadingCloud}
+            cloudLoadFailure={cloudLoadFailure}
             importing={importing}
             onImportFile={onImportFile}
             binNames={sortedBinNames(store)}

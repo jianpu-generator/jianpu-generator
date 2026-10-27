@@ -42,5 +42,8 @@ export function errorBannerMessage(
   if (error.kind === 'network') {
     return "You appear to be offline. Changes will save once you're back online."
   }
+  if (error.kind === 'unknown') {
+    return `Couldn't save to the cloud: ${error.message}`
+  }
   return null
 }

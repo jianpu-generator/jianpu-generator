@@ -2,6 +2,7 @@ import {
   callWorker,
   createWorkerClient,
   NetworkFailure,
+  traceIdOf,
   WorkerRequestError,
 } from '../syncedShare/workerClient'
 import type { StoredAccountAuth } from './accountAuth'
@@ -26,9 +27,11 @@ export type AccountFailure =
   | { kind: 'session-ended' }
   | { kind: 'message'; message: string }
 
+/** `traceId` names the failed request in the worker's `app_log`, for the
+ * dialog to show; `null` when it never reached the worker. */
 export type AccountResult<T> =
   | { ok: true; value: T }
-  | { ok: false; failure: AccountFailure }
+  | { ok: false; failure: AccountFailure; traceId: string | null }
 
 function workerClient() {
   return createWorkerClient(import.meta.env.VITE_SYNCED_SHARE_HOST ?? '')
@@ -73,7 +76,7 @@ async function attempt<T>(send: () => Promise<T>): Promise<AccountResult<T>> {
   try {
     return { ok: true, value: await send() }
   } catch (error) {
-    return { ok: false, failure: toFailure(error) }
+    return { ok: false, failure: toFailure(error), traceId: traceIdOf(error) }
   }
 }
 

@@ -77,6 +77,7 @@ export function useScoreSource(
     clearSyncedFolder,
     syncedShareViewerPreview,
     syncedShareViewerStatus,
+    syncedShareViewerTraceId,
     handleImportSyncedShare,
   } = useSyncedShareViewer(
     setEditorCollapsed,
@@ -127,6 +128,7 @@ export function useScoreSource(
       viewerActive: syncedShareViewerActive,
       sharedFolder,
       viewerStatus: syncedShareViewerStatus,
+      viewerTraceId: syncedShareViewerTraceId,
       viewerFilename: syncedShareViewerPreview?.filename ?? null,
       onImportSyncedShare: handleImportSyncedShare,
       canSync: syncedShareOwner.canSync,

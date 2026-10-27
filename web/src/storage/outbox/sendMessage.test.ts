@@ -16,7 +16,11 @@ type Post = (
 ) => Promise<unknown>
 
 function replyWith({ status, body }: FakeReply) {
-  const response = { ok: status >= 200 && status < 300, status } as Response
+  const response = {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: new Headers(),
+  } as Response
   return status >= 200 && status < 300
     ? { data: body, response }
     : { error: body, response }
@@ -198,6 +202,22 @@ describe('sendMessage failures', () => {
     expect(result).toEqual({
       tag: 'permanent',
       val: { status: 400, reason: 'bad_request' },
+    })
+  })
+
+  it("names the failed request's trace ID in the reason", async () => {
+    const result = await sendMessage(
+      requestFor(saveContent('x')),
+      makeDeps(
+        respond({
+          status: 400,
+          body: { code: 'bad_request', traceId: '0123456789abcdef' },
+        }),
+      ),
+    )
+    expect(result).toEqual({
+      tag: 'permanent',
+      val: { status: 400, reason: 'bad_request, trace ID 0123456789abcdef' },
     })
   })
 })

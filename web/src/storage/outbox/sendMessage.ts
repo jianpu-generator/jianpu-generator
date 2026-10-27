@@ -28,6 +28,12 @@ function transient(reason: string): SendResult {
   return { tag: 'transient', val: { reason } }
 }
 
+/** Appends the worker's trace ID, so a failed save in the sync panel and
+ * its history can be looked up in `app_log`. */
+function withTraceId(reason: string, error: WorkerRequestError): string {
+  return error.traceId ? `${reason}, trace ID ${error.traceId}` : reason
+}
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
@@ -198,11 +204,14 @@ async function classifyRequestError(
     return { tag: 'ok', val: { revision: request.expectedRevision } }
   }
   if (status >= 500 || status === 429) {
-    return transient(`status ${status}`)
+    return transient(withTraceId(`status ${status}`, error))
   }
   return {
     tag: 'permanent',
-    val: { status, reason: apiError?.code ?? `status ${status}` },
+    val: {
+      status,
+      reason: withTraceId(apiError?.code ?? `status ${status}`, error),
+    },
   }
 }
 

@@ -40,6 +40,7 @@ use worker::{
     ScheduledEvent,
 };
 
+use crate::api_error::ApiError;
 use crate::app_log::{prune_cutoff_millis, APP_LOG_PRUNE_BATCH_SIZE, APP_LOG_PRUNE_MAX_BATCHES};
 
 /// The web app calls this worker cross-origin, so every response --
@@ -53,6 +54,7 @@ fn cors_config() -> Cors {
         .with_origins(["*"])
         .with_methods([Method::Get, Method::Post, Method::Options])
         .with_allowed_headers(["Content-Type"])
+        .with_exposed_headers([handlers::TRACE_ID_HEADER])
 }
 
 #[event(fetch)]
@@ -64,10 +66,19 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     }
 
     let e2e_reset_enabled = env.var(e2e_reset::EMAILS_VAR).is_ok();
-    let response = handlers::routes(e2e_reset_enabled)?
+    let route = format!("{} {}", req.method(), req.path());
+    let request_meta = handlers::request_meta(&req);
+    let outcome = handlers::routes(e2e_reset_enabled)?
         .into_router()
-        .run(req, env)
-        .await?;
+        .run(req, env.clone())
+        .await;
+    let response = match outcome {
+        Ok(response) if response.headers().has(handlers::TRACE_ID_HEADER)? => response,
+        // No route matched: the router's own plain-text 404/405.
+        Ok(_) => handlers::fail(&env, &route, ApiError::NotFound, &request_meta).await?,
+        // The router itself failed, outside any route's `fail`.
+        Err(error) => handlers::fail(&env, &route, error.into(), &request_meta).await?,
+    };
     response.with_cors(&cors)
 }
 
