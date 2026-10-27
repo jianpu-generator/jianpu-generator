@@ -238,6 +238,22 @@ impl Guest for Component {
         section_headers(source)
     }
 
+    fn list_presets(source: String) -> Vec<PresetSummary> {
+        list_presets(source)
+    }
+
+    fn update_preset_field(source: String, preset_name: String, edit: PresetEdit) -> String {
+        update_preset_field(source, preset_name, edit)
+    }
+
+    fn add_preset_section(source: String, preset: NewPreset) -> String {
+        add_preset_section(source, preset)
+    }
+
+    fn preset_header_span(source: String, preset_name: String) -> Option<Span> {
+        preset_header_span(source, preset_name)
+    }
+
     fn set_layout_fonts(fonts: FontBytesByFamily) {
         set_layout_fonts(fonts)
     }

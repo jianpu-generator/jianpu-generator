@@ -976,6 +976,50 @@ world jianpu-wasm {
     // order; returns `source` unchanged when it has no such section.
     export update-metadata-field: func(source: string, edit: metadata-edit) -> string;
 
+    // How the preview and exports draw the score (`jianpu_generator::ast::parsed::Notation`).
+    enum notation {
+        jianpu,
+        violin,
+        cello,
+        abc,
+        guitar,
+        harmonica,
+    }
+
+    // One entry of the preset menu.
+    record preset-summary {
+        name: string,
+        notation: option<notation>,
+    }
+
+    // The file's `# preset` sections in file order, read from the sections
+    // alone so a half-typed score doesn't empty the menu.
+    export list-presets: func(source: string) -> list<preset-summary>;
+
+    // One line the preset menu's controls write into a `# preset` section.
+    // An empty `visible-parts` list hides every part.
+    variant preset-edit {
+        visible-parts(list<string>),
+        notation(notation),
+    }
+
+    // Rewrites the named preset's line for `edit` in place, or adds it under
+    // the header; returns `source` unchanged when no preset has that name.
+    export update-preset-field: func(source: string, preset-name: string, edit: preset-edit) -> string;
+
+    // A preset for "New preset…", holding the parts and notation shown now.
+    record new-preset {
+        name: string,
+        visible-parts: list<string>,
+        notation: notation,
+    }
+
+    // Adds a `# preset` section after the last one (else before the music).
+    export add-preset-section: func(source: string, preset: new-preset) -> string;
+
+    // The `# preset "Name"` header line's UTF-8 byte span, for "Edit in source".
+    export preset-header-span: func(source: string, preset-name: string) -> option<span>;
+
     // Kind of one editor keyword `highlight-tokens` reports.
     enum highlight-kind {
         section-header,
