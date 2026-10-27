@@ -70,6 +70,8 @@ pub enum WarningKind {
     /// page's usable music width — the layout overflows rather than
     /// over-compressing glyphs (see **Rod and spring** in `ARCHITECTURE.md`).
     MeasureOverflow,
+    /// A preset draws staff notation (violin/cello), which ignores its text styles.
+    PresetTextStylesIgnored,
 }
 
 impl WarningKind {
@@ -83,6 +85,7 @@ impl WarningKind {
             Self::HalfBarBoundaryCrossed => "half_bar_boundary_crossed",
             Self::GroupTooFewNotes => "group_too_few_notes",
             Self::MeasureOverflow => "measure_overflow",
+            Self::PresetTextStylesIgnored => "preset_text_styles_ignored",
         }
     }
 }
@@ -129,6 +132,16 @@ impl Warning {
                  is available; reduce measures per system or font size"
             ),
             kind: WarningKind::MeasureOverflow,
+        }
+    }
+
+    pub fn preset_text_styles_ignored(span: Span, notation: &str) -> Self {
+        Self {
+            span,
+            message: format!(
+                "{notation} notation is drawn as a staff, which ignores this preset's text styles"
+            ),
+            kind: WarningKind::PresetTextStylesIgnored,
         }
     }
 }

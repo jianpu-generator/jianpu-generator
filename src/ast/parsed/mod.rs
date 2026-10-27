@@ -4,9 +4,11 @@ mod events;
 mod metadata_access;
 mod metadata_keys;
 mod pitch;
+mod preset;
 pub use events::*;
 pub use metadata_keys::*;
 pub use pitch::*;
+pub use preset::*;
 
 #[derive(Debug)]
 pub enum ParsedMeasureSlot {
@@ -168,6 +170,10 @@ pub struct ParsedDocument {
     pub sequence: Option<crate::parser::sequence_parser::SequenceSection>,
     /// Recoverable errors from parsing the `# sequence` section (e.g. empty entries).
     pub sequence_parse_errors: Vec<RecoverableError>,
+    /// Every valid `# preset` section, in file order.
+    pub presets: Vec<ParsedPreset>,
+    /// Errors and warnings from the `# preset` sections.
+    pub preset_diagnostics: Vec<Diagnostic>,
 }
 
 keyword_enum! {

@@ -64,6 +64,16 @@ pub enum RecoverableErrorKind {
     SectionDuplicate { section: DocumentSection },
     /// A required section is absent — an empty default is used.
     SectionMissing { section: DocumentSection },
+    /// A `# preset` header has no `"quoted"` name — the section is skipped.
+    PresetMissingName,
+    /// Two `# preset` sections share a name — the later one is skipped.
+    PresetDuplicateName { name: String },
+    /// A `# preset` is named `"Default"`, which the preset menu uses for "no preset" — the section is skipped.
+    PresetReservedName { name: String },
+    /// A preset's `visible_parts` names an abbreviation not declared in `# parts` — the entry is ignored.
+    PresetUnknownPart { abbreviation: String },
+    /// A preset-only field (`visible_parts`, `notation`) appears in `# metadata` — the line is skipped.
+    PresetOnlyField { field: String },
     /// A lyrics line is empty — treated as `_` (no lyrics for this measure).
     LyricsLineEmpty,
     /// A lyrics slot has no paired notes track — lyrics are skipped.
@@ -169,6 +179,11 @@ impl RecoverableErrorKind {
             Self::SectionUnknown { name } => format!("unknown section: # {name}"),
             Self::SectionDuplicate { section } => format!("duplicate {} section", section.header()),
             Self::SectionMissing { section } => format!("missing {} section", section.header()),
+            Self::PresetMissingName => "a preset needs a quoted name, e.g. # preset \"Choir\"".to_string(),
+            Self::PresetDuplicateName { name } => format!("duplicate preset \"{name}\""),
+            Self::PresetReservedName { name } => format!("\"{name}\" is reserved for the song without a preset; choose another name"),
+            Self::PresetUnknownPart { abbreviation } => format!("no part with abbreviation '{abbreviation}' in # parts"),
+            Self::PresetOnlyField { field } => format!("{field} can only be set in a # preset section"),
             Self::LyricsLineEmpty => "lyrics line cannot be empty; use '_' for no lyrics".to_string(),
             Self::LyricsNoNotesTrack { abbrev } => format!("lyrics line for '{abbrev}' has no matching notes track"),
             Self::LyricsBracketNotOneSyllable { found } => format!("a lyric bracket must hold exactly one syllable, found {found}"),
@@ -195,26 +210,12 @@ impl RecoverableErrorKind {
             Self::TieOnRest => "~ cannot be applied to a rest; ~ ignored".to_string(),
             Self::DanglingTie => "~ has no following note to tie to; ~ ignored".to_string(),
             Self::TiePitchMismatch { expected, got } => format!("tied notes must have the same pitch and octave; expected {expected}, got {got}; ~ ignored"),
-            Self::PartsFollowUnknownTarget { target } => {
-                format!(
-                    "no part with abbreviation '{target}'; follow targets must match a part declared earlier in #parts"
-                )
-            }
-            Self::PartsLyricsInvalidTarget { target } => {
-                format!(
-                    "lyrics[{target}] must name a notes or chords part declared earlier in #parts"
-                )
-            }
-            Self::PartsFirstPartCannotFollow => {
-                "the first declared part cannot use follow[...]".to_string()
-            }
-            Self::PartsUnknownSoundfont { soundfont, suggestions } => {
-                Self::parts_unknown_soundfont_message(soundfont, suggestions)
-            }
+            Self::PartsFollowUnknownTarget { target } => format!("no part with abbreviation '{target}'; follow targets must match a part declared earlier in #parts"),
+            Self::PartsLyricsInvalidTarget { target } => format!("lyrics[{target}] must name a notes or chords part declared earlier in #parts"),
+            Self::PartsFirstPartCannotFollow => "the first declared part cannot use follow[...]".to_string(),
+            Self::PartsUnknownSoundfont { soundfont, suggestions } => Self::parts_unknown_soundfont_message(soundfont, suggestions),
             Self::PartsVolumeOutOfRange { volume } => Self::parts_volume_out_of_range_message(*volume),
-            Self::PartsOctaveOffsetOutOfRange { offset } => {
-                Self::parts_octave_offset_out_of_range_message(*offset)
-            }
+            Self::PartsOctaveOffsetOutOfRange { offset } => Self::parts_octave_offset_out_of_range_message(*offset),
             Self::RepeatNoPriorNote => "no prior note/chord to repeat; token ignored".to_string(),
             Self::TupletAmbiguousRatio { num } => format!("tuplet ratio for {num} is ambiguous; use {{{num}:M:...}} to specify explicitly"),
             Self::TupletNoteCountMismatch { expected, got } => format!("tuplet declared {expected} notes but got {got}; note count must match"),

@@ -1000,6 +1000,7 @@ world jianpu-wasm {
         parts,
         score,
         sequence,
+        preset,
     }
 
     // One known section header line's UTF-8 byte span (its `section-header`

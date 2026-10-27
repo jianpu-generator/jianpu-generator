@@ -4,6 +4,7 @@ use crate::error::{DocumentSection, IrrecoverableError, RecoverableError, Span};
 pub mod lyrics;
 pub mod metadata_parser;
 pub mod parts_parser;
+pub mod preset_parser;
 pub mod score;
 pub mod section_splitter;
 pub mod sequence_parser;
@@ -13,6 +14,7 @@ pub(crate) struct DocumentSectionContents {
     pub score: (String, usize),
     pub metadata: (String, usize),
     pub sequence: Option<(String, usize)>,
+    pub presets: Vec<preset_parser::PresetSection>,
 }
 
 fn unwrap_or_missing(
@@ -33,6 +35,7 @@ struct RawSections {
     parts: Option<(String, usize)>,
     score: Option<(String, usize)>,
     sequence: Option<(String, usize)>,
+    presets: Vec<preset_parser::PresetSection>,
 }
 
 fn partition_sections(
@@ -44,6 +47,15 @@ fn partition_sections(
 
     let mut raw = RawSections::default();
     for section in sections.into_iter() {
+        if let (SectionKind::Preset, Some(name)) = (section.kind, section.preset_name) {
+            raw.presets.push(preset_parser::PresetSection {
+                name,
+                header_span: section.header_span,
+                content: section.content,
+                content_offset: section.content_offset,
+            });
+            continue;
+        }
         let occurrence = SectionOccurrence {
             content: (section.content, section.content_offset),
             doc_span,
@@ -67,6 +79,8 @@ fn partition_sections(
                 occurrence,
                 errors,
             ),
+            // Taken above: a preset section always carries its name.
+            SectionKind::Preset => {}
         }
     }
     raw
@@ -112,6 +126,7 @@ pub(crate) fn load_document_sections(
             parts,
             score,
             sequence: raw.sequence,
+            presets: raw.presets,
         },
         errors,
     )
@@ -140,6 +155,7 @@ pub fn parse(
             score::interleaved_parser::parse(&score_content, score_offset, &declarations)
                 .map_err(|error| error.with_path(path))?
         };
+    let parsed_presets = preset_parser::parse_presets(sections.presets, &declarations);
     let (sequence, sequence_parse_errors) = match sections.sequence {
         Some((sequence_content, sequence_offset)) => {
             sequence_parser::parse_sequence(&sequence_content, sequence_offset)
@@ -159,6 +175,8 @@ pub fn parse(
         section_structure_errors,
         sequence,
         sequence_parse_errors,
+        presets: parsed_presets.presets,
+        preset_diagnostics: parsed_presets.diagnostics,
     })
 }
 

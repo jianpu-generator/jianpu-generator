@@ -37,12 +37,13 @@ mod pdf_embedding {
     fn round_trip_recovers_original_source_from_pdf() {
         let source =
             "# metadata\ntitle = \"Testing\"\n\n# parts\nMelody = notes\n\n# score\n[Melody] 1 2 3 4\n";
-        let pdf_bytes = write_pdf_from_source_filtered(
+        let pdf_bytes = write_pdf_from_source_with_visibility(
             source,
             "test.jianpu",
-            None,
+            &ResolvedPartVisibility::default(),
             &fonts::FontBytesByFamily::embedded(),
             &[],
+            NoteLabels::Degrees,
         )
         .unwrap();
         assert_eq!(

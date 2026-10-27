@@ -122,21 +122,29 @@ pub struct SplitPdfEntry {
     pub pdf: Vec<u8>,
 }
 
+/// Which tracks a split export writes, and the `# preset` it exports under.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SplitSelection<'a> {
+    /// Empty → all tracks; non-empty → only these abbreviations.
+    pub tracks: &'a [String],
+    /// Overlays that `# preset`'s metadata on every file.
+    pub preset_name: Option<&'a str>,
+}
+
 /// Parse once, render one PDF per track (CLI `--split-tracks` semantics).
 ///
-/// `tracks_filter`: empty → all tracks; non-empty → only listed abbreviations.
 /// A track exports together with the lyric parts that sing along to it.
 #[cfg(feature = "pdf")]
 pub fn write_split_pdfs_from_source(
     source: &str,
     filename: &str,
     base_name: &str,
-    tracks_filter: &[String],
+    selection: SplitSelection,
     fonts: &crate::fonts::FontBytesByFamily,
     note_labels: crate::compiler::NoteLabels,
 ) -> Result<Vec<SplitPdfEntry>, IrrecoverableError> {
-    let score = crate::compile(source, filename, &[])?;
-    let track_names = split_track_names(source, filename, &score, tracks_filter)?;
+    let score = crate::compile_with_preset(source, filename, &[], selection.preset_name)?;
+    let track_names = split_track_names(source, filename, &score, selection.tracks)?;
     let display_names = part_display_name_map(source, filename)?;
     let all_parts = list_parts_from_source(source, filename, &[])?;
     let mut entries = Vec::with_capacity(track_names.len());

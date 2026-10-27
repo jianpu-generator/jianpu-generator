@@ -18,7 +18,7 @@ pub struct CheckOutcome {
 /// Parse and group a `.jianpu` file, returning whether it has any errors and the
 /// full list of collected diagnostics.
 pub fn check(input: &Path) -> Result<CheckOutcome, IrrecoverableError> {
-    let score = parse_and_group(input)?;
+    let score = parse_and_group(input, None)?;
     let diagnostics = crate::collect_measure_diagnostics(&score);
     let ok = !diagnostics
         .iter()
@@ -36,13 +36,16 @@ pub fn read_source(input: &Path) -> Result<String, IrrecoverableError> {
     })
 }
 
+/// Parse and group a `.jianpu` file, with `# metadata` overlaid by the
+/// `# preset` named `preset_name`.
 pub(crate) fn parse_and_group(
     input: &Path,
+    preset_name: Option<&str>,
 ) -> Result<crate::ast::grouped::Score, IrrecoverableError> {
     let content = read_source(input)?;
     let filename = input.to_string_lossy().to_string();
-    let doc = crate::parser::parse(&content, &filename, &[]).map_err(|e| e.with_path(input))?;
-    crate::grouper::group(doc).map_err(|e| e.with_path(input))
+    crate::compile_with_preset(&content, &filename, &[], preset_name)
+        .map_err(|e| e.with_path(input))
 }
 
 pub fn write_file(path: &Path, bytes: &[u8]) -> Result<(), IrrecoverableError> {

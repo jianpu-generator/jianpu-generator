@@ -152,3 +152,23 @@ fn indented_header_like_line_is_not_a_section_header() {
     let source = "# score\n[M] 1\n  # parts\n";
     assert_eq!(headers(source), [header(SectionKind::Score, "# score")]);
 }
+
+#[test]
+fn preset_section_highlights_its_header_metadata_keys_and_preset_keys() {
+    use HighlightKind::{MetadataKey, SectionHeader};
+    let source =
+        "# preset \"Choir\"\nvisible_parts = S1\nnotation = violin\nrow_height = 30\ncolour = red\n";
+    assert_eq!(
+        highlighted(source),
+        [
+            (SectionHeader, "# preset \"Choir\""),
+            (MetadataKey, "visible_parts"),
+            (MetadataKey, "notation"),
+            (MetadataKey, "row_height"),
+        ]
+    );
+    assert_eq!(
+        headers(source),
+        [header(SectionKind::Preset, "# preset \"Choir\"")]
+    );
+}

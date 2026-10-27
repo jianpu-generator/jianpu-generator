@@ -166,6 +166,7 @@ pub(super) fn resolve_part_visibility(
     resolved_part_visibility_to_wit(jianpu_generator::resolve_part_visibility(
         &parts,
         &part_toggle_state_from_wit(toggles),
+        None,
     ))
 }
 
