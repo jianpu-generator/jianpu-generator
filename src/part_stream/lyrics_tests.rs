@@ -175,6 +175,34 @@ fn leftover_syllables_are_an_error_on_the_first_leftover() {
 }
 
 #[test]
+fn placeholders_pushed_past_the_last_slot_are_dropped() {
+    let source = r"# parts
+Melody [M] = notes
+Words [W] = lyrics[M]
+
+# score
+[M] 1 2 3 4
+
+[M] 5 6 7 1
+";
+    let result = apply_part_stream(source, "W", "a b c d _ _");
+    assert_eq!(result.diagnostics, vec![]);
+    assert_eq!(
+        applied(result),
+        "# parts\nMelody [M] = notes\nWords [W] = lyrics[M]\n\n# score\n[M] 1 2 3 4\n[W] a b c d\n\n[M] 5 6 7 1\n"
+    );
+}
+
+#[test]
+fn leftover_placeholders_mixed_with_syllables_are_still_an_error() {
+    let result = apply_part_stream(TWO_MEASURES, "W", "a b c d e f g h _ i");
+    assert_eq!(result.source, None);
+    let errors = with_severity(&result, StreamDiagnosticSeverity::Error);
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].span, Span::new(16, 17));
+}
+
+#[test]
 fn a_short_last_measure_is_only_a_warning() {
     let result = apply_part_stream(TWO_MEASURES, "W", "b c d e f g h");
     let warnings = with_severity(&result, StreamDiagnosticSeverity::Warning);

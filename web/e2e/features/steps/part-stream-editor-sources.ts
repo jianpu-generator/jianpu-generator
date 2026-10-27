@@ -98,8 +98,34 @@ Melody [M] = notes
 [M] 2 0 0 0
 `
 
+export const UNWRITTEN_LYRICS_SOURCE = `# parts
+Melody [M] = notes
+Words [W] = lyrics[M]
+
+# score
+[M] 1 2 3 4
+
+[M] 5 6 7 1
+
+[M] 3 4 5 6
+`
+
+export const FIRST_MEASURE_LYRICS_SOURCE = `# parts
+Melody [M] = notes
+Words [W] = lyrics[M]
+
+# score
+[M] 1 2 3 4
+[W] a b c d
+
+[M] 5 6 7 1
+
+[M] 3 4 5 6
+`
+
 export const EXPECTED_SOURCES: Record<string, string> = {
   'original fixture': SOURCE,
   'shifted melody': SHIFTED_MELODY_SOURCE,
   're-barred melody': RE_BARRED_MELODY_SOURCE,
+  'first measure lyrics': FIRST_MEASURE_LYRICS_SOURCE,
 }

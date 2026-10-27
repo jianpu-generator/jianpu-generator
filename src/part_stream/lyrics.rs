@@ -87,7 +87,8 @@ pub(super) fn extract_lyric_chunks(
 }
 
 /// Cuts a lyric stream into measures by `slot_counts`. Lyric streams can't
-/// add measures: syllables left after the last slot are an error.
+/// add measures: syllables left after the last slot are an error, unless
+/// they are all `_` (placeholders pushed out by syllables typed before them).
 pub(super) fn split_lyric_stream(stream: &str, slot_counts: &[usize]) -> SplitStream {
     let mut diagnostics = forbidden_character_errors(stream, AllowedMarkers::default());
     let syllables = tokenize_lyrics(stream, 0);
@@ -129,17 +130,29 @@ pub(super) fn split_lyric_stream(stream: &str, slot_counts: &[usize]) -> SplitSt
         consumed += taken.len();
         previous_end = span.end;
     }
-    if let Some(leftover) = syllables.get(consumed) {
-        diagnostics.push(error_at(
-            leftover.span,
-            "this syllable has no note left to sing on; a lyric stream can't add measures",
-        ));
-    }
+    let leftovers = syllables.get(consumed..).unwrap_or_default();
+    let dropped_placeholders = if leftovers
+        .iter()
+        .all(|syllable| syllable.text == NO_LYRICS_MEASURE)
+    {
+        leftovers
+            .last()
+            .map(|last| Span::new(previous_end, last.span.end))
+    } else {
+        if let Some(leftover) = leftovers.first() {
+            diagnostics.push(error_at(
+                leftover.span,
+                "this syllable has no note left to sing on; a lyric stream can't add measures",
+            ));
+        }
+        None
+    };
     SplitStream {
         chunks,
         measure_starts,
         blocks_rebarring: has_error(&diagnostics),
         diagnostics,
+        dropped_placeholders,
     }
 }
 

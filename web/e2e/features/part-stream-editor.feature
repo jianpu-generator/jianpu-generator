@@ -126,6 +126,20 @@ Feature: Part focus editor
     Then the part focus editor has an error marker
     And the part focus Apply button is disabled
 
+  Scenario: Typing lyrics before the no-lyrics placeholders drops the ones pushed past the end
+    Given the unwritten lyrics fixture is loaded instead
+    When I choose part "W" from the Edit part as stream menu
+    And I place the cursor at the start of part focus line 1
+    And I type "a b c d " in the part focus editor
+    Then the part focus stream is:
+      """
+      a b c d
+      _
+      _
+      """
+    When I apply the part focus editor
+    Then the main editor source is the first measure lyrics source
+
   Scenario: The preview follows the draft as I type
     When I choose part "W" from the Edit part as stream menu
     And I place the cursor at the start of part focus line 1
