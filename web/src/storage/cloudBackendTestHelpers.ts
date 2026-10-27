@@ -3,9 +3,9 @@ import { beforeEach, vi } from 'vitest'
 import { instantiate } from '../../../crates/jianpu-wasm/pkg-component/jianpu_wasm.js'
 import { setWasmRoot } from '../jianpuWasm'
 import {
-  type ApiError,
   callWorker,
   createWorkerClient,
+  type WorkerSchemas,
 } from '../syncedShare/workerClient'
 import { createCloudBackend } from './cloudBackend'
 import { baseSnapshotHooks } from './cloudBackendOutbox'
@@ -29,10 +29,15 @@ export function jsonResponse(status: number, body: unknown): Response {
   })
 }
 
+const TEST_TRACE_ID = '0123456789abcdef'
+
 /** A worker failure response, its body checked against the generated
  * `ApiError` union. */
-export function apiErrorResponse(status: number, error: ApiError): Response {
-  return jsonResponse(status, error)
+export function apiErrorResponse(
+  status: number,
+  error: WorkerSchemas['ApiError'],
+): Response {
+  return jsonResponse(status, { ...error, traceId: TEST_TRACE_ID })
 }
 
 export function emptyResponse(status: number): Response {

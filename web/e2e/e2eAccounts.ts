@@ -46,6 +46,8 @@ export const E2E_EMAILS = [
   'e2e-lockout@jianpu.test',
   'e2e-change-password@jianpu.test',
   'e2e-sign-out@jianpu.test',
+  // `request-trace-id.feature`'s refused sign-in.
+  'e2e-trace-id@jianpu.test',
 ] as const
 
 /** The password every seeded e2e account is created with. */

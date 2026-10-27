@@ -6,6 +6,7 @@ import type { StorageBackend } from '../storage/types'
 import {
   callWorker,
   createWorkerClient,
+  traceIdOf,
   WorkerRequestError,
 } from '../syncedShare/workerClient'
 import { clearSyncedShare, parseSyncedShare } from '../syncedShareUrl'
@@ -61,6 +62,11 @@ export function useSyncedShareViewer(
         ? 'loading'
         : 'none',
     )
+  /** The failed load's trace ID, shown with the `unreachable`/`too-large`
+   * notice. */
+  const [syncedShareViewerTraceId, setSyncedShareViewerTraceId] = useState<
+    string | null
+  >(null)
   const [syncedFolder, setSyncedFolder] = useState<FolderSnapshot | null>(null)
   const { importFile: importToStorage } = useImportToStorage(
     store,
@@ -125,6 +131,7 @@ export function useSyncedShareViewer(
       .catch((error: unknown) => {
         if (cancelled) return
         setSyncedShareViewerStatus(failureStatus(error))
+        setSyncedShareViewerTraceId(traceIdOf(error))
       })
 
     return () => {
@@ -143,6 +150,7 @@ export function useSyncedShareViewer(
     clearSyncedFolder,
     syncedShareViewerPreview,
     syncedShareViewerStatus,
+    syncedShareViewerTraceId,
     handleImportSyncedShare,
   }
 }

@@ -1,6 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import type { SyncedShareFailure } from '../syncedShare/errors'
 import { redactSecrets } from '../syncedShare/errors'
+import { TraceId } from './TraceId'
 
 const NEW_ISSUE_URL =
   'https://github.com/jianpu-generator/jianpu-generator/issues/new'
@@ -197,6 +198,7 @@ export function SyncedShareErrorDialog({
                     </span>
                   </div>
                 )}
+                <TraceId traceId={failure.traceId} />
               </div>
               {failure.rawResponseBody && (
                 <div>

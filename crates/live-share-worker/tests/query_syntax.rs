@@ -195,6 +195,14 @@ const QUERIES: &[(&str, &str)] = &[
         include_str!("../queries/observability/auth_rejections.sql"),
     ),
     (
+        "observability/by_trace_id.sql",
+        include_str!("../queries/observability/by_trace_id.sql"),
+    ),
+    (
+        "observability/request_failures.sql",
+        include_str!("../queries/observability/request_failures.sql"),
+    ),
+    (
         "observability/recent.sql",
         include_str!("../queries/observability/recent.sql"),
     ),

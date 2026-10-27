@@ -557,7 +557,10 @@ migrations (see "Storage" below), nothing else.
   `weak_password { message }` (400), `incorrect_credentials` (401: unknown
   email and wrong password alike), `sign_in_locked { retryAfterSeconds }`
   and `rate_limited` (429), and `internal { message }` — whose HTTP
-  status comes from `ApiError::status_code`, never chosen at a call site);
+  status comes from `ApiError::status_code`, never chosen at a call site) /
+  `api_error::ApiErrorBody` (what a failure is actually answered with: the
+  flattened `ApiError` plus its request's `traceId`, also sent as the
+  `X-Trace-Id` header);
   `handlers::routes::Routes` / `Reply` (see "Route list and generated
   client" above);
   `protocol::SyncedDoc` (the `GET /shares/{share_id}` response shape:
@@ -715,15 +718,19 @@ is queried with SQL, by agents and the owner, through the saved queries in
 `crates/live-share-worker/queries/observability/` (see "Debugging production"
 in `CLAUDE.md` for the run command).
 
-- Columns: `at` (ms since epoch), `flow` (`auth` today), `kind` (the event),
+- Columns: `at` (ms since epoch), `flow` (`auth` or `request`), `kind` (the event),
   `outcome` (`ok`/`rejected`/`unavailable`/`error`), `user_id` (when known),
   `subject` (`email:<email>` or `token:<token tag>`), `worker_version` (the git SHA `build.rs`
   embeds as `WORKER_GIT_SHA`), `origin`/`user_agent` (request headers, on every
-  request-driven row), `detail` (the event payload as JSON). Indexed on `at`,
-  `(flow, kind, at)` and `subject`.
+  request-driven row), `detail` (the event payload as JSON), `trace_id` (the
+  request's **trace ID**, migration `0009_app_log_trace_id.sql`). Indexed on `at`,
+  `(flow, kind, at)`, `subject` and `trace_id`.
 - Key types (`src/app_log.rs`, pub and D1-free, tested in `tests/app_log.rs`):
   `app_log::LogEvent` (one row's event, adjacently tagged
-  `{"flow", "event"}`; `LogEvent::Auth(AuthEvent)` is its only variant) /
+  `{"flow", "event"}`; `LogEvent::Auth(AuthEvent)` or
+  `LogEvent::Request(RequestEvent)`) /
+  `app_log::RequestEvent` (`RequestFailed { route, status, code, message }`:
+  one per non-2xx response) /
   `app_log::AuthEvent` (the account and session life cycle, adjacently
   tagged `{"kind", "detail"}`: `SignedUp`, `SignedIn`, `SignInFailed`
   (`reason`: `wrong_password`/`unknown_email`/`locked`), `LockedOut`,
@@ -734,7 +741,9 @@ in `CLAUDE.md` for the run command).
   only so their rows keep decoding until they age out) / `app_log::Outcome` (derived from the variant, never chosen at
   a call site) / `app_log::LogRow` (`LogEvent::to_row`'s split into the
   `flow`/`kind`/`outcome`/`subject`/`detail` columns; `LogEvent::try_from(&LogRow)`
-  reassembles it) / `app_log::RequestMeta` (`Origin`/`User-Agent`).
+  reassembles it) / `app_log::RequestMeta` (`Origin`/`User-Agent`, the
+  request's `trace_id`, and `resolved_user_id`, which the session lookup
+  fills in so a later `request_failed` row names the caller).
   Schema-evolution rule: rows must keep decoding for their 30 days, so only
   add fields, each with `#[serde(default)]`; a changed shape is a new variant.
 - Writes: `db::record_app_log` (`queries/insert_app_log.sql`) is
@@ -749,6 +758,17 @@ in `CLAUDE.md` for the run command).
   authenticated `/files/*`, `/folders/*` and `/shares/overview` routes pass
   it to the session lookup through `resolve_files_caller`. Only `post_if`'s
   `/e2e/reset`, which logs nothing, gets none.
+- Failed requests: every request gets a trace ID (`crypto::new_trace_id`, 16
+  hex chars) when it arrives. Every non-2xx answer goes through
+  `handlers::fail`, which writes one `request_failed` row under that ID and
+  answers an `ApiErrorBody` with the `X-Trace-Id` header (exposed by CORS);
+  unmatched routes and router errors in `src/lib.rs` take the same path. The
+  web shows the ID with the error (`components/TraceId.tsx`, copyable), read
+  by `WorkerRequestError.traceId`; a request that never reached the worker
+  has none, and its error says it is a network error instead
+  (`NetworkFailure`).
+  `queries/observability/by_trace_id.sql` looks up every row of one reported
+  ID; `request_failures.sql` lists recent failures.
 - Retention: the `#[event(scheduled)] async fn scheduled` entry point in
   `src/lib.rs`, fired by the daily cron in `cloudflare.config.ts`
   (`triggers.scheduled`), deletes rows older than
@@ -789,7 +809,8 @@ away from the wasm build both times:
 | **session token** | The random 32-byte (43 base64url chars) token `POST /auth/sign-up`/`/auth/sign-in` hands the browser, sent as `identityToken`. Only its SHA-256 hash is stored (`sessions.token_hash`); it lasts 60 days from its last use, and signing out or changing the password elsewhere ends it. |
 | **sign-in lockout** | A `sign_in_lockouts` row: 5 wrong passwords in a row for one email (account or not) lock it for 15 min × 2^level, answered `sign_in_locked { retryAfterSeconds }`; a successful sign-in clears it. Separate from the per-IP rate limits. |
 | **app log** | The `app_log` D1 table: an append-only, 30-day record of what the worker did (today: the account and session life cycle), written best-effort through `app_log::LogEvent` and read with the saved SQL in `queries/observability/`. Query it before guessing at production behaviour — see "App log (observability)". |
-| **flow** | `app_log.flow`: which part of the system a row is about (`auth` today), the outer tag of `app_log::LogEvent`. New flows are new `LogEvent` variants in the same table, not new tables. |
+| **trace ID** | The 16-hex-char ID the worker gives each request (`X-Trace-Id` header, `traceId` in every error body, `app_log.trace_id`). The web shows it with every failed request so a reported failure can be looked up with `queries/observability/by_trace_id.sql`. |
+| **flow** | `app_log.flow`: which part of the system a row is about (`auth` for the account and session life cycle, `request` for failed requests), the outer tag of `app_log::LogEvent`. New flows are new `LogEvent` variants in the same table, not new tables. |
 | **subject** | `app_log.subject`: what a row is about as a typed tag (`token:<token tag>`), derived from the event, `email:<email>` for account events, `token:<token tag>` for session events (signed out, rejected), so rows of one account or session join across kinds. |
 | **token tag** | `app_log::token_tag`: the first 12 hex chars of a session token's SHA-256 hash (`auth::session::hash_token`). Enough to tell tokens apart in `app_log`, never the token or full hash. |
 | **VerificationFailure** | `auth::session::VerificationFailure { reason, failed_at, attempts }`: why a request's token was refused (no live session), returned as `ApiError::Unauthorized` (a `401` body with `code: "unauthorized"` beside these fields). `attempts` is always 1, kept from the GitHub era so the web reads it unchanged. Never carries the token or its hash. |

@@ -60,6 +60,7 @@ Reuse the shared components in `web/src/components/` before building a new contr
 - **`EditorToolbarButton`**: an icon button with a tooltip for the editor toolbar.
 - **`SpinnerLabel`**: a button label with the shared pending spinner.
 - **`accountDialogParts.tsx`**: `AccountDialogFrame`, `Field`, `ErrorBanner` and friends for account modals.
+- **`TraceId`**: the worker's trace ID for a failed request, with a copy button. Show it beside every request error (`ErrorBanner` takes a `traceId`).
 - **Icons**: `@radix-ui/react-icons` first; app-specific icons live in `components/icons/`.
 - **Mobile branching**: in TypeScript, `useMediaQuery(MOBILE_BREAKPOINT_QUERY)` (`web/src/hooks/useMediaQuery.ts`) rather than a hard-coded width; in CSS, `@media (max-width: 768px)`.
 
@@ -75,12 +76,13 @@ The rendering pipeline layers, entry points, key types, and domain glossary are 
 
 ## Debugging production
 
-When asked why something happened in production (e.g. a user got signed out, or can't sign in), **query the `app_log` D1 table before guessing**. It holds 30 days of what the Synced Share worker did (see "App log (observability)" in `ARCHITECTURE.md`). Saved queries live in `crates/live-share-worker/queries/observability/` (`recent.sql`, `auth_rejections.sql`, `auth_by_version.sql`, `sign_ins_per_email.sql`). Run one against the production database from `crates/live-share-worker`:
+When asked why something happened in production (e.g. a user got signed out, or can't sign in), **query the `app_log` D1 table before guessing**. It holds 30 days of what the Synced Share worker did (see "App log (observability)" in `ARCHITECTURE.md`). Saved queries live in `crates/live-share-worker/queries/observability/` (`recent.sql`, `auth_rejections.sql`, `auth_by_version.sql`, `sign_ins_per_email.sql`, `request_failures.sql`, `by_trace_id.sql`). Run one against the production database from `crates/live-share-worker`:
 
 ```sh
 pnpm exec wrangler d1 execute jianpu-live-share --remote --command="$(cat queries/observability/auth_rejections.sql)"
 ```
 
+- When a user reports an error with a trace ID, edit the ID in `by_trace_id.sql` and run it: it returns every row written for that request, including the `request_failed` row (route, status, code).
 - Keep the `--command=` form: the saved queries start with a `-- ` comment, which a space-separated `--command` would read as a flag. `--file` returns no rows for a remote `SELECT`.
 - This uses wrangler's stored login (`pnpm exec wrangler whoami`). `cf d1 query <database-id> --sql="..."` also works, but needs `CLOUDFLARE_API_TOKEN` or `cf auth login`.
 - Against a local `cf dev` database, use `sqlite3 .wrangler/state/v3/d1/miniflare-D1DatabaseObject/<hash>.sqlite ".read queries/observability/recent.sql"`. `wrangler d1 execute --local` can't find the database, because the D1 binding lives in `cloudflare.config.ts`.

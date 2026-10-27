@@ -21,7 +21,8 @@
 //! `routes()` is the one list of routes: each entry registers into both the
 //! worker `Router` and the OpenAPI spec (see `routes`), so the web client
 //! generated from that spec can't drift from what's actually served. Every
-//! failure is an `ApiError` body.
+//! failure goes through `fail`: an `ApiErrorBody` carrying the request's
+//! trace ID, and one `request_failed` row in `app_log`.
 //!
 //! Helpers below (`is_unique_constraint_violation`, `resolve_files_caller`)
 //! are private to this module but visible to every submodule per Rust's
@@ -34,11 +35,13 @@ mod files;
 pub(crate) mod routes;
 mod shares;
 
-use worker::D1Database;
+use worker::{console_error, D1Database, Env, Response};
 
-use crate::api_error::ApiError;
-use crate::app_log::RequestMeta;
+use crate::api_error::{ApiError, ApiErrorBody};
+use crate::app_log::{LogEvent, RequestEvent, RequestFailed, RequestMeta};
+use crate::db;
 use crate::identity::resolve_verified_user_id;
+pub(crate) use routes::{request_meta, TRACE_ID_HEADER};
 use routes::{HandlerResult, Routes};
 
 /// D1 binding name this worker expects in `deploy.json`/`cloudflare.config.ts`. Wiring the
@@ -74,6 +77,40 @@ pub(crate) fn routes(e2e_reset_enabled: bool) -> worker::Result<Routes> {
         .post("/folders/share/status", shares::folder_share_status)?
         .post("/shares/overview", shares::share_overview)?
         .post_if(e2e_reset_enabled, "/e2e/reset", e2e_reset::reset)
+}
+
+/// Answers `error` to a request for `route`, and logs it to `app_log` under
+/// the request's trace ID. The one place a failure becomes a response, so no
+/// failure can go unlogged or reach the user without its trace ID.
+pub(crate) async fn fail(
+    env: &Env,
+    route: &str,
+    error: ApiError,
+    request_meta: &RequestMeta,
+) -> worker::Result<Response> {
+    let status = error.status_code();
+    let event = LogEvent::Request(RequestEvent::RequestFailed(RequestFailed {
+        route: route.to_string(),
+        status,
+        code: error.code(),
+        message: error.message().map(str::to_owned),
+    }));
+    match env.d1(D1_BINDING) {
+        Ok(d1) => {
+            let user_id = request_meta.resolved_user_id.borrow().clone();
+            db::record_app_log(&d1, &event, user_id.as_deref(), request_meta).await;
+        }
+        Err(d1_error) => console_error!("app_log: no database to record {event:?}: {d1_error}"),
+    }
+    let body = ApiErrorBody {
+        error,
+        trace_id: request_meta.trace_id.clone().unwrap_or_default(),
+    };
+    let mut response = Response::from_json(&body)?.with_status(status);
+    response
+        .headers_mut()
+        .set(TRACE_ID_HEADER, &body.trace_id)?;
+    Ok(response)
 }
 
 /// D1 surfaces a SQLite `UNIQUE constraint failed` violation as a plain
