@@ -161,3 +161,40 @@ fn all_parts_invalid_renders_empty_document_with_error() {
         "empty-section error must appear in document_diagnostics"
     );
 }
+
+#[test]
+fn tie_into_a_measure_without_lyrics_does_not_swallow_a_later_syllable() {
+    // Bar 1's tie ends in bar 2, which has no lyrics (its lyric row is hidden).
+    // Bar 3 must start fresh: "A" goes on its first note, not its second.
+    let score = score_from(&lyrics_doc(concat!(
+        "time=4/4 key=C4 bpm=120\n",
+        "[S] 6,~---\n",
+        "[Sv] a\n",
+        "\n",
+        "[S] 6, 5 5 5\n",
+        "\n",
+        "[S] 6, 3_2_ 1 6,\n",
+        "[Sv] A B C D E\n",
+    )));
+    let result = compile(&score);
+    let bar3 = &result.blocks[2];
+    let lyrics: Vec<_> = bar3.rows[1]
+        .elements
+        .iter()
+        .filter_map(|e| match &e.content {
+            ElementContent::Lyric { text, note_id } => Some((e.column, text.as_str(), *note_id)),
+            _ => None,
+        })
+        .collect();
+    // Bar 1 holds note 0, bar 2 notes 1..=4, so bar 3 starts at note 5.
+    assert_eq!(
+        lyrics,
+        vec![
+            (0, "A", 5),
+            (4, "B", 6),
+            (6, "C", 7),
+            (8, "D", 8),
+            (12, "E", 9)
+        ]
+    );
+}

@@ -240,3 +240,29 @@ fn output_is_sorted_by_part_then_measure() {
         .collect();
     assert_eq!(keys, vec![(0, 0), (0, 1), (1, 0), (1, 2)]);
 }
+
+#[test]
+fn note_ids_skip_the_notes_of_a_measure_without_lyrics() {
+    let source = r#"# parts
+M = notes
+L = lyrics[M]
+
+# score
+time=4/4
+[M] 6,~---
+[L] a
+
+[M] 6, 5 5 5
+
+[M] 6, 3_2_ 1 6,
+[L] A B C D E
+"#;
+    let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
+        .unwrap()
+        .spans;
+
+    assert_eq!(
+        spans.iter().map(|s| s.note_id).collect::<Vec<_>>(),
+        vec![0, 5, 6, 7, 8, 9]
+    );
+}

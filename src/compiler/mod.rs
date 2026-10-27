@@ -32,6 +32,7 @@ mod guitar_voicing_path;
 
 use crate::ast::grouped::{MultiPartMeasure, NoteEvent, PartRow, Score};
 use crate::ast::parsed::{Accidental, KeyChange, NoteName, PartKind};
+use crate::lyric_slots::LyricCursor;
 use itertools::Itertools;
 
 struct PartSliceResult {
@@ -167,6 +168,46 @@ pub(crate) fn is_resting(part_row: &PartRow) -> bool {
     !events.is_empty() && events.iter().all(|e| matches!(e, NoteEvent::Rest(_)))
 }
 
+/// Whether the part a lyric part sings along to is compiled in this measure
+/// (see `visible_part_indices`), i.e. whether it allocates note ids here.
+pub(crate) fn lyric_target_visible(
+    measure: &MultiPartMeasure,
+    visible: &[usize],
+    target_name: &str,
+) -> bool {
+    measure
+        .parts
+        .iter()
+        .enumerate()
+        .any(|(part_idx, part_row)| {
+            part_row.name().map(String::as_str) == Some(target_name) && visible.contains(&part_idx)
+        })
+}
+
+/// Moves every lyric part's cursor past this measure, including a lyric part
+/// whose row is hidden here (see `lyric_slots::LyricCursor`).
+fn advance_lyric_cursors(
+    measure: &MultiPartMeasure,
+    visible: &[usize],
+    cross_states: &mut [PartCrossState],
+) {
+    for (part_row, cs) in measure.parts.iter().zip(cross_states.iter_mut()) {
+        let Some(lyrics) = &part_row.slice().lyrics else {
+            continue;
+        };
+        let cursor = LyricCursor {
+            next_note_id: cs.next_note_id,
+            entering_tied: cs.prev_tie,
+        }
+        .advance(
+            &lyrics.target_events,
+            lyric_target_visible(measure, visible, &lyrics.target_name),
+        );
+        cs.next_note_id = cursor.next_note_id;
+        cs.prev_tie = cursor.entering_tied;
+    }
+}
+
 fn update_cross_state(cs: &mut PartCrossState, result: &mut PartSliceResult) {
     cs.pending_slur_opens = std::mem::take(&mut result.final_pending_opens);
     cs.prev_tie = result.final_tie;
@@ -234,10 +275,13 @@ fn compile_measure(
             tuplet_spans,
         );
 
-        let Some(cs) = cross_states.get_mut(part_idx) else {
-            continue;
-        };
-        update_cross_state(cs, &mut slice_result);
+        // A lyric part's cursor advances after the loop, hidden or not.
+        if part_row.slice().lyrics.is_none() {
+            let Some(cs) = cross_states.get_mut(part_idx) else {
+                continue;
+            };
+            update_cross_state(cs, &mut slice_result);
+        }
 
         let label = part_row.name().cloned().unwrap_or_default();
         let id = part_row_id(part_row, part_idx);
@@ -251,6 +295,8 @@ fn compile_measure(
             absorbed_rows: Vec::new(),
         });
     }
+
+    advance_lyric_cursors(measure, &visible, cross_states);
 
     MeasureBlock {
         rows,
@@ -308,6 +354,8 @@ mod tests_harmonica_tabs;
 mod tests_implicit_fill_rest;
 #[cfg(test)]
 mod tests_letter_names;
+#[cfg(test)]
+mod tests_lyric_cursor_properties;
 #[cfg(test)]
 mod tests_lyrics_and_diagnostics;
 #[cfg(test)]
