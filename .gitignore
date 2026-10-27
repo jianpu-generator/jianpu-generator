@@ -27,3 +27,6 @@ package-lock.json
 /*.svg
 /fixtures/*.svg
 dev.log
+
+# cargo-mutants reports
+mutants.out*/

@@ -68,3 +68,9 @@ copy-prod-db force="":
     } | sqlite3 -bail "$db"
     date -u +%Y-%m-%dT%H:%M:%SZ > "$marker"
     for table in $tables; do echo "$table: $(sqlite3 "$db" "SELECT count(*) FROM \"$table\"")"; done
+
+# Mutation-tests how lyric parts follow their target's notes (lyric slots,
+# the lyric cursor, and lyric spans) with cargo-mutants
+# (`cargo install cargo-mutants`). Reports go to ./mutants.out.
+mutants-lyrics:
+    cargo mutants --file src/lyric_slots.rs --file src/compiler/mod.rs --file src/lyric_spans.rs --re "LyricCursor|lyric_target_visible|advance_lyric_cursors|measure_lyric_slots|list_lyric_spans_from_source" -- --lib
