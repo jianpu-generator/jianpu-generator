@@ -10,6 +10,8 @@ export type { JianpuWorkerState } from './useJianpuWorkerTypes'
 export function useJianpuWorker(
   source: string,
   partToggles: PartToggleState,
+  /** The preset chosen in the preset menu; `null` is Default. */
+  chosenPreset: string | null,
   wasmReady: boolean,
   activeFile: string,
   soundfontBytes: Uint8Array | null,
@@ -38,7 +40,13 @@ export function useJianpuWorker(
   measureRangeSelectedPartNamesRef: RefObject<string[] | undefined>,
   debounceMs = 300,
 ): JianpuWorkerState {
-  const state = useJianpuWorkerState(source, activeFile, partToggles, wasmReady)
+  const state = useJianpuWorkerState(
+    source,
+    activeFile,
+    partToggles,
+    chosenPreset,
+    wasmReady,
+  )
   const {
     parts,
     visibility,

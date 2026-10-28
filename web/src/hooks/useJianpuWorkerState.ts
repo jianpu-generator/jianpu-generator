@@ -37,6 +37,7 @@ export function useJianpuWorkerState(
   source: string,
   activeFile: string,
   partToggles: PartToggleState,
+  chosenPreset: string | null,
   /** Whether the main thread's wasm component is instantiated, which
    * resolving `partToggles` needs. */
   wasmReady: boolean,
@@ -169,7 +170,7 @@ export function useJianpuWorkerState(
   const visibilityRef = useRef<ResolvedPartVisibility>(ALL_PARTS_VISIBLE)
   const enabledTracksRef = useRef<string[] | undefined>(undefined)
   const renderedTracksRef = useRef<string[] | undefined>(undefined)
-  const enabledPartNamesRef = useRef<string[] | undefined>(undefined)
+  const filenameLabelsRef = useRef<string[] | undefined>(undefined)
   const audioAvailableRef = useRef(false)
   const cursorOffsetTimerRef = useRef<number | null>(null)
   const lastSelectionRef = useRef<{
@@ -210,8 +211,10 @@ export function useJianpuWorkerState(
 
   const resolvedVisibility = useMemo(
     () =>
-      wasmReady ? resolvePartVisibility(parts, partToggles) : ALL_PARTS_VISIBLE,
-    [wasmReady, parts, partToggles],
+      wasmReady
+        ? resolvePartVisibility(source, parts, partToggles, chosenPreset)
+        : ALL_PARTS_VISIBLE,
+    [wasmReady, source, parts, partToggles, chosenPreset],
   )
   // `parts` is a fresh array after every re-listing, so keep the previous
   // `visibility` whenever the resolved content is unchanged — otherwise every
@@ -223,14 +226,19 @@ export function useJianpuWorkerState(
   const enabledTracks = visibility.soundingTracks
   /** Parts drawn (notes and/or lyrics); `undefined` when every part is. */
   const renderedTracks = visibility.renderedTracks
-  const enabledPartNames = visibility.soundingDisplayNames
+  /** What a single export's filename is suffixed with: the preset in force,
+   * else the sounding parts when only some sound. */
+  const filenameLabels =
+    visibility.presetName != null
+      ? [visibility.presetName]
+      : visibility.soundingDisplayNames
   const wavFilename = useMemo(
-    () => wavFilenameFromActiveFile(activeFile, enabledPartNames),
-    [activeFile, enabledPartNames],
+    () => wavFilenameFromActiveFile(activeFile, filenameLabels),
+    [activeFile, filenameLabels],
   )
   const mp3Filename = useMemo(
-    () => mp3FilenameFromActiveFile(activeFile, enabledPartNames),
-    [activeFile, enabledPartNames],
+    () => mp3FilenameFromActiveFile(activeFile, filenameLabels),
+    [activeFile, filenameLabels],
   )
 
   sourceRef.current = source
@@ -238,7 +246,7 @@ export function useJianpuWorkerState(
   visibilityRef.current = visibility
   enabledTracksRef.current = enabledTracks
   renderedTracksRef.current = renderedTracks
-  enabledPartNamesRef.current = enabledPartNames
+  filenameLabelsRef.current = filenameLabels
   measureSpansRef.current = measureSpans
 
   return {
@@ -351,14 +359,14 @@ export function useJianpuWorkerState(
     sourceRef,
     activeFileRef,
     enabledTracksRef,
-    enabledPartNamesRef,
+    filenameLabelsRef,
     visibilityRef,
     renderedTracksRef,
     audioAvailableRef,
     cursorOffsetTimerRef,
     lastSelectionRef,
     enabledTracks,
-    enabledPartNames,
+    filenameLabels,
     visibility,
     renderedTracks,
     wavFilename,

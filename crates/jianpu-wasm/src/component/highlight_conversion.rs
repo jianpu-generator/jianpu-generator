@@ -31,6 +31,7 @@ fn section_kind_to_wit(kind: section_splitter::SectionKind) -> SectionKind {
         section_splitter::SectionKind::Parts => SectionKind::Parts,
         section_splitter::SectionKind::Score => SectionKind::Score,
         section_splitter::SectionKind::Sequence => SectionKind::Sequence,
+        section_splitter::SectionKind::Preset => SectionKind::Preset,
     }
 }
 

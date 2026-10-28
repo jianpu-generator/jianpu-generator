@@ -8,6 +8,7 @@ import type {
   NoteSpan,
   PartDeclaration,
   PartInfo,
+  ResolvedPartVisibility,
   SectionRange,
   SequenceEntry,
 } from '../types'
@@ -45,7 +46,8 @@ export interface WorkerMessageHandlerDeps {
   latestPdfIdRef: RefObject<number>
   setPdfExporting: (value: boolean) => void
   activeFileRef: RefObject<string>
-  enabledPartNamesRef: RefObject<string[] | undefined>
+  filenameLabelsRef: RefObject<string[] | undefined>
+  visibilityRef: RefObject<ResolvedPartVisibility>
   setDiagnostics: (value: Diagnostic[]) => void
   latestSplitPdfIdRef: RefObject<number>
   setSplitPdfExporting: (value: boolean) => void

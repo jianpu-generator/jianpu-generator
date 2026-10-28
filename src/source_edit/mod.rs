@@ -1,5 +1,6 @@
 mod metadata_edit;
 mod octave_shift;
+mod preset_edit;
 mod range_edit;
 mod slur_toggle;
 mod tie_toggle;
@@ -7,6 +8,10 @@ pub use metadata_edit::{
     parse_metadata_fields, update_metadata_field, MetadataEdit, MetadataFields,
 };
 pub use octave_shift::{shift_part_octave, shift_range_octave};
+pub use preset_edit::{
+    add_preset_section, follow_preset_rename, list_presets, new_preset_name_error,
+    set_preset_part_shown, update_preset_field, NewPreset, PartShown, PresetEdit, PresetSummary,
+};
 pub use range_edit::{ByteRange, RangeEditResult};
 pub use slur_toggle::toggle_range_slur;
 pub use tie_toggle::toggle_range_tie;

@@ -22,12 +22,10 @@ Feature: Staff notation view
     And I hide the "A" part from the staff view
     Then the staff notation page has 4 notes
 
-  Scenario: The chosen notation is remembered after a reload
+  Scenario: Without a preset, the notation goes back to jianpu after a reload
     When I switch the preview notation to "violin"
     Then the preview shows a staff notation page
     When I reload the page
-    Then the preview shows a staff notation page
-    When I switch the preview notation to "jianpu"
     Then the preview shows jianpu pages
 
   Scenario: Exporting a PDF from the staff view engraves the PDF in staff notation

@@ -61,9 +61,19 @@ pub(crate) fn generate_mp3_for_measure_range_response(
 pub(crate) fn generate_split_mp3s_response(
     source: &str,
     base_name: &str,
+    preset_name: Option<&str>,
     soundfont: Vec<u8>,
 ) -> GenerateSplitMp3sResponse {
-    match write_split_mp3s_from_source(source, "input.jianpu", base_name, &[], &soundfont) {
+    match write_split_mp3s_from_source(
+        source,
+        "input.jianpu",
+        base_name,
+        jianpu_generator::SplitSelection {
+            tracks: &[],
+            preset_name,
+        },
+        &soundfont,
+    ) {
         Ok(entries) => match zip_split_entries(&entries) {
             Ok(zip) => GenerateSplitMp3sResponse::Ok { zip },
             Err(e) => GenerateSplitMp3sResponse::Err {

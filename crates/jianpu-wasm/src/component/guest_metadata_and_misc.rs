@@ -18,14 +18,23 @@ use super::*;
 // one-line call into a `jianpu_generator::` function is not meaningfully
 // riskier than extracting it).
 
-pub(super) fn parse_metadata_fields(source: String) -> MetadataFields {
+pub(super) fn parse_metadata_fields(source: String, preset_name: Option<String>) -> MetadataFields {
     metadata_fields_to_wit(jianpu_generator::source_edit::parse_metadata_fields(
         &source,
+        preset_name.as_deref(),
     ))
 }
 
-pub(super) fn update_metadata_field(source: String, edit: MetadataEdit) -> String {
-    jianpu_generator::source_edit::update_metadata_field(&source, metadata_edit_from_wit(edit))
+pub(super) fn update_metadata_field(
+    source: String,
+    preset_name: Option<String>,
+    edit: MetadataEdit,
+) -> String {
+    jianpu_generator::source_edit::update_metadata_field(
+        &source,
+        preset_name.as_deref(),
+        metadata_edit_from_wit(edit),
+    )
 }
 
 pub(super) fn highlight_tokens(source: String) -> Vec<HighlightToken> {
@@ -211,74 +220,6 @@ fn streamable_part_kind_to_wit(
 
 fn offsets_to_wit(offsets: &[usize]) -> Vec<u32> {
     offsets.iter().map(|&offset| offset as u32).collect()
-}
-
-pub(super) fn shift_range_octave(
-    source: String,
-    ranges: Vec<ByteRange>,
-    delta: i32,
-) -> RangeEditResponse {
-    let ranges = to_source_edit_ranges(ranges);
-    let result = jianpu_generator::source_edit::shift_range_octave(&source, &ranges, delta as i8);
-    to_range_edit_response(result)
-}
-
-pub(super) fn toggle_range_slur(source: String, ranges: Vec<ByteRange>) -> RangeEditResponse {
-    let ranges = to_source_edit_ranges(ranges);
-    let result = jianpu_generator::source_edit::toggle_range_slur(&source, &ranges);
-    to_range_edit_response(result)
-}
-
-pub(super) fn toggle_range_tie(source: String, ranges: Vec<ByteRange>) -> RangeEditResponse {
-    let ranges = to_source_edit_ranges(ranges);
-    let result = jianpu_generator::source_edit::toggle_range_tie(&source, &ranges);
-    to_range_edit_response(result)
-}
-
-pub(super) fn describe_selection(
-    source: String,
-    ranges: Vec<ByteRange>,
-) -> Option<PitchDescription> {
-    use jianpu_generator::pitch_description as description;
-    let ranges = to_source_edit_ranges(ranges);
-    description::describe_selection(&source, &ranges).map(|described| match described {
-        description::PitchDescription::Note(note) => PitchDescription::Note(NoteDescription {
-            letter_name: note.letter_name,
-        }),
-        description::PitchDescription::Chord(chord) => PitchDescription::Chord(ChordDescription {
-            chord_name: chord.chord_name,
-            tone_names: chord.tone_names,
-            bass_note: chord.bass_note,
-            guitar_diagram_svgs: chord.guitar_diagram_svgs,
-            piano_diagram_svg: chord.piano_diagram_svg,
-        }),
-    })
-}
-
-fn to_source_edit_ranges(ranges: Vec<ByteRange>) -> Vec<jianpu_generator::source_edit::ByteRange> {
-    ranges
-        .into_iter()
-        .map(|range| jianpu_generator::source_edit::ByteRange {
-            start_byte: range.start_byte,
-            end_byte: range.end_byte,
-        })
-        .collect()
-}
-
-fn to_range_edit_response(
-    result: jianpu_generator::source_edit::RangeEditResult,
-) -> RangeEditResponse {
-    RangeEditResponse {
-        source: result.source,
-        ranges: result
-            .ranges
-            .into_iter()
-            .map(|range| ByteRange {
-                start_byte: range.start_byte,
-                end_byte: range.end_byte,
-            })
-            .collect(),
-    }
 }
 
 pub(super) fn format_score(source: String) -> String {

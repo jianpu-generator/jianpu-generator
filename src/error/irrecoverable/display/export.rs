@@ -54,5 +54,8 @@ pub(super) fn write(
         IrrecoverableErrorKind::InternalInvariant { detail, .. } => {
             Some(write!(formatter, "{detail}"))
         }
+        IrrecoverableErrorKind::UnknownPreset { name, .. } => {
+            Some(write!(formatter, "no `# preset \"{name}\"` in this file"))
+        }
     }
 }

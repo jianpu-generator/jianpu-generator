@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { jianpuWasm } from '../jianpuWasm'
 import type { ResolvedPartVisibility } from '../types'
 import type {
   Notation,
@@ -27,33 +28,6 @@ export interface StaffNotation {
 
 const EMPTY_SCORE: StaffScore = { pages: [], measures: [] }
 
-const STORAGE_KEY = 'jianpu:preview-notation:v1'
-
-function load(): Notation {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    // Before the violin/cello split, the staff view was stored as `staff`.
-    if (stored === 'staff') return 'violin'
-    return stored === 'violin' ||
-      stored === 'cello' ||
-      stored === 'abc' ||
-      stored === 'guitar' ||
-      stored === 'harmonica'
-      ? stored
-      : 'jianpu'
-  } catch {
-    return 'jianpu'
-  }
-}
-
-function save(notation: Notation) {
-  try {
-    localStorage.setItem(STORAGE_KEY, notation)
-  } catch {
-    // Storage may be blocked; the toggle just won't persist.
-  }
-}
-
 interface UseStaffNotationParams {
   workerRef: RefObject<Worker | null>
   source: string
@@ -62,10 +36,24 @@ interface UseStaffNotationParams {
   debounceMs: number
 }
 
-/** Remembers the preview's notation in this browser only (a per-viewer UI
- * preference, like `useExpandedFolders`), and while it's `staff` asks the
- * worker to engrave the current source with Verovio. Nothing is requested —
- * and Verovio is never downloaded — until the user first switches to staff. */
+/** The `notation` line of the preset in force, if it has one. */
+function presetNotation(
+  source: string,
+  presetName: string | undefined,
+): Notation | undefined {
+  if (presetName == null) return undefined
+  return jianpuWasm()
+    .listPresets(source)
+    .find((preset) => preset.name === presetName)?.notation
+}
+
+/** The preview's notation: the one picked in this session under the preset
+ * in force, else that preset's `notation` line, else jianpu. Under a preset
+ * in a file you can edit, the picker rewrites the `notation` line instead
+ * (`usePresetMenu`), so only a read-only view picks one. While it's a staff
+ * notation, asks the worker to engrave the current source with Verovio.
+ * Nothing is requested — and Verovio is never downloaded — until the
+ * preview first shows staff. */
 export function useStaffNotation({
   workerRef,
   source,
@@ -74,15 +62,25 @@ export function useStaffNotation({
   debounceMs,
 }: UseStaffNotationParams): StaffNotation {
   const { requestIdRef, latestIdRef, pendingRequestsRef } = staffRenderTracker
-  const [notation, setNotationState] = useState<Notation>(load)
+  // Preset name → the notation picked under it; Default is `''`, a name no
+  // preset can have.
+  const [pickedNotations, setPickedNotations] = useState<
+    Record<string, Notation>
+  >({})
+  const pickKey = visibility.presetName ?? ''
+  const setNotation = useCallback(
+    (picked: Notation) =>
+      setPickedNotations((previous) => ({ ...previous, [pickKey]: picked })),
+    [pickKey],
+  )
+  const fromPreset = useMemo(
+    () => presetNotation(source, visibility.presetName),
+    [source, visibility.presetName],
+  )
+  const notation = pickedNotations[pickKey] ?? fromPreset ?? 'jianpu'
   const [score, setScore] = useState<StaffScore>(EMPTY_SCORE)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  const setNotation = useCallback((next: Notation) => {
-    save(next)
-    setNotationState(next)
-  }, [])
 
   useEffect(() => {
     const worker = workerRef.current

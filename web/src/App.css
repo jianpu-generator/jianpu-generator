@@ -365,9 +365,10 @@
   line-height: 1.4;
 }
 
-/* Section jump buttons */
+/* Section jump buttons (and the preset menu trigger, styled like them) */
 
-.section-jump-btn {
+.section-jump-btn,
+.preset-menu-trigger {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -381,7 +382,8 @@
   height: 24px;
   white-space: nowrap;
 }
-.section-jump-btn:hover {
+.section-jump-btn:hover,
+.preset-menu-trigger:hover {
   background: #f0f0f0;
 }
 .section-jump-btn--dragging {

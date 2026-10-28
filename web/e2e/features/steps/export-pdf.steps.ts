@@ -170,6 +170,27 @@ Then(
   },
 )
 
+/** The file names in a ZIP's central directory (each entry's header is
+ * `PK\x01\x02`, with the name length at byte 28 and the name at byte 46). */
+function zipEntryNames(zip: Buffer): string[] {
+  const names: string[] = []
+  for (
+    let at = zip.indexOf('PK\x01\x02');
+    at !== -1;
+    at = zip.indexOf('PK\x01\x02', at + 46)
+  ) {
+    const nameLength = zip.readUInt16LE(at + 28)
+    names.push(zip.toString('utf8', at + 46, at + 46 + nameLength))
+  }
+  return names
+}
+
+Then('the downloaded zip holds only {string}', async ({}, filename: string) => {
+  const fs = await import('node:fs')
+  const zip = fs.readFileSync((await lastDownload?.path()) as string)
+  expect(zipEntryNames(zip)).toEqual([filename])
+})
+
 Then('only a single PDF download ever fires', async () => {
   expect(downloadCount).toBe(1)
 })

@@ -209,7 +209,7 @@ fn split_track_names_falls_back_to_part_declarations() {
         "[Melodyv1] a b c d\n",
     );
     let score = compile(input, "test.jianpu", &[]).unwrap();
-    let names = split_track_names(input, "test.jianpu", &score, &[]).unwrap();
+    let names = split_track_names(input, "test.jianpu", &score, SplitSelection::default()).unwrap();
     assert_eq!(names, vec!["Melody"]);
 }
 
@@ -316,4 +316,68 @@ fn key_prefix_only_b_omits_rest_filled_a() {
     assert!(svg.contains(">3<"), "part B note 3 should appear");
     assert!(svg.contains(">4<"), "part B note 4 should appear");
     assert!(!svg.contains(">0<"), "part A rests should not appear");
+}
+
+#[test]
+fn rendering_under_a_preset_draws_its_header_text() {
+    let input = concat!(
+        "# metadata\n",
+        "title = \"Song\"\n",
+        "subtitle = \"Base subtitle\"\n",
+        "\n",
+        "# parts\n",
+        "Soprano [S] = notes\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[S] 1 2 3 4\n",
+        "\n",
+        "# preset \"Choir\"\n",
+        "subtitle = \"Choir subtitle\"\n",
+    );
+    let render = |preset_name: Option<&str>| {
+        let documents = render_documents_from_source_with_visibility(
+            input,
+            "test.jianpu",
+            &ResolvedPartVisibility {
+                preset_name: preset_name.map(str::to_string),
+                ..Default::default()
+            },
+            &[],
+            NoteLabels::Degrees,
+        )
+        .unwrap()
+        .documents;
+        serializer::serialize(&documents, None).concat()
+    };
+    assert!(render(Some("Choir")).contains("Choir subtitle"));
+    assert!(render(None).contains("Base subtitle"));
+    assert!(render(Some("Gone")).contains("Base subtitle"));
+}
+
+#[test]
+fn chosen_preset_from_source_reads_the_named_preset() {
+    let input = concat!(
+        "# parts\n",
+        "Soprano [S] = notes\n",
+        "Alto [A] = notes\n",
+        "\n",
+        "# score\n",
+        "[S] 1\n",
+        "[A] 2\n",
+        "\n",
+        "# preset \"Choir\"\n",
+        "visible_parts = A\n",
+    );
+    assert_eq!(
+        chosen_preset_from_source(input, "test.jianpu", "Choir").unwrap(),
+        Some(ChosenPreset {
+            name: "Choir".to_string(),
+            visible_parts: Some(vec!["A".to_string()]),
+        })
+    );
+    assert_eq!(
+        chosen_preset_from_source(input, "test.jianpu", "Gone").unwrap(),
+        None
+    );
 }

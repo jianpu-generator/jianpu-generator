@@ -113,6 +113,7 @@ export interface AppWorkspaceProps {
   previewAudioPlaying: boolean
   editMetadataOpen: boolean
   parsedMetadata: MetadataFields | null
+  metadataPresetName: string | null
   handleMetadataFieldChange: (edit: MetadataEdit) => void
   documents: SvgDocument[]
   highlightedDocuments: SvgDocument[]

@@ -15,6 +15,7 @@ fn single_error(error: &jianpu_generator::error::IrrecoverableError) -> Diagnost
 pub(super) fn render_split_meis(
     source: String,
     base_name: String,
+    preset_name: Option<String>,
     raw_instruments: Vec<InstrumentInfo>,
     clef: StaffClef,
 ) -> RenderSplitMeisResponse {
@@ -26,6 +27,10 @@ pub(super) fn render_split_meis(
         &source,
         "input.jianpu",
         &base_name,
+        jianpu_generator::SplitSelection {
+            tracks: &[],
+            preset_name: preset_name.as_deref(),
+        },
         &instruments,
         clef_choice_from_wit(clef),
     ) {

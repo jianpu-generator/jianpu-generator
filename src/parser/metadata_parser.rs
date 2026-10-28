@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::ast::parsed::{
     FontFamilyChoice, MetadataFlagKey, MetadataNumberKey, MetadataTextKey, Offset, ParsedMetadata,
-    TextStyleKind, YesNo, DIRECTIVE_ROW_OFFSET_KEY,
+    PresetKey, TextStyleKind, YesNo, DIRECTIVE_ROW_OFFSET_KEY,
 };
 use crate::error::{RecoverableError, Span};
 
@@ -150,7 +150,22 @@ pub(crate) fn metadata_key_spans(content: &str, base_offset: usize) -> Vec<Span>
         .collect()
 }
 
-fn apply_field(
+/// Spans of every recognized key in a `# preset` section's `content`: the
+/// `# metadata` keys plus the preset-only ones.
+pub(crate) fn preset_key_spans(content: &str, base_offset: usize) -> Vec<Span> {
+    metadata_lines(content, base_offset)
+        .filter_map(Result::ok)
+        .filter(|line| {
+            MetadataKey::from_keyword(line.key).is_some()
+                || PresetKey::from_keyword(line.key).is_some()
+        })
+        .map(|line| line.key_span)
+        .collect()
+}
+
+/// Applies one `# metadata` key to `metadata`, recording a bad value or an
+/// unknown key in `errors`.
+pub(crate) fn apply_field(
     metadata: &mut ParsedMetadata,
     line: &MetadataLine,
     errors: &mut Vec<RecoverableError>,
@@ -192,6 +207,9 @@ fn apply_field(
                 errors,
             ),
         },
+        None if PresetKey::from_keyword(key).is_some() => {
+            errors.push(RecoverableError::preset_only_field(key_span, key))
+        }
         None => errors.push(RecoverableError::metadata_unknown_field(key_span, key)),
     }
 }

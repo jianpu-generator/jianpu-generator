@@ -166,9 +166,19 @@ pub(crate) fn generate_percussion_preview_wav_response(
 pub(crate) fn generate_split_wavs_response(
     source: &str,
     base_name: &str,
+    preset_name: Option<&str>,
     soundfont: Vec<u8>,
 ) -> GenerateSplitWavsResponse {
-    match write_split_wavs_from_source(source, "input.jianpu", base_name, &[], &soundfont) {
+    match write_split_wavs_from_source(
+        source,
+        "input.jianpu",
+        base_name,
+        jianpu_generator::SplitSelection {
+            tracks: &[],
+            preset_name,
+        },
+        &soundfont,
+    ) {
         Ok(entries) => match zip_split_entries(&entries) {
             Ok(zip) => GenerateSplitWavsResponse::Ok { zip },
             Err(e) => GenerateSplitWavsResponse::Err {

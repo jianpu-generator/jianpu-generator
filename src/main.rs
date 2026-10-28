@@ -40,6 +40,11 @@ enum GenerateFormat {
         tracks: Vec<String>,
         #[arg(
             long,
+            help = "Export with this # preset's metadata and visible parts (--tracks overrides its parts)"
+        )]
+        preset: Option<String>,
+        #[arg(
+            long,
             help = "Generate one file per track instead of a single combined file"
         )]
         split_tracks: bool,
@@ -50,6 +55,11 @@ enum GenerateFormat {
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0.., help = "Comma-separated list of track names to include (e.g. --tracks S1,S2)")]
         tracks: Vec<String>,
+        #[arg(
+            long,
+            help = "Export with this # preset's metadata and visible parts (--tracks overrides its parts)"
+        )]
+        preset: Option<String>,
         #[arg(
             long,
             help = "Generate one file per track instead of a single combined file"
@@ -63,6 +73,11 @@ enum GenerateFormat {
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0.., help = "Comma-separated list of track names to include (e.g. --tracks S1,S2)")]
         tracks: Vec<String>,
+        #[arg(
+            long,
+            help = "Export with this # preset's metadata and visible parts (--tracks overrides its parts)"
+        )]
+        preset: Option<String>,
     },
     Midi {
         input: PathBuf,
@@ -70,6 +85,11 @@ enum GenerateFormat {
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0.., help = "Comma-separated list of track names to include (e.g. --tracks S1,S2)")]
         tracks: Vec<String>,
+        #[arg(
+            long,
+            help = "Export with this # preset's metadata and visible parts (--tracks overrides its parts)"
+        )]
+        preset: Option<String>,
         #[arg(
             long,
             help = "Generate one file per track instead of a single combined file"
@@ -84,6 +104,11 @@ enum GenerateFormat {
         tracks: Vec<String>,
         #[arg(
             long,
+            help = "Export with this # preset's metadata and visible parts (--tracks overrides its parts)"
+        )]
+        preset: Option<String>,
+        #[arg(
+            long,
             help = "Generate one file per track instead of a single combined file"
         )]
         split_tracks: bool,
@@ -94,6 +119,11 @@ enum GenerateFormat {
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0.., help = "Comma-separated list of track names to include (e.g. --tracks S1,S2)")]
         tracks: Vec<String>,
+        #[arg(
+            long,
+            help = "Export with this # preset's metadata and visible parts (--tracks overrides its parts)"
+        )]
+        preset: Option<String>,
         #[arg(
             long,
             help = "Generate one file per track instead of a single combined file"
@@ -160,66 +190,78 @@ fn run_generate(format: GenerateFormat) -> Result<(), jg::error::IrrecoverableEr
             input,
             output,
             tracks,
+            preset,
             split_tracks,
         } => generate_pdf(&GenerateInput {
             input,
             output,
             tracks,
             split_tracks,
+            preset,
         }),
         GenerateFormat::Svg {
             input,
             output,
             tracks,
+            preset,
             split_tracks,
         } => generate_svg(&GenerateInput {
             input,
             output,
             tracks,
             split_tracks,
+            preset,
         }),
         GenerateFormat::Mei {
             input,
             output,
             tracks,
+            preset,
         } => generate_mei(&GenerateInput {
             input,
             output,
             tracks,
             split_tracks: false,
+            preset,
         }),
         GenerateFormat::Midi {
             input,
             output,
             tracks,
+            preset,
             split_tracks,
         } => generate_midi(&GenerateInput {
             input,
             output,
             tracks,
             split_tracks,
+            preset,
         }),
         GenerateFormat::Wav {
             input,
             output,
             tracks,
+            preset,
             split_tracks,
         } => generate_wav(&GenerateInput {
             input,
             output,
             tracks,
             split_tracks,
+            preset,
         }),
         GenerateFormat::Mp3 {
             input,
             output,
             tracks,
+            preset,
             split_tracks,
         } => generate_mp3(&GenerateInput {
             input,
             output,
             tracks,
             split_tracks,
+            preset,
         }),
     }
 }

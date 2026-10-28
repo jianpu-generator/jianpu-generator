@@ -5,7 +5,7 @@
 use itertools::Itertools;
 
 use crate::error::Span;
-use crate::parser::metadata_parser::metadata_key_spans;
+use crate::parser::metadata_parser::{metadata_key_spans, preset_key_spans};
 use crate::parser::parts_parser::part_kind_spans;
 use crate::parser::score::interleaved_parser::directive_keyword_spans;
 use crate::parser::section_splitter::{split_sections, RawSection, SectionKind};
@@ -34,6 +34,7 @@ fn section_tokens(section: &RawSection) -> Vec<HighlightToken> {
         header_span,
         content,
         content_offset,
+        preset_name: _,
     } = section;
     let (body_kind, body_spans) = match kind {
         SectionKind::Metadata => (
@@ -49,6 +50,10 @@ fn section_tokens(section: &RawSection) -> Vec<HighlightToken> {
             directive_keyword_spans(content, *content_offset),
         ),
         SectionKind::Sequence => (HighlightKind::SectionHeader, Vec::new()),
+        SectionKind::Preset => (
+            HighlightKind::MetadataKey,
+            preset_key_spans(content, *content_offset),
+        ),
     };
     std::iter::once(HighlightToken {
         kind: HighlightKind::SectionHeader,

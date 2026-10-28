@@ -20,8 +20,17 @@ pub(crate) fn generate_midi_response(
 pub(crate) fn generate_split_midis_response(
     source: &str,
     base_name: &str,
+    preset_name: Option<&str>,
 ) -> GenerateSplitMidisResponse {
-    match write_split_midis_from_source(source, "input.jianpu", base_name, &[]) {
+    match write_split_midis_from_source(
+        source,
+        "input.jianpu",
+        base_name,
+        jianpu_generator::SplitSelection {
+            tracks: &[],
+            preset_name,
+        },
+    ) {
         Ok(entries) => match zip_split_entries(&entries) {
             Ok(zip) => GenerateSplitMidisResponse::Ok { zip },
             Err(e) => GenerateSplitMidisResponse::Err {

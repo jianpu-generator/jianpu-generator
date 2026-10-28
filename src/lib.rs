@@ -123,6 +123,36 @@ pub fn compile(
     grouper::group(doc)
 }
 
+/// Like [`compile`], with `# metadata` overlaid by the `# preset` named
+/// `preset_name`. `None`, or a name no preset has, compiles the song's own
+/// `# metadata`.
+pub fn compile_with_preset(
+    source: &str,
+    filename: &str,
+    instruments: &[InstrumentInfo],
+    preset_name: Option<&str>,
+) -> Result<Score, IrrecoverableError> {
+    let doc = parser::parse(source, filename, instruments)?;
+    grouper::group(match preset_name {
+        Some(name) => doc.with_preset(name),
+        None => doc,
+    })
+}
+
+/// The `# preset` named `preset_name`, for [`resolve_part_visibility`].
+/// `None` when the source has no such preset (the menu then shows Default).
+pub fn chosen_preset_from_source(
+    source: &str,
+    filename: &str,
+    preset_name: &str,
+) -> Result<Option<ChosenPreset>, IrrecoverableError> {
+    let doc = parser::parse(source, filename, &[])?;
+    Ok(doc.preset(preset_name).map(|preset| ChosenPreset {
+        name: preset.name.clone(),
+        visible_parts: preset.visible_abbreviations(),
+    }))
+}
+
 /// Supply every `FontFamily` role's raw font bytes for real glyph-advance
 /// measurement during layout. Which role measures which text is decided by
 /// `font_metrics`, not by the caller. Only meaningful on `wasm32`, where the
@@ -318,28 +348,6 @@ pub fn render_svgs_from_source_filtered(
             rendered_tracks: enabled_tracks.map(<[String]>::to_vec),
             ..Default::default()
         },
-        instruments,
-        NoteLabels::Degrees,
-    )
-}
-
-/// Parse, group, optionally filter tracks, and write PDF bytes.
-#[cfg(feature = "pdf")]
-pub fn write_pdf_from_source_filtered(
-    source: &str,
-    filename: &str,
-    enabled_tracks: Option<&[String]>,
-    fonts: &fonts::FontBytesByFamily,
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<u8>, IrrecoverableError> {
-    write_pdf_from_source_with_visibility(
-        source,
-        filename,
-        &ResolvedPartVisibility {
-            rendered_tracks: enabled_tracks.map(<[String]>::to_vec),
-            ..Default::default()
-        },
-        fonts,
         instruments,
         NoteLabels::Degrees,
     )

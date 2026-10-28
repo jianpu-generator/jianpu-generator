@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { jianpuWasm, type MetadataFields } from '../jianpuWasm'
 import { ensureWasmInit } from '../wasmInit'
 
-/** The `# metadata` section's field values, parsed by the Rust metadata
- * parser. `null` while `enabled` is false (so a closed Edit Metadata modal
+/** The field values of the preset called `presetName`, or of `# metadata`
+ * when `null`, parsed by the Rust metadata parser. `null` while `enabled` is false (so a closed Edit Metadata modal
  * costs nothing per keystroke) or until the main-thread wasm component is
  * ready. */
 export function useMetadataFields(
   source: string,
+  presetName: string | null,
   enabled: boolean,
 ): MetadataFields | null {
   const [wasmReady, setWasmReady] = useState(false)
@@ -25,7 +26,9 @@ export function useMetadataFields(
 
   return useMemo(
     () =>
-      enabled && wasmReady ? jianpuWasm().parseMetadataFields(source) : null,
-    [enabled, wasmReady, source],
+      enabled && wasmReady
+        ? jianpuWasm().parseMetadataFields(source, presetName ?? undefined)
+        : null,
+    [enabled, wasmReady, source, presetName],
   )
 }

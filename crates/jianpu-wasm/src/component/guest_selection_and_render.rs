@@ -157,15 +157,24 @@ pub(super) fn get_measure_index_at_offset(
 // collides with `#[wasm_bindgen] pub fn render`'s own export symbol on
 // `wasm32-unknown-unknown`.
 
+/// A chosen preset that no longer parses or exists resolves as Default.
 pub(super) fn resolve_part_visibility(
+    source: String,
     parts: Vec<Part>,
     toggles: PartToggleState,
+    preset_name: Option<String>,
 ) -> ResolvedPartVisibility {
     let parts: Vec<jianpu_generator::PartInfo> =
         parts.into_iter().map(part_info_from_wit).collect();
+    let preset = preset_name.and_then(|name| {
+        jianpu_generator::chosen_preset_from_source(&source, "input.jianpu", &name)
+            .ok()
+            .flatten()
+    });
     resolved_part_visibility_to_wit(jianpu_generator::resolve_part_visibility(
         &parts,
         &part_toggle_state_from_wit(toggles),
+        preset.as_ref(),
     ))
 }
 

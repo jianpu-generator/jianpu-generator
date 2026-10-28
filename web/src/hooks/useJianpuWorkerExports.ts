@@ -119,6 +119,7 @@ export function useJianpuWorkerExports({
       source: sourceRef.current,
       id,
       baseName: baseNameFromActiveFile(activeFileRef.current),
+      presetName: visibilityRef.current.presetName,
       notation,
     }
     postAfterPaint(worker, payload)
@@ -132,6 +133,7 @@ export function useJianpuWorkerExports({
     setSplitPdfExporting,
     sourceRef,
     activeFileRef,
+    visibilityRef,
   ])
 
   const exportMidi = useCallback(() => {
@@ -172,6 +174,7 @@ export function useJianpuWorkerExports({
       source: sourceRef.current,
       id,
       baseName: baseNameFromActiveFile(activeFileRef.current),
+      presetName: visibilityRef.current.presetName,
     }
     postAfterPaint(worker, payload)
   }, [
@@ -182,6 +185,7 @@ export function useJianpuWorkerExports({
     setSplitMidiExporting,
     sourceRef,
     activeFileRef,
+    visibilityRef,
   ])
 
   const exportSplitWav = useCallback(() => {
@@ -197,6 +201,7 @@ export function useJianpuWorkerExports({
       source: sourceRef.current,
       id,
       baseName: baseNameFromActiveFile(activeFileRef.current),
+      presetName: visibilityRef.current.presetName,
     }
     postAfterPaint(worker, payload)
   }, [
@@ -207,6 +212,7 @@ export function useJianpuWorkerExports({
     setSplitWavExporting,
     sourceRef,
     activeFileRef,
+    visibilityRef,
   ])
 
   const exportMp3 = useCallback(() => {
@@ -247,6 +253,7 @@ export function useJianpuWorkerExports({
       source: sourceRef.current,
       id,
       baseName: baseNameFromActiveFile(activeFileRef.current),
+      presetName: visibilityRef.current.presetName,
     }
     postAfterPaint(worker, payload)
   }, [
@@ -257,6 +264,7 @@ export function useJianpuWorkerExports({
     setSplitMp3Exporting,
     sourceRef,
     activeFileRef,
+    visibilityRef,
   ])
 
   return {

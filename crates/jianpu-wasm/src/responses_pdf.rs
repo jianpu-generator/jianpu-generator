@@ -1,7 +1,7 @@
 use jianpu_generator::fonts::FontBytesByFamily;
 use jianpu_generator::{
     write_pdf_from_source_with_visibility, write_split_pdfs_from_source, zip_split_pdfs,
-    NoteLabels, ResolvedPartVisibility,
+    NoteLabels, ResolvedPartVisibility, SplitSelection,
 };
 
 use super::diagnostic_from_error;
@@ -31,10 +31,21 @@ pub(crate) fn generate_pdf_response(
 pub(crate) fn generate_split_pdfs_response(
     source: &str,
     base_name: &str,
+    preset_name: Option<&str>,
     fonts: &FontBytesByFamily,
     note_labels: NoteLabels,
 ) -> GenerateSplitPdfsResponse {
-    match write_split_pdfs_from_source(source, "input.jianpu", base_name, &[], fonts, note_labels) {
+    match write_split_pdfs_from_source(
+        source,
+        "input.jianpu",
+        base_name,
+        SplitSelection {
+            tracks: &[],
+            preset_name,
+        },
+        fonts,
+        note_labels,
+    ) {
         Ok(entries) => match zip_split_pdfs(&entries) {
             Ok(zip) => GenerateSplitPdfsResponse::Ok { zip },
             Err(e) => GenerateSplitPdfsResponse::Err {
