@@ -82,9 +82,10 @@ pub(super) fn add_preset_section(source: String, preset: NewPreset) -> String {
     )
 }
 
-pub(super) fn preset_header_span(source: String, preset_name: String) -> Option<Span> {
-    source_edit::preset_header_span(&source, &preset_name).map(|span| Span {
-        start: span.start as u32,
-        end: span.end as u32,
-    })
+pub(super) fn follow_preset_rename(
+    previous_source: String,
+    source: String,
+    preset_name: String,
+) -> Option<String> {
+    source_edit::follow_preset_rename(&previous_source, &source, &preset_name)
 }

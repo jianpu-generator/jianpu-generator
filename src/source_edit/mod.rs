@@ -9,7 +9,7 @@ pub use metadata_edit::{
 };
 pub use octave_shift::{shift_part_octave, shift_range_octave};
 pub use preset_edit::{
-    add_preset_section, list_presets, new_preset_name_error, preset_header_span,
+    add_preset_section, follow_preset_rename, list_presets, new_preset_name_error,
     set_preset_part_shown, update_preset_field, NewPreset, PartShown, PresetEdit, PresetSummary,
 };
 pub use range_edit::{ByteRange, RangeEditResult};

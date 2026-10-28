@@ -15,7 +15,6 @@ export interface PresetMenuProps {
   onCreatePreset?: (name: string) => void
   /** Rust's reason a new preset can't take this name, if it can't. */
   nameError: (name: string) => string | undefined
-  onEditInSource: (presetName: string | null) => void
 }
 
 /** Chooses which `# preset` the preview, playback and exports follow. Sits
@@ -27,7 +26,6 @@ export function PresetMenu({
   onChoose,
   onCreatePreset,
   nameError,
-  onEditInSource,
 }: PresetMenuProps) {
   const [naming, setNaming] = useState(false)
   if (presets.length === 0 && !onCreatePreset) return null
@@ -79,12 +77,6 @@ export function PresetMenu({
               New preset…
             </ResponsiveMenu.Item>
           )}
-          <ResponsiveMenu.Item
-            className="export-menu-item preset-menu-action"
-            onSelect={() => onEditInSource(presetInForce)}
-          >
-            Edit in source
-          </ResponsiveMenu.Item>
         </ResponsiveMenu.Content>
       </ResponsiveMenu.Root>
       {onCreatePreset && (

@@ -221,7 +221,7 @@ impl Guest for Component {
         set_preset_part_shown(source: String, preset_name: String, all_parts: Vec<String>, part: PartShown) -> String;
         new_preset_name_error(source: String, name: String) -> Option<String>;
         add_preset_section(source: String, preset: NewPreset) -> String;
-        preset_header_span(source: String, preset_name: String) -> Option<Span>;
+        follow_preset_rename(previous_source: String, source: String, preset_name: String) -> Option<String>;
     }
 
     fn set_layout_fonts(fonts: FontBytesByFamily) {

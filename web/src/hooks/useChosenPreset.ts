@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { jianpuWasm } from '../jianpuWasm'
 
 export const CHOSEN_PRESET_KEY = 'jianpu:chosen-preset:v1'
 
@@ -30,15 +31,24 @@ function writeCache(fileId: string, presetName: string | null): void {
 }
 
 /** The preset chosen for `fileId`, remembered per browser like the part
- * toggles. `null` is Default. A name the file no longer has is kept; Rust
- * resolves it as Default (`resolvePartVisibility`'s `presetName`). */
-export function useChosenPreset(fileId: string) {
+ * toggles. `null` is Default. Renaming the chosen preset in the editor
+ * keeps it chosen. A name the file no longer has is kept; Rust resolves it
+ * as Default (`resolvePartVisibility`'s `presetName`). */
+export function useChosenPreset(
+  fileId: string,
+  source: string,
+  wasmReady: boolean,
+) {
   const [chosenPreset, setChosenPresetState] = useState<string | null>(
     () => readCache()[fileId] ?? null,
   )
+  // The last source that still had the chosen preset. Kept while a rename
+  // is half typed, so the rename is followed once the header parses again.
+  const sourceWithPresetRef = useRef<string | null>(null)
 
   useEffect(() => {
     setChosenPresetState(readCache()[fileId] ?? null)
+    sourceWithPresetRef.current = null
   }, [fileId])
 
   const setChosenPreset = useCallback(
@@ -48,6 +58,18 @@ export function useChosenPreset(fileId: string) {
     },
     [fileId],
   )
+
+  useEffect(() => {
+    if (!wasmReady || chosenPreset == null) return
+    const followed = jianpuWasm().followPresetRename(
+      sourceWithPresetRef.current ?? source,
+      source,
+      chosenPreset,
+    )
+    if (followed == null) return
+    sourceWithPresetRef.current = source
+    if (followed !== chosenPreset) setChosenPreset(followed)
+  }, [wasmReady, source, chosenPreset, setChosenPreset])
 
   return { chosenPreset, setChosenPreset }
 }

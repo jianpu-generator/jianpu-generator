@@ -43,7 +43,6 @@ type MonacoWindow = Window & {
             captureMatches: boolean,
           ) => Array<{ range: unknown }>
         } | null
-        getPosition: () => { lineNumber: number } | null
         executeEdits: (
           source: string,
           edits: Array<{ range: unknown; text: string }>,
@@ -133,6 +132,16 @@ Given('the presets fixture is loaded', async ({ page }) => {
     )
   }, PRESETS_SOURCE)
   await page.goto('/')
+  await waitForPreviewReady(page)
+})
+
+Given('the presets fixture is opened as a shared link', async ({ page }) => {
+  // The decoder's plain URI-encoded JSON fallback, so no wasm is needed here.
+  const payload = JSON.stringify({
+    filename: 'test.jianpu',
+    content: PRESETS_SOURCE,
+  })
+  await page.goto(`/#share=${encodeURIComponent(payload)}`)
   await waitForPreviewReady(page)
 })
 
@@ -250,24 +259,6 @@ Then("the new preset dialog's Create button is disabled", async ({ page }) => {
     newPresetDialog(page).getByRole('button', { name: 'Create' }),
   ).toBeDisabled()
 })
-
-Then(
-  "the editor cursor is on the {string} preset's header line",
-  async ({ page }, name: string) => {
-    const headerLine =
-      PRESETS_SOURCE.split('\n').indexOf(`# preset "${name}"`) + 1
-    await expect
-      .poll(() =>
-        page.evaluate(
-          () =>
-            (window as MonacoWindow).monaco?.editor
-              .getEditors()[0]
-              ?.getPosition()?.lineNumber,
-        ),
-      )
-      .toBe(headerLine)
-  },
-)
 
 function metadataField(page: Page, label: string) {
   return page.getByTestId('edit-metadata-modal').getByLabel(label, {

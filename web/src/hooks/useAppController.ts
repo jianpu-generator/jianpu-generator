@@ -106,7 +106,11 @@ export function useAppController() {
     handlePartToggle,
     handleSoloToggle,
   } = usePartToggles(fileId)
-  const { chosenPreset, setChosenPreset } = useChosenPreset(fileId)
+  const { chosenPreset, setChosenPreset } = useChosenPreset(
+    fileId,
+    source,
+    wasm.status === 'ready',
+  )
 
   const {
     parts,
@@ -178,7 +182,6 @@ export function useAppController() {
     parts,
     visibility,
     staffNotation,
-    editorRef,
     setChosenPreset,
     handlePartToggle,
     handleSourceChange,

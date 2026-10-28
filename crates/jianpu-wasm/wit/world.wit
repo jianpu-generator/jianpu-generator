@@ -1047,8 +1047,9 @@ world jianpu-wasm {
     // Adds a `# preset` section after the last one (else before the music).
     export add-preset-section: func(source: string, preset: new-preset) -> string;
 
-    // The `# preset "Name"` header line's UTF-8 byte span, for "Edit in source".
-    export preset-header-span: func(source: string, preset-name: string) -> option<span>;
+    // The chosen preset's name after an edit from `previous-source`: the same
+    // name, the preset's new name when the edit renamed it, or none when gone.
+    export follow-preset-rename: func(previous-source: string, source: string, preset-name: string) -> option<string>;
 
     // Kind of one editor keyword `highlight-tokens` reports.
     enum highlight-kind {

@@ -151,10 +151,25 @@ fn leaves_the_source_alone_for_an_unknown_preset() {
 }
 
 #[test]
-fn finds_a_preset_header() {
-    let span = preset_header_span(SOURCE, "Alto").expect("Alto preset");
-    assert_eq!(&SOURCE[span.start..span.end], "# preset \"Alto\"");
-    assert_eq!(preset_header_span(SOURCE, "Gone"), None);
+fn follows_a_preset_renamed_in_the_editor() {
+    let renamed = SOURCE.replace("\"Alto\"", "\"Alto solo\"");
+    assert_eq!(
+        follow_preset_rename(SOURCE, &renamed, "Alto"),
+        Some("Alto solo".to_owned())
+    );
+    assert_eq!(
+        follow_preset_rename(SOURCE, SOURCE, "Choir"),
+        Some("Choir".to_owned())
+    );
+}
+
+#[test]
+fn drops_a_preset_that_was_deleted_or_renamed_to_another_preset() {
+    let deleted = SOURCE.replace("# preset \"Alto\"\nsubtitle = \"Alto part\"\n", "");
+    assert_eq!(follow_preset_rename(SOURCE, &deleted, "Alto"), None);
+    let duplicate = SOURCE.replace("\"Alto\"", "\"Choir\"");
+    assert_eq!(follow_preset_rename(SOURCE, &duplicate, "Alto"), None);
+    assert_eq!(follow_preset_rename(SOURCE, SOURCE, "Gone"), None);
 }
 
 fn new_preset(name: &str) -> NewPreset {

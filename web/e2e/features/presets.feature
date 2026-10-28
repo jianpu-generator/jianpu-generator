@@ -39,13 +39,13 @@ Feature: Presets
     Then the preset menu shows "Melody only"
     And the "C" part pill is off
 
-  Scenario: Renaming the chosen preset falls back to Default
+  Scenario: Renaming the chosen preset in the editor keeps it chosen
     Given the presets fixture is loaded
     When I choose the "Melody only" preset
     And I replace "Melody only" with "Tune" in the editor
-    Then the preset menu shows "Default"
-    And the "C" part pill is on
-    And the preview contains the chord content
+    Then the preset menu shows "Tune"
+    And the "C" part pill is off
+    And the preview does not contain the chord content
 
   Scenario: New preset adds a section with the parts shown now and chooses it
     Given the presets fixture is loaded
@@ -63,12 +63,6 @@ Feature: Presets
     Then the new preset dialog says "A preset is already called Melody only."
     And the new preset dialog's Create button is disabled
 
-  Scenario: Edit in source moves the cursor to the preset's header
-    Given the presets fixture is loaded
-    When I choose the "Melody only" preset
-    And I choose "Edit in source" in the preset menu
-    Then the editor cursor is on the "Melody only" preset's header line
-
   Scenario: A preset's notation line sets the preview's notation
     Given the presets fixture is loaded
     When I choose the "Violin" preset
@@ -82,6 +76,13 @@ Feature: Presets
     And I switch the preview notation to "cello"
     Then the "Melody only" preset has the line "notation = cello"
     And the preview shows a staff notation page
+
+  Scenario: In a shared link, picking a notation under a preset changes only the preview
+    Given the presets fixture is opened as a shared link
+    When I choose the "Violin" preset
+    Then the preview shows a staff notation page
+    When I switch the preview notation to "jianpu"
+    Then the preview shows jianpu pages
 
   Scenario: Export > PDF under a preset is named after it
     Given the presets fixture is loaded

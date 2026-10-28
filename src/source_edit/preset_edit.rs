@@ -1,7 +1,7 @@
 //! Edits to `# preset "Name"` sections for the web editor's preset menu:
 //! rewriting one preset's `visible_parts` or `notation` line, adding a new
-//! preset, and finding a preset's header. Each edit touches only the lines
-//! it needs, so the rest of the file keeps its formatting.
+//! preset, and following a preset renamed in the editor. Each edit touches
+//! only the lines it needs, so the rest of the file keeps its formatting.
 
 use itertools::Itertools;
 
@@ -116,9 +116,30 @@ pub fn new_preset_name_error(source: &str, name: &str) -> Option<String> {
     }
 }
 
-/// The `# preset "name"` header line, for "Edit in source".
-pub fn preset_header_span(source: &str, name: &str) -> Option<Span> {
-    preset_section(source, name).map(|section| section.header_span)
+/// The chosen preset's name after editing `previous_source` into `source`:
+/// `name` while `source` still has it, else the preset now at its position
+/// when the edit renamed it (same number of presets, and a name that is
+/// new). `None` when `source` no longer has the preset.
+pub fn follow_preset_rename(previous_source: &str, source: &str, name: &str) -> Option<String> {
+    let names = |text| {
+        list_presets(text)
+            .into_iter()
+            .map(|preset| preset.name)
+            .collect_vec()
+    };
+    let current = names(source);
+    if current.iter().any(|current_name| current_name == name) {
+        return Some(name.to_owned());
+    }
+    let previous = names(previous_source);
+    let position = previous
+        .iter()
+        .position(|previous_name| previous_name == name)?;
+    current
+        .get(position)
+        .filter(|renamed| current.len() == previous.len() && !renamed.is_empty())
+        .filter(|renamed| !previous.contains(renamed))
+        .cloned()
 }
 
 fn replace_span(source: &str, span: Span, replacement: &str) -> String {

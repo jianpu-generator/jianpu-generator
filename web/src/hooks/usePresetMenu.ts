@@ -1,9 +1,7 @@
-import type { RefObject } from 'react'
 import { useCallback, useMemo } from 'react'
 import type { PresetMenuProps } from '../components/PresetMenu'
 import { jianpuWasm, type Notation, type PresetSummary } from '../jianpuWasm'
-import type { EditorHandle, PartInfo, ResolvedPartVisibility } from '../types'
-import { byteOffsetToStringIndex } from '../utils/byteSpan'
+import type { PartInfo, ResolvedPartVisibility } from '../types'
 import type { StaffNotation } from './useStaffNotation'
 
 interface PresetMenuInputs {
@@ -13,22 +11,9 @@ interface PresetMenuInputs {
   parts: PartInfo[]
   visibility: ResolvedPartVisibility
   staffNotation: StaffNotation
-  editorRef: RefObject<EditorHandle | null>
   setChosenPreset: (presetName: string | null) => void
   handlePartToggle: (abbreviation: string, enabled: boolean) => void
   handleSourceChange: (value: string) => void
-}
-
-/** The byte offset "Edit in source" jumps to: the preset's header, or the
- * `# metadata` header for Default. */
-function presetHeaderOffset(source: string, presetName: string | null) {
-  const wasm = jianpuWasm()
-  const span =
-    presetName == null
-      ? wasm.sectionHeaders(source).find(({ kind }) => kind === 'metadata')
-          ?.span
-      : wasm.presetHeaderSpan(source, presetName)
-  return span?.start ?? 0
 }
 
 /** The preset menu's props, and the part pill handler: under a preset in a
@@ -42,7 +27,6 @@ export function usePresetMenu({
   parts,
   visibility,
   staffNotation,
-  editorRef,
   setChosenPreset,
   handlePartToggle,
   handleSourceChange,
@@ -118,10 +102,6 @@ export function usePresetMenu({
           )
           setChosenPreset(name)
         },
-    onEditInSource: (presetName) => {
-      const offset = presetHeaderOffset(source, presetName)
-      editorRef.current?.jumpToOffset(byteOffsetToStringIndex(source, offset))
-    },
   }
 
   return {
