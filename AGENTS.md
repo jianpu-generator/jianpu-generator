@@ -1,8 +1,23 @@
+## Guiding principles
+
+- Cut taglines, helper text and secondary labels. If a screen needs them to make sense, fix the layout.
+- Make the best decision that will elevate all three: the user experience (UX), developer experience (DX), and agent experience (AX) always, without breaking anything.
+
 ## Branching and PRs
 
 **Never commit directly to `master`.** Always work on a feature branch and open a pull request. The full e2e suite is too large to run in the pre-commit hook, so it runs in CI (`.github/workflows/ci.yml`) on the PR instead — the PR is the gate, not the local commit.
 
-Locally, run only the specific e2e tests you need with plain Playwright (`cd web && pnpm test:e2e --grep "..."`), not the auto-retry script `pnpm test:e2e:resolve` — that is reserved for CI. Stop any dev server you started once the run finishes.
+## Committing
+
+Commit message titles must always include a scope: `<type>(<scope>): <description>`, e.g. `feat(sequence): allow entries to omit parts for a single occurrence`. The scope identifies **where** the change lives (the module/directory/area touched, e.g. `sequence`, `grid-layout`, `midi`, `editor`), never **what** the change does or which feature it adds — that belongs in the description. When a change spans multiple modules in service of one feature, pick the scope by where the change is centered (the module doing the most work, or the one a reader would look in first), not by naming the feature itself. Never omit the scope, even for small or single-file changes. Don't restate the scope word in the description; the scope already says it.
+
+Do not manually run `cargo build`/`cargo test` as a pre-commit check — the pre-commit hook already runs them, acting like a CI gate. It's fine to run tests during development to verify your own fix, but don't re-run the full suite right before `git commit` just to double-check.
+
+The pre-commit hook runs cargo checks and the web typecheck, which can take a few minutes — longer than the default 2-minute Bash tool timeout. A plain `git commit` will hit that timeout even though the hook itself is still running to completion in the background. Always pass an explicit `timeout` of at least 300000ms (5 minutes), and prefer 480000ms (8 minutes) to be safe, on the `git commit` Bash call to avoid wasting a turn on a false timeout.
+
+## Running e2e tests
+
+When you run Playwright e2e tests yourself locally, run only the specific tests you need, with plain Playwright: `cd web && pnpm test:e2e --grep "..."`. Do **not** use the auto-retry script `pnpm test:e2e:resolve` locally — it exists for CI (`web/scripts/resolve-e2e-flakes.ts`), where the full suite runs and its known flaky tests are re-run until the failing set settles. A scoped local run is small enough to read directly, and a failure there should be investigated, not retried away. Stop any dev server you started once the run finishes.
 
 ## Syntax documentation
 
@@ -12,15 +27,33 @@ The `.jianpu` input syntax is documented in `syntax.md`.
 - When a commit introduces or changes user-facing `.jianpu` syntax, **MUST update the `demo/` folder** in the same commit (add/update the example measure demonstrating the feature in the relevant `demo/NN-*.jianpu` file). Each file in `demo/` is a complete, standalone-valid `.jianpu` document (its own `# metadata`/`# parts`/`# score`) — the web editor opens them individually as a folder of demo files, so a fragment missing its own header would fail to render there even though it's never concatenated with the others.
 - Syntax-affecting code lives under `src/parser/` and `src/desugar.rs`.
 
+## Architecture documentation
+
+The rendering pipeline layers, entry points, key types, and domain glossary are documented in `ARCHITECTURE.md`.
+
+- When a layer's entry function signature or module path changes, **MUST update `ARCHITECTURE.md`** in the same commit.
+- When a key type is added, removed, or renamed in any layer, **MUST update `ARCHITECTURE.md`** in the same commit.
+- When a new domain term is introduced or an existing term is redefined, **MUST update the glossary in `ARCHITECTURE.md`** in the same commit.
+
 ## Coding style
 
-Prefer functional programming style:
+Prefer functional programming style, unless the iterative version is simpler, shorter and easier to understand:
 - **TypeScript**: use the `remeda` library (`import * as R from 'remeda'`)
 - **Rust**: use the `itertools` crate
+
+Avoid using uncommon abbreviations when naming (e.g. `TimedRdParser` for "recursive descent" — spell it out as `TimedRecursiveDescentParser` instead). Widely understood abbreviations (e.g. `Ast`, `Id`, `Http`) are fine.
+
+Test cases should not be inlined with the source code, they should live in separate files.
+
+Never use tuple in new data structures, always use struct instead.
 
 ## Node scripts
 
 Node scripts (`web/scripts/`, e2e mock/static servers, Playwright reporters, anything run with `node`) are TypeScript (`.ts`) run directly with `node` (native type stripping — no `tsx`/`ts-node`, so stick to erasable syntax and explicit `.ts` import extensions), never untyped `.mjs`/`.js`, and must be covered by `tsc -b` (the pre-commit `web-typecheck` job) — add any new script's path to the matching `web/tsconfig.*.json` `include`. Parse CLI arguments with `commander`, not hand-rolled `process.argv` slicing. The only exception is config a tool requires in a fixed JS format (e.g. `web/.pnpmfile.cjs`).
+
+## Web frontend must stay dumb
+
+Keep the TypeScript web frontend as dumb as possible; put logic in Rust (compiled to wasm for the worker). The web layer passes raw UI state (e.g. hidden/soloed sets) to Rust and renders what comes back. Don't derive effective state (solo resolution, track filtering) in TS hooks.
 
 ## UI components
 
@@ -39,7 +72,7 @@ Reuse the shared components in `web/src/components/` before building a new contr
 - **Icons**: `@radix-ui/react-icons` first; app-specific icons live in `components/icons/`.
 - **Mobile branching**: in TypeScript, `useMediaQuery(MOBILE_BREAKPOINT_QUERY)` (`web/src/hooks/useMediaQuery.ts`) rather than a hard-coded width; in CSS, `@media (max-width: 768px)`.
 
-When you add a new reusable primitive, add it to this list (in both `CLAUDE.md` and `AGENTS.md`).
+When you add a new reusable primitive, add it to this list.
 
 ## Browser storage
 
@@ -50,37 +83,6 @@ When you add a new reusable primitive, add it to this list (in both `CLAUDE.md` 
 - **the cloud outbox**: unsynced edits awaiting delivery to the database, held in IndexedDB on this device only until the server acknowledges them. It is never read as a source of truth for state that must agree across devices, and entries are deleted on acknowledgement.
 
 Anything else, especially state that must agree across devices (e.g. whether a file is shared, which share belongs to which file), lives in the database and is derived from it, never mirrored into browser storage.
-
-## Local dev
-
-To run local dev, use `mprocs -c dekit.yaml`.
-
-## Local tooling
-
-The whole toolchain is pinned in `mise.toml` and shared with CI
-(`jdx/mise-action`). After cloning, run `mise install` and then
-`lefthook install` (activate mise in your shell, or prefix commands with
-`mise exec --`). To change a tool version, edit `mise.toml` — CI picks it up.
-
-It provides Rust 1.89.0 (with `rustfmt`, `clippy` and the
-`wasm32-unknown-unknown` target), Node, pnpm, `cargo-component`,
-`worker-build` (compiles `crates/live-share-worker` to the wasm bundle `cf`
-expects), `sqruff` (SQL linter used by the pre-commit `sqruff` job — see
-`.sqruff`), `lefthook`, `prek`, `just` and `jq`. `sqruff` is pinned to 0.29.3
-because 0.34.1 fails to compile from crates.io (a `PathBuf == str` type error
-in `sqruff-cli-lib`) and newer releases require a rustc ahead of this repo's.
-
-## Staging D1
-
-**Purpose:** prod D1 (`jianpu-live-share`) is the only other database, and the local e2e worker runs plain SQLite, not D1. Staging is where a migration or a risky SQL statement gets run against real D1, on a copy of prod data, before it reaches prod. Use it for anything D1 could handle differently from SQLite (table-rebuild migrations, multi-row atomicity, constraint behaviour). It is not a place to deploy the worker or run e2e. Prod is deployed straight from `master` with no staging gate, so this check is manual: do it before merging a PR that adds a migration or changes `crates/live-share-worker/queries/`.
-
-Database: `jianpu-live-share-staging` (id `e388837b-aed7-495c-96d3-fca824639cfc`, same Cloudflare account as prod). Only the database exists: no staging worker is deployed, and nothing in the repo or CI points at it.
-
-- **Contents:** a copy of prod data, last taken 2026-10-16 at migration `0004`, with `0005` applied on top (first use: the file-tree PR). It includes the `oauth_sessions` rows, so treat it as sensitive as prod. Earlier tests leave stray data (e.g. files renamed to `Zed/...`), so refresh before relying on it.
-- **Refresh from prod** (read-only on prod): `npx wrangler d1 export jianpu-live-share --remote --output <file>.sql`, then `npx wrangler d1 execute jianpu-live-share-staging --remote --file <file>.sql`. The export uses plain `CREATE TABLE`, so importing into a database that already has tables should fail (not tried): drop the tables first or create a fresh database. Keep the export outside the repo.
-- **Apply migrations:** `d1 migrations apply` needs a config naming the database, and there is none in the repo. Write a throwaway `wrangler.staging.jsonc` outside the repo: `{"name":"staging-tmp","compatibility_date":"2024-09-23","d1_databases":[{"binding":"DB","database_name":"jianpu-live-share-staging","database_id":"e388837b-aed7-495c-96d3-fca824639cfc","migrations_dir":"<absolute path to live-share-worker/migrations>"}]}`, then `npx wrangler d1 migrations apply DB --remote -c <that file>`. Wrangler asks no confirmation in a non-interactive shell, and `-y` is rejected.
-- **Run SQL:** `npx wrangler d1 execute DB --remote -c <that file> --command "..."`. It can't bind parameters, so inline literals when replaying a query from `crates/live-share-worker/queries/`.
-- **Never** point `deploy.json`, `cloudflare.config.ts` or the deploy workflow at the staging id, or the next push to `master` would deploy against it.
 
 ## Cross-boundary invariants (Rust ↔ TS)
 
@@ -127,6 +129,58 @@ Rules:
 - Remove any existing instance you touch rather than adding another occurrence.
 - If none of the options above fits (e.g. values fixed by an external deploy platform), stop and ask the user before settling for less.
 - `TODO-cross-boundary-invariants.md` tracks the known instances and how each was fixed.
+
+## Local tooling
+
+The whole toolchain is pinned in `mise.toml` and shared with CI
+(`jdx/mise-action`). After cloning, run `mise install` and then
+`lefthook install` (activate mise in your shell, or prefix commands with
+`mise exec --`). To change a tool version, edit `mise.toml` — CI picks it up.
+
+It provides Rust 1.89.0 (with `rustfmt`, `clippy` and the
+`wasm32-unknown-unknown` target), Node, pnpm, `cargo-component`,
+`worker-build` (compiles `crates/live-share-worker` to the wasm bundle `cf`
+expects), `sqruff` (SQL linter used by the pre-commit `sqruff` job — see
+`.sqruff`), `lefthook`, `prek`, `just` and `jq`. `sqruff` is pinned to 0.29.3
+because 0.34.1 fails to compile from crates.io (a `PathBuf == str` type error
+in `sqruff-cli-lib`) and newer releases require a rustc ahead of this repo's.
+
+## Generating an SVG
+
+```sh
+cargo run -- generate svg simple.jianpu
+```
+
+## Running the app locally
+
+Start the dev servers with `just dev` from the repo root: it runs the web app (Vite, `localhost:5173`) together with the live-share worker (`cf dev`, `localhost:8787`, with the local D1 migrations applied), and logs both to `dev.log`. Don't run `pnpm dev` in `web/` alone — without the worker there is no backend, so cloud files (the local D1 database) won't load.
+
+Once the worker is up, **always run `just copy-prod-db`** to copy production's rows into the local D1 database, so local dev runs against real accounts and files. It does nothing if this checkout already has a copy (it leaves `crates/live-share-worker/.wrangler/state/prod-data-copied-at`), so run it every time you start the dev servers. Each worktree has its own local database, so a fresh worktree needs its own copy. `just copy-prod-db force` copies again; `app_log` is never copied. It needs wrangler's stored login (`pnpm exec wrangler whoami`), and a running worker picks up the rows without a restart.
+
+## Debugging production
+
+When asked why something happened in production (e.g. a user got signed out, or can't sign in), **query the `app_log` D1 table before guessing**. It holds 30 days of what the Synced Share worker did (see "App log (observability)" in `ARCHITECTURE.md`). Saved queries live in `crates/live-share-worker/queries/observability/` (`recent.sql`, `auth_rejections.sql`, `auth_by_version.sql`, `sign_ins_per_email.sql`, `request_failures.sql`, `by_trace_id.sql`). Run one against the production database from `crates/live-share-worker`:
+
+```sh
+pnpm exec wrangler d1 execute jianpu-live-share --remote --command="$(cat queries/observability/auth_rejections.sql)"
+```
+
+- When a user reports an error with a trace ID, edit the ID in `by_trace_id.sql` and run it: it returns every row written for that request, including the `request_failed` row (route, status, code).
+- Keep the `--command=` form: the saved queries start with a `-- ` comment, which a space-separated `--command` would read as a flag. `--file` returns no rows for a remote `SELECT`.
+- This uses wrangler's stored login (`pnpm exec wrangler whoami`). `cf d1 query <database-id> --sql="..."` also works, but needs `CLOUDFLARE_API_TOKEN` or `cf auth login`.
+- Against a local `cf dev` database, use `sqlite3 .wrangler/state/v3/d1/miniflare-D1DatabaseObject/<hash>.sqlite ".read queries/observability/recent.sql"`. `wrangler d1 execute --local` can't find the database, because the D1 binding lives in `cloudflare.config.ts`.
+
+## Staging D1
+
+**Purpose:** prod D1 (`jianpu-live-share`) is the only other database, and the local e2e worker runs plain SQLite, not D1. Staging is where a migration or a risky SQL statement gets run against real D1, on a copy of prod data, before it reaches prod. Use it for anything D1 could handle differently from SQLite (table-rebuild migrations, multi-row atomicity, constraint behaviour). It is not a place to deploy the worker or run e2e. Prod is deployed straight from `master` with no staging gate, so this check is manual: do it before merging a PR that adds a migration or changes `crates/live-share-worker/queries/`.
+
+Database: `jianpu-live-share-staging` (id `e388837b-aed7-495c-96d3-fca824639cfc`, same Cloudflare account as prod). Only the database exists: no staging worker is deployed, and nothing in the repo or CI points at it.
+
+- **Contents:** a copy of prod data, last taken 2026-10-16 at migration `0004`, with `0005` applied on top (first use: the file-tree PR). It includes the `oauth_sessions` rows, so treat it as sensitive as prod. Earlier tests leave stray data (e.g. files renamed to `Zed/...`), so refresh before relying on it.
+- **Refresh from prod** (read-only on prod): `npx wrangler d1 export jianpu-live-share --remote --output <file>.sql`, then `npx wrangler d1 execute jianpu-live-share-staging --remote --file <file>.sql`. The export uses plain `CREATE TABLE`, so importing into a database that already has tables should fail (not tried): drop the tables first or create a fresh database. Keep the export outside the repo.
+- **Apply migrations:** `d1 migrations apply` needs a config naming the database, and there is none in the repo. Write a throwaway `wrangler.staging.jsonc` outside the repo: `{"name":"staging-tmp","compatibility_date":"2024-09-23","d1_databases":[{"binding":"DB","database_name":"jianpu-live-share-staging","database_id":"e388837b-aed7-495c-96d3-fca824639cfc","migrations_dir":"<absolute path to live-share-worker/migrations>"}]}`, then `npx wrangler d1 migrations apply DB --remote -c <that file>`. Wrangler asks no confirmation in a non-interactive shell, and `-y` is rejected.
+- **Run SQL:** `npx wrangler d1 execute DB --remote -c <that file> --command "..."`. It can't bind parameters, so inline literals when replaying a query from `crates/live-share-worker/queries/`.
+- **Never** point `deploy.json`, `cloudflare.config.ts` or the deploy workflow at the staging id, or the next push to `master` would deploy against it.
 
 ## Cloudflare stays on the free plan
 

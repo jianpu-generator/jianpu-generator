@@ -716,7 +716,7 @@ that records what the worker did so production behaviour — first of all why
 someone got signed out or can't sign in — can be answered from data. It
 is queried with SQL, by agents and the owner, through the saved queries in
 `crates/live-share-worker/queries/observability/` (see "Debugging production"
-in `CLAUDE.md` for the run command).
+in `AGENTS.md` for the run command).
 
 - Columns: `at` (ms since epoch), `flow` (`auth` or `request`), `kind` (the event),
   `outcome` (`ok`/`rejected`/`unavailable`/`error`), `user_id` (when known),
@@ -799,7 +799,7 @@ in `CLAUDE.md` for the run command).
     can add files but can't read or delete them.
   - The read-only key `just restore-backup` uses lives in each laptop's
     macOS Keychain (service `jianpu-backup-reader`). See "Handling secrets" in
-    `CLAUDE.md` for setting up another laptop.
+    `AGENTS.md` for setting up another laptop.
   - Only the Backblaze master key can delete backups or change the rules.
     It's kept in the owner's password manager, never in a secret or a file.
   - The export uses the deploy workflow's `CLOUDFLARE_API_TOKEN`.
