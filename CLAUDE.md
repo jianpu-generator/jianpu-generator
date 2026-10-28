@@ -86,3 +86,19 @@ pnpm exec wrangler d1 execute jianpu-live-share --remote --command="$(cat querie
 - Keep the `--command=` form: the saved queries start with a `-- ` comment, which a space-separated `--command` would read as a flag. `--file` returns no rows for a remote `SELECT`.
 - This uses wrangler's stored login (`pnpm exec wrangler whoami`). `cf d1 query <database-id> --sql="..."` also works, but needs `CLOUDFLARE_API_TOKEN` or `cf auth login`.
 - Against a local `cf dev` database, use `sqlite3 .wrangler/state/v3/d1/miniflare-D1DatabaseObject/<hash>.sqlite ".read queries/observability/recent.sql"`. `wrangler d1 execute --local` can't find the database, because the D1 binding lives in `cloudflare.config.ts`.
+
+## Cloudflare stays on the free plan
+
+The Cloudflare account has no payment method, and the owner won't add one. Don't propose or build on anything that needs one, such as R2. That's why production backups go to Backblaze B2 (see "Backups" in `ARCHITECTURE.md`).
+
+## Recovering production data
+
+- Within the last 7 days, D1 Time Travel restores production to any minute: `pnpm exec wrangler d1 time-travel restore jianpu-live-share --timestamp=<ISO time>`. It overwrites production, so confirm with the owner first.
+- Older than that, or if the database is gone, use the daily backups in B2. Run `just restore-backup <YYYY-MM-DD>` to load one into the local D1 database and check it before touching production. "Backups" in `ARCHITECTURE.md` covers restoring production itself.
+
+## Handling secrets
+
+- Never ask the owner to paste a key or token into the chat; the chat is stored. When they copy one to the clipboard, pipe `pbpaste` straight into `gh secret set <NAME>` (repo secrets) or `security add-generic-password -U -s <service> -a <account> -w "$(pbpaste)"` (macOS Keychain). Before storing, check its length and prefix with the characters masked, and check again right before storing, because the clipboard can change between commands. Verify by comparing hashes, with trailing newlines stripped on both sides.
+- When a step needs a key only the owner should type (e.g. the Backblaze master key), and you're running inside herdr (`HERDR_ENV=1`), don't hand the command back. Open a pane (`herdr pane split` + `herdr pane run`) running a script that reads the key with `read -s`, then wait for its result with `herdr pane wait-output`.
+- Create Backblaze keys with `b2 key create` and an explicit capability list. The web UI's "Write Only" option also grants `deleteFiles` and lifecycle-rule changes.
+- The B2 restore key lives in each laptop's Keychain (service `jianpu-backup-reader`, accounts `keyID` and `applicationKey`). On a laptop without it, create one with the master key in a herdr pane: `uvx b2==5.0.0 key create --bucket jianpu-live-share-backups jianpu-backup-reader-<machine> listBuckets,listFiles,readFiles`. Then store both values there.

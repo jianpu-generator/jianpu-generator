@@ -785,15 +785,29 @@ in `CLAUDE.md` for the run command).
   `daily/<YYYY-MM-DD>.sql.gz`. The 1st of each month's dump is also stored as
   `monthly/<YYYY-MM-DD>.sql.gz`. B2 rather than R2 because R2 needs a payment
   method on the Cloudflare account, and B2 keeps the backups outside the
-  account they protect.
+  account they protect. Other options were ruled out: GitHub Actions
+  artifacts can be downloaded by any signed-in GitHub user (the repo is
+  public), and Workers KV or a second D1 database would sit in the same
+  Cloudflare account.
 - Retention: the bucket's lifecycle rules (`backup-lifecycle.json`) delete
   `daily/` files after 30 days and `monthly/` ones after 365.
   `just setup-backup-bucket` creates the bucket and applies the rules, and is
-  safe to rerun after editing them.
-- Keys: the workflow's `B2_KEY_ID` / `B2_APPLICATION_KEY` secrets are a
-  write-only key scoped to the bucket. The read-only key `just restore-backup`
-  uses lives only on the owner's machine (macOS Keychain service
-  `jianpu-backup-reader`). The worker has no access to the bucket.
+  safe to rerun after editing them. It needs a key with `writeBuckets`.
+- Keys:
+  - The workflow's `B2_KEY_ID` / `B2_APPLICATION_KEY` secrets are a key
+    scoped to the bucket with only `listBuckets,writeFiles`. A leaked secret
+    can add files but can't read or delete them.
+  - The read-only key `just restore-backup` uses lives in each laptop's
+    macOS Keychain (service `jianpu-backup-reader`). See "Handling secrets" in
+    `CLAUDE.md` for setting up another laptop.
+  - Only the Backblaze master key can delete backups or change the rules.
+    It's kept in the owner's password manager, never in a secret or a file.
+  - The export uses the deploy workflow's `CLOUDFLARE_API_TOKEN`.
+  - The worker has no access to the bucket.
+- Silent failure: a failed run only emails the owner, and GitHub turns off
+  scheduled workflows after 60 days without commits. To check a backup ran,
+  look at the latest run in the Actions tab, or list the bucket with the
+  reader key (`uvx b2==5.0.0 ls b2://jianpu-live-share-backups/daily/`).
 - Within the last 7 days, D1 Time Travel (`wrangler d1 time-travel restore`)
   restores production to any minute without these dumps. The dumps cover
   older points and the database itself being deleted.
