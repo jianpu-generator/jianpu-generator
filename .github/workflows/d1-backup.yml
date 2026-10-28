@@ -13,6 +13,8 @@ on:
   schedule:
     - cron: '41 4 * * *'
   workflow_dispatch:
+  push:
+    branches: [chore/d1-daily-backup]
 
 concurrency:
   group: d1-backup
@@ -49,6 +51,7 @@ jobs:
           B2_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
           B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
         run: |
+          b2 account get | jq .allowed
           bucket=$(jq -r .backupBucket deploy.json)
           day=$(date -u +%F)
           b2 file upload --no-progress --content-type application/gzip "$bucket" backup.sql.gz "daily/$day.sql.gz"
