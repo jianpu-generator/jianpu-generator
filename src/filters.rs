@@ -55,6 +55,9 @@ pub struct ResolvedPartVisibility {
     /// The chosen preset, whose `# metadata` overrides the render applies.
     /// `None` renders the song's own `# metadata`.
     pub preset_name: Option<String>,
+    /// Parts whose pill is off, in `parts` order: hidden ones and those the
+    /// preset's `visible_parts` leaves out. Solo doesn't change it.
+    pub hidden_parts: Vec<String>,
 }
 
 /// Resolves the raw toggle state against `parts`, under the chosen preset.
@@ -69,10 +72,11 @@ pub fn resolve_part_visibility(
 ) -> ResolvedPartVisibility {
     let contains =
         |names: &[String], part: &crate::part_info::PartInfo| names.contains(&part.abbreviation);
-    let in_preset = |part: &crate::part_info::PartInfo| {
-        preset
-            .and_then(|preset| preset.visible_parts.as_deref())
-            .is_none_or(|visible| contains(visible, part))
+    let is_hidden = |part: &crate::part_info::PartInfo| {
+        contains(&state.hidden_parts, part)
+            || preset
+                .and_then(|preset| preset.visible_parts.as_deref())
+                .is_some_and(|visible| !contains(visible, part))
     };
     let any_solo = parts.iter().any(|part| contains(&state.soloed_parts, part));
     let shown: Vec<_> = parts
@@ -81,7 +85,7 @@ pub fn resolve_part_visibility(
             if any_solo {
                 contains(&state.soloed_parts, part)
             } else {
-                in_preset(part) && !contains(&state.hidden_parts, part)
+                !is_hidden(part)
             }
         })
         .collect();
@@ -105,6 +109,11 @@ pub fn resolve_part_visibility(
             |part| part.sounds,
         ),
         preset_name: preset.map(|preset| preset.name.clone()),
+        hidden_parts: parts
+            .iter()
+            .filter(|part| is_hidden(part))
+            .map(|part| part.abbreviation.clone())
+            .collect(),
     }
 }
 

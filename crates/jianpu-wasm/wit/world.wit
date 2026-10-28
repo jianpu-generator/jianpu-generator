@@ -452,15 +452,20 @@ world jianpu-wasm {
     // What `resolve-part-visibility` decided (`jianpu_generator::ResolvedPartVisibility`),
     // passed back verbatim to the render and PDF exports. `rendered-tracks`
     // and `sounding-tracks` are `none` when every part is drawn / sounds.
+    // `preset-name` is the preset in force, `none` when the chosen one no
+    // longer exists; `hidden-parts` are the pills shown as off.
     record resolved-part-visibility {
         rendered-tracks: option<list<string>>,
         sounding-tracks: option<list<string>>,
         sounding-display-names: option<list<string>>,
+        preset-name: option<string>,
+        hidden-parts: list<string>,
     }
 
     // Resolves hide/solo state into what is drawn and what sounds, given the
-    // score's parts (as returned by `list-parts`).
-    export resolve-part-visibility: func(parts: list<part>, toggles: part-toggle-state) -> resolved-part-visibility;
+    // score's parts (as returned by `list-parts`) and the preset chosen in
+    // the preset menu (`none` for Default).
+    export resolve-part-visibility: func(source: string, parts: list<part>, toggles: part-toggle-state, preset-name: option<string>) -> resolved-part-visibility;
 
     // Phase 3, group 4 of PLAN-wit-bindgen-migration.md. Placed here, not
     // immediately after `render-response`'s own `variant` declaration
@@ -1006,6 +1011,19 @@ world jianpu-wasm {
     // Rewrites the named preset's line for `edit` in place, or adds it under
     // the header; returns `source` unchanged when no preset has that name.
     export update-preset-field: func(source: string, preset-name: string, edit: preset-edit) -> string;
+
+    // A part pill clicked under a preset: which part, and whether it now shows.
+    record part-shown {
+        abbreviation: string,
+        shown: bool,
+    }
+
+    // Shows or hides one part in the named preset's `visible_parts`,
+    // rewritten in `all-parts` order (the abbreviations `list-parts` gives).
+    export set-preset-part-shown: func(source: string, preset-name: string, all-parts: list<string>, part: part-shown) -> string;
+
+    // Why "New preset…" can't use `name` (empty, quoted, Default or taken).
+    export new-preset-name-error: func(source: string, name: string) -> option<string>;
 
     // A preset for "New preset…", holding the parts and notation shown now.
     record new-preset {

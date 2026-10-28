@@ -50,6 +50,27 @@ pub(super) fn update_preset_field(source: String, preset_name: String, edit: Pre
     source_edit::update_preset_field(&source, &preset_name, &edit)
 }
 
+pub(super) fn set_preset_part_shown(
+    source: String,
+    preset_name: String,
+    all_parts: Vec<String>,
+    part: PartShown,
+) -> String {
+    source_edit::set_preset_part_shown(
+        &source,
+        &preset_name,
+        &all_parts,
+        &source_edit::PartShown {
+            abbreviation: part.abbreviation,
+            shown: part.shown,
+        },
+    )
+}
+
+pub(super) fn new_preset_name_error(source: String, name: String) -> Option<String> {
+    source_edit::new_preset_name_error(&source, &name)
+}
+
 pub(super) fn add_preset_section(source: String, preset: NewPreset) -> String {
     source_edit::add_preset_section(
         &source,

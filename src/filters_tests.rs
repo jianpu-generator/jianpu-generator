@@ -160,6 +160,19 @@ fn hiding_narrows_the_preset_parts() {
     );
 
     assert_eq!(resolved.rendered_tracks, Some(names(&["M"])));
+    assert_eq!(resolved.hidden_parts, names(&["v1", "C"]));
+}
+
+#[test]
+fn hidden_parts_are_the_toggle_state_without_a_preset_and_ignore_solo() {
+    let state = PartToggleState {
+        hidden_parts: names(&["v1", "gone"]),
+        soloed_parts: names(&["M"]),
+    };
+
+    let resolved = resolve_part_visibility(&melody_verse_and_chords(), &state, None);
+
+    assert_eq!(resolved.hidden_parts, names(&["v1"]));
 }
 
 #[test]

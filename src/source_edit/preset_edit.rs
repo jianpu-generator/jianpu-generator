@@ -95,6 +95,27 @@ pub fn list_presets(source: &str) -> Vec<PresetSummary> {
         .collect()
 }
 
+/// Why "New preset…" can't use `name`, or `None` when it can.
+pub fn new_preset_name_error(source: &str, name: &str) -> Option<String> {
+    let name = name.trim();
+    if name.is_empty() {
+        Some("Give the preset a name.".to_owned())
+    } else if name.contains(['"', '\n', '\r']) {
+        Some("A preset name can't contain quotes or line breaks.".to_owned())
+    } else if name.eq_ignore_ascii_case(DEFAULT_PRESET_NAME) {
+        Some(format!(
+            "{DEFAULT_PRESET_NAME} is the song without a preset."
+        ))
+    } else if list_presets(source)
+        .iter()
+        .any(|preset| preset.name == name)
+    {
+        Some(format!("A preset is already called {name}."))
+    } else {
+        None
+    }
+}
+
 /// The `# preset "name"` header line, for "Edit in source".
 pub fn preset_header_span(source: &str, name: &str) -> Option<Span> {
     preset_section(source, name).map(|section| section.header_span)
@@ -133,6 +154,58 @@ pub fn update_preset_field(source: &str, name: &str, edit: &PresetEdit) -> Strin
             &format!("{}\n", edit.line()),
         ),
     }
+}
+
+/// The preset's `visible_parts` as written, `None` when it sets none.
+fn visible_parts_of(section: &RawSection) -> Option<Vec<String>> {
+    metadata_lines(&section.content, section.content_offset)
+        .filter_map(Result::ok)
+        .filter(|line| line.key == PresetKey::VisibleParts.keyword())
+        .last()
+        .map(|line| {
+            line.value
+                .split(',')
+                .map(str::trim)
+                .filter(|abbreviation| !abbreviation.is_empty())
+                .map(str::to_owned)
+                .collect()
+        })
+}
+
+/// A part pill clicked under a preset: which part, and whether it now shows.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PartShown {
+    pub abbreviation: String,
+    pub shown: bool,
+}
+
+/// Shows or hides one part in the preset's `visible_parts`, rewritten in
+/// `all_parts` order. A preset without `visible_parts` starts from every
+/// part. Returns `source` unchanged when no preset is called `name`.
+pub fn set_preset_part_shown(
+    source: &str,
+    name: &str,
+    all_parts: &[String],
+    part: &PartShown,
+) -> String {
+    let Some(section) = preset_section(source, name) else {
+        return source.to_owned();
+    };
+    let visible = visible_parts_of(&section);
+    let parts = all_parts
+        .iter()
+        .filter(|abbreviation| {
+            if **abbreviation == part.abbreviation {
+                part.shown
+            } else {
+                visible
+                    .as_ref()
+                    .is_none_or(|visible| visible.contains(abbreviation))
+            }
+        })
+        .cloned()
+        .collect();
+    update_preset_field(source, name, &PresetEdit::VisibleParts(parts))
 }
 
 /// The new section goes after the last `# preset`, else before the first

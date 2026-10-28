@@ -24,6 +24,80 @@ fn parts(abbreviations: &[&str]) -> Vec<String> {
 }
 
 #[test]
+fn a_new_preset_name_must_be_new_and_quote_free() {
+    assert_eq!(new_preset_name_error(SOURCE, "Tenor"), None);
+    assert_eq!(
+        new_preset_name_error(SOURCE, " Choir "),
+        Some("A preset is already called Choir.".to_owned())
+    );
+    assert_eq!(
+        new_preset_name_error(SOURCE, "default"),
+        Some("Default is the song without a preset.".to_owned())
+    );
+    assert_eq!(
+        new_preset_name_error(SOURCE, "Say \"hi\""),
+        Some("A preset name can't contain quotes or line breaks.".to_owned())
+    );
+    assert_eq!(
+        new_preset_name_error(SOURCE, "  "),
+        Some("Give the preset a name.".to_owned())
+    );
+}
+
+fn part_shown(abbreviation: &str, shown: bool) -> PartShown {
+    PartShown {
+        abbreviation: abbreviation.to_owned(),
+        shown,
+    }
+}
+
+#[test]
+fn hiding_a_part_drops_it_from_visible_parts() {
+    let result = set_preset_part_shown(
+        SOURCE,
+        "Choir",
+        &parts(&["S", "A"]),
+        &part_shown("S", false),
+    );
+    assert_eq!(
+        result,
+        SOURCE.replace("visible_parts = S, A", "visible_parts = A")
+    );
+}
+
+#[test]
+fn showing_a_part_adds_it_back_in_declaration_order() {
+    let source = SOURCE.replace("visible_parts = S, A", "visible_parts = A");
+    let result = set_preset_part_shown(
+        &source,
+        "Choir",
+        &parts(&["S", "A"]),
+        &part_shown("S", true),
+    );
+    assert_eq!(result, SOURCE);
+}
+
+#[test]
+fn hiding_a_part_in_a_preset_without_visible_parts_lists_the_rest() {
+    let result =
+        set_preset_part_shown(SOURCE, "Alto", &parts(&["S", "A"]), &part_shown("S", false));
+    assert_eq!(
+        result,
+        SOURCE.replace(
+            "# preset \"Alto\"\n",
+            "# preset \"Alto\"\nvisible_parts = A\n"
+        )
+    );
+}
+
+#[test]
+fn setting_a_part_in_an_unknown_preset_changes_nothing() {
+    let result =
+        set_preset_part_shown(SOURCE, "Nope", &parts(&["S", "A"]), &part_shown("S", false));
+    assert_eq!(result, SOURCE);
+}
+
+#[test]
 fn rewrites_an_existing_visible_parts_line_in_place() {
     let result = update_preset_field(SOURCE, "Choir", &PresetEdit::VisibleParts(parts(&["A"])));
     assert_eq!(
