@@ -69,6 +69,47 @@ copy-prod-db force="":
     date -u +%Y-%m-%dT%H:%M:%SZ > "$marker"
     for table in $tables; do echo "$table: $(sqlite3 "$db" "SELECT count(*) FROM \"$table\"")"; done
 
+# Creates the private R2 bucket the daily production backup
+# (`.github/workflows/d1-backup.yml`) uploads to, and sets its retention from
+# `backup-lifecycle.json`. Safe to rerun: an existing bucket is left alone and
+# the rules are replaced wholesale.
+setup-backup-bucket:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd crates/live-share-worker
+    bucket=$(jq -r .backupBucket deploy.json)
+    pnpm exec wrangler r2 bucket info "$bucket" >/dev/null 2>&1 || pnpm exec wrangler r2 bucket create "$bucket"
+    pnpm exec wrangler r2 bucket lifecycle set "$bucket" --file backup-lifecycle.json --force
+
+# Replaces the local D1 database (what `just dev`'s worker serves) with a
+# production backup: `just restore-backup 2026-10-28` for a `daily/` dump,
+# `just restore-backup monthly/2026-10-01` for a monthly one. The previous
+# local database is kept next to it as `*.sqlite.before-restore`.
+restore-backup key:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd crates/live-share-worker
+    db=$(ls .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite 2>/dev/null | grep -v /metadata.sqlite || true)
+    if [[ -z "$db" ]]; then
+      echo "No local D1 database yet; start \`just dev\` once so it creates one, then rerun." >&2
+      exit 1
+    fi
+    key="{{key}}"
+    [[ "$key" == */* ]] || key="daily/$key"
+    dir=$(mktemp -d)
+    trap 'rm -rf "$dir"' EXIT
+    pnpm exec wrangler r2 object get "$(jq -r .backupBucket deploy.json)/$key.sql.gz" --remote --file "$dir/backup.sql.gz"
+    gunzip "$dir/backup.sql.gz"
+    tables=$(sqlite3 "$db" "SELECT name FROM sqlite_master WHERE type = 'table' AND name != 'sqlite_sequence' AND name NOT LIKE '\_cf\_%' ESCAPE '\'")
+    cp "$db" "$db.before-restore"
+    {
+      echo "PRAGMA foreign_keys = OFF; BEGIN;"
+      printf 'DROP TABLE "%s";\n' $tables
+      grep -v '^PRAGMA' "$dir/backup.sql"
+      echo "COMMIT;"
+    } | sqlite3 -bail "$db"
+    for table in $tables; do echo "$table: $(sqlite3 "$db" "SELECT count(*) FROM \"$table\"")"; done
+
 # Mutation-tests how lyric parts follow their target's notes (lyric slots,
 # the lyric cursor, and lyric spans) with cargo-mutants
 # (`cargo install cargo-mutants`). Reports go to ./mutants.out.

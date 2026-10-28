@@ -777,6 +777,29 @@ in `CLAUDE.md` for the run command).
   statement and at most `APP_LOG_PRUNE_MAX_BATCHES` (10) statements per run.
   Locally, `cf dev` fires it on `GET /cdn-cgi/local/scheduled`.
 
+### Backups
+
+- `.github/workflows/d1-backup.yml` runs `wrangler d1 export` against
+  production daily (04:41 UTC) and uploads the gzipped SQL dump to the
+  private R2 bucket named by `backupBucket` in `deploy.json`, as
+  `daily/<YYYY-MM-DD>.sql.gz`. The 1st of each month's dump is also stored as
+  `monthly/<YYYY-MM-DD>.sql.gz`.
+- Retention: the bucket's lifecycle rules (`backup-lifecycle.json`) delete
+  `daily/` objects after 30 days and `monthly/` ones after 365.
+  `just setup-backup-bucket` creates the bucket and applies the rules, and is
+  safe to rerun after editing them.
+- The worker has no binding to the bucket. Only the workflow, through its
+  own `BACKUP_CLOUDFLARE_API_TOKEN` secret, writes to it.
+- Within the last 7 days, D1 Time Travel (`wrangler d1 time-travel restore`)
+  restores production to any minute without these dumps. The dumps cover
+  older points and the database itself being deleted.
+- Restore: `just restore-backup <date>` loads a dump into the local D1
+  database. To restore production, download it with
+  `wrangler r2 object get <bucket>/<key> --remote`, gunzip, and run it with
+  `wrangler d1 execute <database> --remote --file` into a new, empty
+  database (the dump contains `CREATE TABLE` statements), then point
+  `d1DatabaseId` at it.
+
 ### D1 query checking
 
 `sqlx`'s "sqlite" feature can't be a normal dependency of this crate — its
