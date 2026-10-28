@@ -1,14 +1,13 @@
 name: Back up production D1
 
-# Daily SQL dump of the production D1 database into the private R2 bucket
-# named by `backupBucket` in `crates/live-share-worker/deploy.json`. The
-# bucket's lifecycle rules (`backup-lifecycle.json`, applied by
+# Daily SQL dump of the production D1 database into the private Backblaze B2
+# bucket named by `backupBucket` in `crates/live-share-worker/deploy.json`.
+# The bucket's lifecycle rules (`backup-lifecycle.json`, applied by
 # `just setup-backup-bucket`) keep `daily/` for 30 days and `monthly/` (the
 # 1st of each month's dump) for 365. `just restore-backup` loads one locally.
 #
-# BACKUP_CLOUDFLARE_API_TOKEN is its own token (D1 Edit + Workers R2 Storage
-# Edit), not the deploy token. The worker has no binding to the bucket, so
-# nothing it runs can touch the backups.
+# B2_KEY_ID / B2_APPLICATION_KEY is a write-only key scoped to that bucket,
+# so a leaked secret can neither read nor delete the backups.
 
 on:
   schedule:
@@ -29,21 +28,30 @@ jobs:
         with:
           install_args: node pnpm
 
-      - name: Install wrangler
+      - name: Install wrangler and b2
         working-directory: crates/live-share-worker
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm install --frozen-lockfile
+          pipx install b2==5.0.0
 
-      - name: Export and upload
+      - name: Export production
         working-directory: crates/live-share-worker
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.BACKUP_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm exec wrangler d1 export jianpu-live-share --remote --output backup.sql
+          gzip backup.sql
+
+      - name: Upload to B2
+        working-directory: crates/live-share-worker
+        env:
+          B2_APPLICATION_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
         run: |
           bucket=$(jq -r .backupBucket deploy.json)
           day=$(date -u +%F)
-          pnpm exec wrangler d1 export jianpu-live-share --remote --output backup.sql
-          gzip backup.sql
-          pnpm exec wrangler r2 object put "$bucket/daily/$day.sql.gz" --remote --file backup.sql.gz --content-type application/gzip
+          b2 file upload --no-progress --content-type application/gzip "$bucket" backup.sql.gz "daily/$day.sql.gz"
           if [[ $(date -u +%d) == 01 ]]; then
-            pnpm exec wrangler r2 object put "$bucket/monthly/$day.sql.gz" --remote --file backup.sql.gz --content-type application/gzip
+            b2 file upload --no-progress --content-type application/gzip "$bucket" backup.sql.gz "monthly/$day.sql.gz"
           fi

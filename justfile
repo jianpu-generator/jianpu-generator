@@ -69,22 +69,29 @@ copy-prod-db force="":
     date -u +%Y-%m-%dT%H:%M:%SZ > "$marker"
     for table in $tables; do echo "$table: $(sqlite3 "$db" "SELECT count(*) FROM \"$table\"")"; done
 
-# Creates the private R2 bucket the daily production backup
+# Creates the private Backblaze B2 bucket the daily production backup
 # (`.github/workflows/d1-backup.yml`) uploads to, and sets its retention from
 # `backup-lifecycle.json`. Safe to rerun: an existing bucket is left alone and
-# the rules are replaced wholesale.
+# the rules are replaced wholesale. Needs a B2 key with `writeBuckets` in
+# `B2_APPLICATION_KEY_ID` / `B2_APPLICATION_KEY`; delete it afterwards.
 setup-backup-bucket:
     #!/usr/bin/env bash
     set -euo pipefail
     cd crates/live-share-worker
     bucket=$(jq -r .backupBucket deploy.json)
-    pnpm exec wrangler r2 bucket info "$bucket" >/dev/null 2>&1 || pnpm exec wrangler r2 bucket create "$bucket"
-    pnpm exec wrangler r2 bucket lifecycle set "$bucket" --file backup-lifecycle.json --force
+    b2() { uvx b2==5.0.0 "$@"; }
+    b2 bucket get "$bucket" >/dev/null 2>&1 || b2 bucket create --default-server-side-encryption SSE-B2 "$bucket" allPrivate
+    rules=()
+    while read -r rule; do rules+=(--lifecycle-rule "$rule"); done < <(jq -c '.[]' backup-lifecycle.json)
+    b2 bucket update "${rules[@]}" "$bucket" allPrivate
 
 # Replaces the local D1 database (what `just dev`'s worker serves) with a
 # production backup: `just restore-backup 2026-10-28` for a `daily/` dump,
 # `just restore-backup monthly/2026-10-01` for a monthly one. The previous
-# local database is kept next to it as `*.sqlite.before-restore`.
+# local database is kept next to it as `*.sqlite.before-restore`. Downloads
+# with the read-only B2 key from `B2_APPLICATION_KEY_ID` / `B2_APPLICATION_KEY`,
+# or else from the macOS Keychain (service `jianpu-backup-reader`, accounts
+# `keyID` and `applicationKey`).
 restore-backup key:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -98,7 +105,9 @@ restore-backup key:
     [[ "$key" == */* ]] || key="daily/$key"
     dir=$(mktemp -d)
     trap 'rm -rf "$dir"' EXIT
-    pnpm exec wrangler r2 object get "$(jq -r .backupBucket deploy.json)/$key.sql.gz" --remote --file "$dir/backup.sql.gz"
+    export B2_APPLICATION_KEY_ID="${B2_APPLICATION_KEY_ID:-$(security find-generic-password -s jianpu-backup-reader -a keyID -w)}"
+    export B2_APPLICATION_KEY="${B2_APPLICATION_KEY:-$(security find-generic-password -s jianpu-backup-reader -a applicationKey -w)}"
+    uvx b2==5.0.0 file download --no-progress "b2://$(jq -r .backupBucket deploy.json)/$key.sql.gz" "$dir/backup.sql.gz"
     gunzip "$dir/backup.sql.gz"
     tables=$(sqlite3 "$db" "SELECT name FROM sqlite_master WHERE type = 'table' AND name != 'sqlite_sequence' AND name NOT LIKE '\_cf\_%' ESCAPE '\'")
     cp "$db" "$db.before-restore"

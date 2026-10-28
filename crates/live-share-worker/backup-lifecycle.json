@@ -1,16 +1,4 @@
-{
-  "rules": [
-    {
-      "id": "expire-daily-after-30-days",
-      "enabled": true,
-      "conditions": { "prefix": "daily/" },
-      "deleteObjectsTransition": { "condition": { "type": "Age", "maxAge": 2592000 } }
-    },
-    {
-      "id": "expire-monthly-after-365-days",
-      "enabled": true,
-      "conditions": { "prefix": "monthly/" },
-      "deleteObjectsTransition": { "condition": { "type": "Age", "maxAge": 31536000 } }
-    }
-  ]
-}
+[
+  { "fileNamePrefix": "daily/", "daysFromUploadingToHiding": 30, "daysFromHidingToDeleting": 1 },
+  { "fileNamePrefix": "monthly/", "daysFromUploadingToHiding": 365, "daysFromHidingToDeleting": 1 }
+]

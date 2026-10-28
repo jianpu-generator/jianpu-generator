@@ -781,21 +781,25 @@ in `CLAUDE.md` for the run command).
 
 - `.github/workflows/d1-backup.yml` runs `wrangler d1 export` against
   production daily (04:41 UTC) and uploads the gzipped SQL dump to the
-  private R2 bucket named by `backupBucket` in `deploy.json`, as
+  private Backblaze B2 bucket named by `backupBucket` in `deploy.json`, as
   `daily/<YYYY-MM-DD>.sql.gz`. The 1st of each month's dump is also stored as
-  `monthly/<YYYY-MM-DD>.sql.gz`.
+  `monthly/<YYYY-MM-DD>.sql.gz`. B2 rather than R2 because R2 needs a payment
+  method on the Cloudflare account, and B2 keeps the backups outside the
+  account they protect.
 - Retention: the bucket's lifecycle rules (`backup-lifecycle.json`) delete
-  `daily/` objects after 30 days and `monthly/` ones after 365.
+  `daily/` files after 30 days and `monthly/` ones after 365.
   `just setup-backup-bucket` creates the bucket and applies the rules, and is
   safe to rerun after editing them.
-- The worker has no binding to the bucket. Only the workflow, through its
-  own `BACKUP_CLOUDFLARE_API_TOKEN` secret, writes to it.
+- Keys: the workflow's `B2_KEY_ID` / `B2_APPLICATION_KEY` secrets are a
+  write-only key scoped to the bucket. The read-only key `just restore-backup`
+  uses lives only on the owner's machine (macOS Keychain service
+  `jianpu-backup-reader`). The worker has no access to the bucket.
 - Within the last 7 days, D1 Time Travel (`wrangler d1 time-travel restore`)
   restores production to any minute without these dumps. The dumps cover
   older points and the database itself being deleted.
 - Restore: `just restore-backup <date>` loads a dump into the local D1
   database. To restore production, download it with
-  `wrangler r2 object get <bucket>/<key> --remote`, gunzip, and run it with
+  `b2 file download b2://<bucket>/<key> <file>`, gunzip, and run it with
   `wrangler d1 execute <database> --remote --file` into a new, empty
   database (the dump contains `CREATE TABLE` statements), then point
   `d1DatabaseId` at it.
