@@ -44,6 +44,31 @@ fn write_split_pdfs_from_source_produces_one_pdf_per_track() {
 }
 
 #[test]
+fn write_split_pdfs_from_source_keeps_the_presets_parts_and_names_files_after_it() {
+    let input = format!(
+        "{}\n# preset \"Soprano 2\"\nvisible_parts = S2, S2v1\n",
+        multi_track_input()
+    );
+    let entries = write_split_pdfs_from_source(
+        &input,
+        "test.jianpu",
+        "test_split",
+        SplitSelection {
+            tracks: &[],
+            preset_name: Some("Soprano 2"),
+        },
+        &fonts::FontBytesByFamily::embedded(),
+        NoteLabels::Degrees,
+    )
+    .unwrap();
+    let filenames: Vec<&str> = entries
+        .iter()
+        .map(|entry| entry.filename.as_str())
+        .collect();
+    assert_eq!(filenames, ["test_split (Soprano 2) - Soprano 2.pdf"]);
+}
+
+#[test]
 fn write_split_pdfs_from_source_single_part_uses_split_naming() {
     let input = concat!(
         "# metadata\n",

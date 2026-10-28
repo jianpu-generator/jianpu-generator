@@ -31,6 +31,7 @@ pub(crate) fn generate_pdf_response(
 pub(crate) fn generate_split_pdfs_response(
     source: &str,
     base_name: &str,
+    preset_name: Option<&str>,
     fonts: &FontBytesByFamily,
     note_labels: NoteLabels,
 ) -> GenerateSplitPdfsResponse {
@@ -38,7 +39,10 @@ pub(crate) fn generate_split_pdfs_response(
         source,
         "input.jianpu",
         base_name,
-        SplitSelection::default(),
+        SplitSelection {
+            tracks: &[],
+            preset_name,
+        },
         fonts,
         note_labels,
     ) {

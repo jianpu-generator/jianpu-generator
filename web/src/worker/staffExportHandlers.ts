@@ -70,6 +70,7 @@ export async function handleGenerateSplitStaffPdf(
   const meis = jianpuWasm().renderSplitMeis(
     msg.source,
     msg.baseName,
+    msg.presetName,
     GM_INSTRUMENTS,
     clef,
   )

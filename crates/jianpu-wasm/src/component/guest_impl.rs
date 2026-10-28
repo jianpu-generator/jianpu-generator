@@ -101,28 +101,12 @@ impl Guest for Component {
         render_mei(source, visibility, raw_instruments, clef)
     }
 
-    fn generate_split_wavs(
-        source: String,
-        base_name: String,
-        soundfont: Vec<u8>,
-    ) -> GenerateSplitWavsResponse {
-        generate_split_wavs(source, base_name, soundfont)
-    }
-
     fn generate_mp3(
         source: String,
         enabled_tracks: Option<Vec<String>>,
         soundfont: Vec<u8>,
     ) -> GenerateMp3Response {
         generate_mp3(source, enabled_tracks, soundfont)
-    }
-
-    fn generate_split_mp3s(
-        source: String,
-        base_name: String,
-        soundfont: Vec<u8>,
-    ) -> GenerateSplitMp3sResponse {
-        generate_split_mp3s(source, base_name, soundfont)
     }
 
     fn generate_pdf(
@@ -134,21 +118,8 @@ impl Guest for Component {
         generate_pdf(source, visibility, fonts, note_labels)
     }
 
-    fn generate_split_pdfs(
-        source: String,
-        base_name: String,
-        fonts: FontBytesByFamily,
-        note_labels: NoteLabels,
-    ) -> GenerateSplitPdfsResponse {
-        generate_split_pdfs(source, base_name, fonts, note_labels)
-    }
-
     fn generate_midi(source: String, enabled_tracks: Option<Vec<String>>) -> GenerateMidiResponse {
         generate_midi(source, enabled_tracks)
-    }
-
-    fn generate_split_midis(source: String, base_name: String) -> GenerateSplitMidisResponse {
-        generate_split_midis(source, base_name)
     }
 
     fn generate_mp3_for_measure_range(
@@ -341,9 +312,13 @@ impl Guest for Component {
         part_stream_ranges_to_source(source: String, abbreviation: String, edited_stream: String, ranges: Vec<Span>) -> Vec<Span>;
         source_ranges_to_part_stream(source: String, abbreviation: String, edited_stream: String, ranges: Vec<Span>) -> Vec<Span>;
         render_svg_with_highlight_range(source: String, raw_measure_ranges: Vec<MeasureRangeIn>, visibility: ResolvedPartVisibility, raw_instruments: Vec<InstrumentInfo>, note_labels: NoteLabels) -> RenderResponse;
-        render_split_meis(source: String, base_name: String, raw_instruments: Vec<InstrumentInfo>, clef: StaffClef) -> RenderSplitMeisResponse;
+        render_split_meis(source: String, base_name: String, preset_name: Option<String>, raw_instruments: Vec<InstrumentInfo>, clef: StaffClef) -> RenderSplitMeisResponse;
         generate_staff_pdf(pages: Vec<String>, source: String, fonts: FontBytesByFamily) -> GeneratePdfResponse;
         generate_split_staff_pdfs(parts: Vec<StaffPdfPart>, fonts: FontBytesByFamily) -> GenerateSplitPdfsResponse;
+        generate_split_pdfs(source: String, base_name: String, preset_name: Option<String>, fonts: FontBytesByFamily, note_labels: NoteLabels) -> GenerateSplitPdfsResponse;
+        generate_split_midis(source: String, base_name: String, preset_name: Option<String>) -> GenerateSplitMidisResponse;
+        generate_split_wavs(source: String, base_name: String, preset_name: Option<String>, soundfont: Vec<u8>) -> GenerateSplitWavsResponse;
+        generate_split_mp3s(source: String, base_name: String, preset_name: Option<String>, soundfont: Vec<u8>) -> GenerateSplitMp3sResponse;
         generate_wav(source: String, enabled_tracks: Option<Vec<String>>, metronome: bool, soundfont: Vec<u8>) -> GenerateWavResponse;
         generate_wav_for_measure_range(source: String, start_index: u32, end_index: u32, extend_to_last_occurrence: bool, respect_sequence: bool, sequence_entry_start_index: Option<u32>, sequence_entry_end_index: Option<u32>, enabled_tracks: Option<Vec<String>>, metronome: bool, trim_start_s: Option<f64>, trim_end_s: Option<f64>, trim_next_note_start_s: Option<f64>, soundfont: Vec<u8>) -> GenerateWavResponse;
         file_store_create_folder(state: FileStoreState, parent: Option<String>, name: String, context: FileOperationContext) -> FileStoreResponse;

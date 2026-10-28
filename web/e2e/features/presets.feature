@@ -82,3 +82,16 @@ Feature: Presets
     And I switch the preview notation to "cello"
     Then the "Melody only" preset has the line "notation = cello"
     And the preview shows a staff notation page
+
+  Scenario: Export > PDF under a preset is named after it
+    Given the presets fixture is loaded
+    When I choose the "Melody only" preset
+    And I export "PDF" and capture the download, as seen in export pdf
+    Then the downloaded file is named "test (Melody only).pdf", as seen in export pdf
+
+  Scenario: Export Parts > PDF (ZIP) under a preset holds only its parts
+    Given the presets fixture is loaded
+    When I choose the "Melody only" preset
+    And I export "PDF (ZIP)" and capture the download, as seen in export pdf
+    Then the downloaded file is named "test (Melody only).zip", as seen in export pdf
+    And the downloaded zip holds only "test (Melody only) - Melody.pdf"

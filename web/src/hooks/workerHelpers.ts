@@ -104,14 +104,15 @@ export function triggerAnchorDownload(url: string, filename: string) {
   anchor.click()
 }
 
-// When only some parts are enabled, mark that in the filename so exports
-// of different toggle combinations don't silently overwrite each other.
-export function withEnabledPartsSuffix(
+// Mark the preset or the enabled parts in the filename so exports of
+// different presets or toggle combinations don't silently overwrite each
+// other.
+export function withLabelsSuffix(
   filename: string,
-  enabledPartNames: string[] | undefined,
+  labels: string[] | undefined,
 ): string {
-  if (!enabledPartNames || enabledPartNames.length === 0) return filename
-  const suffix = enabledPartNames.join(', ')
+  if (!labels || labels.length === 0) return filename
+  const suffix = labels.join(', ')
   const dotIndex = filename.lastIndexOf('.')
   if (dotIndex === -1) return `${filename} (${suffix})`
   return `${filename.slice(0, dotIndex)} (${suffix})${filename.slice(dotIndex)}`
@@ -119,52 +120,52 @@ export function withEnabledPartsSuffix(
 
 export function pdfFilenameFromActiveFile(
   activeFile: string,
-  enabledPartNames?: string[],
+  labels?: string[],
 ): string {
   const base = activeFile.endsWith('.jianpu')
     ? activeFile.replace(/\.jianpu$/, '.pdf')
     : `${activeFile}.pdf`
-  return withEnabledPartsSuffix(base, enabledPartNames)
+  return withLabelsSuffix(base, labels)
 }
 
 export function midiFilenameFromActiveFile(
   activeFile: string,
-  enabledPartNames?: string[],
+  labels?: string[],
 ): string {
   const base = activeFile.endsWith('.jianpu')
     ? activeFile.replace(/\.jianpu$/, '.mid')
     : `${activeFile}.mid`
-  return withEnabledPartsSuffix(base, enabledPartNames)
+  return withLabelsSuffix(base, labels)
 }
 
 export function wavFilenameFromActiveFile(
   activeFile: string,
-  enabledPartNames?: string[],
+  labels?: string[],
 ): string {
   const base = activeFile.endsWith('.jianpu')
     ? activeFile.replace(/\.jianpu$/, '.wav')
     : `${activeFile}.wav`
-  return withEnabledPartsSuffix(base, enabledPartNames)
+  return withLabelsSuffix(base, labels)
 }
 
 export function mp3FilenameFromActiveFile(
   activeFile: string,
-  enabledPartNames?: string[],
+  labels?: string[],
 ): string {
   const base = activeFile.endsWith('.jianpu')
     ? activeFile.replace(/\.jianpu$/, '.mp3')
     : `${activeFile}.mp3`
-  return withEnabledPartsSuffix(base, enabledPartNames)
+  return withLabelsSuffix(base, labels)
 }
 
 export function zipFilenameFromActiveFile(
   activeFile: string,
-  suffix?: string,
+  labels: string[],
 ): string {
   const base = activeFile.endsWith('.jianpu')
-    ? activeFile.replace(/\.jianpu$/, '')
-    : activeFile
-  return suffix ? `${base} (${suffix}).zip` : `${base}.zip`
+    ? activeFile.replace(/\.jianpu$/, '.zip')
+    : `${activeFile}.zip`
+  return withLabelsSuffix(base, labels)
 }
 
 /** Posts `payload` to `worker` only after the browser has had a chance to

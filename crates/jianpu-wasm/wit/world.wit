@@ -531,7 +531,7 @@ world jianpu-wasm {
         err(diagnostics-error),
     }
 
-    export render-split-meis: func(source: string, base-name: string, raw-instruments: list<instrument-info>, clef: staff-clef) -> render-split-meis-response;
+    export render-split-meis: func(source: string, base-name: string, preset-name: option<string>, raw-instruments: list<instrument-info>, clef: staff-clef) -> render-split-meis-response;
 
     /// Verovio's SVG pages for one part of the split staff export.
     record staff-pdf-part {
@@ -1354,7 +1354,7 @@ world jianpu-wasm {
     }
 
     // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
-    export generate-split-pdfs: func(source: string, base-name: string, fonts: font-bytes-by-family, note-labels: note-labels) -> generate-split-pdfs-response;
+    export generate-split-pdfs: func(source: string, base-name: string, preset-name: option<string>, fonts: font-bytes-by-family, note-labels: note-labels) -> generate-split-pdfs-response;
 
     record generate-midi-success {
         midi: list<u8>,
@@ -1378,7 +1378,7 @@ world jianpu-wasm {
     }
 
     // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
-    export generate-split-midis: func(source: string, base-name: string) -> generate-split-midis-response;
+    export generate-split-midis: func(source: string, base-name: string, preset-name: option<string>) -> generate-split-midis-response;
 
     record generate-split-wavs-success {
         zip: list<u8>,
@@ -1390,7 +1390,7 @@ world jianpu-wasm {
     }
 
     // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
-    export generate-split-wavs: func(source: string, base-name: string, soundfont: list<u8>) -> generate-split-wavs-response;
+    export generate-split-wavs: func(source: string, base-name: string, preset-name: option<string>, soundfont: list<u8>) -> generate-split-wavs-response;
 
     record generate-mp3-success {
         mp3: list<u8>,
@@ -1421,7 +1421,7 @@ world jianpu-wasm {
     }
 
     // Phase 3, group 5 of PLAN-wit-bindgen-migration.md.
-    export generate-split-mp3s: func(source: string, base-name: string, soundfont: list<u8>) -> generate-split-mp3s-response;
+    export generate-split-mp3s: func(source: string, base-name: string, preset-name: option<string>, soundfont: list<u8>) -> generate-split-mp3s-response;
 
     // ==================== lib_import.rs ====================
     // Phase 3, group 7 of PLAN-wit-bindgen-migration.md.

@@ -209,7 +209,7 @@ fn split_track_names_falls_back_to_part_declarations() {
         "[Melodyv1] a b c d\n",
     );
     let score = compile(input, "test.jianpu", &[]).unwrap();
-    let names = split_track_names(input, "test.jianpu", &score, &[]).unwrap();
+    let names = split_track_names(input, "test.jianpu", &score, SplitSelection::default()).unwrap();
     assert_eq!(names, vec!["Melody"]);
 }
 

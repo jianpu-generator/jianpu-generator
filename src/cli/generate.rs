@@ -167,7 +167,7 @@ pub fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
             &filename,
             &base_name,
             jg::SplitSelection {
-                tracks: &tracks,
+                tracks: &opts.tracks,
                 preset_name: opts.preset.as_deref(),
             },
             &crate::fonts::FontBytesByFamily::embedded(),

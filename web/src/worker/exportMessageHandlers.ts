@@ -69,6 +69,7 @@ export function handleGenerateSplitPdf(
   const result = jianpuWasm().generateSplitPdfs(
     msg.source,
     msg.baseName,
+    msg.presetName,
     loadedFonts,
     noteLabelsFor(msg.notation),
   )
@@ -119,7 +120,11 @@ export function handleGenerateMidi(
 export function handleGenerateSplitMidi(
   msg: Extract<WorkerRequest, { type: 'generateSplitMidi' }>,
 ): void {
-  const result = jianpuWasm().generateSplitMidis(msg.source, msg.baseName)
+  const result = jianpuWasm().generateSplitMidis(
+    msg.source,
+    msg.baseName,
+    msg.presetName,
+  )
   if (result.tag === 'ok') {
     const zipBuffer = binaryBufferFromResult(result.val.zip)
     postMessage(
@@ -155,6 +160,7 @@ export function handleGenerateSplitWav(
   const result = jianpuWasm().generateSplitWavs(
     msg.source,
     msg.baseName,
+    msg.presetName,
     loadedSoundfont,
   )
   if (result.tag === 'ok') {
@@ -192,6 +198,7 @@ export function handleGenerateSplitMp3(
   const result = jianpuWasm().generateSplitMp3s(
     msg.source,
     msg.baseName,
+    msg.presetName,
     loadedSoundfont,
   )
   if (result.tag === 'ok') {

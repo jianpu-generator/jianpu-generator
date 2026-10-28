@@ -91,6 +91,9 @@ export type WorkerRequest =
       source: string
       id: number
       baseName: string
+      /** The preset in force: only its parts are split, and the files are
+       * named after it. */
+      presetName?: string
       notation: Notation
     }
   | {
@@ -104,12 +107,14 @@ export type WorkerRequest =
       source: string
       id: number
       baseName: string
+      presetName?: string
     }
   | {
       type: 'generateSplitWav'
       source: string
       id: number
       baseName: string
+      presetName?: string
     }
   | {
       type: 'generateMp3'
@@ -122,6 +127,7 @@ export type WorkerRequest =
       source: string
       id: number
       baseName: string
+      presetName?: string
     }
   | {
       type: 'generateAudio'

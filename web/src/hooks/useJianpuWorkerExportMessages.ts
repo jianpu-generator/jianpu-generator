@@ -7,6 +7,13 @@ import {
   zipFilenameFromActiveFile,
 } from './workerHelpers'
 
+/** A per-part ZIP's filename labels: the preset in force, then `kind`. */
+function zipLabels(deps: WorkerMessageHandlerDeps, kind?: string) {
+  return [deps.visibilityRef.current.presetName, kind].filter(
+    (label): label is string => label != null,
+  )
+}
+
 /** Handles the twelve "export finished"/"export failed" message pairs that
  * open the rename-before-download modal (`pdf`, `splitPdf`, `midi`,
  * `splitMidi`, `splitWav`, `splitMp3`, each with its own `...Err` variant).
@@ -28,7 +35,7 @@ export function handleExportMessage(
       objectUrlForBytes(msg.pdf, 'application/pdf'),
       pdfFilenameFromActiveFile(
         deps.activeFileRef.current,
-        deps.enabledPartNamesRef.current,
+        deps.filenameLabelsRef.current,
       ),
       true,
     )
@@ -47,7 +54,7 @@ export function handleExportMessage(
     deps.setSplitPdfExporting(false)
     deps.requestDownload(
       objectUrlForBytes(msg.zip, 'application/zip'),
-      zipFilenameFromActiveFile(deps.activeFileRef.current),
+      zipFilenameFromActiveFile(deps.activeFileRef.current, zipLabels(deps)),
       true,
     )
     return true
@@ -67,7 +74,7 @@ export function handleExportMessage(
       objectUrlForBytes(msg.midi, 'audio/midi'),
       midiFilenameFromActiveFile(
         deps.activeFileRef.current,
-        deps.enabledPartNamesRef.current,
+        deps.filenameLabelsRef.current,
       ),
       true,
     )
@@ -86,7 +93,10 @@ export function handleExportMessage(
     deps.setSplitMidiExporting(false)
     deps.requestDownload(
       objectUrlForBytes(msg.zip, 'application/zip'),
-      zipFilenameFromActiveFile(deps.activeFileRef.current, 'MIDI parts'),
+      zipFilenameFromActiveFile(
+        deps.activeFileRef.current,
+        zipLabels(deps, 'MIDI parts'),
+      ),
       true,
     )
     return true
@@ -104,7 +114,10 @@ export function handleExportMessage(
     deps.setSplitWavExporting(false)
     deps.requestDownload(
       objectUrlForBytes(msg.zip, 'application/zip'),
-      zipFilenameFromActiveFile(deps.activeFileRef.current, 'WAV parts'),
+      zipFilenameFromActiveFile(
+        deps.activeFileRef.current,
+        zipLabels(deps, 'WAV parts'),
+      ),
       true,
     )
     return true
@@ -122,7 +135,10 @@ export function handleExportMessage(
     deps.setSplitMp3Exporting(false)
     deps.requestDownload(
       objectUrlForBytes(msg.zip, 'application/zip'),
-      zipFilenameFromActiveFile(deps.activeFileRef.current, 'MP3 parts'),
+      zipFilenameFromActiveFile(
+        deps.activeFileRef.current,
+        zipLabels(deps, 'MP3 parts'),
+      ),
       true,
     )
     return true

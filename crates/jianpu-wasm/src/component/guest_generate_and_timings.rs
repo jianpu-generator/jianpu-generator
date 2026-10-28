@@ -55,10 +55,14 @@ pub(super) fn generate_wav(
 pub(super) fn generate_split_wavs(
     source: String,
     base_name: String,
+    preset_name: Option<String>,
     soundfont: Vec<u8>,
 ) -> GenerateSplitWavsResponse {
     generate_split_wavs_response_to_wit(crate::responses::generate_split_wavs_response(
-        &source, &base_name, soundfont,
+        &source,
+        &base_name,
+        preset_name.as_deref(),
+        soundfont,
     ))
 }
 
@@ -77,10 +81,14 @@ pub(super) fn generate_mp3(
 pub(super) fn generate_split_mp3s(
     source: String,
     base_name: String,
+    preset_name: Option<String>,
     soundfont: Vec<u8>,
 ) -> GenerateSplitMp3sResponse {
     generate_split_mp3s_response_to_wit(crate::responses::generate_split_mp3s_response(
-        &source, &base_name, soundfont,
+        &source,
+        &base_name,
+        preset_name.as_deref(),
+        soundfont,
     ))
 }
 
@@ -101,12 +109,14 @@ pub(super) fn generate_pdf(
 pub(super) fn generate_split_pdfs(
     source: String,
     base_name: String,
+    preset_name: Option<String>,
     fonts: FontBytesByFamily,
     note_labels: NoteLabels,
 ) -> GenerateSplitPdfsResponse {
     generate_split_pdfs_response_to_wit(crate::responses::generate_split_pdfs_response(
         &source,
         &base_name,
+        preset_name.as_deref(),
         &font_bytes_by_family_from_wit(fonts),
         note_labels_from_wit(note_labels),
     ))
@@ -125,9 +135,12 @@ pub(super) fn generate_midi(
 pub(super) fn generate_split_midis(
     source: String,
     base_name: String,
+    preset_name: Option<String>,
 ) -> GenerateSplitMidisResponse {
     generate_split_midis_response_to_wit(crate::responses::generate_split_midis_response(
-        &source, &base_name,
+        &source,
+        &base_name,
+        preset_name.as_deref(),
     ))
 }
 
