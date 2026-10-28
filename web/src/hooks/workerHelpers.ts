@@ -58,17 +58,24 @@ export function measureRangeInSpanWithReveal(
 
 /** What is drawn and what sounds when nothing is hidden or soloed, and what
  * is used while the score's parts are not known yet. */
-export const ALL_PARTS_VISIBLE: ResolvedPartVisibility = {}
+export const ALL_PARTS_VISIBLE: ResolvedPartVisibility = { hiddenParts: [] }
 
 /** Resolves the toggle UI's raw hide/solo state into what is drawn and what
  * sounds. The rules live in Rust (`resolve_part_visibility`); this only
- * hands the state over. */
+ * hands the state over, with the preset chosen in the preset menu. */
 export function resolvePartVisibility(
+  source: string,
   parts: PartInfo[],
   toggles: PartToggleState,
+  presetName: string | null,
 ): ResolvedPartVisibility {
   if (parts.length === 0) return ALL_PARTS_VISIBLE
-  return jianpuWasm().resolvePartVisibility(parts, toggles)
+  return jianpuWasm().resolvePartVisibility(
+    source,
+    parts,
+    toggles,
+    presetName ?? undefined,
+  )
 }
 
 /** True when the toggles leave no part drawn at all. */

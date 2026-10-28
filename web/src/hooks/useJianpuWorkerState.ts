@@ -37,6 +37,7 @@ export function useJianpuWorkerState(
   source: string,
   activeFile: string,
   partToggles: PartToggleState,
+  chosenPreset: string | null,
   /** Whether the main thread's wasm component is instantiated, which
    * resolving `partToggles` needs. */
   wasmReady: boolean,
@@ -210,8 +211,10 @@ export function useJianpuWorkerState(
 
   const resolvedVisibility = useMemo(
     () =>
-      wasmReady ? resolvePartVisibility(parts, partToggles) : ALL_PARTS_VISIBLE,
-    [wasmReady, parts, partToggles],
+      wasmReady
+        ? resolvePartVisibility(source, parts, partToggles, chosenPreset)
+        : ALL_PARTS_VISIBLE,
+    [wasmReady, source, parts, partToggles, chosenPreset],
   )
   // `parts` is a fresh array after every re-listing, so keep the previous
   // `visibility` whenever the resolved content is unchanged — otherwise every

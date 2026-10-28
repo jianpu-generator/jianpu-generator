@@ -195,3 +195,11 @@
   font-size: 0.65rem;
   opacity: 0.75;
 }
+
+.preset-menu-trigger {
+  gap: 4px;
+}
+
+.notation-toggle-item + .preset-menu-action {
+  border-top: 1px solid var(--border);
+}

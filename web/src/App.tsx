@@ -5,6 +5,7 @@ import { AppWorkspace } from './components/AppWorkspace'
 import { AssetLoadingBanner } from './components/AssetLoadingBanner'
 import { ExportAudioToast } from './components/ExportAudioToast'
 import { PartToggles } from './components/PartToggles'
+import { PresetMenu } from './components/PresetMenu'
 import { SectionJumpToolbar } from './components/SectionJumpToolbar'
 import { SequenceJumpToolbar } from './components/SequenceJumpToolbar'
 import {
@@ -67,10 +68,11 @@ export default function App() {
     wasm,
     soundfontReady,
     pdfFontsReady,
-    disabledParts,
+    hiddenParts,
     soloedParts,
     partToggles,
-    handlePartToggle,
+    handlePartPillToggle,
+    presetMenuProps,
     handleSoloToggle,
     parts,
     partDeclarations,
@@ -301,9 +303,10 @@ export default function App() {
       <SequenceJumpToolbar {...sequenceJumpToolbarProps} />
       <PartToggles
         parts={parts}
-        disabledParts={disabledParts}
+        hiddenParts={new Set(hiddenParts)}
+        presetMenu={<PresetMenu {...presetMenuProps} />}
         soloedParts={soloedParts}
-        onPartToggle={handlePartToggle}
+        onPartToggle={handlePartPillToggle}
         onSoloToggle={handleSoloToggle}
       />
       {syncedShareViewerActive &&
