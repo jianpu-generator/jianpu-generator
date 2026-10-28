@@ -167,13 +167,17 @@ export function useAppController() {
     setFileOpError,
     importFromFile,
   )
-  const { handlePartPillToggle, presetMenuProps } = usePresetMenu({
+  const {
+    handlePartPillToggle,
+    presetMenuProps,
+    staffNotation: presetStaffNotation,
+  } = usePresetMenu({
     source,
     readOnly,
     wasmReady: wasm.status === 'ready',
     parts,
     visibility,
-    notation: staffNotation.notation,
+    staffNotation,
     editorRef,
     setChosenPreset,
     handlePartToggle,
@@ -235,7 +239,7 @@ export function useAppController() {
   const noPartsSelected = computeNoPartsSelected(parts, visibility)
   return {
     ...workerResults,
-    staffNotation,
+    staffNotation: presetStaffNotation,
     notifySelection,
     measureSpans,
     noteSpans,

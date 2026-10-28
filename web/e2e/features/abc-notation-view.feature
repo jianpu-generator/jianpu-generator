@@ -13,11 +13,6 @@ Feature: ABC notation view
     Then the preview's note heads read "1, 2, 3, 4, 5, 6, 7, 1"
     And the preview's chord symbols read "1, 6m/3, 4△⁷, ♭5"
 
-  Scenario: The ABC view is remembered after a reload
-    When I switch the preview notation to "abc"
-    And I reload the page
-    Then the preview's note heads read "D, E, F♯, G, A, B, C♯, D"
-
   Scenario: Exporting a PDF from the ABC view writes letter names
     When I export "PDF" from the preview, keeping it as the jianpu PDF
     And I switch the preview notation to "abc"

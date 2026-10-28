@@ -1,7 +1,8 @@
 Feature: Presets
 
-  # The fixture has a "Melody only" preset (visible_parts = M, Mv1) and the
-  # parts Melody [M], Melody lyrics [Mv1] and Chords [C].
+  # The fixture has a "Melody only" preset (visible_parts = M, Mv1), a
+  # "Violin" preset (notation = violin) and the parts Melody [M], Melody
+  # lyrics [Mv1] and Chords [C].
 
   Scenario: Choosing a preset shows only its parts
     Given the presets fixture is loaded
@@ -67,3 +68,17 @@ Feature: Presets
     When I choose the "Melody only" preset
     And I choose "Edit in source" in the preset menu
     Then the editor cursor is on the "Melody only" preset's header line
+
+  Scenario: A preset's notation line sets the preview's notation
+    Given the presets fixture is loaded
+    When I choose the "Violin" preset
+    Then the preview shows a staff notation page
+    When I choose "Default" in the preset menu
+    Then the preview shows jianpu pages
+
+  Scenario: Picking a notation under a preset rewrites its notation line
+    Given the presets fixture is loaded
+    When I choose the "Melody only" preset
+    And I switch the preview notation to "cello"
+    Then the "Melody only" preset has the line "notation = cello"
+    And the preview shows a staff notation page

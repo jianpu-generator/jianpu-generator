@@ -4,6 +4,7 @@ import type { PresetMenuProps } from '../components/PresetMenu'
 import { jianpuWasm, type Notation, type PresetSummary } from '../jianpuWasm'
 import type { EditorHandle, PartInfo, ResolvedPartVisibility } from '../types'
 import { byteOffsetToStringIndex } from '../utils/byteSpan'
+import type { StaffNotation } from './useStaffNotation'
 
 interface PresetMenuInputs {
   source: string
@@ -11,7 +12,7 @@ interface PresetMenuInputs {
   wasmReady: boolean
   parts: PartInfo[]
   visibility: ResolvedPartVisibility
-  notation: Notation
+  staffNotation: StaffNotation
   editorRef: RefObject<EditorHandle | null>
   setChosenPreset: (presetName: string | null) => void
   handlePartToggle: (abbreviation: string, enabled: boolean) => void
@@ -32,14 +33,15 @@ function presetHeaderOffset(source: string, presetName: string | null) {
 
 /** The preset menu's props, and the part pill handler: under a preset in a
  * file you can edit, a pill rewrites the preset's `visible_parts`; on
- * Default or in a read-only file it only changes this browser's toggles. */
+ * Default or in a read-only file it only changes this browser's toggles.
+ * The notation menu works the same way on the preset's `notation` line. */
 export function usePresetMenu({
   source,
   readOnly,
   wasmReady,
   parts,
   visibility,
-  notation,
+  staffNotation,
   editorRef,
   setChosenPreset,
   handlePartToggle,
@@ -79,6 +81,23 @@ export function usePresetMenu({
     ],
   )
 
+  const { setNotation } = staffNotation
+  const handleNotationChange = useCallback(
+    (notation: Notation) => {
+      if (presetInForce == null || readOnly) {
+        setNotation(notation)
+        return
+      }
+      handleSourceChange(
+        jianpuWasm().updatePresetField(source, presetInForce, {
+          tag: 'notation',
+          val: notation,
+        }),
+      )
+    },
+    [presetInForce, readOnly, source, setNotation, handleSourceChange],
+  )
+
   const presetMenuProps: PresetMenuProps = {
     presets,
     presetInForce,
@@ -94,7 +113,7 @@ export function usePresetMenu({
               visibleParts: parts
                 .map((part) => part.abbreviation)
                 .filter((abbreviation) => !hidden.has(abbreviation)),
-              notation,
+              notation: staffNotation.notation,
             }),
           )
           setChosenPreset(name)
@@ -105,5 +124,9 @@ export function usePresetMenu({
     },
   }
 
-  return { handlePartPillToggle, presetMenuProps }
+  return {
+    handlePartPillToggle,
+    presetMenuProps,
+    staffNotation: { ...staffNotation, setNotation: handleNotationChange },
+  }
 }
