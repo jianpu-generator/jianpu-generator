@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { jianpuWasm } from '../jianpuWasm'
 import type { ResolvedPartVisibility } from '../types'
 import type {
@@ -47,8 +47,10 @@ function presetNotation(
     .find((preset) => preset.name === presetName)?.notation
 }
 
-/** The preview's notation: the in-force preset's `notation` line, else the
- * one picked in this session (jianpu until then). While it's a staff
+/** The preview's notation: the one picked in this session under the preset
+ * in force, else that preset's `notation` line, else jianpu. Under a preset
+ * in a file you can edit, the picker rewrites the `notation` line instead
+ * (`usePresetMenu`), so only a read-only view picks one. While it's a staff
  * notation, asks the worker to engrave the current source with Verovio.
  * Nothing is requested — and Verovio is never downloaded — until the
  * preview first shows staff. */
@@ -60,12 +62,22 @@ export function useStaffNotation({
   debounceMs,
 }: UseStaffNotationParams): StaffNotation {
   const { requestIdRef, latestIdRef, pendingRequestsRef } = staffRenderTracker
-  const [pickedNotation, setNotation] = useState<Notation>('jianpu')
+  // Preset name → the notation picked under it; Default is `''`, a name no
+  // preset can have.
+  const [pickedNotations, setPickedNotations] = useState<
+    Record<string, Notation>
+  >({})
+  const pickKey = visibility.presetName ?? ''
+  const setNotation = useCallback(
+    (picked: Notation) =>
+      setPickedNotations((previous) => ({ ...previous, [pickKey]: picked })),
+    [pickKey],
+  )
   const fromPreset = useMemo(
     () => presetNotation(source, visibility.presetName),
     [source, visibility.presetName],
   )
-  const notation = fromPreset ?? pickedNotation
+  const notation = pickedNotations[pickKey] ?? fromPreset ?? 'jianpu'
   const [score, setScore] = useState<StaffScore>(EMPTY_SCORE)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
