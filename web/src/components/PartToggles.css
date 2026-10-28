@@ -196,8 +196,10 @@
   opacity: 0.75;
 }
 
-.preset-menu-trigger {
+/* As tall as the part pills beside it. */
+.section-jump-btn.preset-menu-trigger {
   gap: 4px;
+  height: 28px;
 }
 
 .notation-toggle-item + .preset-menu-action {
