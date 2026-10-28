@@ -7,6 +7,7 @@ import {
   OVER_BRACKETED_CHORD_LYRICS_SOURCE,
   OVERFLOWING_MELODY_SOURCE,
   SOURCE,
+  UNWRITTEN_LYRICS_SOURCE,
 } from './part-stream-editor-sources'
 
 declare global {
@@ -137,6 +138,10 @@ Given('the overflowing melody fixture is loaded instead', async ({ page }) => {
 
 Given('the held note melody fixture is loaded instead', async ({ page }) => {
   await loadSource(page, HELD_NOTE_MELODY_SOURCE)
+})
+
+Given('the unwritten lyrics fixture is loaded instead', async ({ page }) => {
+  await loadSource(page, UNWRITTEN_LYRICS_SOURCE)
 })
 
 Given(

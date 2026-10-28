@@ -910,7 +910,7 @@ The editor re-bars the stream on every keystroke, so each line always holds exac
 
 ### Lyric streams
 
-A lyric stream is cut into measures by its target's **lyric slots**: each measure takes as many syllables as its target has notes that aren't the continuation of a tie (ties carry across barlines). `-` held syllables count as syllables. A measure whose target has no slots takes nothing. If the stream runs out partway through a measure, that measure keeps what it has (a warning; it shows the usual lyrics-underflow warning after Apply). Syllables left over after the last slot are an error — a lyric stream can't add measures.
+A lyric stream is cut into measures by its target's **lyric slots**: each measure takes as many syllables as its target has notes that aren't the continuation of a tie (ties carry across barlines). `-` held syllables count as syllables. A measure whose target has no slots takes nothing. If the stream runs out partway through a measure, that measure keeps what it has (a warning; it shows the usual lyrics-underflow warning after Apply). Syllables left over after the last slot are an error — a lyric stream can't add measures — except `_` placeholders pushed past the end by syllables typed before them, which are deleted.
 
 ### Lyric streams under a chords part
 

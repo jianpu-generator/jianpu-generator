@@ -37,7 +37,8 @@ pub struct FormattedPartStream {
 /// line. Whitespace right before a measure becomes one `\n`, any other
 /// whitespace holding a line break becomes one space, and leading
 /// whitespace is dropped; everything else (spaces inside a measure, the
-/// stream's trailing whitespace) stays as typed.
+/// stream's trailing whitespace) stays as typed. The only non-whitespace
+/// edit deletes a lyric stream's `_` placeholders pushed past its last slot.
 pub fn format_part_stream(
     source: &str,
     abbreviation: &str,
@@ -84,8 +85,12 @@ fn formatting_edits(source: &str, abbreviation: &str, stream: &str) -> Vec<Strea
     if measure_starts.is_empty() {
         return Vec::new();
     }
+    let dropped_placeholders = split.dropped_placeholders;
+    let outside_dropped_placeholders =
+        |run: &Span| dropped_placeholders.is_none_or(|dropped| run.end <= dropped.start);
     let whitespace_edits = whitespace_runs(stream)
         .filter(|run| run.end < stream.len())
+        .filter(outside_dropped_placeholders)
         .filter_map(|run| {
             let text = stream.get(run.start..run.end).unwrap_or_default();
             let replacement = if run.start == 0 {
@@ -115,8 +120,13 @@ fn formatting_edits(source: &str, abbreviation: &str, stream: &str) -> Vec<Strea
             span: Span::new(start, start),
             replacement: "\n".to_string(),
         });
+    let deleted_placeholders = dropped_placeholders.map(|span| StreamTextEdit {
+        span,
+        replacement: String::new(),
+    });
     whitespace_edits
         .chain(inserted_breaks)
+        .chain(deleted_placeholders)
         .sorted_by_key(|edit| edit.span.start)
         .collect()
 }

@@ -183,6 +183,7 @@ pub(super) fn split_chord_lyric_stream(
         measure_starts: pieces.iter().map(|piece| piece.start).collect(),
         blocks_rebarring: has_error(&diagnostics),
         diagnostics,
+        dropped_placeholders: None,
     }
 }
 

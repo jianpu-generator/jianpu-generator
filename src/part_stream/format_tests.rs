@@ -208,6 +208,22 @@ fn a_lyric_stream_past_its_last_slot_is_left_as_typed() {
 }
 
 #[test]
+fn placeholders_pushed_past_the_last_slot_by_typed_lyrics_are_deleted() {
+    assert_eq!(
+        formatted(THREE_MEASURES, "W", "a b c d\ne f g h _\n_\n_\n"),
+        "a b c d\ne f g h\n_\n"
+    );
+}
+
+#[test]
+fn a_cursor_among_deleted_placeholders_moves_to_the_last_kept_syllable() {
+    assert_eq!(
+        formatted_with_cursor(THREE_MEASURES, "W", "a b c d e f g h _ _ _|"),
+        "a b c d\ne f g h\n_|"
+    );
+}
+
+#[test]
 fn a_measure_without_lyric_slots_adds_no_blank_line() {
     let source = r"# parts
 Melody [M] = notes

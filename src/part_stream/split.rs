@@ -26,6 +26,10 @@ pub(super) struct SplitStream {
     /// left as typed. A note or tuplet crossing a barline doesn't count: the
     /// re-bar itself can move it there, and it stays a diagnostic.
     pub(super) blocks_rebarring: bool,
+    /// No-lyrics placeholders pushed past the last slot by syllables typed
+    /// before them, from the end of the last measure: the formatter deletes
+    /// them, and Apply ignores them.
+    pub(super) dropped_placeholders: Option<Span>,
 }
 
 /// Where a measure starts in the stream: the first cluster's index and the
@@ -93,6 +97,7 @@ pub(super) fn split_timed_stream(
                 measure_starts: Vec::new(),
                 diagnostics,
                 blocks_rebarring: true,
+                dropped_placeholders: None,
             };
         }
     };
@@ -138,6 +143,7 @@ pub(super) fn split_timed_stream(
             .collect(),
         diagnostics,
         blocks_rebarring,
+        dropped_placeholders: None,
     }
 }
 
