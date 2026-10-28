@@ -36,7 +36,7 @@ database (id in
 [`crates/live-share-worker/deploy.json`](crates/live-share-worker/deploy.json)).
 Authenticate once with `pnpm exec cf auth login`, then run a saved query from
 [`crates/live-share-worker/queries/observability/`](crates/live-share-worker/queries/observability/)
-(see "Debugging production" in [`CLAUDE.md`](CLAUDE.md)):
+(see "Debugging production" in [`AGENTS.md`](AGENTS.md)):
 
 ```sh
 cd crates/live-share-worker
