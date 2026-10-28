@@ -830,8 +830,15 @@ world jianpu-wasm {
         font-family: font-family-choice,
     }
 
-    // What each scalar `# metadata` field resolves to when left unset.
+    // What each scalar field of the edited section resolves to when left
+    // unset: the song's `# metadata` value when editing a preset, else the
+    // documented default.
     record metadata-defaults {
+        // Text fields have no documented default; `none` unless a preset
+        // inherits them from `# metadata`.
+        title: option<string>,
+        subtitle: option<string>,
+        author: option<string>,
         row-height: u32,
         max-measures-per-system: u32,
         note-number-width: u32,
@@ -973,13 +980,18 @@ world jianpu-wasm {
         flag(metadata-flag-edit),
         directive-row-offset(option<string>),
         style(metadata-style-edit),
+        // Removes every component of one kind's style.
+        reset-style(text-style-kind),
     }
 
-    export parse-metadata-fields: func(source: string) -> metadata-fields;
+    // The fields of the preset named `preset-name`, or of `# metadata` when
+    // `none` (or no preset has that name).
+    export parse-metadata-fields: func(source: string, preset-name: option<string>) -> metadata-fields;
 
-    // Applies one edit and rewrites the `# metadata` section in canonical
-    // order; returns `source` unchanged when it has no such section.
-    export update-metadata-field: func(source: string, edit: metadata-edit) -> string;
+    // Applies one edit to the section `parse-metadata-fields` reads and
+    // rewrites it in canonical order; returns `source` unchanged when it has
+    // no such section.
+    export update-metadata-field: func(source: string, preset-name: option<string>, edit: metadata-edit) -> string;
 
     // How the preview and exports draw the score (`jianpu_generator::ast::parsed::Notation`).
     enum notation {

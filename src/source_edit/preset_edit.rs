@@ -52,7 +52,7 @@ pub struct NewPreset {
     pub notation: Notation,
 }
 
-fn preset_section(source: &str, name: &str) -> Option<RawSection> {
+pub(super) fn preset_section(source: &str, name: &str) -> Option<RawSection> {
     split_sections(source).0.into_iter().find(|section| {
         section.kind == SectionKind::Preset
             && section

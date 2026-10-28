@@ -59,6 +59,7 @@ export function AppWorkspace({
   previewAudioPlaying,
   editMetadataOpen,
   parsedMetadata,
+  metadataPresetName,
   handleMetadataFieldChange,
   documents,
   highlightedDocuments,
@@ -303,6 +304,7 @@ export function AppWorkspace({
               open={editMetadataOpen}
               onOpenChange={setEditMetadataOpen}
               metadata={parsedMetadata}
+              presetName={metadataPresetName}
               onFieldChange={handleMetadataFieldChange}
               container={editorPaneEl}
             />

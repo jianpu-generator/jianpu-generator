@@ -195,12 +195,16 @@ impl Guest for Component {
         generate_percussion_preview_wav(key, soundfont)
     }
 
-    fn parse_metadata_fields(source: String) -> MetadataFields {
-        parse_metadata_fields(source)
+    fn parse_metadata_fields(source: String, preset_name: Option<String>) -> MetadataFields {
+        parse_metadata_fields(source, preset_name)
     }
 
-    fn update_metadata_field(source: String, edit: MetadataEdit) -> String {
-        update_metadata_field(source, edit)
+    fn update_metadata_field(
+        source: String,
+        preset_name: Option<String>,
+        edit: MetadataEdit,
+    ) -> String {
+        update_metadata_field(source, preset_name, edit)
     }
 
     fn highlight_tokens(source: String) -> Vec<HighlightToken> {

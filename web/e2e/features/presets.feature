@@ -95,3 +95,17 @@ Feature: Presets
     And I export "PDF (ZIP)" and capture the download, as seen in export pdf
     Then the downloaded file is named "test (Melody only).zip", as seen in export pdf
     And the downloaded zip holds only "test (Melody only) - Melody.pdf"
+
+  Scenario: Edit Metadata under a preset writes into the preset's section
+    Given the presets fixture is loaded
+    When I choose the "Melody only" preset
+    And I open the Edit Metadata modal
+    Then the edit metadata modal contains "Edit Metadata (Melody only)"
+    And the metadata "Title *" field is empty with the placeholder "Test"
+    When I fill the metadata "Title *" field with "Tune"
+    Then the "Melody only" preset has the line "title = \"Tune\""
+    And the "Melody only" preset has the line "visible_parts = M, Mv1"
+    And the editor source and stored source both contain "title = \"Test\""
+    When I reset the metadata "Title *" field
+    Then the metadata "Title *" field is empty with the placeholder "Test"
+    And the "Melody only" preset has no "title" line

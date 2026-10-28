@@ -19,6 +19,8 @@ export interface EditMetadataModalProps {
   /** `null` until the wasm-side parse is available (see
    * `useMetadataFields`); the modal shows no fields until then. */
   metadata: MetadataFields | null
+  /** The preset the form edits, or `null` for the song's `# metadata`. */
+  presetName: string | null
   onFieldChange: (edit: MetadataEdit) => void
   /** Element to confine the modal to (e.g. the editor pane), so it doesn't
    * cover the preview pane. Falls back to viewport-centered when null. */
@@ -68,9 +70,11 @@ export function EditMetadataModal({
   open,
   onOpenChange,
   metadata,
+  presetName,
   onFieldChange,
   container,
 }: EditMetadataModalProps) {
+  const editingPreset = presetName != null
   const [helpContent, setHelpContent] = useState<{
     label: string
     help: string
@@ -85,6 +89,11 @@ export function EditMetadataModal({
       help: `${metadataFieldHelp[kind]}\n\n${fontSizeDefaultHelp(fontSizeDefault)}`,
       value: fields,
       placeholder: defaults,
+      editingPreset,
+      onReset:
+        editingPreset && Object.values(fields).some((field) => field != null)
+          ? () => onFieldChange({ tag: 'reset-style', val: kind })
+          : undefined,
     }),
   )
 
@@ -136,7 +145,9 @@ export function EditMetadataModal({
             <Dialog.Title
               style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}
             >
-              Edit Metadata
+              {editingPreset
+                ? `Edit Metadata (${presetName})`
+                : 'Edit Metadata'}
             </Dialog.Title>
             <Dialog.Close
               style={{
@@ -182,6 +193,7 @@ export function EditMetadataModal({
                   metadata={metadata}
                   showHelp={showHelp}
                   onFieldChange={onFieldChange}
+                  editingPreset={editingPreset}
                 />
               </table>
             </div>

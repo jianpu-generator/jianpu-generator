@@ -356,6 +356,7 @@ export default function App() {
           previewAudioPlaying={previewAudioPlaying}
           editMetadataOpen={panels.editMetadataOpen}
           parsedMetadata={panels.parsedMetadata}
+          metadataPresetName={panels.metadataPresetName}
           handleMetadataFieldChange={panels.handleMetadataFieldChange}
           // The preview's click/hover resolvers call `jianpuWasm()`
           // synchronously, so its SVG only appears once the main-thread

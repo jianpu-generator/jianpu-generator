@@ -14,6 +14,8 @@ export function useAppPanels(
   ) => Promise<string>,
   shiftPartOctave: (abbreviation: string, delta: number) => Promise<string>,
   handleSourceChange: (value: string) => void,
+  /** The preset in force, whose section Edit Metadata edits. */
+  presetName: string | null,
 ) {
   const [editPartsOpen, setEditPartsOpen] = useState(false)
   const [editMetadataOpen, setEditMetadataOpen] = useState(false)
@@ -38,15 +40,17 @@ export function useAppPanels(
     [shiftPartOctave, handleSourceChange],
   )
 
-  const parsedMetadata = useMetadataFields(source, editMetadataOpen)
+  const parsedMetadata = useMetadataFields(source, presetName, editMetadataOpen)
 
   // Only reachable from the Edit Metadata modal, which renders its fields
   // once `parsedMetadata` is non-null, i.e. once the wasm is ready.
   const handleMetadataFieldChange = useCallback(
     (edit: MetadataEdit) => {
-      handleSourceChange(jianpuWasm().updateMetadataField(source, edit))
+      handleSourceChange(
+        jianpuWasm().updateMetadataField(source, presetName ?? undefined, edit),
+      )
     },
-    [source, handleSourceChange],
+    [source, presetName, handleSourceChange],
   )
 
   return {
@@ -65,6 +69,7 @@ export function useAppPanels(
     handlePartDeclarationChange,
     handleShiftPartOctave,
     parsedMetadata,
+    metadataPresetName: presetName,
     handleMetadataFieldChange,
   }
 }

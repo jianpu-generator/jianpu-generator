@@ -3,7 +3,8 @@ import { Given, Then, When } from './fixtures'
 
 // "the preview contains the chord content" and its negation come from
 // `part-toggles.steps.ts`; "I press undo in the main editor" from
-// `part-stream-editor.steps.ts`.
+// `part-stream-editor.steps.ts`; the Edit Metadata modal steps from
+// `edit-metadata-modal.steps.ts`.
 
 const PRESETS_SOURCE = [
   '# metadata',
@@ -265,5 +266,47 @@ Then(
         ),
       )
       .toBe(headerLine)
+  },
+)
+
+function metadataField(page: Page, label: string) {
+  return page.getByTestId('edit-metadata-modal').getByLabel(label, {
+    exact: true,
+  })
+}
+
+When(
+  'I fill the metadata {string} field with {string}',
+  async ({ page }, label: string, value: string) => {
+    await metadataField(page, label).fill(value)
+  },
+)
+
+When('I reset the metadata {string} field', async ({ page }, label: string) => {
+  await page
+    .getByTestId('edit-metadata-modal')
+    .getByRole('button', { name: `Reset ${label}`, exact: true })
+    .click()
+})
+
+Then(
+  'the metadata {string} field is empty with the placeholder {string}',
+  async ({ page }, label: string, placeholder: string) => {
+    const field = metadataField(page, label)
+    await expect(field).toHaveValue('')
+    await expect(field).toHaveAttribute('placeholder', placeholder)
+  },
+)
+
+Then(
+  'the {string} preset has no {string} line',
+  async ({ page }, name: string, key: string) => {
+    await expect
+      .poll(async () =>
+        presetLines(await editorSource(page), name).filter((line) =>
+          line.startsWith(`${key} =`),
+        ),
+      )
+      .toEqual([])
   },
 )

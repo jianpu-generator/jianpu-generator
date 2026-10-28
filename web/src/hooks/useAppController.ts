@@ -188,6 +188,7 @@ export function useAppController() {
     updatePartDeclaration,
     shiftPartOctave,
     handleSourceChange,
+    visibility.presetName ?? null,
   )
 
   const {

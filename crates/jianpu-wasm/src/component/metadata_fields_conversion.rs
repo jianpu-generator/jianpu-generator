@@ -155,6 +155,9 @@ fn font_size_default_to_wit(rule: grouped::FontSizeDefault) -> FontSizeDefault {
 
 fn metadata_defaults_to_wit(defaults: &grouped::Metadata) -> MetadataDefaults {
     MetadataDefaults {
+        title: defaults.title.clone(),
+        subtitle: defaults.subtitle.clone(),
+        author: defaults.author.clone(),
         row_height: defaults.row_height,
         max_measures_per_system: defaults.max_measures_per_system,
         note_number_width: defaults.note_number_width,
@@ -171,8 +174,9 @@ pub(super) fn metadata_fields_to_wit(fields: source_edit::MetadataFields) -> Met
     let source_edit::MetadataFields {
         metadata,
         directive_row_offset,
+        inherited,
     } = fields;
-    let defaults = grouper::metadata_defaults(&metadata);
+    let defaults = grouper::metadata_defaults(&inherited, &metadata);
     MetadataFields {
         styles: parsed::TextStyleKind::ALL
             .iter()
@@ -220,5 +224,8 @@ pub(super) fn metadata_edit_from_wit(edit: MetadataEdit) -> source_edit::Metadat
             kind: text_style_kind_from_wit(edit.kind),
             value: text_style_component_value_from_wit(edit.value),
         },
+        MetadataEdit::ResetStyle(kind) => {
+            source_edit::MetadataEdit::ResetStyle(text_style_kind_from_wit(kind))
+        }
     }
 }
