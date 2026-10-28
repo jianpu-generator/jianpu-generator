@@ -39,7 +39,7 @@ export function PresetMenu({
         <ResponsiveMenu.Trigger asChild>
           <button
             type="button"
-            className="section-jump-btn preset-menu-trigger"
+            className="preset-menu-trigger"
             aria-label={`Preset: ${presetInForce ?? DEFAULT_LABEL}`}
             data-testid="preset-menu"
           >
