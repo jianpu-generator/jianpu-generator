@@ -6,8 +6,7 @@ use crate::grid_layout::layout::{
     MUSIC_START_COL,
 };
 use crate::grid_layout::types::{
-    GridContent, GridElement, GridRow, HAlign, Header, MeasureColumnLayout, PartListEntry,
-    TextStyleFlags, VAlign,
+    GridContent, GridElement, GridRow, HAlign, Header, MeasureColumnLayout, PartListEntry, VAlign,
 };
 
 /// Whether `block`'s (index `index` within its system) `DirectiveLine`
@@ -187,7 +186,8 @@ fn make_sequence_rows(header: &Header, base: f32, include_part_list: bool) -> Ve
                     elements: vec![],
                 },
                 GridRow {
-                    height_pt: decoration_row_height(base),
+                    height_pt: decoration_row_height(base)
+                        + 2.0 * header.sequence_vertical_padding_pt,
                     column_count: 1,
                     has_label_region: false,
                     measure_layout: vec![],
@@ -284,18 +284,7 @@ pub(crate) fn make_header_rows(
             .iter()
             .filter(|entry| entry.abbreviation != entry.display_name)
             .collect();
-        make_part_list_rows(
-            &entries,
-            base,
-            header.parts_list_columns,
-            header.part_legend_font_size,
-            TextStyleFlags {
-                bold: header.part_legend_bold,
-                italic: header.part_legend_italic,
-                underline: header.part_legend_underline,
-            },
-            header.part_legend_font_family,
-        )
+        make_part_list_rows(&entries, base, header)
     } else {
         vec![]
     };
@@ -308,19 +297,13 @@ pub(crate) fn make_header_rows(
         .collect()
 }
 
-fn make_part_list_rows(
-    entries: &[&PartListEntry],
-    base: f32,
-    columns: u32,
-    font_size: f32,
-    style: TextStyleFlags,
-    font_family: crate::compositor::types::FontFamily,
-) -> Vec<GridRow> {
+fn make_part_list_rows(entries: &[&PartListEntry], base: f32, header: &Header) -> Vec<GridRow> {
     entries
-        .chunks(columns as usize)
+        .chunks(header.parts_list_columns as usize)
         .map(|chunk| GridRow {
-            height_pt: header_part_list_row_height(base),
-            column_count: columns,
+            height_pt: header_part_list_row_height(base)
+                + 2.0 * header.part_legend_vertical_padding_pt,
+            column_count: header.parts_list_columns,
             has_label_region: false,
             measure_layout: vec![],
             elements: chunk
@@ -333,11 +316,11 @@ fn make_part_list_rows(
                     valign: VAlign::Center,
                     content: GridContent::Text {
                         content: format!("{} \u{2014} {}", entry.abbreviation, entry.display_name),
-                        font_size,
-                        bold: style.bold,
-                        italic: style.italic,
-                        underline: style.underline,
-                        font_family,
+                        font_size: header.part_legend_font_size,
+                        bold: header.part_legend_bold,
+                        italic: header.part_legend_italic,
+                        underline: header.part_legend_underline,
+                        font_family: header.part_legend_font_family,
                     },
                 })
                 .collect(),

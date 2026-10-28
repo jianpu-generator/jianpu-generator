@@ -29,7 +29,7 @@
 
 use cucumber::{given, then, when, World as _};
 use jianpu_generator::compositor::types::{AbsoluteContent, AbsolutePage};
-use jianpu_generator::grid_layout::types::GridPage;
+use jianpu_generator::grid_layout::types::{GridContent, GridPage};
 use jianpu_generator::renderer::new_renderer::render_new;
 use jianpu_generator::renderer::new_types::{SvgDocument, SvgKind};
 use jianpu_generator::{coordinate_resolver, grid_layout};
@@ -70,14 +70,22 @@ fn render_source(metadata_lines: &[String], title: &str, score_body: &str) -> Re
         title: score.metadata.title.clone(),
         subtitle: score.metadata.subtitle.clone(),
         author: score.metadata.author.clone(),
-        part_list: vec![],
+        part_list: vec![grid_layout::types::PartListEntry {
+            abbreviation: "S".to_string(),
+            display_name: "Soprano".to_string(),
+        }],
         parts_list_columns: 3,
-        sequence: None,
+        sequence: Some(vec![grid_layout::types::SequenceEntryInfo {
+            label: "A".to_string(),
+            part_filter: None,
+        }]),
         title_font_size: score.metadata.title_style.font_size as f32,
         subtitle_font_size: score.metadata.subtitle_style.font_size as f32,
         author_font_size: score.metadata.author_style.font_size as f32,
         sequence_font_size: score.metadata.sequence.font_size as f32,
         part_legend_font_size: score.metadata.part_legend.font_size as f32,
+        part_legend_vertical_padding_pt: score.metadata.part_legend.vertical_padding_pt as f32,
+        sequence_vertical_padding_pt: score.metadata.sequence.vertical_padding_pt as f32,
         ..Default::default()
     };
     let compile_result = jianpu_generator::compiler::compile(&score);
@@ -238,9 +246,27 @@ fn page_number_box_height_pt(result: &RenderResult) -> f32 {
     page.height_pt - text_y
 }
 
+/// Height of the first page's header row holding the element `is_target`
+/// matches — the part legend entry or the `# sequence` summary line.
+fn header_row_height_pt(result: &RenderResult, is_target: fn(&GridContent) -> bool) -> f32 {
+    result.grid_pages[0]
+        .rows
+        .iter()
+        .find(|row| row.elements.iter().any(|e| is_target(&e.content)))
+        .map(|row| row.height_pt)
+        .expect("header row should be present")
+}
+
 fn box_height_pt(result: &RenderResult, kind: &str) -> f32 {
     match kind {
         "notes" => notes_body_height_pt(result),
+        "part_legend" => header_row_height_pt(
+            result,
+            |content| matches!(content, GridContent::Text { content, .. } if content == "S \u{2014} Soprano"),
+        ),
+        "sequence" => header_row_height_pt(result, |content| {
+            matches!(content, GridContent::SequenceLine { .. })
+        }),
         "section_label" => section_label_box_height_pt(result),
         "page_number" => page_number_box_height_pt(result),
         other => panic!("unrecognized text style kind {other:?}"),
