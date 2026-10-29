@@ -199,13 +199,8 @@ fn parse_rhs_suffix_tokens(
     for token in tokens {
         match &token.value {
             PartsToken::Soundfont(inner) => {
-                soundfont = Some(validate_soundfont(
-                    inner,
-                    token.span,
-                    errors,
-                    instruments,
-                    is_percussion,
-                ));
+                soundfont =
+                    validate_soundfont(inner, token.span, errors, instruments, is_percussion);
             }
             PartsToken::Volume(written) => {
                 volume = Some(checked_volume(*written, token.span, errors));

@@ -15,6 +15,8 @@ pub use setting_limits::{
 use declaration_parsing::parse_declaration_line;
 
 #[cfg(test)]
+mod default_soundfont_tests;
+#[cfg(test)]
 mod lexer_tests;
 #[cfg(test)]
 mod lyrics_part_tests;
@@ -278,7 +280,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                 display_name,
                 kind,
                 follow_target: None,
-                soundfont: soundfont.unwrap_or_default(),
+                soundfont: soundfont.unwrap_or(kind.default_soundfont()),
                 volume: volume.unwrap_or(DEFAULT_PART_VOLUME),
                 octave_offset: octave_offset.unwrap_or(DEFAULT_PART_OCTAVE_OFFSET),
             }),
@@ -338,7 +340,7 @@ fn resolve_lyrics_declaration(
         display_name: header.display_name,
         kind: PartKind::Lyrics { target_part_index },
         follow_target: None,
-        soundfont: Soundfont::default(),
+        soundfont: PartKind::Lyrics { target_part_index }.default_soundfont(),
         volume: DEFAULT_PART_VOLUME,
         octave_offset: DEFAULT_PART_OCTAVE_OFFSET,
     })

@@ -31,10 +31,9 @@ pub struct ParsedLyrics {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Soundfont(pub u8);
 
-impl Default for Soundfont {
-    fn default() -> Self {
-        Self(52) // Choir Aahs
-    }
+impl Soundfont {
+    pub const ACOUSTIC_GRAND_PIANO: Self = Self(0);
+    pub const CHOIR_AAHS: Self = Self(52);
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -70,6 +69,15 @@ impl PartKind {
     /// target's notes.
     pub fn sounds(self) -> bool {
         !matches!(self, Self::Lyrics { .. })
+    }
+
+    /// The soundfont a concrete part of this kind plays with when its
+    /// declaration names none.
+    pub fn default_soundfont(self) -> Soundfont {
+        match self {
+            Self::Chords | Self::Notes => Soundfont::ACOUSTIC_GRAND_PIANO,
+            Self::Percussion | Self::Lyrics { .. } => Soundfont::CHOIR_AAHS,
+        }
     }
 }
 
