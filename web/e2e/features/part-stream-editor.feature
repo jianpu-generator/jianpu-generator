@@ -119,12 +119,18 @@ Feature: Part focus editor
       j k l
       """
 
-  Scenario: Typing past the last lyric slot is an error and is not re-cut
+  Scenario: Typing past the last lyric slot adds a measure on its own line
     When I choose part "W" from the Edit part as stream menu
     And I place the cursor at the end of the part focus stream
     And I type " extra" in the part focus editor
-    Then the part focus editor has an error marker
-    And the part focus Apply button is disabled
+    Then the part focus stream is:
+      """
+      a b c d
+      e f g h
+      i j k l
+      extra
+      """
+    And the part focus status says "1 measure changed"
 
   Scenario: Typing lyrics before the no-lyrics placeholders drops the ones pushed past the end
     Given the unwritten lyrics fixture is loaded instead

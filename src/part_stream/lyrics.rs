@@ -1,6 +1,8 @@
 //! Lyric parts bound to a notes part: measures are cut by the target's
 //! **lyric slots** (its notes that aren't the continuation of a tie), never
-//! by guessing from the lyric text.
+//! by guessing from the lyric text. Past the last slot, each line is a measure.
+
+use itertools::Itertools;
 
 use crate::ast::parsed::Syllable;
 use crate::error::Span;
@@ -9,9 +11,7 @@ use crate::parser::score::timed_parser::GroupStack;
 use crate::parser::score::token_parser::parse_notes_line;
 use crate::utils::{count_lyric_slots_in_events, tokenize_lyrics, LyricTieState};
 
-use super::diagnostics::{
-    error_at, forbidden_character_errors, has_error, warning_at, AllowedMarkers,
-};
+use super::diagnostics::{forbidden_character_errors, has_error, warning_at, AllowedMarkers};
 use super::document::ScoreDocument;
 use super::split::SplitStream;
 use super::timing::normalize_whitespace;
@@ -86,9 +86,10 @@ pub(super) fn extract_lyric_chunks(
         .collect()
 }
 
-/// Cuts a lyric stream into measures by `slot_counts`. Lyric streams can't
-/// add measures: syllables left after the last slot are an error, unless
-/// they are all `_` (placeholders pushed out by syllables typed before them).
+/// Cuts a lyric stream into measures by `slot_counts`. Syllables left after
+/// the last slot are appended as new measures, one per line (see
+/// [`appended_measures`]), unless they are all `_`: placeholders pushed out
+/// by syllables typed before them, which are dropped.
 pub(super) fn split_lyric_stream(stream: &str, slot_counts: &[usize]) -> SplitStream {
     let mut diagnostics = forbidden_character_errors(stream, AllowedMarkers::default());
     let syllables = tokenize_lyrics(stream, 0);
@@ -139,11 +140,12 @@ pub(super) fn split_lyric_stream(stream: &str, slot_counts: &[usize]) -> SplitSt
             .last()
             .map(|last| Span::new(previous_end, last.span.end))
     } else {
-        if let Some(leftover) = leftovers.first() {
-            diagnostics.push(error_at(
-                leftover.span,
-                "this syllable has no note left to sing on; a lyric stream can't add measures",
+        for measure in appended_measures(stream, leftovers) {
+            let span = covering_span(measure).unwrap_or(Span::new(previous_end, previous_end));
+            chunks.push(normalize_whitespace(
+                stream.get(span.start..span.end).unwrap_or_default(),
             ));
+            measure_starts.push(span.start);
         }
         None
     };
@@ -154,6 +156,32 @@ pub(super) fn split_lyric_stream(stream: &str, slot_counts: &[usize]) -> SplitSt
         diagnostics,
         dropped_placeholders,
     }
+}
+
+/// Syllables past the last slot have no notes to cut them by, so each line
+/// of them is one new measure, and `_` is a whole measure on its own.
+fn appended_measures<'a>(stream: &str, leftovers: &'a [Syllable]) -> Vec<&'a [Syllable]> {
+    let starts = std::iter::once(0)
+        .chain(
+            leftovers
+                .iter()
+                .tuple_windows()
+                .positions(|(previous, current)| {
+                    previous.text == NO_LYRICS_MEASURE
+                        || current.text == NO_LYRICS_MEASURE
+                        || stream
+                            .get(previous.span.end..current.span.start)
+                            .is_some_and(|between| between.contains('\n'))
+                })
+                .map(|index| index + 1),
+        )
+        .collect_vec();
+    starts
+        .iter()
+        .zip(starts.iter().skip(1).copied().chain([leftovers.len()]))
+        .filter_map(|(&start, end)| leftovers.get(start..end))
+        .filter(|measure| !measure.is_empty())
+        .collect()
 }
 
 fn covering_span(syllables: &[Syllable]) -> Option<Span> {

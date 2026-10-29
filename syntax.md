@@ -939,7 +939,7 @@ The editor re-bars the stream on every keystroke, so each line always holds exac
 
 ### Lyric streams
 
-A lyric stream is cut into measures by its target's **lyric slots**: each measure takes as many syllables as its target has notes that aren't the continuation of a tie (ties carry across barlines). `-` held syllables count as syllables. A measure whose target has no slots takes nothing. If the stream runs out partway through a measure, that measure keeps what it has (a warning; it shows the usual lyrics-underflow warning after Apply). Syllables left over after the last slot are an error — a lyric stream can't add measures — except `_` placeholders pushed past the end by syllables typed before them, which are deleted.
+A lyric stream is cut into measures by its target's **lyric slots**: each measure takes as many syllables as its target has notes that aren't the continuation of a tie (ties carry across barlines). `-` held syllables count as syllables. A measure whose target has no slots takes nothing. If the stream runs out partway through a measure, that measure keeps what it has (a warning; it shows the usual lyrics-underflow warning after Apply). Syllables past the last slot are appended to the score as new measures, so lyrics can be written before the notes: each line of them is one measure, and `_` is a measure on its own. If every syllable past the last slot is `_` (placeholders pushed past the end by syllables typed before them), they are deleted instead.
 
 ### Lyric streams under a chords part
 
@@ -971,7 +971,7 @@ l = lyrics[c]
 ### Applying a longer or shorter stream
 
 - **Shorter** (e.g. after deleting a note): the rest of the last measure is filled with rests, and later measures drop this part's line. A follow part writes explicit rests there instead (dropping the line would make it copy its target); a lyric part just drops its lines. A group whose only data line is this part keeps that line as a rest fill (`_` for lyrics) rather than becoming empty.
-- **Longer**: each extra measure is appended to the end of the `# score` as a new group holding only this part's line. Only a lyric stream under a chords part can add measures (it marks each one with `|`); a lyric stream under a notes part can't.
+- **Longer**: each extra measure is appended to the end of the `# score` as a new group holding only this part's line. A lyric stream marks each extra measure with a new line (under a notes part) or `|` (under a chords part).
 
 Apply is refused while the stream has any error; warnings don't block it.
 
