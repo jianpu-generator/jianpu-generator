@@ -202,9 +202,11 @@ fn a_lyric_stream_is_re_cut_by_its_targets_slots() {
 }
 
 #[test]
-fn a_lyric_stream_past_its_last_slot_is_left_as_typed() {
-    let result = format_part_stream(THREE_MEASURES, "W", "a b c d e f g h i j k l\nm", &[]);
-    assert_eq!(result.edits, vec![]);
+fn each_line_of_a_lyric_stream_past_its_last_slot_is_a_measure() {
+    assert_eq!(
+        formatted(THREE_MEASURES, "W", "a b c d e f g h i j k l m n\no"),
+        "a b c d\ne f g h\ni j k l\nm n\no"
+    );
 }
 
 #[test]

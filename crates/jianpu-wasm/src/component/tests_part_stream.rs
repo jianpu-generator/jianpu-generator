@@ -119,14 +119,11 @@ fn a_barline_is_an_error_and_yields_no_source() {
 }
 
 #[test]
-fn a_leftover_cjk_syllable_is_spanned_in_utf8_bytes() {
+fn a_leftover_cjk_syllable_starts_a_measure_at_its_utf8_byte_offset() {
     let result = apply("W", "你 好 世 界 一 二 三 四 五");
-    assert_eq!(result.source, None);
-    assert_eq!(result.diagnostics.len(), 1);
-    let diagnostic = &result.diagnostics[0];
-    assert!(matches!(diagnostic.severity, DiagnosticSeverity::Error));
-    assert_eq!((diagnostic.span.start, diagnostic.span.end), (32, 35));
-    assert!(diagnostic.message.contains("can't add measures"));
+    assert!(result.diagnostics.is_empty());
+    assert_eq!(result.measure_starts.last(), Some(&32));
+    assert!(result.source.unwrap().ends_with("[W] 五\n"));
 }
 
 #[test]

@@ -119,12 +119,18 @@ Feature: Part focus editor
       j k l
       """
 
-  Scenario: Typing past the last lyric slot is an error and is not re-cut
+  Scenario: Typing past the last lyric slot adds a measure on its own line
     When I choose part "W" from the Edit part as stream menu
     And I place the cursor at the end of the part focus stream
     And I type " extra" in the part focus editor
-    Then the part focus editor has an error marker
-    And the part focus Apply button is disabled
+    Then the part focus stream is:
+      """
+      a b c d
+      e f g h
+      i j k l
+      extra
+      """
+    And the part focus status says "1 measure changed"
 
   Scenario: Typing lyrics before the no-lyrics placeholders drops the ones pushed past the end
     Given the unwritten lyrics fixture is loaded instead
@@ -151,7 +157,7 @@ Feature: Part focus editor
     And I place the cursor at the start of part focus line 1
     And I type "x" in the part focus editor
     And I place the cursor at the end of the part focus stream
-    And I type " extra" in the part focus editor
+    And I type " @" in the part focus editor
     Then the part focus editor has an error marker
     And the preview shows the text "xa"
 
@@ -219,6 +225,15 @@ Feature: Part focus editor
       (e) f
       """
     And the part focus status says "0 measures changed"
+
+  Scenario: A lyric stream bound to a chords part adds measures past the end of the score
+    Given the chord-bound lyrics fixture is loaded instead
+    When I choose part "C" from the Edit part as stream menu
+    And I place the cursor at the end of the part focus stream
+    And I type " | g h" in the part focus editor
+    Then the part focus status says "1 measure changed"
+    When I apply the part focus editor
+    Then the main editor source is the appended chord lyrics source
 
   Scenario: Applying the untouched stream re-bars an overflowing measure
     Given the overflowing melody fixture is loaded instead

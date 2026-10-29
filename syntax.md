@@ -939,7 +939,7 @@ The editor re-bars the stream on every keystroke, so each line always holds exac
 
 ### Lyric streams
 
-A lyric stream is cut into measures by its target's **lyric slots**: each measure takes as many syllables as its target has notes that aren't the continuation of a tie (ties carry across barlines). `-` held syllables count as syllables. A measure whose target has no slots takes nothing. If the stream runs out partway through a measure, that measure keeps what it has (a warning; it shows the usual lyrics-underflow warning after Apply). Syllables left over after the last slot are an error — a lyric stream can't add measures — except `_` placeholders pushed past the end by syllables typed before them, which are deleted.
+A lyric stream is cut into measures by its target's **lyric slots**: each measure takes as many syllables as its target has notes that aren't the continuation of a tie (ties carry across barlines). `-` held syllables count as syllables. A measure whose target has no slots takes nothing. If the stream runs out partway through a measure, that measure keeps what it has (a warning; it shows the usual lyrics-underflow warning after Apply). Syllables past the last slot are appended to the score as new measures, so lyrics can be written before the notes: each line of them is one measure, and `_` is a measure on its own. If every syllable past the last slot is `_` (placeholders pushed past the end by syllables typed before them), they are deleted instead.
 
 ### Lyric streams under a chords part
 
@@ -966,12 +966,12 @@ l = lyrics[c]
 - Each `|` ends a measure; a trailing `|` at the end of the stream doesn't open another one. Moving a `|` moves syllables between the neighbouring measures.
 - A measure the part doesn't write shows as `_`. An empty measure (`| |`) is an error; write `_` for a measure without lyrics.
 - Each measure is checked like a lyric line under a chord part: bracket mistakes and more bracketed items than the measure's chord attacks (counting an unbracketed first syllable on a beat-1 chord) are errors in the stream.
-- More measures than the score has are an error (a lyric stream can't add measures). Fewer is a warning: the measures after the stream's end lose their lyrics on Apply.
+- Measures past the end of the score are appended to it, so lyrics can be written before the chords: the chords part writes nothing there, so a bracketed item in such a measure is an error. Fewer measures is a warning: the measures after the stream's end lose their lyrics on Apply.
 
 ### Applying a longer or shorter stream
 
 - **Shorter** (e.g. after deleting a note): the rest of the last measure is filled with rests, and later measures drop this part's line. A follow part writes explicit rests there instead (dropping the line would make it copy its target); a lyric part just drops its lines. A group whose only data line is this part keeps that line as a rest fill (`_` for lyrics) rather than becoming empty.
-- **Longer**: each extra measure is appended to the end of the `# score` as a new group holding only this part's line. Lyric streams can't add measures.
+- **Longer**: each extra measure is appended to the end of the `# score` as a new group holding only this part's line. A lyric stream marks each extra measure with a new line (under a notes part) or `|` (under a chords part).
 
 Apply is refused while the stream has any error; warnings don't block it.
 

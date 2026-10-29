@@ -165,13 +165,32 @@ Words [W] = lyrics[M]
 }
 
 #[test]
-fn leftover_syllables_are_an_error_on_the_first_leftover() {
-    let result = apply_part_stream(TWO_MEASURES, "W", "a b c d e f g h i j");
-    assert_eq!(result.source, None);
-    let errors = with_severity(&result, StreamDiagnosticSeverity::Error);
-    assert_eq!(errors.len(), 1);
-    assert_eq!(errors[0].span, Span::new(16, 17));
-    assert!(errors[0].message.contains("can't add measures"));
+fn each_line_past_the_last_slot_is_appended_as_a_measure() {
+    let result = apply_part_stream(TWO_MEASURES, "W", "a b c d\ne f g h i j\nk\n_\nl m");
+    assert_eq!(result.changed_measure_count, 4);
+    assert_eq!(result.measure_starts, vec![0, 8, 16, 20, 22, 24]);
+    assert_eq!(
+        applied(result),
+        r"# parts
+Melody [M] = notes
+Words [W] = lyrics[M]
+
+# score
+[M] 1 2 3 4
+[W] a b c d
+
+[M] 5 6 7 1
+[W] e f g h
+
+[W] i j
+
+[W] k
+
+[W] _
+
+[W] l m
+"
+    );
 }
 
 #[test]
@@ -194,12 +213,12 @@ Words [W] = lyrics[M]
 }
 
 #[test]
-fn leftover_placeholders_mixed_with_syllables_are_still_an_error() {
-    let result = apply_part_stream(TWO_MEASURES, "W", "a b c d e f g h _ i");
-    assert_eq!(result.source, None);
-    let errors = with_severity(&result, StreamDiagnosticSeverity::Error);
-    assert_eq!(errors.len(), 1);
-    assert_eq!(errors[0].span, Span::new(16, 17));
+fn a_placeholder_past_the_last_slot_is_a_whole_measure_when_syllables_follow_it() {
+    let source = applied(apply_part_stream(TWO_MEASURES, "W", "a b c d e f g h _ i"));
+    assert!(
+        source.ends_with("[W] e f g h\n\n[W] _\n\n[W] i\n"),
+        "{source}"
+    );
 }
 
 #[test]
