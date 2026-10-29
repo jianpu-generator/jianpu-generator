@@ -231,6 +231,8 @@ fn build_header(score: &Score, parts: &[PartInfo]) -> grid_layout::types::Header
         part_legend_italic: score.metadata.part_legend.italic,
         part_legend_underline: score.metadata.part_legend.underline,
         part_legend_font_family: score.metadata.part_legend.font_family,
+        part_legend_vertical_padding_pt: score.metadata.part_legend.vertical_padding_pt as f32,
+        sequence_vertical_padding_pt: score.metadata.sequence.vertical_padding_pt as f32,
     }
 }
 
