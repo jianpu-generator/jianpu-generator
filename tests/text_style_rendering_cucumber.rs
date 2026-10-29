@@ -86,6 +86,9 @@ fn render_source(metadata_lines: &[String], title: &str, score_body: &str) -> Re
         part_legend_font_size: score.metadata.part_legend.font_size as f32,
         part_legend_vertical_padding_pt: score.metadata.part_legend.vertical_padding_pt as f32,
         sequence_vertical_padding_pt: score.metadata.sequence.vertical_padding_pt as f32,
+        title_vertical_padding_pt: score.metadata.title_style.vertical_padding_pt as f32,
+        subtitle_vertical_padding_pt: score.metadata.subtitle_style.vertical_padding_pt as f32,
+        author_vertical_padding_pt: score.metadata.author_style.vertical_padding_pt as f32,
         ..Default::default()
     };
     let compile_result = jianpu_generator::compiler::compile(&score);
@@ -174,6 +177,16 @@ fn given_minimal_score_using_kind(world: &mut TextStyleRenderingWorld, kind: Str
     world.kind = kind;
 }
 
+#[given(expr = "a score with a title, subtitle and author")]
+fn given_score_with_title_subtitle_author(world: &mut TextStyleRenderingWorld) {
+    world.title = "T".to_string();
+    world.metadata_lines.extend([
+        "subtitle = \"Sub\"".to_string(),
+        "author = \"Au\"".to_string(),
+    ]);
+    world.score_body = "time=4/4 key=C4 bpm=120\n[S] 1\n".to_string();
+}
+
 #[when(expr = "it is rendered")]
 fn when_rendered(world: &mut TextStyleRenderingWorld) {
     let rendered = render_source(&world.metadata_lines, &world.title, &world.score_body);
@@ -248,7 +261,7 @@ fn page_number_box_height_pt(result: &RenderResult) -> f32 {
 
 /// Height of the first page's header row holding the element `is_target`
 /// matches — the part legend entry or the `# sequence` summary line.
-fn header_row_height_pt(result: &RenderResult, is_target: fn(&GridContent) -> bool) -> f32 {
+fn header_row_height_pt(result: &RenderResult, is_target: impl Fn(&GridContent) -> bool) -> f32 {
     result.grid_pages[0]
         .rows
         .iter()
@@ -343,6 +356,41 @@ fn then_unrelated_elements_unchanged(world: &mut TextStyleRenderingWorld) {
     assert!(
         (padded_title_y - unpadded_title_y).abs() < 0.001,
         "the title (laid out before any system/footer row) should not move: padded y={padded_title_y}, unpadded y={unpadded_title_y}"
+    );
+}
+
+#[then(expr = "the header row holding the {word} grows by {int} above and below")]
+fn then_header_row_grows(world: &mut TextStyleRenderingWorld, kind: String, padding_pt: i64) {
+    let rendered = &world
+        .rendered
+        .as_ref()
+        .expect("'it is rendered' must run first")
+        .0;
+    let text = match kind.as_str() {
+        "title" => "T",
+        "subtitle" => "Sub",
+        "author" => "Au",
+        other => panic!("unrecognized header kind {other:?}"),
+    };
+    let row_height = |result: &RenderResult| {
+        header_row_height_pt(
+            result,
+            |content| matches!(content, GridContent::Text { content, .. } if content == text),
+        )
+    };
+    let padded = row_height(rendered);
+    let baseline_metadata: Vec<String> = world
+        .metadata_lines
+        .iter()
+        .filter(|line| !line.contains("vertical_padding_pt"))
+        .cloned()
+        .collect();
+    let baseline = render_source(&baseline_metadata, &world.title, &world.score_body);
+    let unpadded = row_height(&baseline);
+    assert!(
+        (padded - unpadded - 2.0 * padding_pt as f32).abs() < 0.001,
+        "the {kind} row ({padded}) should be {padding_pt}pt taller above and below than \
+         unpadded ({unpadded})"
     );
 }
 
