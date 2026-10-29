@@ -220,6 +220,15 @@ Feature: Part focus editor
       """
     And the part focus status says "0 measures changed"
 
+  Scenario: A lyric stream bound to a chords part adds measures past the end of the score
+    Given the chord-bound lyrics fixture is loaded instead
+    When I choose part "C" from the Edit part as stream menu
+    And I place the cursor at the end of the part focus stream
+    And I type " | g h" in the part focus editor
+    Then the part focus status says "1 measure changed"
+    When I apply the part focus editor
+    Then the main editor source is the appended chord lyrics source
+
   Scenario: Applying the untouched stream re-bars an overflowing measure
     Given the overflowing melody fixture is loaded instead
     When I choose part "M" from the Edit part as stream menu

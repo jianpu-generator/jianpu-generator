@@ -142,8 +142,8 @@ fn measure_pieces(stream: &str) -> Vec<MeasurePiece<'_>> {
 }
 
 /// Cuts a chord-bound lyric stream into measures at its `|`s and checks each
-/// measure's brackets against its chord attacks. Lyric streams can't add
-/// measures: a measure past the last one is an error.
+/// measure's brackets against its chord attacks. A measure past the last one
+/// is appended to the score, with no chord attacks to bracket.
 pub(super) fn split_chord_lyric_stream(
     stream: &str,
     attacks: &[MeasureChordAttacks],
@@ -156,12 +156,9 @@ pub(super) fn split_chord_lyric_stream(
         },
     );
     let pieces = measure_pieces(stream);
-    diagnostics.extend(
-        pieces
-            .iter()
-            .enumerate()
-            .flat_map(|(index, piece)| measure_diagnostics(piece, attacks.get(index))),
-    );
+    diagnostics.extend(pieces.iter().enumerate().flat_map(|(index, piece)| {
+        measure_diagnostics(piece, attacks.get(index).copied().unwrap_or(PAST_THE_END))
+    }));
     if pieces.len() < attacks.len() {
         let span = pieces
             .last()
@@ -187,9 +184,16 @@ pub(super) fn split_chord_lyric_stream(
     }
 }
 
+/// A measure appended past the end of the score: its chords part writes
+/// nothing there, so the measure is all rests.
+const PAST_THE_END: MeasureChordAttacks = MeasureChordAttacks {
+    count: 0,
+    first_on_beat_one: false,
+};
+
 fn measure_diagnostics(
     piece: &MeasurePiece,
-    attacks: Option<&MeasureChordAttacks>,
+    attacks: MeasureChordAttacks,
 ) -> Vec<StreamDiagnostic> {
     if piece.text.is_empty() {
         return vec![error_at(
@@ -197,18 +201,12 @@ fn measure_diagnostics(
             "this measure is empty; write `_` for a measure without lyrics",
         )];
     }
-    let Some(attacks) = attacks else {
-        return vec![error_at(
-            piece.span(),
-            "this measure is past the end of the score; a lyric stream can't add measures",
-        )];
-    };
     if piece.text == NO_LYRICS_MEASURE {
         return Vec::new();
     }
     let lyrics = tokenize_bracketed_lyrics(piece.text, piece.start);
     let errors = if lyrics.errors.is_empty() {
-        tally_error(&lyrics.syllables, *attacks, piece.span())
+        tally_error(&lyrics.syllables, attacks, piece.span())
             .into_iter()
             .collect()
     } else {

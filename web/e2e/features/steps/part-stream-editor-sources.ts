@@ -58,6 +58,10 @@ Chant [C] = lyrics[H]
 [C] (e) f
 `
 
+const APPENDED_CHORD_LYRICS_SOURCE = `${CHORD_BOUND_LYRICS_SOURCE}
+[C] g h
+`
+
 export const OVER_BRACKETED_CHORD_LYRICS_SOURCE = `# parts
 Harmony [H] = chords
 Chant [C] = lyrics[H]
@@ -128,4 +132,5 @@ export const EXPECTED_SOURCES: Record<string, string> = {
   'shifted melody': SHIFTED_MELODY_SOURCE,
   're-barred melody': RE_BARRED_MELODY_SOURCE,
   'first measure lyrics': FIRST_MEASURE_LYRICS_SOURCE,
+  'appended chord lyrics': APPENDED_CHORD_LYRICS_SOURCE,
 }

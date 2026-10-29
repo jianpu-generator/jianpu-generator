@@ -966,12 +966,12 @@ l = lyrics[c]
 - Each `|` ends a measure; a trailing `|` at the end of the stream doesn't open another one. Moving a `|` moves syllables between the neighbouring measures.
 - A measure the part doesn't write shows as `_`. An empty measure (`| |`) is an error; write `_` for a measure without lyrics.
 - Each measure is checked like a lyric line under a chord part: bracket mistakes and more bracketed items than the measure's chord attacks (counting an unbracketed first syllable on a beat-1 chord) are errors in the stream.
-- More measures than the score has are an error (a lyric stream can't add measures). Fewer is a warning: the measures after the stream's end lose their lyrics on Apply.
+- Measures past the end of the score are appended to it, so lyrics can be written before the chords: the chords part writes nothing there, so a bracketed item in such a measure is an error. Fewer measures is a warning: the measures after the stream's end lose their lyrics on Apply.
 
 ### Applying a longer or shorter stream
 
 - **Shorter** (e.g. after deleting a note): the rest of the last measure is filled with rests, and later measures drop this part's line. A follow part writes explicit rests there instead (dropping the line would make it copy its target); a lyric part just drops its lines. A group whose only data line is this part keeps that line as a rest fill (`_` for lyrics) rather than becoming empty.
-- **Longer**: each extra measure is appended to the end of the `# score` as a new group holding only this part's line. Lyric streams can't add measures.
+- **Longer**: each extra measure is appended to the end of the `# score` as a new group holding only this part's line. Only a lyric stream under a chords part can add measures (it marks each one with `|`); a lyric stream under a notes part can't.
 
 Apply is refused while the stream has any error; warnings don't block it.
 
