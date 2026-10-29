@@ -280,6 +280,10 @@ impl Guest for Component {
         list_sound_choices(raw_instruments)
     }
 
+    fn list_range_instruments() -> Vec<RangeInstrumentChoice> {
+        list_range_instruments()
+    }
+
     fn get_part_setting_limits() -> PartSettingLimits {
         get_part_setting_limits()
     }

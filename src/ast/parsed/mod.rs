@@ -5,10 +5,12 @@ mod metadata_access;
 mod metadata_keys;
 mod pitch;
 mod preset;
+mod range_instrument;
 pub use events::*;
 pub use metadata_keys::*;
 pub use pitch::*;
 pub use preset::*;
+pub use range_instrument::*;
 
 #[derive(Debug)]
 pub enum ParsedMeasureSlot {
@@ -51,6 +53,9 @@ pub struct PartDecl {
     pub volume: u8,
     /// MIDI-only octave shift applied to every note in this part (−4..=+4).
     pub octave_offset: i8,
+    /// The instrument whose range this part's notes are checked against;
+    /// `None` checks nothing. A follow part inherits its target's.
+    pub range_instrument: Option<RangeInstrument>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

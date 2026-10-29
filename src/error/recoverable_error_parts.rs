@@ -154,6 +154,22 @@ impl RecoverableError {
         }
     }
 
+    pub fn parts_unknown_instrument(span: Span, name: &str) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsUnknownInstrument {
+                name: name.to_string(),
+            },
+        }
+    }
+
+    pub fn parts_instrument_on_non_notes_part(span: Span) -> Self {
+        Self {
+            span,
+            kind: RecoverableErrorKind::PartsInstrumentOnNonNotesPart,
+        }
+    }
+
     pub fn parts_follow_unknown_target(span: Span, target: &str) -> Self {
         Self {
             span,

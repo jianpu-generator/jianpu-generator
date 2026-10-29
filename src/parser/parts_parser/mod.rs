@@ -3,8 +3,8 @@ mod instrument_matching;
 mod lexer;
 mod setting_limits;
 
-use crate::ast::parsed::{PartDecl, PartKind, Soundfont};
-use crate::error::{RecoverableError, Span};
+use crate::ast::parsed::{PartDecl, PartKind, RangeInstrument, Soundfont};
+use crate::error::{RecoverableError, Span, Spanned};
 
 pub use instrument_matching::InstrumentInfo;
 use lexer::lex_line;
@@ -64,6 +64,7 @@ pub struct SourceRawPartDecl {
     pub line_number: u32,
     pub mode: SourcePartMode,
     pub follow_target: Option<String>,
+    pub range_instrument: Option<RangeInstrument>,
     pub soundfont: Option<Soundfont>,
     pub volume: Option<u8>,
     pub octave_offset: Option<i8>,
@@ -75,6 +76,8 @@ struct RawDecl {
     abbreviation_span: Span,
     span: Span,
     kind: RawKind,
+    /// `None` when omitted on the declaration line (follow parts inherit from target).
+    range_instrument: Option<RangeInstrument>,
     /// `None` when omitted on the declaration line (follow parts inherit from target).
     soundfont: Option<Soundfont>,
     /// `None` when omitted on the declaration line (follow parts inherit from target).
@@ -129,6 +132,7 @@ pub fn collect_source_raw_declarations(
                 line_number: byte_offset_to_line_number(full_source, raw_decl.span.start),
                 mode,
                 follow_target,
+                range_instrument: raw_decl.range_instrument,
                 soundfont: raw_decl.soundfont,
                 volume: raw_decl.volume,
                 octave_offset: raw_decl.octave_offset,
@@ -139,6 +143,7 @@ pub fn collect_source_raw_declarations(
 
 struct ParsedPartRhs {
     kind: RawKind,
+    range_instrument: Option<RangeInstrument>,
     soundfont: Option<Soundfont>,
     volume: Option<u8>,
     octave_offset: Option<i8>,
@@ -151,6 +156,7 @@ struct LhsParsed {
 }
 
 struct RhsSuffixes {
+    range_instrument: Option<Spanned<RangeInstrument>>,
     soundfont: Option<Soundfont>,
     volume: Option<u8>,
     octave_offset: Option<i8>,
@@ -238,6 +244,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
             abbreviation_span,
             span,
             kind,
+            range_instrument,
             soundfont,
             volume,
             octave_offset,
@@ -268,6 +275,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                         display_name,
                         kind: target_decl.kind,
                         follow_target: Some(target),
+                        range_instrument: range_instrument.or(target_decl.range_instrument),
                         soundfont: soundfont.unwrap_or(target_decl.soundfont),
                         volume: volume.unwrap_or(target_decl.volume),
                         octave_offset: octave_offset.unwrap_or(target_decl.octave_offset),
@@ -280,6 +288,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                 display_name,
                 kind,
                 follow_target: None,
+                range_instrument,
                 soundfont: soundfont.unwrap_or(kind.default_soundfont()),
                 volume: volume.unwrap_or(DEFAULT_PART_VOLUME),
                 octave_offset: octave_offset.unwrap_or(DEFAULT_PART_OCTAVE_OFFSET),
@@ -340,6 +349,7 @@ fn resolve_lyrics_declaration(
         display_name: header.display_name,
         kind: PartKind::Lyrics { target_part_index },
         follow_target: None,
+        range_instrument: None,
         soundfont: PartKind::Lyrics { target_part_index }.default_soundfont(),
         volume: DEFAULT_PART_VOLUME,
         octave_offset: DEFAULT_PART_OCTAVE_OFFSET,

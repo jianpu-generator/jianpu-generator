@@ -43,6 +43,7 @@ fn map_raw_to_source_declaration(
         line_number: raw.line_number,
         settings: PartSettings {
             mode: PartMode::from_source_mode(raw.mode, raw.follow_target),
+            range_instrument: raw.range_instrument,
             program,
             volume: raw.volume.unwrap_or(DEFAULT_PART_VOLUME),
             octave_offset: raw.octave_offset.unwrap_or(DEFAULT_PART_OCTAVE_OFFSET),

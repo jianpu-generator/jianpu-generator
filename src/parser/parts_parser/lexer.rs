@@ -17,6 +17,9 @@ pub(crate) enum PartsToken {
     Lyrics,
     LyricsTarget(String),
     Soundfont(String),
+    /// A bare word naming the part's instrument (e.g. `violin`), as written;
+    /// resolved to a [`crate::ast::parsed::RangeInstrument`] when parsing.
+    InstrumentName(String),
     /// As written; [`super::PART_SETTING_LIMITS`] is applied when parsing.
     Volume(u16),
     /// As written; [`super::PART_SETTING_LIMITS`] is applied when parsing.
@@ -49,6 +52,7 @@ pub(crate) fn kind_keyword_span(token: &Spanned<PartsToken>) -> Option<Span> {
         | PartsToken::FollowTarget(_)
         | PartsToken::LyricsTarget(_)
         | PartsToken::Soundfont(_)
+        | PartsToken::InstrumentName(_)
         | PartsToken::Volume(_)
         | PartsToken::OctaveOffset(_) => None,
     }
@@ -308,6 +312,10 @@ fn classify_coarse_token(
 
     if let Some(offset) = parse_octave_token(&text) {
         return Ok(vec![Spanned::new(PartsToken::OctaveOffset(offset), span)]);
+    }
+
+    if text.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+        return Ok(vec![Spanned::new(PartsToken::InstrumentName(text), span)]);
     }
 
     Err(RecoverableError::parts_invalid_columns(span, &text))

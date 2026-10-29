@@ -371,6 +371,9 @@ world jianpu-wasm {
     // `"N: Name"` source text for it.
     record part-settings {
         mode: part-mode,
+        // `jianpu_generator::ast::parsed::RangeInstrument::keyword`, e.g.
+        // `"violin"`; `none` when the line names no instrument.
+        range-instrument: option<string>,
         program: option<u8>,
         volume: u8,
         octave-offset: s8,
@@ -580,6 +583,18 @@ world jianpu-wasm {
 
     // Every sound the Edit Parts sound picker offers, labelled by Rust.
     export list-sound-choices: func(raw-instruments: list<instrument-info>) -> sound-choices;
+
+    // `jianpu_generator::ast::parsed::RangeInstrument`: one instrument the
+    // Edit Parts instrument picker offers — its source keyword (`"guzheng"`)
+    // and its display label (`"guzheng 古箏"`).
+    record range-instrument-choice {
+        name: string,
+        label: string,
+    }
+
+    // Every instrument a notes part can name, whose range its notes are
+    // checked against.
+    export list-range-instruments: func() -> list<range-instrument-choice>;
 
     // `jianpu_generator::parser::parts_parser::PartSettingRange<u8>` for
     // `PART_SETTING_LIMITS.volume` — inclusive, in percent.

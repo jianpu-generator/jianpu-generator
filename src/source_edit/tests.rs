@@ -1,9 +1,11 @@
 use super::{PartMode, PartSettings};
+use crate::ast::parsed::RangeInstrument;
 use crate::parser::parts_parser::InstrumentInfo;
 
 fn settings(mode: PartMode, program: Option<u8>, volume: u8, octave_offset: i8) -> PartSettings {
     PartSettings {
         mode,
+        range_instrument: None,
         program,
         volume,
         octave_offset,
@@ -182,4 +184,27 @@ fn test_program_missing_from_catalog_is_written_as_unknown() {
         update_part_declaration(&source, "P", &settings(PartMode::Notes, Some(41), 100, 0))
             .unwrap();
     assert!(result.contains(r#"Piano [P] = notes "41: Unknown""#));
+}
+
+#[test]
+fn writes_the_instrument_before_the_sound() {
+    let source = source_with_parts("Violin [V] = notes");
+    let result = update_part_declaration(
+        &source,
+        "V",
+        &PartSettings {
+            range_instrument: Some(RangeInstrument::Violin),
+            ..settings(PartMode::Notes, Some(40), 80, 0)
+        },
+    )
+    .unwrap();
+    assert!(result.contains("Violin [V] = notes violin \"40: Violin\" 80%"));
+}
+
+#[test]
+fn clearing_the_instrument_drops_it_from_the_line() {
+    let source = source_with_parts("Soprano [S] = notes soprano");
+    let result =
+        update_part_declaration(&source, "S", &settings(PartMode::Notes, None, 100, 0)).unwrap();
+    assert!(result.contains("Soprano [S] = notes\n"));
 }
