@@ -24,13 +24,9 @@ export const metadataFieldHelp: Record<
 
   author: `Rendered in the header, below the title/subtitle.`,
 
-  sequence: `Style of the \`# sequence\` summary line rendered near the top of the score.
+  sequence: `Style of the \`# sequence\` summary line rendered near the top of the score.`,
 
-**V. Padding** adds space above and below the row, pushing the rows below it down.`,
-
-  'part-legend': `Style of the part-name legend entries shown in the header.
-
-**V. Padding** adds space above and below the row, pushing the rows below it down.`,
+  'part-legend': `Style of the part-name legend entries shown in the header.`,
 
   'measure-number': `Style of each measure's bar number.`,
 

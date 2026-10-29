@@ -26,7 +26,6 @@ The `.jianpu` input syntax is documented in `syntax.md`.
 - When a commit introduces or changes user-facing `.jianpu` syntax, **MUST update `syntax.md`** in the same commit.
 - When a commit introduces or changes user-facing `.jianpu` syntax, **MUST update the `demo/` folder** in the same commit (add/update the example measure demonstrating the feature in the relevant `demo/NN-*.jianpu` file). Each file in `demo/` is a complete, standalone-valid `.jianpu` document (its own `# metadata`/`# parts`/`# score`) — the web editor opens them individually as a folder of demo files, so a fragment missing its own header would fail to render there even though it's never concatenated with the others.
 - Syntax-affecting code lives under `src/parser/` and `src/desugar.rs`.
-- When a commit adds, removes or changes a `# metadata` key (or what one does), **MUST update the Edit Metadata modal** (`web/src/components/EditMetadataModal.tsx`, its tables, and the help text in `web/src/utils/metadataFieldHelp.ts`) in the same commit, so the modal can edit every key and its help describes what the key does.
 
 ## Architecture documentation
 
