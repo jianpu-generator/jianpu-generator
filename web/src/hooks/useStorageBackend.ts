@@ -151,23 +151,25 @@ export function useStorageBackend(): UseStorageBackendResult {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [autosaveDeadline, setAutosaveDeadline] = useState<number | null>(null)
 
+  const clearAccountAuth = useCallback(
+    () => setAccountAuth(null),
+    [setAccountAuth],
+  )
+
   const backend = useMemo<StorageBackend | CloudBackend>(() => {
     if (preference.backend === 'cloud' && accountAuth) {
       return createCloudBackend({
         token: accountAuth.token,
         account: accountAuth.email,
         workerHost: import.meta.env.VITE_SYNCED_SHARE_HOST ?? '',
+        onSessionEnded: clearAccountAuth,
       })
     }
     return localBackend
-  }, [preference, accountAuth])
+  }, [preference, accountAuth, clearAccountAuth])
 
   // `localBackend`'s state instead lives in `localStore` above, seeded
   // synchronously, so no loader is needed for it.
-  const clearAccountAuth = useCallback(
-    () => setAccountAuth(null),
-    [setAccountAuth],
-  )
   const cloudLoadFailure = useCloudStoreLoader(
     backend,
     setCloudStore,

@@ -48,6 +48,8 @@ export const E2E_EMAILS = [
   'e2e-sign-out@jianpu.test',
   // `request-trace-id.feature`'s refused sign-in.
   'e2e-trace-id@jianpu.test',
+  // `session-ended.feature`, whose scenarios end their page's session.
+  'e2e-session-ended@jianpu.test',
 ] as const
 
 /** The password every seeded e2e account is created with. */
