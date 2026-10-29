@@ -34,6 +34,8 @@ pub struct Soundfont(pub u8);
 impl Soundfont {
     pub const ACOUSTIC_GRAND_PIANO: Self = Self(0);
     pub const CHOIR_AAHS: Self = Self(52);
+    /// A GM percussion key (not a program), for `percussion` parts.
+    pub const ACOUSTIC_SNARE: Self = Self(38);
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -76,7 +78,8 @@ impl PartKind {
     pub fn default_soundfont(self) -> Soundfont {
         match self {
             Self::Chords | Self::Notes => Soundfont::ACOUSTIC_GRAND_PIANO,
-            Self::Percussion | Self::Lyrics { .. } => Soundfont::CHOIR_AAHS,
+            Self::Percussion => Soundfont::ACOUSTIC_SNARE,
+            Self::Lyrics { .. } => Soundfont::CHOIR_AAHS,
         }
     }
 }

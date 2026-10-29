@@ -40,6 +40,7 @@ fn percussion_without_soundfont_uses_default() {
     let (decls, errors) = parse_parts(content, 0, &[]);
     assert!(errors.is_empty(), "unexpected errors: {errors:?}");
     assert_eq!(decls[0].kind, PartKind::Percussion);
+    assert_eq!(decls[0].soundfont, Soundfont::ACOUSTIC_SNARE);
 }
 
 #[test]
