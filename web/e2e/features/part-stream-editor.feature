@@ -157,7 +157,7 @@ Feature: Part focus editor
     And I place the cursor at the start of part focus line 1
     And I type "x" in the part focus editor
     And I place the cursor at the end of the part focus stream
-    And I type " extra" in the part focus editor
+    And I type " @" in the part focus editor
     Then the part focus editor has an error marker
     And the preview shows the text "xa"
 
