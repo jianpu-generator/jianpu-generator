@@ -19,7 +19,9 @@ Feature: Text style components have real rendering effects
       (which already fills all remaining page height regardless — see
       `resolve_row_element`'s `bottom_padding`); `part_legend` and
       `sequence` grow their header rows by the padding above and below
-      (`grid_layout::layout_decoration::make_header_rows`).
+      (`grid_layout::layout_decoration::make_header_rows`), and so do
+      `title` and `subtitle`/`author` (which share one row, taking the
+      larger padding).
 
   Verified end-to-end by `tests/text_style_rendering_cucumber.rs`
   (registered in `Cargo.toml`), which runs each scenario's `# metadata`
@@ -49,3 +51,15 @@ Feature: Text style components have real rendering effects
       | page_number   | 4       |
       | part_legend   | 6       |
       | sequence      | 10      |
+
+  Scenario Outline: <kind>.vertical_padding_pt grows the header row holding it
+    Given "# metadata" sets "<kind>" to "{ vertical_padding_pt: <padding> }"
+    And a score with a title, subtitle and author
+    When it is rendered
+    Then the header row holding the <kind> grows by <padding> above and below
+
+    Examples:
+      | kind     | padding |
+      | title    | 7       |
+      | subtitle | 9       |
+      | author   | 5       |

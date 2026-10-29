@@ -209,7 +209,7 @@ fn make_sequence_rows(header: &Header, base: f32, include_part_list: bool) -> Ve
 
 fn make_title_row(header: &Header, base: f32) -> Option<GridRow> {
     header.title.as_ref().map(|title| GridRow {
-        height_pt: header_title_row_height(base),
+        height_pt: header_title_row_height(base) + 2.0 * header.title_vertical_padding_pt,
         column_count: 1,
         has_label_region: false,
         measure_layout: vec![],
@@ -265,7 +265,11 @@ fn make_subtitle_author_row(header: &Header, base: f32) -> GridRow {
         });
     }
     GridRow {
-        height_pt: header_subtitle_author_row_height(base),
+        height_pt: header_subtitle_author_row_height(base)
+            + 2.0
+                * header
+                    .subtitle_vertical_padding_pt
+                    .max(header.author_vertical_padding_pt),
         column_count: 1,
         has_label_region: false,
         measure_layout: vec![],
