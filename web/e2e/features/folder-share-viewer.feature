@@ -69,6 +69,24 @@ Feature: Viewing and importing a shared folder
     When the owner stops sharing the folder
     And the viewer reloads the page
     Then the viewer sees the "no longer shared" screen
+    When the viewer clicks Discard
+    Then the viewer's page URL has no synced share param
+    And the viewer sees no shared folder banner
+    And the viewer sees no shared viewer notice
+
+  Scenario: A viewer can discard a synced folder without importing it
+    Given a cloud file named "ViewNine/song.jianpu" titled "Not For Me" is seeded for the signed-in account
+    And the cloud app is open
+    When I open the share dialog of the folder "ViewNine"
+    And I open the synced tab of the share dialog
+    And I start sync in the share dialog
+    Then the share dialog shows a synced link
+    When a viewer opens the synced link of the share dialog
+    Then the viewer's preview contains "Not For Me"
+    When the viewer clicks Discard
+    Then the viewer's page URL has no synced share param
+    And the viewer sees no shared folder banner
+    And the viewer's preview no longer contains "Not For Me"
 
   Scenario: Importing a synced folder copies it into the viewer's own files
     Given a cloud file named "ViewFive/Advent/o-come.jianpu" titled "Import One" is seeded for the signed-in account
@@ -115,7 +133,7 @@ Feature: Viewing and importing a shared folder
     When the viewer opens the file list
     Then the viewer's file list shows the file "b"
     And the viewer's file list offers no editing actions
-    When the viewer discards the folder
+    When the viewer clicks Discard
     Then the viewer's page URL has no share hash
     And the viewer sees no shared folder banner
 

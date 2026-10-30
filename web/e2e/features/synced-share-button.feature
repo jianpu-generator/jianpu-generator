@@ -70,6 +70,18 @@ Feature: Synced share button
     When the late viewer reloads the page
     Then the late viewer's preview contains "Synced Score"
 
+  Scenario: A viewer can discard a synced score without importing it
+    Given the owner is signed in as "e2e-test-user@jianpu.test"
+    And the file store is seeded with the synced score
+    When the owner loads the app and clicks "Sync"
+    Then the synced link is copied
+    When a viewer opens the copied sync link in a new page
+    Then the viewer's preview contains "Synced Score"
+    When the viewer clicks Discard
+    Then the viewer's page URL has no synced share param
+    And the viewer sees no shared folder banner
+    And the viewer's preview no longer contains "Synced Score"
+
   Scenario: A viewer sees the owner's edit only once the autosave has saved it
     Given the owner is signed in as "e2e-test-user@jianpu.test"
     And the file store is seeded with the synced score
