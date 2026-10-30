@@ -49,6 +49,7 @@ pub mod render_config;
 pub mod renderer;
 pub mod serializer;
 pub mod sound_label;
+mod sounding_pitch;
 pub mod source_edit;
 pub mod source_embed;
 pub mod split_track;

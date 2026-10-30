@@ -2,7 +2,8 @@ import * as Slider from '@radix-ui/react-slider'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 import { range } from 'remeda'
-import type { OctaveOffsetRange, PartSettingLimits } from '../jianpuWasm'
+import type { PartSettingOptions } from '../hooks/usePartSettingOptions'
+import type { OctaveOffsetRange } from '../jianpuWasm'
 import type {
   PartDeclaration,
   PartInfo,
@@ -26,7 +27,7 @@ function octaveOptions(offsets: OctaveOffsetRange) {
 
 export function PartRow({
   declaration,
-  limits,
+  options,
   allParts,
   isFirstPart,
   onPartDeclarationChange,
@@ -38,7 +39,7 @@ export function PartRow({
   previewAudioPlaying,
 }: {
   declaration: PartDeclaration
-  limits: PartSettingLimits
+  options: PartSettingOptions
   allParts: PartInfo[]
   isFirstPart: boolean
   onPartDeclarationChange: EditPartsModalProps['onPartDeclarationChange']
@@ -50,6 +51,7 @@ export function PartRow({
   previewAudioPlaying: boolean
 }) {
   const [searchOpen, setSearchOpen] = useState(false)
+  const { limits, rangeInstruments } = options
   const partInfo = allParts.find(
     (p) => p.abbreviation === declaration.abbreviation,
   )
@@ -63,6 +65,8 @@ export function PartRow({
     onPartDeclarationChange(declaration.abbreviation, { ...settings, ...patch })
   const followTarget =
     settings.mode.tag === 'follow' ? settings.mode.val : undefined
+  const takesRangeInstrument =
+    settings.mode.tag === 'notes' || settings.mode.tag === 'follow'
 
   function handleModeChange(newMode: string) {
     // The select only offers these; lyric parts are not listed here at all.
@@ -125,6 +129,30 @@ export function PartRow({
             </RadixSelect>
           )}
         </div>
+      </td>
+      <td style={tdStyle}>
+        {takesRangeInstrument && (
+          <RadixSelect
+            value={settings.rangeInstrument ?? NO_RANGE_INSTRUMENT}
+            onValueChange={(value) =>
+              change({
+                rangeInstrument:
+                  value === NO_RANGE_INSTRUMENT ? undefined : value,
+              })
+            }
+            placeholder="instrument"
+            testId={`instrument-select-${declaration.abbreviation}`}
+          >
+            <RadixSelectItem value={NO_RANGE_INSTRUMENT}>
+              {followTarget === undefined ? 'none' : 'as target'}
+            </RadixSelectItem>
+            {rangeInstruments.map((instrument) => (
+              <RadixSelectItem key={instrument.name} value={instrument.name}>
+                {instrument.label}
+              </RadixSelectItem>
+            ))}
+          </RadixSelect>
+        )}
       </td>
       <td style={tdStyle}>
         <button
@@ -276,6 +304,10 @@ export function PartRow({
     </tr>
   )
 }
+
+/** The instrument picker's value for a line that names no instrument (Radix
+ * Select can't hold an empty value). */
+const NO_RANGE_INSTRUMENT = 'none'
 
 const octaveShiftButtonStyle: React.CSSProperties = {
   display: 'inline-flex',

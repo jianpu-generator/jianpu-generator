@@ -25,7 +25,8 @@ pub struct SourcePartDeclaration {
     pub display_name: String,
     pub line_number: u32,
     pub settings: PartSettings,
-    /// Display label for `settings.program` (see [`crate::sound_label`]).
+    /// Display label for the sound the part plays (see [`crate::sound_label`]):
+    /// `settings.program`, or else the range instrument's default sound.
     pub sound_label: Option<String>,
 }
 
@@ -35,14 +36,20 @@ fn map_raw_to_source_declaration(
 ) -> SourcePartDeclaration {
     let program = raw.soundfont.map(|soundfont| soundfont.0);
     let is_percussion = matches!(raw.mode, SourcePartMode::Percussion);
-    let sound_label =
-        program.map(|program| crate::sound_label::sound_label(program, is_percussion, instruments));
+    // A line that quotes no sound but names an instrument plays that
+    // instrument's sound; label it so the modal shows what will play.
+    let sounding_program = program.or(raw
+        .range_instrument
+        .map(|instrument| instrument.default_soundfont().0));
+    let sound_label = sounding_program
+        .map(|program| crate::sound_label::sound_label(program, is_percussion, instruments));
     SourcePartDeclaration {
         abbreviation: raw.abbreviation,
         display_name: raw.display_name,
         line_number: raw.line_number,
         settings: PartSettings {
             mode: PartMode::from_source_mode(raw.mode, raw.follow_target),
+            range_instrument: raw.range_instrument,
             program,
             volume: raw.volume.unwrap_or(DEFAULT_PART_VOLUME),
             octave_offset: raw.octave_offset.unwrap_or(DEFAULT_PART_OCTAVE_OFFSET),

@@ -68,6 +68,14 @@ impl SpelledPitch {
         self.name_with_accidentals("#", "b")
     }
 
+    /// [`Self::name`] plus the octave number of `midi` (C4 = 60), the
+    /// sounding pitch this spelling names. The octave goes by letter, so
+    /// MIDI 60 spelled as B# is `B#3`.
+    pub(crate) fn name_with_octave(self, midi: u8) -> String {
+        let octave = (i32::from(midi) - i32::from(self.alteration)).div_euclid(12) - 1;
+        format!("{}{octave}", self.name())
+    }
+
     /// Like [`Self::name`], with the engraved `♯`/`♭` signs the jianpu view
     /// draws its own accidentals with (see `font_metrics::accidental_symbol`).
     pub(crate) fn engraved_name(self) -> String {

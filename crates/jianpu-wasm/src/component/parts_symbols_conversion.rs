@@ -1,4 +1,5 @@
 use super::*;
+use jianpu_generator::ast::parsed::RangeInstrument;
 use jianpu_generator::source_edit;
 
 pub(super) fn instrument_info_from_wit(
@@ -45,6 +46,9 @@ fn part_mode_from_wit(mode: PartMode) -> source_edit::PartMode {
 fn part_settings_to_wit(settings: source_edit::PartSettings) -> PartSettings {
     PartSettings {
         mode: part_mode_to_wit(settings.mode),
+        range_instrument: settings
+            .range_instrument
+            .map(|instrument| instrument.keyword().to_string()),
         program: settings.program,
         volume: settings.volume,
         octave_offset: settings.octave_offset,
@@ -54,6 +58,10 @@ fn part_settings_to_wit(settings: source_edit::PartSettings) -> PartSettings {
 pub(super) fn part_settings_from_wit(settings: PartSettings) -> source_edit::PartSettings {
     source_edit::PartSettings {
         mode: part_mode_from_wit(settings.mode),
+        range_instrument: settings
+            .range_instrument
+            .as_deref()
+            .and_then(RangeInstrument::from_keyword),
         program: settings.program,
         volume: settings.volume,
         octave_offset: settings.octave_offset,

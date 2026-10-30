@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use super::DocumentSection;
 use crate::parser::parts_parser::{PartSettingRange, PART_SETTING_LIMITS};
 
@@ -139,6 +141,10 @@ pub enum RecoverableErrorKind {
     PartsVolumeOutOfRange { volume: u16 },
     /// Per-part octave offset outside `PART_SETTING_LIMITS.octave_offset` — clamped to the valid range.
     PartsOctaveOffsetOutOfRange { offset: i16 },
+    /// A bare word on a `# parts` line that isn't a known instrument — ignored.
+    PartsUnknownInstrument { name: String },
+    /// An instrument on a part that isn't `notes` or `follow[X]` — ignored.
+    PartsInstrumentOnNonNotesPart,
     /// `r`/bare `_`/`=` used with no prior pitched note/chord to repeat — token ignored.
     RepeatNoPriorNote,
     /// A `{N:...}` tuplet has no standard implied ratio and no explicit `{N:M:...}` override.
@@ -216,6 +222,11 @@ impl RecoverableErrorKind {
             Self::PartsUnknownSoundfont { soundfont, suggestions } => Self::parts_unknown_soundfont_message(soundfont, suggestions),
             Self::PartsVolumeOutOfRange { volume } => Self::parts_volume_out_of_range_message(*volume),
             Self::PartsOctaveOffsetOutOfRange { offset } => Self::parts_octave_offset_out_of_range_message(*offset),
+            Self::PartsUnknownInstrument { name } => format!(
+                "unknown instrument \"{name}\"; expected one of: {}",
+                crate::ast::parsed::RangeInstrument::ALL.iter().map(|instrument| instrument.keyword()).join(", ")
+            ),
+            Self::PartsInstrumentOnNonNotesPart => "only notes parts can name an instrument; ignored".to_string(),
             Self::RepeatNoPriorNote => "no prior note/chord to repeat; token ignored".to_string(),
             Self::TupletAmbiguousRatio { num } => format!("tuplet ratio for {num} is ambiguous; use {{{num}:M:...}} to specify explicitly"),
             Self::TupletNoteCountMismatch { expected, got } => format!("tuplet declared {expected} notes but got {got}; note count must match"),

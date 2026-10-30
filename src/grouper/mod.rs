@@ -19,12 +19,14 @@ mod directive_grouper;
 mod lyrics_pairing;
 mod metadata_defaults;
 mod part_grouper;
+mod range_validation;
 mod sequence_resolution;
 mod tie_validation;
 
 use directive_grouper::DirectiveGrouper;
 pub use metadata_defaults::metadata_defaults;
 use part_grouper::{group_lyrics_track, group_timed_track};
+use range_validation::validate_ranges;
 use sequence_resolution::resolve_sequence;
 use tie_validation::validate_ties;
 
@@ -88,6 +90,7 @@ pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
         sequence: None,
     };
     validate_ties(&mut score);
+    validate_ranges(&mut score, &declarations);
     resolve_sequence(&mut score, sequence, sequence_parse_errors, &declarations);
     Ok(score)
 }

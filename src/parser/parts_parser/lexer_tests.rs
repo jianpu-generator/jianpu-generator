@@ -155,10 +155,22 @@ fn rejects_empty_follow_abbreviation() {
 
 #[test]
 fn rejects_unknown_rhs_token() {
-    let line = "X = bogus";
+    let line = "X = @bogus";
     let error = lex_line(line, 0, Span::new(0, line.len())).expect_err("error");
     assert!(matches!(
         error.kind,
         RecoverableErrorKind::PartsInvalidColumns { .. }
     ));
+}
+
+#[test]
+fn lexes_a_bare_word_as_an_instrument_name() {
+    let line = "V = notes violin";
+    let tokens = lex_line(line, 0, Span::new(0, line.len())).expect("tokens");
+    let instrument = tokens.last().expect("instrument token");
+    assert_eq!(
+        instrument.value,
+        PartsToken::InstrumentName("violin".to_string())
+    );
+    assert_eq!(&line[instrument.span.start..instrument.span.end], "violin");
 }

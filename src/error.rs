@@ -27,7 +27,7 @@ impl DocumentSection {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
@@ -72,6 +72,8 @@ pub enum WarningKind {
     MeasureOverflow,
     /// A preset draws staff notation (violin/cello), which ignores its text styles.
     PresetTextStylesIgnored,
+    /// A note sounds outside the range of its part's instrument.
+    NoteOutOfRange,
 }
 
 impl WarningKind {
@@ -86,6 +88,7 @@ impl WarningKind {
             Self::GroupTooFewNotes => "group_too_few_notes",
             Self::MeasureOverflow => "measure_overflow",
             Self::PresetTextStylesIgnored => "preset_text_styles_ignored",
+            Self::NoteOutOfRange => "note_out_of_range",
         }
     }
 }
@@ -113,6 +116,14 @@ impl Warning {
             span,
             message: "note/rest crosses the half-bar boundary (beat 2→3); use a beam group or tie to show the split".to_string(),
             kind: WarningKind::HalfBarBoundaryCrossed,
+        }
+    }
+
+    pub fn note_out_of_range(span: Span, message: String) -> Self {
+        Self {
+            span,
+            message,
+            kind: WarningKind::NoteOutOfRange,
         }
     }
 

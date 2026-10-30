@@ -1,4 +1,4 @@
-use crate::ast::parsed::PartKind;
+use crate::ast::parsed::{PartKind, RangeInstrument};
 use crate::error::{RecoverableError, Span, Spanned};
 
 use super::instrument_matching::validate_soundfont;
@@ -34,6 +34,7 @@ pub(super) fn parse_declaration_line(
 
     let ParsedPartRhs {
         kind,
+        range_instrument,
         soundfont,
         volume,
         octave_offset,
@@ -51,6 +52,7 @@ pub(super) fn parse_declaration_line(
         abbreviation_span,
         span: line_span,
         kind,
+        range_instrument,
         soundfont,
         volume,
         octave_offset,
@@ -161,6 +163,7 @@ fn parse_rhs_tokens(
                     target: target.clone(),
                     target_span: *target_span,
                 },
+                range_instrument: None,
                 soundfont: None,
                 volume: None,
                 octave_offset: None,
@@ -172,12 +175,14 @@ fn parse_rhs_tokens(
     let is_percussion = matches!(head, RawKind::Concrete(PartKind::Percussion));
 
     let RhsSuffixes {
+        range_instrument,
         soundfont,
         volume,
         octave_offset,
     } = parse_rhs_suffix_tokens(suffix_tokens, span, errors, instruments, is_percussion)?;
 
     Ok(ParsedPartRhs {
+        range_instrument: checked_range_instrument(range_instrument, &head, errors),
         kind: head,
         soundfont,
         volume,
@@ -192,12 +197,17 @@ fn parse_rhs_suffix_tokens(
     instruments: &[InstrumentInfo],
     is_percussion: bool,
 ) -> Result<RhsSuffixes, RecoverableError> {
+    let mut range_instrument = None;
     let mut soundfont = None;
     let mut volume = None;
     let mut octave_offset = None;
 
     for token in tokens {
         match &token.value {
+            PartsToken::InstrumentName(name) => match RangeInstrument::from_keyword(name) {
+                Some(instrument) => range_instrument = Some(Spanned::new(instrument, token.span)),
+                None => errors.push(RecoverableError::parts_unknown_instrument(token.span, name)),
+            },
             PartsToken::Soundfont(inner) => {
                 soundfont =
                     validate_soundfont(inner, token.span, errors, instruments, is_percussion);
@@ -213,10 +223,30 @@ fn parse_rhs_suffix_tokens(
     }
 
     Ok(RhsSuffixes {
+        range_instrument,
         soundfont,
         volume,
         octave_offset,
     })
+}
+
+/// `range_instrument`, or `None` with a diagnostic when `kind` is a part
+/// that can't name one (only `notes` and `follow[X]` parts can).
+fn checked_range_instrument(
+    range_instrument: Option<Spanned<RangeInstrument>>,
+    kind: &RawKind,
+    errors: &mut Vec<RecoverableError>,
+) -> Option<RangeInstrument> {
+    let range_instrument = range_instrument?;
+    match kind {
+        RawKind::Concrete(PartKind::Notes) | RawKind::Follow { .. } => Some(range_instrument.value),
+        _ => {
+            errors.push(RecoverableError::parts_instrument_on_non_notes_part(
+                range_instrument.span,
+            ));
+            None
+        }
+    }
 }
 
 /// `written` clamped into [`PART_SETTING_LIMITS`]`.volume`, reporting a

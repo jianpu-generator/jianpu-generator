@@ -1,10 +1,11 @@
 mod declaration_parsing;
 mod instrument_matching;
 mod lexer;
+mod lyrics_declaration;
 mod setting_limits;
 
-use crate::ast::parsed::{PartDecl, PartKind, Soundfont};
-use crate::error::{RecoverableError, Span};
+use crate::ast::parsed::{PartDecl, PartKind, RangeInstrument, Soundfont};
+use crate::error::{RecoverableError, Span, Spanned};
 
 pub use instrument_matching::InstrumentInfo;
 use lexer::lex_line;
@@ -13,6 +14,7 @@ pub use setting_limits::{
 };
 
 use declaration_parsing::parse_declaration_line;
+use lyrics_declaration::{resolve_lyrics_declaration, LyricsDeclarationHeader};
 
 #[cfg(test)]
 mod default_soundfont_tests;
@@ -64,6 +66,7 @@ pub struct SourceRawPartDecl {
     pub line_number: u32,
     pub mode: SourcePartMode,
     pub follow_target: Option<String>,
+    pub range_instrument: Option<RangeInstrument>,
     pub soundfont: Option<Soundfont>,
     pub volume: Option<u8>,
     pub octave_offset: Option<i8>,
@@ -75,6 +78,8 @@ struct RawDecl {
     abbreviation_span: Span,
     span: Span,
     kind: RawKind,
+    /// `None` when omitted on the declaration line (follow parts inherit from target).
+    range_instrument: Option<RangeInstrument>,
     /// `None` when omitted on the declaration line (follow parts inherit from target).
     soundfont: Option<Soundfont>,
     /// `None` when omitted on the declaration line (follow parts inherit from target).
@@ -129,6 +134,7 @@ pub fn collect_source_raw_declarations(
                 line_number: byte_offset_to_line_number(full_source, raw_decl.span.start),
                 mode,
                 follow_target,
+                range_instrument: raw_decl.range_instrument,
                 soundfont: raw_decl.soundfont,
                 volume: raw_decl.volume,
                 octave_offset: raw_decl.octave_offset,
@@ -139,6 +145,7 @@ pub fn collect_source_raw_declarations(
 
 struct ParsedPartRhs {
     kind: RawKind,
+    range_instrument: Option<RangeInstrument>,
     soundfont: Option<Soundfont>,
     volume: Option<u8>,
     octave_offset: Option<i8>,
@@ -151,6 +158,7 @@ struct LhsParsed {
 }
 
 struct RhsSuffixes {
+    range_instrument: Option<Spanned<RangeInstrument>>,
     soundfont: Option<Soundfont>,
     volume: Option<u8>,
     octave_offset: Option<i8>,
@@ -238,10 +246,12 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
             abbreviation_span,
             span,
             kind,
+            range_instrument,
             soundfont,
             volume,
             octave_offset,
         } = raw_decl;
+        let soundfont = soundfont.or(range_instrument.map(RangeInstrument::default_soundfont));
         match kind {
             RawKind::Follow {
                 target,
@@ -268,6 +278,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                         display_name,
                         kind: target_decl.kind,
                         follow_target: Some(target),
+                        range_instrument: range_instrument.or(target_decl.range_instrument),
                         soundfont: soundfont.unwrap_or(target_decl.soundfont),
                         volume: volume.unwrap_or(target_decl.volume),
                         octave_offset: octave_offset.unwrap_or(target_decl.octave_offset),
@@ -280,6 +291,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
                 display_name,
                 kind,
                 follow_target: None,
+                range_instrument,
                 soundfont: soundfont.unwrap_or(kind.default_soundfont()),
                 volume: volume.unwrap_or(DEFAULT_PART_VOLUME),
                 octave_offset: octave_offset.unwrap_or(DEFAULT_PART_OCTAVE_OFFSET),
@@ -304,46 +316,6 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
         }
     }
     lyric_parts_after_their_targets(declarations)
-}
-
-/// The name fields of a `lyrics[X]` declaration, before its target is resolved.
-struct LyricsDeclarationHeader {
-    abbreviation: String,
-    abbreviation_span: Span,
-    display_name: String,
-}
-
-/// Resolves a `lyrics[target]` declaration against the parts declared so far,
-/// reporting an error (and yielding nothing) when `target` isn't an earlier
-/// notes or chords part.
-fn resolve_lyrics_declaration(
-    declarations: &[PartDecl],
-    header: LyricsDeclarationHeader,
-    target: &str,
-    target_span: Span,
-    errors: &mut Vec<RecoverableError>,
-) -> Option<PartDecl> {
-    let target_part_index = declarations.iter().position(|declaration| {
-        declaration.abbreviation == target
-            && matches!(declaration.kind, PartKind::Notes | PartKind::Chords)
-    });
-    let Some(target_part_index) = target_part_index else {
-        errors.push(RecoverableError::parts_lyrics_invalid_target(
-            target_span,
-            target,
-        ));
-        return None;
-    };
-    Some(PartDecl {
-        abbreviation: header.abbreviation,
-        abbreviation_span: header.abbreviation_span,
-        display_name: header.display_name,
-        kind: PartKind::Lyrics { target_part_index },
-        follow_target: None,
-        soundfont: PartKind::Lyrics { target_part_index }.default_soundfont(),
-        volume: DEFAULT_PART_VOLUME,
-        octave_offset: DEFAULT_PART_OCTAVE_OFFSET,
-    })
 }
 
 /// Reorders `declarations` so each lyric part sits directly after its target

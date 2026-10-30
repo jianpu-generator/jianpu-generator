@@ -159,13 +159,36 @@ One track per line. Blank lines are ignored.
 | `follow[X]` | Inherit column layout from the part with abbreviation `X` | same as target |
 | `lyrics[X]` | A lyric part: one verse of lyrics for the `notes`/`chords`/`follow` part with abbreviation `X` (see [Lyric parts](#lyric-parts)) | 1 per measure that writes it |
 
-An optional soundfont string `"<number>: <name>"` may follow the kind token (or `follow[X]` bracket) to select the MIDI timbre for that part. The number is the General MIDI program number (0–127). The `<name>` portion is a quoted string and may contain `=` and other characters (for example `"1: Grand = Piano"`). For example: `notes "52: Choir Aahs"` or `follow[A] "1: Grand Piano"`. If omitted on a `chords` or `notes` part, the default is program 0 (Acoustic Grand Piano). On a `follow[X]` part, the soundfont is inherited from the target when omitted.
+An optional soundfont string `"<number>: <name>"` may follow the kind token (or `follow[X]` bracket) to select the MIDI timbre for that part. The number is the General MIDI program number (0–127). The `<name>` portion is a quoted string and may contain `=` and other characters (for example `"1: Grand = Piano"`). For example: `notes "52: Choir Aahs"` or `follow[A] "1: Grand Piano"`. If omitted on a `chords` or `notes` part, the default is the sound of the part's [instrument](#instrument-range), or program 0 (Acoustic Grand Piano) when it names none. On a `follow[X]` part, the soundfont is inherited from the target when omitted, unless the follow part names its own instrument.
 
 For `percussion` parts, the soundfont number is instead a **GM percussion key** (e.g. `38` = Acoustic Snare, `36` = Bass Drum 1), not a GM program number — all percussion parts share MIDI channel 9 (the GM drum channel) and a single fixed GM Standard Kit program change; the number selects which drum sample within that kit each hit plays. If omitted, the default is key 38 (Acoustic Snare). The number is not checked against the melodic instrument catalog.
 
 An optional volume suffix `XX%` (1–3 ASCII digits followed by `%`; the valid range is `0%`–`100%`, where `0%` silences the part — a value above `100%` emits a recoverable error and is clamped to `100%`) may appear after the soundfont string (or after the kind token if there is no soundfont) to set the MIDI volume for that part. For example: `notes "52: Choir Aahs" 47%` or `notes 80%`. If omitted on a concrete part, the default is 100%. On a `follow[X]` part, volume is inherited from the target when omitted and may be overridden with an explicit `XX%` suffix.
 
 An optional octave offset `+N` or `-N` (1–4 ASCII digits; the valid range is `-4`–`+4`) may appear anywhere on the right-hand side to shift every note in that part up or down by N octaves in MIDI output only. For example: `notes -1`, `notes +1`, `notes "5: Electric Guitar" -2`, or `follow[A] -1`. The offset does not change octave dots in the rendered SVG. If omitted on a concrete part, the default is 0. On a `follow[X]` part, the octave offset is inherited from the target when omitted and may be overridden with an explicit `+N` or `-N` suffix. Values outside `-4`–`+4` emit a recoverable error and are clamped to the nearest bound.
+
+#### Instrument range
+
+An optional instrument name may follow the kind token (or `follow[X]` bracket), before the soundfont, on a `notes` or `follow[X]` part. It sets the part's playable range (a range is never written by hand) and, when the line quotes no soundfont, the sound the part plays. For example: `Violin [V] = notes violin "41: Violin" 80%`, `Soprano [S] = notes soprano`.
+
+| Name | Instrument | Range | Default sound |
+|------|------------|-------|---------------|
+| `guitar` | Guitar | E2–B5 | `24: Acoustic Guitar (nylon)` |
+| `violin` | Violin | G3–A7 | `40: Violin` |
+| `cello` | Cello | C2–E5 | `42: Cello` |
+| `liuqin` | 柳琴 | G3–G6 | `106: Shamisen` |
+| `guzheng` | 古箏 | D2–D6 | `107: Koto` |
+| `harmonica` | Harmonica | C4–C7 | `22: Harmonica` |
+| `bass` | Bass voice | F2–D4 | `52: Choir Aahs` |
+| `tenor` | Tenor voice | C3–G4 | `52: Choir Aahs` |
+| `alto` | Alto voice | G3–D5 | `52: Choir Aahs` |
+| `soprano` | Soprano voice | C4–G5 | `52: Choir Aahs` |
+
+General MIDI has no liuqin or guzheng, so they default to the closest plucked lute and zither. A quoted soundfont always wins over the default sound.
+
+Each note whose sounding pitch (the key plus the part's `+N`/`-N` octave offset) falls outside the range gets its own warning, pointing at the note, e.g. `V: note sounds as F3, below the violin's lowest note G3`. The warning doesn't stop rendering or playback. A part with no instrument is not checked. A `follow[X]` part inherits its target's instrument and sound, and may name its own instrument to override both (`Violin 2 [V2] = follow[V] -1`, `Cello [C] = follow[V] cello -1`).
+
+An unknown name emits a recoverable error listing the valid names and is ignored. A name on a `chords` or `percussion` part emits a recoverable error and is ignored.
 
 Rules:
 

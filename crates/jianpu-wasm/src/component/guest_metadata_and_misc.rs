@@ -272,6 +272,16 @@ pub(super) fn list_sound_choices(raw_instruments: Vec<InstrumentInfo>) -> SoundC
     ))
 }
 
+pub(super) fn list_range_instruments() -> Vec<RangeInstrumentChoice> {
+    jianpu_generator::ast::parsed::RangeInstrument::ALL
+        .iter()
+        .map(|instrument| RangeInstrumentChoice {
+            name: instrument.keyword().to_string(),
+            label: instrument.label().to_string(),
+        })
+        .collect()
+}
+
 pub(super) fn get_part_setting_limits() -> PartSettingLimits {
     part_setting_limits_to_wit(jianpu_generator::parser::parts_parser::PART_SETTING_LIMITS)
 }
