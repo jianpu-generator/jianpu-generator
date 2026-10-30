@@ -17,7 +17,8 @@ export interface FileHistoryModalProps {
   backend: CloudBackend
   fileId: string
   fileName: string
-  /** The editor's current text, which a version is diffed against. */
+  /** The editor's current text, which a version is diffed against: the
+   * diff shows what changed since that version. */
   currentContent: string
   /** Puts `content` in the editor; it is saved like any edit, as a new
    * version. */
@@ -182,8 +183,8 @@ function VersionPane({
     <div className="file-history__pane">
       <div className="file-history__diff" data-testid="file-history-diff">
         <JianpuDiffEditor
-          original={currentContent}
-          modified={version.value.content}
+          original={version.value.content}
+          modified={currentContent}
           layout={layout}
         />
       </div>
