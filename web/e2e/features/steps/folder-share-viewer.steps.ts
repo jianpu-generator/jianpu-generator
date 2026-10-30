@@ -185,7 +185,7 @@ When('the viewer imports the folder', async () => {
   await viewer().getByRole('button', { name: 'Import this folder' }).click()
 })
 
-When('the viewer discards the folder', async () => {
+When('the viewer clicks Discard', async () => {
   await viewer().getByRole('button', { name: 'Discard' }).click()
 })
 
@@ -249,6 +249,10 @@ Then("the viewer's page URL has no synced share param", async () => {
 
 Then("the viewer's page URL has no share hash", async () => {
   await expect.poll(() => new URL(viewer().url()).hash).toBe('')
+})
+
+Then('the viewer sees no shared viewer notice', async () => {
+  await expect(viewer().getByTestId('shared-viewer-notice')).toHaveCount(0)
 })
 
 Then('the viewer sees the "no longer shared" screen', async () => {

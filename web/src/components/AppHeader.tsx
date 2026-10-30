@@ -42,6 +42,7 @@ interface SyncedShareHeaderProps {
   viewerStatus: SyncedShareViewerStatus
   viewerFilename: string | null
   onImportSyncedShare: () => void
+  onDiscardSyncedShare: () => void
   /** Whether the active file can have a live link (cloud files only) --
    * see `useSyncedShareOwner.ts`. */
   canSync: boolean
@@ -248,6 +249,7 @@ export function AppHeader({
                 ? sharedFolder.onImport
                 : syncedShare.onImportSyncedShare
             }
+            onDiscard={syncedShare.onDiscardSyncedShare}
           />
         )
       )}

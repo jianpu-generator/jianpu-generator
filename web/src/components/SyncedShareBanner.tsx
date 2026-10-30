@@ -6,6 +6,7 @@ interface SyncedShareBannerProps {
   /** Name of the shared folder when the link is a folder link. */
   folderName: string | null
   onImport: () => void
+  onDiscard: () => void
 }
 
 export function SyncedShareBanner({
@@ -13,6 +14,7 @@ export function SyncedShareBanner({
   filename,
   folderName,
   onImport,
+  onDiscard,
 }: SyncedShareBannerProps) {
   const canImport = status === 'synced' && (folderName || filename)
   return (
@@ -34,8 +36,8 @@ export function SyncedShareBanner({
         {status === 'too-large' && 'This shared folder is too large to open.'}
         {status === 'ended' && 'This synced share has ended.'}
       </p>
-      {canImport && (
-        <div className="shared-preview-actions">
+      <div className="shared-preview-actions">
+        {canImport && (
           <button
             type="button"
             className="shared-preview-import-btn"
@@ -43,8 +45,15 @@ export function SyncedShareBanner({
           >
             {folderName ? 'Import this folder' : 'Import to my scores'}
           </button>
-        </div>
-      )}
+        )}
+        <button
+          type="button"
+          className="shared-preview-discard-btn"
+          onClick={onDiscard}
+        >
+          Discard
+        </button>
+      </div>
     </div>
   )
 }

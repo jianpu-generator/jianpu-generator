@@ -74,7 +74,7 @@ export function useScoreSource(
   )
   const {
     syncedFolder,
-    clearSyncedFolder,
+    leaveSyncedShare,
     syncedShareViewerPreview,
     syncedShareViewerStatus,
     syncedShareViewerTraceId,
@@ -89,7 +89,7 @@ export function useScoreSource(
 
   const sharedFolder = useSharedFolderViewer(
     syncedFolder,
-    clearSyncedFolder,
+    leaveSyncedShare,
     store,
     backend,
     setStore,
@@ -131,6 +131,7 @@ export function useScoreSource(
       viewerTraceId: syncedShareViewerTraceId,
       viewerFilename: syncedShareViewerPreview?.filename ?? null,
       onImportSyncedShare: handleImportSyncedShare,
+      onDiscardSyncedShare: sharedFolder?.onDiscard ?? leaveSyncedShare,
       canSync: syncedShareOwner.canSync,
       isSynced: syncedShareOwner.isSynced,
       syncedShareLink: syncedShareOwner.syncedShareLink,
