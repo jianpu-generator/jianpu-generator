@@ -7,7 +7,7 @@ import {
   createWorkerClient,
   type WorkerSchemas,
 } from '../syncedShare/workerClient'
-import { createCloudBackend } from './cloudBackend'
+import { type CloudBackendConfig, createCloudBackend } from './cloudBackend'
 import { baseSnapshotHooks } from './cloudBackendOutbox'
 import { createBaseSnapshots } from './outbox/baseSnapshots'
 import { createMemoryOutboxStore } from './outbox/memoryOutboxStore'
@@ -90,7 +90,7 @@ export async function installRealWasm(): Promise<void> {
 /** A cloud backend whose outbox runs on the real wasm decisions, an
  * in-memory store, a single (always-leader) tab and a manual clock: call
  * `wake()` after `advance()` to run what has become due. */
-export function createTestBackend() {
+export function createTestBackend(overrides: Partial<CloudBackendConfig> = {}) {
   let time = 1_000_000
   let wake: () => void = () => undefined
   const client = createWorkerClient(config.workerHost)
@@ -131,11 +131,14 @@ export function createTestBackend() {
     now: () => time,
     random: () => 0,
   })
-  const backend = createCloudBackend(config, {
-    looper,
-    bases,
-    ensureWasm: installRealWasm,
-  })
+  const backend = createCloudBackend(
+    { ...config, ...overrides },
+    {
+      looper,
+      bases,
+      ensureWasm: installRealWasm,
+    },
+  )
   return {
     backend,
     looper,

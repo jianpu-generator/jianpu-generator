@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { DEMO_FILE_NAMES, type FileStoreState } from '../fileStore'
 import {
   apiErrorResponse,
@@ -202,6 +202,35 @@ describe('createCloudBackend: saveContent()', () => {
     expect(backend.status()).toBe('error')
     expect(backend.lastError()).toEqual({ kind: 'auth' })
     expect(looper.snapshot().summary.hasUnsynced).toBe(true)
+  })
+
+  it('reports the session as ended when a save is refused as unauthorized', async () => {
+    const onSessionEnded = vi.fn()
+    const { backend, looper } = createTestBackend({ onSessionEnded })
+    fetchMock.mockResolvedValueOnce(
+      apiErrorResponse(401, {
+        code: 'unauthorized',
+        reason: 'ended',
+        failedAt: 0,
+        attempts: 1,
+      }),
+    )
+
+    await backend.saveContent(seededState())
+    await looper.whenIdle()
+
+    expect(onSessionEnded).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not report the session as ended for any other failure', async () => {
+    const onSessionEnded = vi.fn()
+    const { backend, looper } = createTestBackend({ onSessionEnded })
+    fetchMock.mockResolvedValueOnce(jsonResponse(500, { message: 'boom' }))
+
+    await backend.saveContent(seededState())
+    await looper.whenIdle()
+
+    expect(onSessionEnded).not.toHaveBeenCalled()
   })
 
   it('classifies an unexpected non-2xx response as unknown', async () => {

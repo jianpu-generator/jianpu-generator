@@ -258,22 +258,33 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
   /** Exists only while started: stopping disposes it, starting rebuilds it. */
   let scheduler: Scheduler | null = null
 
-  const mutate = async (change: () => Queue): Promise<void> => {
-    if (halted) {
-      throw new Error(
-        'The outbox could not be read, so it will not accept new messages',
-      )
-    }
-    // Another tab may have queued messages since this one last read the
-    // store; build on what is stored so neither tab's messages are lost.
-    if (!isLeader && loaded) await load()
-    if (halted) throw new Error('The outbox could not be read')
-    queue = change()
-    await persist()
-    notify()
-    deps.changes?.announce()
-    void requestDrain().catch(() => undefined)
+  /** Mutations and the new leader's re-read of the store run one at a
+   * time: a re-read that started before a mutation and answered after it
+   * would otherwise put back the queue from before the mutation. */
+  let exclusive: Promise<void> = Promise.resolve()
+  const oneAtATime = (task: () => Promise<void>): Promise<void> => {
+    const run = exclusive.then(task)
+    exclusive = run.catch(() => undefined)
+    return run
   }
+
+  const mutate = (change: () => Queue): Promise<void> =>
+    oneAtATime(async () => {
+      if (halted) {
+        throw new Error(
+          'The outbox could not be read, so it will not accept new messages',
+        )
+      }
+      // Another tab may have queued messages since this one last read the
+      // store; build on what is stored so neither tab's messages are lost.
+      if (!isLeader && loaded) await load()
+      if (halted) throw new Error('The outbox could not be read')
+      queue = change()
+      await persist()
+      notify()
+      deps.changes?.announce()
+      void requestDrain().catch(() => undefined)
+    })
 
   const refreshSent = async (): Promise<void> => {
     sentRecords = (await store.loadAll()).filter((record) =>
@@ -312,8 +323,10 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
         }) ?? null
       stopLeading = runAsLeader(async (signal) => {
         // The previous leader may have changed the stored queue since we loaded.
-        await load()
-        notify()
+        await oneAtATime(async () => {
+          await load()
+          notify()
+        })
         isLeader = true
         leaderSignal = signal
         void requestDrain().catch(() => undefined)
