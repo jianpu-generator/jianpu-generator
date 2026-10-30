@@ -1,5 +1,5 @@
 use super::parse_parts;
-use crate::ast::parsed::PartKind;
+use crate::ast::parsed::{PartKind, Soundfont};
 use crate::error::RecoverableErrorKind;
 
 #[test]
@@ -345,4 +345,56 @@ fn source_level_line_numbers_in_multi_section_file() {
     assert_eq!(declarations.len(), 2);
     assert_eq!(declarations[0].line_number, 5);
     assert_eq!(declarations[1].line_number, 6);
+}
+
+#[test]
+fn instrument_sets_the_sound_when_no_soundfont_is_quoted() {
+    let content = "Violin [V] = notes violin\nZheng [Z] = notes guzheng\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty());
+    assert_eq!(decls[0].soundfont, Soundfont(40));
+    assert_eq!(decls[1].soundfont, Soundfont(107));
+}
+
+#[test]
+fn quoted_soundfont_overrides_the_instruments_sound() {
+    let content = "Violin [V] = notes violin \"0: Acoustic Grand Piano\"\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty());
+    assert_eq!(decls[0].soundfont, Soundfont(0));
+}
+
+#[test]
+fn follow_part_naming_its_own_instrument_plays_that_instruments_sound() {
+    let content = "Violin [V] = notes violin\nCello [C] = follow[V] cello -1\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty());
+    assert_eq!(decls[1].soundfont, Soundfont(42));
+}
+
+#[test]
+fn follow_part_naming_no_instrument_plays_its_targets_sound() {
+    let content = "Violin [V] = notes violin\nViolin 2 [V2] = follow[V] -1\n";
+    let (decls, errors) = parse_parts(content, 0, &[]);
+    assert!(errors.is_empty());
+    assert_eq!(decls[1].soundfont, Soundfont(40));
+}
+
+#[test]
+fn source_level_instrument_labels_its_sound_without_writing_a_program() {
+    use crate::list_part_declarations_from_source;
+
+    let violin = super::InstrumentInfo {
+        name: "Violin".to_owned(),
+        program: 40,
+        category: String::new(),
+        source: String::new(),
+        role: String::new(),
+        articulation: String::new(),
+    };
+    let source = "# parts\nViolin [V] = notes violin\n\n# score\n1 - - -\n";
+    let declarations =
+        list_part_declarations_from_source(source, "test.jianpu", &[violin]).unwrap();
+    assert_eq!(declarations[0].settings.program, None);
+    assert_eq!(declarations[0].sound_label.as_deref(), Some("40: Violin"));
 }

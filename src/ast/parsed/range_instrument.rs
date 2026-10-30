@@ -1,6 +1,9 @@
 //! The instrument a `notes` part names on its `# parts` line (e.g.
 //! `Violin [V] = notes violin`), which sets the range its notes are checked
-//! against (see `syntax.md`, "Instrument range").
+//! against and the sound it plays when the line quotes none (see
+//! `syntax.md`, "Instrument range").
+
+use super::Soundfont;
 
 keyword_enum! {
     /// An instrument or voice whose playable range a part's notes are checked
@@ -67,5 +70,19 @@ impl RangeInstrument {
             Self::Soprano => (60, 79),
         };
         PitchRange { lowest, highest }
+    }
+
+    /// The sound a part naming this instrument plays when its line quotes
+    /// no soundfont: the closest General MIDI program.
+    pub fn default_soundfont(self) -> Soundfont {
+        Soundfont(match self {
+            Self::Guitar => 24,    // Acoustic Guitar (nylon)
+            Self::Violin => 40,    // Violin
+            Self::Cello => 42,     // Cello
+            Self::Liuqin => 106,   // Shamisen: GM has no liuqin, this is the closest plucked lute
+            Self::Guzheng => 107,  // Koto: the Japanese zither descended from the guzheng
+            Self::Harmonica => 22, // Harmonica
+            Self::Bass | Self::Tenor | Self::Alto | Self::Soprano => 52, // Choir Aahs
+        })
     }
 }

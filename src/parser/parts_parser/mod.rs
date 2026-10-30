@@ -1,6 +1,7 @@
 mod declaration_parsing;
 mod instrument_matching;
 mod lexer;
+mod lyrics_declaration;
 mod setting_limits;
 
 use crate::ast::parsed::{PartDecl, PartKind, RangeInstrument, Soundfont};
@@ -13,6 +14,7 @@ pub use setting_limits::{
 };
 
 use declaration_parsing::parse_declaration_line;
+use lyrics_declaration::{resolve_lyrics_declaration, LyricsDeclarationHeader};
 
 #[cfg(test)]
 mod default_soundfont_tests;
@@ -249,6 +251,7 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
             volume,
             octave_offset,
         } = raw_decl;
+        let soundfont = soundfont.or(range_instrument.map(RangeInstrument::default_soundfont));
         match kind {
             RawKind::Follow {
                 target,
@@ -313,47 +316,6 @@ fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -
         }
     }
     lyric_parts_after_their_targets(declarations)
-}
-
-/// The name fields of a `lyrics[X]` declaration, before its target is resolved.
-struct LyricsDeclarationHeader {
-    abbreviation: String,
-    abbreviation_span: Span,
-    display_name: String,
-}
-
-/// Resolves a `lyrics[target]` declaration against the parts declared so far,
-/// reporting an error (and yielding nothing) when `target` isn't an earlier
-/// notes or chords part.
-fn resolve_lyrics_declaration(
-    declarations: &[PartDecl],
-    header: LyricsDeclarationHeader,
-    target: &str,
-    target_span: Span,
-    errors: &mut Vec<RecoverableError>,
-) -> Option<PartDecl> {
-    let target_part_index = declarations.iter().position(|declaration| {
-        declaration.abbreviation == target
-            && matches!(declaration.kind, PartKind::Notes | PartKind::Chords)
-    });
-    let Some(target_part_index) = target_part_index else {
-        errors.push(RecoverableError::parts_lyrics_invalid_target(
-            target_span,
-            target,
-        ));
-        return None;
-    };
-    Some(PartDecl {
-        abbreviation: header.abbreviation,
-        abbreviation_span: header.abbreviation_span,
-        display_name: header.display_name,
-        kind: PartKind::Lyrics { target_part_index },
-        follow_target: None,
-        range_instrument: None,
-        soundfont: PartKind::Lyrics { target_part_index }.default_soundfont(),
-        volume: DEFAULT_PART_VOLUME,
-        octave_offset: DEFAULT_PART_OCTAVE_OFFSET,
-    })
 }
 
 /// Reorders `declarations` so each lyric part sits directly after its target

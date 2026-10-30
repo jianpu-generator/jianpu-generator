@@ -384,7 +384,8 @@ world jianpu-wasm {
         display-name: string,
         line-number: u32,
         settings: part-settings,
-        // Display-only label for `settings.program`, e.g. `"40: Violin"`.
+        // Display-only label for the sound the part plays, e.g. `"40: Violin"`:
+        // `settings.program`, or else the range instrument's default sound.
         sound-label: option<string>,
     }
 
