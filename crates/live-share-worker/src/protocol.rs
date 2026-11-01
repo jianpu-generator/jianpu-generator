@@ -11,6 +11,9 @@
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
+mod origin_migration;
+pub use origin_migration::*;
+
 /// What `GET /shares/{share_id}` returns. `filename`/`content`/`revision`
 /// are the pointed-at `files` row's current `name`/`content`/`revision` --
 /// a share holds no copy of its own (see `crate::share`). `ended` is true
@@ -376,37 +379,4 @@ pub struct E2eResetResponse {
     pub deleted_accounts: usize,
     pub deleted_shares: usize,
     pub deleted_files: usize,
-}
-
-/// Body of `POST /origin-migrations`: everything an old origin's bridge
-/// page found in `localStorage`, as one opaque JSON text the worker never
-/// parses (see `crate::origin_migration`).
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct OriginMigrationUploadRequest {
-    pub payload: String,
-}
-
-/// Response of `POST /origin-migrations`: the id the bridge page hands to
-/// the new origin in its redirect.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct OriginMigrationUploadResponse {
-    pub id: String,
-}
-
-/// Body of `POST /origin-migrations/claim`.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct OriginMigrationClaimRequest {
-    pub id: String,
-}
-
-/// Response of `POST /origin-migrations/claim`: the payload exactly as it
-/// was uploaded. The handoff is deleted by the claim, so a second claim of
-/// the same id answers `not_found`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct OriginMigrationClaimResponse {
-    pub payload: String,
 }
