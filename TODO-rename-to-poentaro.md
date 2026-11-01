@@ -23,6 +23,28 @@ survives context compression. Branch: `feat/rename-to-poentaro`.
 - Cloudflare dashboard / production actions (create `poentaro` project, first
   deploy, switching the old project to the bridge) need the user's approval.
 
+## Findings (from exploring the code)
+
+- Saved browser data: `localStorage` keys all start with `jianpu:`
+  (`files:v1`, `source:v5` legacy, `account-auth:v2`, `storage-backend:v1`,
+  `part-toggles:v1`, `file-tree-expanded:v1`, `part-stream-diff-layout:v1`,
+  `preview-notation:v1`), PLUS the cloud outbox in IndexedDB: one database
+  per account named `jianpu-outbox:<account>`, object store `records`,
+  string key -> string value (`web/src/storage/outbox/outboxStore.ts`).
+  Unsynced cloud edits live there, so the bridge must carry it too.
+- Payload shape (opaque to the worker), version 1:
+  `{ version: 1, localStorage: {key: value}, indexedDb: [{ name, records: [{key, value}] }] }`.
+- Rust file store: `src/file_tree/store_state.rs` (`FileStoreState`), file
+  ops in `src/file_tree/file_ops.rs`, unique names in
+  `src/file_tree/unique_name.rs`; wasm exports in
+  `crates/jianpu-wasm/src/component/guest_file_store.rs`, WIT in
+  `crates/jianpu-wasm/wit/world.wit` (`file-store-state` record); TS calls
+  via `jianpuWasm().fileStoreXxx` in `web/src/fileStore.ts`.
+- `web/functions/index.ts` (Pages Function) rewrites OG tags for `?s=`
+  share links. The bridge deploy has no function, so link-preview crawlers
+  hitting OLD links get the bridge page (no rich preview). Accepted; mention
+  in the PR.
+
 ## Steps
 
 ### 1. Worker: one-time migration handoff
@@ -38,13 +60,16 @@ survives context compression. Branch: `feat/rename-to-poentaro`.
       (Extend that section when steps 2 and 3 land.)
 
 ### 2. Bridge page for the old origin
-- [ ] Standalone static page (e.g. `web/bridge/`), built separately, served
-      for every path of `jianpu-generator.pages.dev` (and GitHub Pages).
-- [ ] Logic: if `jianpu:origin-migrated` flag set or no `jianpu:*` keys ->
-      redirect immediately; else upload all `jianpu:*` keys, set the flag,
-      redirect with `migrate=<id>` added. Always preserve path (minus the
-      GitHub Pages `/jianpu-generator/` base), query and hash.
-- [ ] On upload failure, still redirect (don't trap users), keep flag unset.
+- [x] `web/bridge/index.html` + `web/src/bridge/{main,bridgeUrl,collectSavedData}.ts`,
+      built by `pnpm build:bridge` (`web/vite.bridge.config.ts` ->
+      `web/dist-bridge/`). Shared constants/payload type in
+      `web/src/originMigration/originMigrationPayload.ts`.
+- [x] Logic: `jianpu:origin-migrated:v1` set or nothing saved -> redirect
+      now; else upload, set the flag, redirect with `migrate=<id>`. Path
+      (minus base), query and hash preserved (`bridgeUrl.test.ts`).
+      Target origin overridable with `VITE_ORIGIN_MIGRATION_TARGET` (for e2e).
+- [x] On upload failure: show "Try again" / "Continue without my files"
+      (flag stays unset, so the next visit retries).
 
 ### 3. New app: import on arrival
 - [ ] Detect `migrate=<id>`, claim payload, strip the param from the URL.

@@ -745,6 +745,21 @@ one-time **origin migration** handoff in the worker.
     it (`DELETE ... RETURNING`), so a handoff is read at most once; unknown,
     already claimed and expired (older than `ORIGIN_MIGRATION_TTL_MILLIS`,
     1 h) ids all answer `not_found`. The daily cron prunes expired rows.
+- Payload (`web/src/originMigration/originMigrationPayload.ts`,
+  `OriginMigrationPayload`, version 1): every `localStorage` entry whose key
+  starts with `jianpu:` and every cloud outbox IndexedDB database
+  (`jianpu-outbox:<account>`, `OUTBOX_DATABASE_PREFIX`) with its records.
+- Bridge page (`web/bridge/index.html`, `web/src/bridge/`, built by
+  `pnpm build:bridge` with `web/vite.bridge.config.ts` into
+  `web/dist-bridge/`): served by the old origins for every path. If the old
+  origin is already marked migrated (`jianpu:origin-migrated:v1`) or holds
+  nothing, it redirects at once; otherwise it uploads the payload, sets the
+  mark and redirects with `?migrate=<id>`. `bridgeRedirectUrl` keeps the
+  path (minus the old base path), query and fragment, which share links
+  carry their payload in. A failed upload shows "Try again" / "Continue
+  without my files" and leaves the mark unset. The old origin's data is
+  never deleted. Link-preview crawlers that fetch an old link get the
+  bridge page, not the share's title (`web/functions/` isn't deployed there).
 
 ### App log (observability)
 
