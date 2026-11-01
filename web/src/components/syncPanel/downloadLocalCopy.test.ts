@@ -32,4 +32,10 @@ describe('downloadLocalCopy', () => {
     downloadLocalCopy('song.jianpu', 'x')
     expect(anchor.download).toBe('song.jianpu')
   })
+
+  it('drops the folders from the name', () => {
+    const { anchor } = setup()
+    downloadLocalCopy('hymns/advent/song.jianpu', 'x')
+    expect(anchor.download).toBe('song.jianpu')
+  })
 })

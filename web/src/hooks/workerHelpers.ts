@@ -114,9 +114,7 @@ export function pdfFilenameFromActiveFile(
   activeFile: string,
   enabledPartNames?: string[],
 ): string {
-  const base = activeFile.endsWith('.jianpu')
-    ? activeFile.replace(/\.jianpu$/, '.pdf')
-    : `${activeFile}.pdf`
+  const base = `${baseNameFromActiveFile(activeFile)}.pdf`
   return withEnabledPartsSuffix(base, enabledPartNames)
 }
 
@@ -124,9 +122,7 @@ export function midiFilenameFromActiveFile(
   activeFile: string,
   enabledPartNames?: string[],
 ): string {
-  const base = activeFile.endsWith('.jianpu')
-    ? activeFile.replace(/\.jianpu$/, '.mid')
-    : `${activeFile}.mid`
+  const base = `${baseNameFromActiveFile(activeFile)}.mid`
   return withEnabledPartsSuffix(base, enabledPartNames)
 }
 
@@ -134,9 +130,7 @@ export function wavFilenameFromActiveFile(
   activeFile: string,
   enabledPartNames?: string[],
 ): string {
-  const base = activeFile.endsWith('.jianpu')
-    ? activeFile.replace(/\.jianpu$/, '.wav')
-    : `${activeFile}.wav`
+  const base = `${baseNameFromActiveFile(activeFile)}.wav`
   return withEnabledPartsSuffix(base, enabledPartNames)
 }
 
@@ -144,9 +138,7 @@ export function mp3FilenameFromActiveFile(
   activeFile: string,
   enabledPartNames?: string[],
 ): string {
-  const base = activeFile.endsWith('.jianpu')
-    ? activeFile.replace(/\.jianpu$/, '.mp3')
-    : `${activeFile}.mp3`
+  const base = `${baseNameFromActiveFile(activeFile)}.mp3`
   return withEnabledPartsSuffix(base, enabledPartNames)
 }
 
@@ -154,9 +146,7 @@ export function zipFilenameFromActiveFile(
   activeFile: string,
   suffix?: string,
 ): string {
-  const base = activeFile.endsWith('.jianpu')
-    ? activeFile.replace(/\.jianpu$/, '')
-    : activeFile
+  const base = baseNameFromActiveFile(activeFile)
   return suffix ? `${base} (${suffix}).zip` : `${base}.zip`
 }
 
@@ -173,9 +163,14 @@ export function postAfterPaint(worker: Worker, payload: unknown) {
   requestAnimationFrame(() => worker.postMessage(payload))
 }
 
+/** The last segment of a `/`-separated file path, i.e. the file name
+ * without the folders it lives in. */
+export function fileNameWithoutFolder(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1)
+}
+
+/** The name every export of `activeFile` is downloaded under: its file name
+ * without its folders or its `.jianpu` extension. */
 export function baseNameFromActiveFile(activeFile: string): string {
-  if (activeFile.endsWith('.jianpu')) {
-    return activeFile.replace(/\.jianpu$/, '')
-  }
-  return activeFile
+  return fileNameWithoutFolder(activeFile).replace(/\.jianpu$/, '')
 }
