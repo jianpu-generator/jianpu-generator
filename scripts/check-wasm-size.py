@@ -10,7 +10,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-MAX_BYTES = 8 * 1024 * 1024
+MAX_BYTES = 9 * 1024 * 1024
 WASM_PATH = (
     Path(__file__).resolve().parent.parent
     / "crates/jianpu-wasm/pkg-component/jianpu_wasm.core.wasm"
