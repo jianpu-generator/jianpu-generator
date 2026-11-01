@@ -6,7 +6,9 @@
 //! and `POST /shares/overview`; `shares` submodule), the
 //! `/files` routes (the cloud storage backend, see `crate::files`; `files`
 //! submodule), plus the account routes `/auth/sign-up`, `/auth/sign-in`,
-//! `/auth/sign-out` and `/auth/change-password` (`auth` submodule).
+//! `/auth/sign-out` and `/auth/change-password` (`auth` submodule), and the
+//! one-time origin-migration handoff `POST /origin-migrations{,/claim}`
+//! (`origin_migrations` submodule, see `crate::origin_migration`).
 //!
 //! Every write (including starting/stopping a share) resolves its caller's
 //! identity via `identity::resolve_verified_user_id` -- a session lookup,
@@ -32,10 +34,11 @@
 mod auth;
 mod e2e_reset;
 mod files;
+mod origin_migrations;
 pub(crate) mod routes;
 mod shares;
 
-use worker::{console_error, D1Database, Env, Response};
+use worker::{console_error, D1Database, Env, Response, RouteContext};
 
 use crate::api_error::{ApiError, ApiErrorBody};
 use crate::app_log::{LogEvent, RequestEvent, RequestFailed, RequestMeta};
@@ -76,6 +79,8 @@ pub(crate) fn routes(e2e_reset_enabled: bool) -> worker::Result<Routes> {
         .post("/folders/share/stop", shares::stop_folder_share)?
         .post("/folders/share/status", shares::folder_share_status)?
         .post("/shares/overview", shares::share_overview)?
+        .post("/origin-migrations", origin_migrations::upload)?
+        .post("/origin-migrations/claim", origin_migrations::claim)?
         .post_if(e2e_reset_enabled, "/e2e/reset", e2e_reset::reset)
 }
 
@@ -132,4 +137,27 @@ async fn resolve_files_caller(
     resolve_verified_user_id(d1, identity_token, request_meta)
         .await?
         .map_err(ApiError::Unauthorized)
+}
+
+fn now_millis() -> i64 {
+    worker::Date::now().as_millis() as i64
+}
+
+/// Refuses the request once `binding`'s per-IP limit is spent. Requests
+/// with no `CF-Connecting-IP` (only local runs) share one bucket.
+async fn check_rate_limit(
+    ctx: &RouteContext<()>,
+    binding: &str,
+    request_meta: &RequestMeta,
+) -> HandlerResult<()> {
+    let key = request_meta
+        .client_ip
+        .clone()
+        .unwrap_or_else(|| "unknown".to_string());
+    let outcome = ctx.rate_limiter(binding)?.limit(key).await?;
+    if outcome.success {
+        Ok(())
+    } else {
+        Err(ApiError::RateLimited)
+    }
 }

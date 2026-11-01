@@ -350,6 +350,7 @@ impl Guest for Component {
         file_store_folders_to_reveal(path: String) -> Vec<String>;
         file_store_create_file(state: FileStoreState, folder: Option<String>, name: String, content: String, context: FileOperationContext) -> FileStoreResponse; file_store_create_file_error(state: FileStoreState, folder: Option<String>, name: String, context: FileOperationContext) -> Option<String>;
         file_store_duplicate_file(state: FileStoreState, source: String, context: FileOperationContext) -> FileStoreResponse;
+        file_store_merge_migrated(current: FileStoreState, carried: FileStoreState, context: FileOperationContext) -> FileStoreResponse;
         file_store_rename_file(state: FileStoreState, from_path: String, to_path: String, context: FileOperationContext) -> FileStoreResponse;
         file_store_delete_file(state: FileStoreState, path: String, context: FileOperationContext) -> FileStoreResponse;
         file_store_restore_file(state: FileStoreState, bin_key: String, context: FileOperationContext) -> FileStoreResponse;

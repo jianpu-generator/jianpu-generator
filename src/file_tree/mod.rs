@@ -9,6 +9,7 @@ mod folder_queries;
 mod folder_share;
 mod folder_snapshot;
 mod move_targets;
+mod origin_migration;
 mod path;
 mod placeholder;
 mod selection;
@@ -38,6 +39,7 @@ pub use folder_snapshot::{
     SnapshotFile, MAX_STATIC_FOLDER_LINK_CHARS, MAX_UNCOMPRESSED_SNAPSHOT_BYTES,
 };
 pub use move_targets::{move_destination, move_targets, rename_error, MoveTarget};
+pub use origin_migration::{merge_migrated_file_store, MIGRATED_FOLDER_NAME};
 pub use path::{PathError, TreePath, MAX_PATH_BYTES};
 pub use placeholder::{
     classify_cloud_listing, is_placeholder_path, placeholder_path, FolderPlaceholder, ListedEntry,
@@ -70,6 +72,8 @@ mod folder_share_tests;
 mod folder_snapshot_tests;
 #[cfg(test)]
 mod move_targets_tests;
+#[cfg(test)]
+mod origin_migration_tests;
 #[cfg(test)]
 mod path_tests;
 #[cfg(test)]

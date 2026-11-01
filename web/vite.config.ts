@@ -256,7 +256,7 @@ const LOCAL_WORKER_HOST = 'localhost:8787'
  * one. An explicitly set value (e2e's, or a personal
  * `.env.local`) still wins.
  */
-function workerDeployConfigPlugin(): Plugin {
+export function workerDeployConfigPlugin(): Plugin {
   return {
     name: 'worker-deploy-config',
     config(_, { mode, command }) {

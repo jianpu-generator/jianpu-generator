@@ -58,6 +58,15 @@ export default defineConfig({
         namespace: '1002',
         simple: { limit: rateLimitOverride ?? 3, period: 60 },
       }),
+      // Per-IP limit on `POST /origin-migrations` (the one-time handoff of
+      // a browser's saved data from the old origin, see
+      // `src/origin_migration.rs`): a browser uploads once, so a low limit
+      // only stops someone using it as free storage. The name must match
+      // `ORIGIN_MIGRATION_RATE_LIMITER` in `src/handlers/origin_migrations.rs`.
+      ORIGIN_MIGRATION_RATE_LIMITER: bindings.rateLimit({
+        namespace: '1003',
+        simple: { limit: rateLimitOverride ?? 5, period: 60 },
+      }),
       // The worker never reads it; it is declared so this crate is the
       // single source of deployment config -- `tests/export_openapi.rs`
       // publishes `deploy.json` to

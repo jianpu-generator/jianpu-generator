@@ -19,6 +19,9 @@ export interface OutboxStore {
 const DATABASE_NAME = 'jianpu-outbox'
 const OBJECT_STORE_NAME = 'records'
 
+/** Every account's outbox database is named this plus the account. */
+export const OUTBOX_DATABASE_PREFIX = `${DATABASE_NAME}:`
+
 interface OutboxSchema extends DBSchema {
   records: { key: string; value: string }
 }
@@ -35,7 +38,7 @@ export function assertStoredRecord(record: StoredRecord): void {
  * with another account's token. */
 export function createIndexedDbOutboxStore(account: string): OutboxStore {
   const databasePromise = openDB<OutboxSchema>(
-    `${DATABASE_NAME}:${account}`,
+    `${OUTBOX_DATABASE_PREFIX}${account}`,
     1,
     {
       upgrade(database) {

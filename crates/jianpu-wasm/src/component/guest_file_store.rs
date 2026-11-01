@@ -122,6 +122,18 @@ pub(super) fn file_store_duplicate_file(
     store_response(outcome)
 }
 
+pub(super) fn file_store_merge_migrated(
+    current: FileStoreState,
+    carried: FileStoreState,
+    context: FileOperationContext,
+) -> FileStoreResponse {
+    store_response(tree::merge_migrated_file_store(
+        &current.into(),
+        &carried.into(),
+        &context.into(),
+    ))
+}
+
 pub(super) fn file_store_rename_file(
     state: FileStoreState,
     from_path: String,

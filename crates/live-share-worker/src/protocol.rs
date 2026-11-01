@@ -11,6 +11,9 @@
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
+mod origin_migration;
+pub use origin_migration::*;
+
 /// What `GET /shares/{share_id}` returns. `filename`/`content`/`revision`
 /// are the pointed-at `files` row's current `name`/`content`/`revision` --
 /// a share holds no copy of its own (see `crate::share`). `ended` is true
