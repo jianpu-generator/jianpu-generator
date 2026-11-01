@@ -763,13 +763,16 @@ one-time **origin migration** handoff in the worker.
   still get the share's title (the bridge carries the same `og:` tags).
 - Deploy (`.github/workflows/pages.yml`): the app goes to the `poentaro`
   Cloudflare Pages project; once that succeeds, the bridge goes to the old
-  `jianpu-generator` project, and GitHub Pages gets
-  `web/github-pages-redirect/index.html` (plus a `404.html` copy so every
-  path reaches it): a static page that only redirects, keeping the path
-  minus `/jianpu-generator/`, the query and the fragment. Saved files are
-  not carried over from GitHub Pages.
+  `jianpu-generator` project.
+- GitHub Pages: the old `jianpu-generator.github.io/jianpu-generator/` is
+  served by the separate repo `jianpu-generator/jianpu-generator.github.io`
+  (the old org's site, kept after this repo moved to `poentaro/poentaro`):
+  a static page at every path that only redirects, keeping the path minus
+  `/jianpu-generator/`, the query and the fragment. Saved files are not
+  carried over from GitHub Pages. Nothing in this repo deploys it.
 - Import on arrival (`web/src/originMigration/importOriginMigration.ts`,
-  awaited in `web/src/main.tsx` before the app renders): reads `?migrate=`,
+  loaded and awaited by `web/src/main.tsx` before the app renders, only
+  when the URL carries `?migrate=`): reads `?migrate=`,
   strips it from the URL, claims the handoff and saves each carried
   `localStorage` entry only where the new origin has none, so a session or
   preference already set here wins. `jianpu:files:v1` is merged instead by

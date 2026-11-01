@@ -7,47 +7,12 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  # GitHub Pages (`/jianpu-generator/`) is one of the app's old origins. It
-  # now serves only a static page that redirects every link to the same one
-  # on `poentaro.pages.dev` (`web/github-pages-redirect/index.html`); saved
-  # files are carried over only from the old Cloudflare origin (see "Origin
-  # migration" in ARCHITECTURE.md). Waits for the app's own deploy so it
-  # never redirects to a site that isn't up yet.
-  build:
-    needs: deploy-cloudflare
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Serve the redirect for every path
-        # GitHub Pages serves a top-level `404.html` for any path with no
-        # file on disk, so the copy makes every old link reach the redirect.
-        run: |
-          cp web/github-pages-redirect/index.html web/github-pages-redirect/404.html
-          touch web/github-pages-redirect/.nojekyll
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: web/github-pages-redirect
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/deploy-pages@v4
-        id: deployment
-
   deploy-cloudflare:
     runs-on: ubuntu-latest
     environment:
