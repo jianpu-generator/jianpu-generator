@@ -94,8 +94,8 @@ survives context compression. Branch: `feat/rename-to-poentaro`.
       (`web/github-pages-redirect/index.html` + `404.html` copy; the user
       chose this over carrying data from there). Both old-origin jobs
       `needs: deploy-cloudflare`, so they only redirect once Poentaro is live. Note: if the repo is renamed,
-      `github.io/jianpu-generator/` dies unless a tiny repo with that name
-      hosts the bridge.
+      `github.io/jianpu-generator/` dies unless the old org's site repo
+      hosts the redirect (done, step 7).
 
 ### 5. Rebrand
 - [x] `web/index.html` title + `og:title`, tab title (`useDocumentTitle`),
@@ -107,4 +107,16 @@ survives context compression. Branch: `feat/rename-to-poentaro`.
 ### 6. Ship
 - [x] Commit per step on the branch, open PR (description lists the manual
       Cloudflare steps for the user).
-- [ ] User: create the `poentaro` Pages project, then merge (see the PR).
+- [x] User: create the `poentaro` Pages project, then merge (PR #117,
+      merged 2026-11-01; deploy verified: old links on both old origins
+      land on `poentaro.pages.dev` with query and hash).
+
+### 7. Move the GitHub repo
+- [x] Org-site repo `jianpu-generator/jianpu-generator.github.io` serves
+      the GitHub Pages redirect at every path (created before the move, so
+      the old link never broke). The old org stays, so the name isn't taken.
+- [x] Repo transferred and renamed to `poentaro/poentaro` (issues, PRs and
+      secrets moved; old repo URLs redirect).
+- [x] Follow-up: GitHub Pages jobs and `web/github-pages-redirect/` dropped
+      from this repo, issues link points at `poentaro/poentaro`.
+- [ ] After that PR merges: turn GitHub Pages off for `poentaro/poentaro`.

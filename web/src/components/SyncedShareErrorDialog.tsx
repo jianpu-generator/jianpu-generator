@@ -3,8 +3,7 @@ import type { SyncedShareFailure } from '../syncedShare/errors'
 import { redactSecrets } from '../syncedShare/errors'
 import { TraceId } from './TraceId'
 
-const NEW_ISSUE_URL =
-  'https://github.com/jianpu-generator/jianpu-generator/issues/new'
+const NEW_ISSUE_URL = 'https://github.com/poentaro/poentaro/issues/new'
 
 export interface SyncedShareErrorDialogProps {
   /** Non-null shows the dialog; `null` keeps it closed. Task 9's decision:
