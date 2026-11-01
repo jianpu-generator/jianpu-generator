@@ -760,12 +760,14 @@ one-time **origin migration** handoff in the worker.
   without my files" and leaves the mark unset. The old origin's data is
   never deleted. The old Cloudflare Pages project is deployed with
   `web/functions/` too, so link-preview crawlers fetching an old `?s=` link
-  still get the share's title (the bridge carries the same `og:` tags);
-  GitHub Pages has no functions and serves the plain bridge page.
+  still get the share's title (the bridge carries the same `og:` tags).
 - Deploy (`.github/workflows/pages.yml`): the app goes to the `poentaro`
   Cloudflare Pages project; once that succeeds, the bridge goes to the old
-  `jianpu-generator` project and to GitHub Pages (with a `404.html` copy so
-  every path reaches it).
+  `jianpu-generator` project, and GitHub Pages gets
+  `web/github-pages-redirect/index.html` (plus a `404.html` copy so every
+  path reaches it): a static page that only redirects, keeping the path
+  minus `/jianpu-generator/`, the query and the fragment. Saved files are
+  not carried over from GitHub Pages.
 - Import on arrival (`web/src/originMigration/importOriginMigration.ts`,
   awaited in `web/src/main.tsx` before the app renders): reads `?migrate=`,
   strips it from the URL, claims the handoff and saves each carried

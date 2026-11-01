@@ -43,7 +43,7 @@ survives context compression. Branch: `feat/rename-to-poentaro`.
 - `web/functions/index.ts` (Pages Function) rewrites OG tags for `?s=`
   share links. It is deployed with the bridge on the old Cloudflare project
   too (the bridge page has the same `og:` tags), so old links keep rich
-  previews there; GitHub Pages can't run it.
+  previews there. GitHub Pages only redirects (no data handoff).
 
 ## Steps
 
@@ -90,9 +90,10 @@ survives context compression. Branch: `feat/rename-to-poentaro`.
       (env URL `https://poentaro.pages.dev`); deploy bridge to project
       `jianpu-generator` (job `deploy-cloudflare-bridge`, with
       `web/functions/` so old `?s=` links keep rich previews).
-- [x] GitHub Pages: deploys the bridge (`dist-bridge` + `404.html` copy).
-      Both bridge jobs `needs: deploy-cloudflare`, so the old origins only
-      redirect once Poentaro is live. Note: if the repo is renamed,
+- [x] GitHub Pages: a plain redirect page only
+      (`web/github-pages-redirect/index.html` + `404.html` copy; the user
+      chose this over carrying data from there). Both old-origin jobs
+      `needs: deploy-cloudflare`, so they only redirect once Poentaro is live. Note: if the repo is renamed,
       `github.io/jianpu-generator/` dies unless a tiny repo with that name
       hosts the bridge.
 

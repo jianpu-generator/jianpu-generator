@@ -15,54 +15,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # GitHub Pages (`wongjiahau.github.io/jianpu-generator/`) is one of the
-  # app's old origins: it now serves the bridge page that hands the
-  # browser's saved data to `poentaro.pages.dev` and redirects there (see
-  # "Origin migration" in ARCHITECTURE.md). Waits for the app's own deploy so
-  # the bridge never redirects to a site that isn't up yet.
+  # GitHub Pages (`/jianpu-generator/`) is one of the app's old origins. It
+  # now serves only a static page that redirects every link to the same one
+  # on `poentaro.pages.dev` (`web/github-pages-redirect/index.html`); saved
+  # files are carried over only from the old Cloudflare origin (see "Origin
+  # migration" in ARCHITECTURE.md). Waits for the app's own deploy so it
+  # never redirects to a site that isn't up yet.
   build:
     needs: deploy-cloudflare
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: jdx/mise-action@v2
-        with:
-          install_args: rust node pnpm
-
-      - uses: actions/cache@v4
-        with:
-          path: ~/.local/share/pnpm/store
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
-          restore-keys: pnpm-store-${{ runner.os }}-
-
-      - name: Install dependencies
-        working-directory: web
-        run: pnpm install --frozen-lockfile
-
-      - name: Build the bridge page
-        working-directory: web
-        env:
-          VITE_BASE_PATH: /jianpu-generator/
-          # The Synced Share worker's host comes from its
-          # `cloudflare.config.ts` (see `web/vite.config.ts`), not from here.
-        run: pnpm build:bridge
-
-      - name: Serve the bridge for every path
-        # GitHub Pages is a static file host with no server-side routing: a
-        # path with no file on disk gets the generic 404 page. GitHub Pages
-        # serves a top-level `404.html` for any unmatched path instead, so a
-        # copy of the built bridge page (with its hashed asset tags) makes
-        # every old link reach the bridge, which keeps the path, query and
-        # fragment when it redirects.
-        run: cp web/dist-bridge/index.html web/dist-bridge/404.html
-
-      - name: Add .nojekyll
-        run: touch web/dist-bridge/.nojekyll
+      - name: Serve the redirect for every path
+        # GitHub Pages serves a top-level `404.html` for any path with no
+        # file on disk, so the copy makes every old link reach the redirect.
+        run: |
+          cp web/github-pages-redirect/index.html web/github-pages-redirect/404.html
+          touch web/github-pages-redirect/.nojekyll
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: web/dist-bridge
+          path: web/github-pages-redirect
 
   deploy:
     needs: build
@@ -111,11 +85,10 @@ jobs:
           command: pages deploy dist --project-name=poentaro --branch=master
 
   # The app's old Cloudflare Pages project (`jianpu-generator.pages.dev`)
-  # now serves only the bridge page (see the GitHub Pages `build` job
-  # above). Cloudflare Pages falls back to `index.html` for every path, so no
-  # `404.html` is needed. Deployed from `web/` like the app, so
-  # `web/functions/` goes along and old `?s=` links keep their share's
-  # link-preview title. Waits for the app's deploy, like `build`.
+  # now serves only the bridge page. Cloudflare Pages falls back to
+  # `index.html` for every path, so no `404.html` is needed. Deployed from
+  # `web/` like the app, so `web/functions/` goes along and old `?s=` links
+  # keep their share's link-preview title. Waits for the app's deploy, like `build`.
   deploy-cloudflare-bridge:
     needs: deploy-cloudflare
     runs-on: ubuntu-latest
