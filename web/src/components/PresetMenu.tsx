@@ -1,6 +1,6 @@
 import { CheckIcon, ChevronDownIcon } from '@radix-ui/react-icons'
 import { useState } from 'react'
-import type { PresetSummary } from '../jianpuWasm'
+import type { PresetSummary } from '../poentaroWasm'
 import { NewPresetDialog } from './NewPresetDialog'
 import { ResponsiveMenu } from './ResponsiveMenu'
 

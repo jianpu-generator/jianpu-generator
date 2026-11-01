@@ -36,7 +36,7 @@ struct Underline {
 }
 
 fn render_single_page(score: &str) -> String {
-    render_svgs_from_source(score, "test.jianpu", &[])
+    render_svgs_from_source(score, "test.poentaro", &[])
         .expect("should render")
         .svgs
         .remove(0)

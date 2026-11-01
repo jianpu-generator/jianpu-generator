@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { NoteTiming } from '../jianpuWasm'
+import type { NoteTiming } from '../poentaroWasm'
 import { computeNoteSelectionTrimWindow } from './noteSelectionTrim'
 
 function timing(

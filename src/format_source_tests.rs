@@ -161,15 +161,15 @@ Bass = notes
     assert!(!formatted.contains("[Melody] 0 0 0 0"));
 
     // Strip the embedded-source `<metadata>` tag before comparing: it
-    // legitimately differs (it round-trips the exact `.jianpu` text), but
+    // legitimately differs (it round-trips the exact `.poentaro` text), but
     // everything else in the SVG (measures, note heads, layout) must match.
     fn strip_embedded_metadata(svg: &str) -> String {
         let start = svg.find("<metadata").unwrap();
         let end = svg.find("</metadata>").unwrap() + "</metadata>".len();
         format!("{}{}", &svg[..start], &svg[end..])
     }
-    let original_svgs = crate::render_svgs_from_source(source, "test.jianpu", &[]).unwrap();
-    let formatted_svgs = crate::render_svgs_from_source(&formatted, "test.jianpu", &[]).unwrap();
+    let original_svgs = crate::render_svgs_from_source(source, "test.poentaro", &[]).unwrap();
+    let formatted_svgs = crate::render_svgs_from_source(&formatted, "test.poentaro", &[]).unwrap();
     let strip_all = |svgs: Vec<String>| -> Vec<String> {
         svgs.iter()
             .map(|svg| strip_embedded_metadata(svg))

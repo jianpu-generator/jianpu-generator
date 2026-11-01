@@ -28,13 +28,13 @@ export async function seedSyncedCloudFile(
   baseName: string,
   source: string,
 ): Promise<void> {
-  const name = `${baseName}-${crypto.randomUUID().slice(0, 8)}.jianpu`
+  const name = `${baseName}-${crypto.randomUUID().slice(0, 8)}.poentaro`
   const file = await seedCloudFile(DEFAULT_E2E_EMAIL, name, source)
   syncedShareButtonState.ownerFileName = name
   syncedShareButtonState.ownerFileId = file.id
   await page.addInitScript(() => {
     localStorage.setItem(
-      'jianpu:storage-backend:v1',
+      'poentaro:storage-backend:v1',
       JSON.stringify({ backend: 'cloud' }),
     )
   })

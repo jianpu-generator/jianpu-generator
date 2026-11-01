@@ -51,14 +51,14 @@ const CHORDS_LEGEND = 'C — Chords'
 async function loadSource(page: Page, source: string = SOURCE) {
   await page.addInitScript((src) => {
     // Seed once: a reload must keep the same file id so its toggles survive.
-    if (localStorage.getItem('jianpu:files:v1')) return
+    if (localStorage.getItem('poentaro:files:v1')) return
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'test.jianpu',
-        userFiles: { 'test.jianpu': src },
+        active: 'test.poentaro',
+        userFiles: { 'test.poentaro': src },
         bin: {},
-        fileIds: { 'test.jianpu': crypto.randomUUID() },
+        fileIds: { 'test.poentaro': crypto.randomUUID() },
       }),
     )
   }, source)

@@ -66,13 +66,13 @@ Given(
   async ({ page }) => {
     await page.addInitScript((source) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'lyric-independent-test.jianpu',
-          userFiles: { 'lyric-independent-test.jianpu': source },
+          active: 'lyric-independent-test.poentaro',
+          userFiles: { 'lyric-independent-test.poentaro': source },
           bin: {},
           fileIds: {
-            'lyric-independent-test.jianpu': 'lyric-independent-test-id-001',
+            'lyric-independent-test.poentaro': 'lyric-independent-test-id-001',
           },
         }),
       )

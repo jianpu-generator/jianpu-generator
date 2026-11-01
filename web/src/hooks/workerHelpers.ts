@@ -1,5 +1,6 @@
 import { findIndex, findLastIndex } from 'remeda'
-import { jianpuWasm } from '../jianpuWasm'
+import { stripFileExtension } from '../fileExtension'
+import { poentaroWasm } from '../poentaroWasm'
 import type {
   MeasureSpan,
   PartInfo,
@@ -70,7 +71,7 @@ export function resolvePartVisibility(
   presetName: string | null,
 ): ResolvedPartVisibility {
   if (parts.length === 0) return ALL_PARTS_VISIBLE
-  return jianpuWasm().resolvePartVisibility(
+  return poentaroWasm().resolvePartVisibility(
     source,
     parts,
     toggles,
@@ -89,7 +90,7 @@ export function noPartsSelected(
 /** Wraps export bytes in an object URL of the given MIME type — the URL is
  * the caller's to revoke once it's no longer needed (see `requestDownload`/
  * `cancelPendingDownload`/`confirmPendingDownload` in
- * `useJianpuWorkerState.ts`). */
+ * `usePoentaroWorkerState.ts`). */
 export function objectUrlForBytes(bytes: ArrayBuffer, mimeType: string) {
   return URL.createObjectURL(new Blob([bytes], { type: mimeType }))
 }
@@ -122,9 +123,7 @@ export function pdfFilenameFromActiveFile(
   activeFile: string,
   labels?: string[],
 ): string {
-  const base = activeFile.endsWith('.jianpu')
-    ? activeFile.replace(/\.jianpu$/, '.pdf')
-    : `${activeFile}.pdf`
+  const base = `${stripFileExtension(activeFile)}.pdf`
   return withLabelsSuffix(base, labels)
 }
 
@@ -132,9 +131,7 @@ export function midiFilenameFromActiveFile(
   activeFile: string,
   labels?: string[],
 ): string {
-  const base = activeFile.endsWith('.jianpu')
-    ? activeFile.replace(/\.jianpu$/, '.mid')
-    : `${activeFile}.mid`
+  const base = `${stripFileExtension(activeFile)}.mid`
   return withLabelsSuffix(base, labels)
 }
 
@@ -142,9 +139,7 @@ export function wavFilenameFromActiveFile(
   activeFile: string,
   labels?: string[],
 ): string {
-  const base = activeFile.endsWith('.jianpu')
-    ? activeFile.replace(/\.jianpu$/, '.wav')
-    : `${activeFile}.wav`
+  const base = `${stripFileExtension(activeFile)}.wav`
   return withLabelsSuffix(base, labels)
 }
 
@@ -152,9 +147,7 @@ export function mp3FilenameFromActiveFile(
   activeFile: string,
   labels?: string[],
 ): string {
-  const base = activeFile.endsWith('.jianpu')
-    ? activeFile.replace(/\.jianpu$/, '.mp3')
-    : `${activeFile}.mp3`
+  const base = `${stripFileExtension(activeFile)}.mp3`
   return withLabelsSuffix(base, labels)
 }
 
@@ -162,9 +155,7 @@ export function zipFilenameFromActiveFile(
   activeFile: string,
   labels: string[],
 ): string {
-  const base = activeFile.endsWith('.jianpu')
-    ? activeFile.replace(/\.jianpu$/, '.zip')
-    : `${activeFile}.zip`
+  const base = `${stripFileExtension(activeFile)}.zip`
   return withLabelsSuffix(base, labels)
 }
 
@@ -182,8 +173,5 @@ export function postAfterPaint(worker: Worker, payload: unknown) {
 }
 
 export function baseNameFromActiveFile(activeFile: string): string {
-  if (activeFile.endsWith('.jianpu')) {
-    return activeFile.replace(/\.jianpu$/, '')
-  }
-  return activeFile
+  return stripFileExtension(activeFile)
 }

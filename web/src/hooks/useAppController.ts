@@ -9,11 +9,11 @@ import { useDocumentTitle } from './useDocumentTitle'
 import { useFileImport } from './useFileImport'
 import { useFileOperations } from './useFileOperations'
 import { useFontsLoader } from './useFontsLoader'
-import { useJianpuWorker } from './useJianpuWorker'
 import { useKeyboardShortcuts } from './useKeyboardShortcuts'
 import { usePartFocusSelectionRouting } from './usePartFocusSelectionRouting'
 import { usePartTogglePruning } from './usePartTogglePruning'
 import { usePartToggles } from './usePartToggles'
+import { usePoentaroWorker } from './usePoentaroWorker'
 import { usePresetMenu } from './usePresetMenu'
 import { useScoreSource } from './useScoreSource'
 import type { SelectedSequenceRange } from './useSequenceNavigation'
@@ -135,7 +135,7 @@ export function useAppController() {
     playFromCurrentMeasure,
     stopMeasurePlayback,
     ...workerResults
-  } = useJianpuWorker(
+  } = usePoentaroWorker(
     partFocusDraft ?? source,
     partToggles,
     chosenPreset,

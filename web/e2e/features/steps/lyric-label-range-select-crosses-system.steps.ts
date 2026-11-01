@@ -63,13 +63,13 @@ Given(
   async ({ page }) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'cross-system-lyric-label-range-test.jianpu',
-          userFiles: { 'cross-system-lyric-label-range-test.jianpu': src },
+          active: 'cross-system-lyric-label-range-test.poentaro',
+          userFiles: { 'cross-system-lyric-label-range-test.poentaro': src },
           bin: {},
           fileIds: {
-            'cross-system-lyric-label-range-test.jianpu':
+            'cross-system-lyric-label-range-test.poentaro':
               'cross-system-lyric-label-range-test-id-001',
           },
         }),

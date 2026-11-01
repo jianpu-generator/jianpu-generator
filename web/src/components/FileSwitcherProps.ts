@@ -2,7 +2,7 @@ import type { FileStoreState } from '../fileStore'
 import type { CloudLoadFailure } from '../hooks/useCloudStoreLoader'
 import type { FolderShares } from '../hooks/useFolderShares'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
-import type { SelectionMove, SelectionUnit } from '../jianpuWasm'
+import type { SelectionMove, SelectionUnit } from '../poentaroWasm'
 
 export interface FileSwitcherProps {
   store: FileStoreState

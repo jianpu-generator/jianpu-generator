@@ -1,4 +1,4 @@
-import type { StaffMeasure } from '../jianpuWasm'
+import type { StaffMeasure } from '../poentaroWasm'
 import type { MeasureRange } from './previewSelection'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'

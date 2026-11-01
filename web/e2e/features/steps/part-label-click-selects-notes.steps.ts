@@ -35,13 +35,13 @@ const source = [
 async function loadFixture(page: import('@playwright/test').Page) {
   await page.addInitScript((source) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'part-label-click-test.jianpu',
-        userFiles: { 'part-label-click-test.jianpu': source },
+        active: 'part-label-click-test.poentaro',
+        userFiles: { 'part-label-click-test.poentaro': source },
         bin: {},
         fileIds: {
-          'part-label-click-test.jianpu': 'part-label-click-test-id-001',
+          'part-label-click-test.poentaro': 'part-label-click-test-id-001',
         },
       }),
     )
@@ -109,13 +109,13 @@ Given(
 
     await page.addInitScript((source) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'part-label-click-no-lyric-test.jianpu',
-          userFiles: { 'part-label-click-no-lyric-test.jianpu': source },
+          active: 'part-label-click-no-lyric-test.poentaro',
+          userFiles: { 'part-label-click-no-lyric-test.poentaro': source },
           bin: {},
           fileIds: {
-            'part-label-click-no-lyric-test.jianpu':
+            'part-label-click-no-lyric-test.poentaro':
               'part-label-click-no-lyric-test-id-001',
           },
         }),
@@ -154,13 +154,13 @@ Given(
 
     await page.addInitScript((source) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'part-label-no-overlap-test.jianpu',
-          userFiles: { 'part-label-no-overlap-test.jianpu': source },
+          active: 'part-label-no-overlap-test.poentaro',
+          userFiles: { 'part-label-no-overlap-test.poentaro': source },
           bin: {},
           fileIds: {
-            'part-label-no-overlap-test.jianpu':
+            'part-label-no-overlap-test.poentaro':
               'part-label-no-overlap-test-id-001',
           },
         }),

@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import type { ClickableElementId, StaffMeasure } from '../jianpuWasm'
+import type { ClickableElementId, StaffMeasure } from '../poentaroWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import type { PreviewAnchorState } from './previewAnchorState'
 import type { LyricCell, NoteCell } from './previewSelection'

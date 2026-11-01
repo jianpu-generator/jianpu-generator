@@ -20,7 +20,7 @@ Given(
     await page.addInitScript(
       ({ src, fileName }) => {
         localStorage.setItem(
-          'jianpu:files:v1',
+          'poentaro:files:v1',
           JSON.stringify({
             active: fileName,
             userFiles: { [fileName]: src },

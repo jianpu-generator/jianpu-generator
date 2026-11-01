@@ -6,7 +6,7 @@ fn triplet_of_sixteenth_notes_gets_double_underline_matching_written_duration() 
     // with a double underline (level 0 + level 1) regardless of the tuplet's 3-in-2
     // duration compression — the tuplet bracket/number is a separate overlay on top,
     // not a substitute for the beam reflecting each note's written value. Padded with
-    // "2:{1=2=}" and "5:4:{1=1=1=1=1=} 2_3_4_" (from demo/12-tuplets.jianpu) so the
+    // "2:{1=2=}" and "5:4:{1=1=1=1=1=} 2_3_4_" (from demo/12-tuplets.poentaro) so the
     // measure's nominal duration sum still fills the 4/4 bar (2 + 3 + 5 + 6 = 16).
     let source = concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n",

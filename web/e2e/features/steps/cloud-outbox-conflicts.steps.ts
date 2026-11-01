@@ -21,7 +21,7 @@ import { Given, Then, When } from './fixtures'
 const worker = createClient<paths>({ baseUrl: CLOUD_WORKER_ORIGIN })
 
 const EDITOR_LINES = '.monaco-editor .view-lines'
-const displayName = (fileName: string) => fileName.replace(/\.jianpu$/, '')
+const displayName = (fileName: string) => fileName.replace(/\.poentaro$/, '')
 
 /** The default seed with its last line (`1 2 3 4`) replaced by `lastLine`. */
 const withLastLine = (lastLine: string) =>

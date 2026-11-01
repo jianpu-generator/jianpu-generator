@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 import { range } from 'remeda'
 import type { PartSettingOptions } from '../hooks/usePartSettingOptions'
-import type { OctaveOffsetRange } from '../jianpuWasm'
+import type { OctaveOffsetRange } from '../poentaroWasm'
 import type {
   PartDeclaration,
   PartInfo,

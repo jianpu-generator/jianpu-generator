@@ -236,7 +236,7 @@ mod tests {
         let input = format!(
             "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nSoprano = notes\nAlto = notes\n\n# score\ntime=4/4 key=C4 bpm=120\n[Soprano] {soprano}\n[Alto] {alto}\n"
         );
-        let doc = parser::parse(&input, "test.jianpu", &[]).unwrap();
+        let doc = parser::parse(&input, "test.poentaro", &[]).unwrap();
         grouper::group(doc).unwrap().measures
     }
 
@@ -265,8 +265,8 @@ mod tests {
             "[Soprano] 1 2 3 4\n",
             "[Alto] 5 6 7 1 5\n",
         );
-        let doc =
-            parser::parse(input, "test.jianpu", &[]).expect("beat overflow must not abort parsing");
+        let doc = parser::parse(input, "test.poentaro", &[])
+            .expect("beat overflow must not abort parsing");
         let score = grouper::group(doc).expect("grouping must succeed");
         assert_eq!(score.measures.len(), 1);
         assert_eq!(score.measures[0].diagnostics.len(), 1);

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { jianpuWasm, type MetadataFields } from '../jianpuWasm'
+import { type MetadataFields, poentaroWasm } from '../poentaroWasm'
 import { ensureWasmInit } from '../wasmInit'
 
 /** The field values of the preset called `presetName`, or of `# metadata`
@@ -27,7 +27,7 @@ export function useMetadataFields(
   return useMemo(
     () =>
       enabled && wasmReady
-        ? jianpuWasm().parseMetadataFields(source, presetName ?? undefined)
+        ? poentaroWasm().parseMetadataFields(source, presetName ?? undefined)
         : null,
     [enabled, wasmReady, source, presetName],
   )

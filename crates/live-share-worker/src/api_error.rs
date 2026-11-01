@@ -31,7 +31,7 @@ pub enum ApiError {
     /// file, or lies inside a live file. Nothing was applied.
     FileFolderConflict { path: String },
     /// A create/rename/restore asked for a file name that is not a valid
-    /// path (`jianpu_generator::file_tree::TreePath` rules); `message` says why.
+    /// path (`poentaro::file_tree::TreePath` rules); `message` says why.
     InvalidName { message: String },
     /// A folder share would cover more files or content than
     /// `folder_share::MAX_SHARED_FOLDER_FILES`/`MAX_SHARED_FOLDER_BYTES`

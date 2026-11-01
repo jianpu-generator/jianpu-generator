@@ -43,13 +43,13 @@ const source = [
 async function loadFixture(page: import('@playwright/test').Page) {
   await page.addInitScript((source) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'directive-width-overflow-test.jianpu',
-        userFiles: { 'directive-width-overflow-test.jianpu': source },
+        active: 'directive-width-overflow-test.poentaro',
+        userFiles: { 'directive-width-overflow-test.poentaro': source },
         bin: {},
         fileIds: {
-          'directive-width-overflow-test.jianpu':
+          'directive-width-overflow-test.poentaro':
             'directive-width-overflow-test-id-001',
         },
       }),
@@ -150,13 +150,13 @@ Given(
   async ({ page }) => {
     await page.addInitScript((source) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'two-adjacent-directives-test.jianpu',
-          userFiles: { 'two-adjacent-directives-test.jianpu': source },
+          active: 'two-adjacent-directives-test.poentaro',
+          userFiles: { 'two-adjacent-directives-test.poentaro': source },
           bin: {},
           fileIds: {
-            'two-adjacent-directives-test.jianpu':
+            'two-adjacent-directives-test.poentaro':
               'two-adjacent-directives-test-id-001',
           },
         }),

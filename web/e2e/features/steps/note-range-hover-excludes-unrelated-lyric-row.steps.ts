@@ -14,7 +14,7 @@ import { Given, Then, When } from './fixtures'
  * attached line — see `syntax.md`'s "Positional (unprefixed) lyrics lines").
  * Anchoring on Melody's first note then hovering Harmony's first note
  * resolves via wasm's `Note ↔ Note` cross-part rule
- * (`crates/jianpu-wasm/src/selection_range/note_note.rs`), which always
+ * (`crates/poentaro-wasm/src/selection_range/note_note.rs`), which always
  * returns `lyric_cells: Vec::new()` — an index/measure range has no notion
  * of a lyric row. So even though the hover's note-range sweeps both parts'
  * note rows, Harmony's `x y z` syllables must stay unhighlighted.
@@ -56,13 +56,13 @@ Given(
   async ({ page }) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'note-hover-lyric-exclusion-test.jianpu',
-          userFiles: { 'note-hover-lyric-exclusion-test.jianpu': src },
+          active: 'note-hover-lyric-exclusion-test.poentaro',
+          userFiles: { 'note-hover-lyric-exclusion-test.poentaro': src },
           bin: {},
           fileIds: {
-            'note-hover-lyric-exclusion-test.jianpu':
+            'note-hover-lyric-exclusion-test.poentaro':
               'note-hover-lyric-exclusion-test-id-001',
           },
         }),

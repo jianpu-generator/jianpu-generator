@@ -8,8 +8,8 @@ import {
 import { encodeShareHashOnPage, gotoShareUrl } from '../../shareUrlHelper'
 import { Given, Then, When } from './fixtures'
 
-const FILE_STORE_KEY = 'jianpu:files:v1'
-const SHARED_FILENAME = 'shared-test.jianpu'
+const FILE_STORE_KEY = 'poentaro:files:v1'
+const SHARED_FILENAME = 'shared-test.poentaro'
 const SHARED_SOURCE = [
   '# metadata',
   'title = "Shared Score"',

@@ -79,13 +79,13 @@ When('the merged-rest-run-column-width score is laid out', async ({ page }) => {
   const source = buildSource()
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'merged-rest-run-column-width-test.jianpu',
-        userFiles: { 'merged-rest-run-column-width-test.jianpu': src },
+        active: 'merged-rest-run-column-width-test.poentaro',
+        userFiles: { 'merged-rest-run-column-width-test.poentaro': src },
         bin: {},
         fileIds: {
-          'merged-rest-run-column-width-test.jianpu':
+          'merged-rest-run-column-width-test.poentaro':
             'merged-rest-run-column-width-test-id-001',
         },
       }),

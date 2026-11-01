@@ -9,7 +9,7 @@ import { Given, Then } from './fixtures'
 /**
  * Regression fixture for a bug introduced by the `note_position_in_measure`
  * axis added to the cross-part `Note ↔ Note` arm (see `cross_part` in
- * `crates/jianpu-wasm/src/selection_range/note_note.rs`): that axis's
+ * `crates/poentaro-wasm/src/selection_range/note_note.rs`): that axis's
  * `[position_start, position_end]` bound was applied to *every* measure in
  * the swept range uniformly, not just the boundary measures. So when the
  * anchor and current land in *different* measures, a rest ahead of the
@@ -66,15 +66,15 @@ Given(
   async ({ page }) => {
     await page.addInitScript((source) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'cross-measure-rest-range-test.jianpu',
+          active: 'cross-measure-rest-range-test.poentaro',
           userFiles: {
-            'cross-measure-rest-range-test.jianpu': source,
+            'cross-measure-rest-range-test.poentaro': source,
           },
           bin: {},
           fileIds: {
-            'cross-measure-rest-range-test.jianpu':
+            'cross-measure-rest-range-test.poentaro':
               'cross-measure-rest-range-test-id-001',
           },
         }),

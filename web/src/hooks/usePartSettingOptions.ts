@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import {
-  jianpuWasm,
   type PartSettingLimits,
+  poentaroWasm,
   type RangeInstrumentChoice,
-} from '../jianpuWasm'
+} from '../poentaroWasm'
 import { ensureWasmInit } from '../wasmInit'
 
 /** What the Edit Parts modal may set a part to, owned by Rust. */
@@ -16,8 +16,8 @@ let cachedPartSettingOptions: PartSettingOptions | null = null
 
 function partSettingOptions(): PartSettingOptions {
   cachedPartSettingOptions ??= {
-    limits: jianpuWasm().getPartSettingLimits(),
-    rangeInstruments: jianpuWasm().listRangeInstruments(),
+    limits: poentaroWasm().getPartSettingLimits(),
+    rangeInstruments: poentaroWasm().listRangeInstruments(),
   }
   return cachedPartSettingOptions
 }

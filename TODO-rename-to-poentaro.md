@@ -20,6 +20,8 @@ survives context compression. Branch: `feat/rename-to-poentaro`.
   which can hit browser URL-length limits for large file stores).
 - Keep internal names unchanged: `jianpu:` storage keys, worker name
   `jianpu-live-share-worker-rs`, D1 `jianpu-live-share`, crate names.
+  (Superseded by step 8: everything meaning the app is renamed, except
+  cloud resources that can't be renamed.)
 - Cloudflare dashboard / production actions (create `poentaro` project, first
   deploy, switching the old project to the bridge) need the user's approval.
 
@@ -120,3 +122,15 @@ survives context compression. Branch: `feat/rename-to-poentaro`.
 - [x] Follow-up: GitHub Pages jobs and `web/github-pages-redirect/` dropped
       from this repo, issues link points at `poentaro/poentaro`.
 - [ ] After that PR merges: turn GitHub Pages off for `poentaro/poentaro`.
+
+### 8. Rename every app mention (branch `refactor/rename-jianpu-to-poentaro`)
+- [x] Crates, CLI, WIT package, TS modules/hooks, `.jianpu` -> `.poentaro`
+      (shared `file-extension.json`), `jianpu:` -> `poentaro:` keys, outbox
+      databases, asset cache, Monaco ids, embed tags (legacy still read).
+- [x] Browser data moves on first visit (`web/src/legacyStorage/`), local
+      files renamed in Rust (`file_tree::rename_legacy_extensions`).
+- [x] D1 migration `0011_poentaro_file_extension.sql` renames cloud files;
+      preview query `queries/admin/preview_poentaro_file_extension.sql`.
+- [x] Kept, documented in `AGENTS.md` "Naming": worker, D1 databases, B2
+      bucket, Keychain service, old origins.
+- [ ] Before merging: run the migration on staging D1.

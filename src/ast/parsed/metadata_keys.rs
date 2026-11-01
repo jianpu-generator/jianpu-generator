@@ -151,7 +151,7 @@ impl TextStyleComponentValue {
         }
     }
 
-    /// The value as `.jianpu` source spells it, or `None` when unset.
+    /// The value as `.poentaro` source spells it, or `None` when unset.
     pub fn source_text(self) -> Option<String> {
         let yes_no = |flag: bool| YesNo::from_bool(flag).keyword().to_owned();
         match self {

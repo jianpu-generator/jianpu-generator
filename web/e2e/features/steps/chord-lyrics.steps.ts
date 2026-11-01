@@ -32,12 +32,12 @@ function buildSource(): string {
 When('the chord-lyrics score is rendered', async ({ page }) => {
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'chord-lyrics-test.jianpu',
-        userFiles: { 'chord-lyrics-test.jianpu': src },
+        active: 'chord-lyrics-test.poentaro',
+        userFiles: { 'chord-lyrics-test.poentaro': src },
         bin: {},
-        fileIds: { 'chord-lyrics-test.jianpu': 'chord-lyrics-test-id-001' },
+        fileIds: { 'chord-lyrics-test.poentaro': 'chord-lyrics-test-id-001' },
       }),
     )
   }, buildSource())

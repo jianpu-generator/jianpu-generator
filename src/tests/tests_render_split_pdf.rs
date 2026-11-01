@@ -27,7 +27,7 @@ fn multi_track_input() -> &'static str {
 fn write_split_pdfs_from_source_produces_one_pdf_per_track() {
     let entries = write_split_pdfs_from_source(
         multi_track_input(),
-        "test.jianpu",
+        "test.poentaro",
         "test_split",
         SplitSelection::default(),
         &fonts::FontBytesByFamily::embedded(),
@@ -51,7 +51,7 @@ fn write_split_pdfs_from_source_keeps_the_presets_parts_and_names_files_after_it
     );
     let entries = write_split_pdfs_from_source(
         &input,
-        "test.jianpu",
+        "test.poentaro",
         "test_split",
         SplitSelection {
             tracks: &[],
@@ -86,7 +86,7 @@ fn write_split_pdfs_from_source_single_part_uses_split_naming() {
     );
     let entries = write_split_pdfs_from_source(
         input,
-        "test.jianpu",
+        "test.poentaro",
         "song",
         SplitSelection::default(),
         &fonts::FontBytesByFamily::embedded(),
@@ -104,7 +104,7 @@ fn write_split_pdfs_from_source_no_sections_returns_empty() {
     // so no Err is returned; the missing # parts section means no tracks exist.
     let entries = write_split_pdfs_from_source(
         "not valid",
-        "test.jianpu",
+        "test.poentaro",
         "song",
         SplitSelection::default(),
         &fonts::FontBytesByFamily::embedded(),
@@ -157,7 +157,7 @@ fn without_legend_input() -> &'static str {
 fn write_pdf_from_source_with_visibility_includes_part_legend() {
     let with_legend_pdf = write_pdf_from_source_with_visibility(
         with_legend_input(),
-        "test.jianpu",
+        "test.poentaro",
         &ResolvedPartVisibility::default(),
         &fonts::FontBytesByFamily::embedded(),
         &[],
@@ -166,7 +166,7 @@ fn write_pdf_from_source_with_visibility_includes_part_legend() {
     .unwrap();
     let without_legend_pdf = write_pdf_from_source_with_visibility(
         without_legend_input(),
-        "test.jianpu",
+        "test.poentaro",
         &ResolvedPartVisibility::default(),
         &fonts::FontBytesByFamily::embedded(),
         &[],
@@ -186,7 +186,7 @@ fn write_pdf_from_source_with_visibility_includes_part_legend() {
 fn write_split_pdfs_from_source_includes_part_legend() {
     let with_legend_entries = write_split_pdfs_from_source(
         with_legend_input(),
-        "test.jianpu",
+        "test.poentaro",
         "song",
         SplitSelection::default(),
         &fonts::FontBytesByFamily::embedded(),
@@ -195,7 +195,7 @@ fn write_split_pdfs_from_source_includes_part_legend() {
     .unwrap();
     let without_legend_entries = write_split_pdfs_from_source(
         without_legend_input(),
-        "test.jianpu",
+        "test.poentaro",
         "song",
         SplitSelection::default(),
         &fonts::FontBytesByFamily::embedded(),
@@ -217,7 +217,7 @@ fn write_split_pdfs_from_source_includes_part_legend() {
 fn zip_split_pdfs_contains_named_entries() {
     let entries = write_split_pdfs_from_source(
         multi_track_input(),
-        "test.jianpu",
+        "test.poentaro",
         "test_split",
         SplitSelection::default(),
         &fonts::FontBytesByFamily::embedded(),

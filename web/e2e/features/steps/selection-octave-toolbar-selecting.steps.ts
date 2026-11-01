@@ -91,12 +91,12 @@ const TWO_MEASURE_CLICK_TEST_SOURCE = [
 async function loadSource(page: import('@playwright/test').Page, src: string) {
   await page.addInitScript((source) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'test.jianpu',
-        userFiles: { 'test.jianpu': source },
+        active: 'test.poentaro',
+        userFiles: { 'test.poentaro': source },
         bin: {},
-        fileIds: { 'test.jianpu': crypto.randomUUID() },
+        fileIds: { 'test.poentaro': crypto.randomUUID() },
       }),
     )
   }, src)
@@ -157,7 +157,7 @@ async function selectRangeBetween(
   endNeedle: string,
 ) {
   // Wait for `noteSpans` to have loaded (the async `listNoteSpans` worker
-  // round-trip, see `useJianpuWorkerRenderRequests.ts`) before dragging —
+  // round-trip, see `usePoentaroWorkerRenderRequests.ts`) before dragging —
   // otherwise `useNoteSelection`'s `handleEditorSelectionChange` derives the
   // SVG highlight from an empty span list, and since it only re-derives on
   // the *next* selection-change event, a selection made before spans load
@@ -214,13 +214,13 @@ Given(
   async ({ page, focusEditor }) => {
     await page.addInitScript((source) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'part-label-click-test.jianpu',
-          userFiles: { 'part-label-click-test.jianpu': source },
+          active: 'part-label-click-test.poentaro',
+          userFiles: { 'part-label-click-test.poentaro': source },
           bin: {},
           fileIds: {
-            'part-label-click-test.jianpu': 'part-label-click-test-id-001',
+            'part-label-click-test.poentaro': 'part-label-click-test-id-001',
           },
         }),
       )

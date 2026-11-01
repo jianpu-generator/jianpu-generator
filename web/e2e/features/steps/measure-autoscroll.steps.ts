@@ -43,12 +43,12 @@ Given('a 60-measure autoscroll test fixture is loaded', async ({ page }) => {
 
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'autoscroll-test.jianpu',
-        userFiles: { 'autoscroll-test.jianpu': src },
+        active: 'autoscroll-test.poentaro',
+        userFiles: { 'autoscroll-test.poentaro': src },
         bin: {},
-        fileIds: { 'autoscroll-test.jianpu': crypto.randomUUID() },
+        fileIds: { 'autoscroll-test.poentaro': crypto.randomUUID() },
       }),
     )
   }, source)

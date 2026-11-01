@@ -3,6 +3,7 @@
 //! folder). No I/O and no wasm glue here; see ARCHITECTURE.md "File tree".
 
 mod bin_entries;
+mod extension;
 mod file_ops;
 mod folder_ops;
 mod folder_queries;
@@ -20,6 +21,10 @@ mod unique_name;
 mod view;
 
 pub use bin_entries::{bin_entries, BinEntry};
+pub use extension::{
+    current_extension_path, rename_legacy_extensions, strip_file_extension, FILE_EXTENSION,
+    LEGACY_FILE_EXTENSION,
+};
 pub use file_ops::{
     create_file, create_file_error, delete_file, duplicate_file, rename_file, restore_file,
 };
@@ -60,6 +65,8 @@ pub use view::{
 
 #[cfg(test)]
 mod bin_entries_tests;
+#[cfg(test)]
+mod extension_tests;
 #[cfg(test)]
 mod file_ops_tests;
 #[cfg(test)]

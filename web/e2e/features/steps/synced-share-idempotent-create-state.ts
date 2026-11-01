@@ -75,7 +75,7 @@ export function assignActualName(displayName: string): string {
  * make a failing assertion's diff readable, the content itself isn't
  * asserted on by any scenario in this feature. */
 export function idempotentSharingSource(name: string): string {
-  const title = name.replace(/\.jianpu$/, '')
+  const title = name.replace(/\.poentaro$/, '')
   return [
     '# metadata',
     `title = "${title}"`,

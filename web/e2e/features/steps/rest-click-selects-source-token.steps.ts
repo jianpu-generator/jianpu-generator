@@ -46,12 +46,12 @@ async function getEditorSelectedText(page: import('@playwright/test').Page) {
 Given('the rest-click test fixture is loaded', async ({ page }) => {
   await page.addInitScript((source) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'rest-click-test.jianpu',
-        userFiles: { 'rest-click-test.jianpu': source },
+        active: 'rest-click-test.poentaro',
+        userFiles: { 'rest-click-test.poentaro': source },
         bin: {},
-        fileIds: { 'rest-click-test.jianpu': 'rest-click-test-id-001' },
+        fileIds: { 'rest-click-test.poentaro': 'rest-click-test-id-001' },
       }),
     )
   }, restClickTestSource)

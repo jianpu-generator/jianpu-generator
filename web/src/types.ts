@@ -24,7 +24,7 @@ export type {
   SectionRange,
   SequenceEntry,
   Span as ByteSpan,
-} from './jianpuWasm'
+} from './poentaroWasm'
 
 export interface EditorSelection {
   start: number

@@ -2,7 +2,7 @@
 use crate::note_highlight_identity::{
     multi_part_source_with_ties_rests_and_chord, note_ids_in_svg,
 };
-use jianpu_generator::{
+use poentaro::{
     measure_start_times_from_source, note_timings_for_range_from_source, note_timings_from_source,
     render_svgs_from_source, render_svgs_from_source_filtered, MeasureRangeSelection,
 };
@@ -22,7 +22,7 @@ use std::collections::HashSet;
 #[test]
 fn note_timings_with_track_filter_keep_original_part_indices() {
     let source = multi_part_source_with_ties_rests_and_chord();
-    let filename = "note_highlight_identity_track_filter.jianpu";
+    let filename = "note_highlight_identity_track_filter.poentaro";
 
     let render_output = render_svgs_from_source(source, filename, &[]).unwrap();
     let svg_ids = note_ids_in_svg(&render_output.svgs);
@@ -87,12 +87,13 @@ fn note_ids_match_between_grid_layout_and_midi_timing_with_merged_rest_run() {
     let source = score_with_merged_rest_run();
 
     let render_output =
-        render_svgs_from_source(source, "note_highlight_identity_merged_rest.jianpu", &[]).unwrap();
+        render_svgs_from_source(source, "note_highlight_identity_merged_rest.poentaro", &[])
+            .unwrap();
     let svg_ids = note_ids_in_svg(&render_output.svgs);
 
     let note_timings = note_timings_from_source(
         source,
-        "note_highlight_identity_merged_rest.jianpu",
+        "note_highlight_identity_merged_rest.poentaro",
         None,
         None,
         &[],
@@ -178,7 +179,7 @@ fn score_with_filter_induced_merged_rest_run() -> &'static str {
 #[test]
 fn note_timings_with_visibility_filter_match_filter_induced_merged_rest() {
     let source = score_with_filter_induced_merged_rest_run();
-    let filename = "note_highlight_identity_visibility_filter_merged_rest.jianpu";
+    let filename = "note_highlight_identity_visibility_filter_merged_rest.poentaro";
 
     let visible_tracks = ["M".to_string()];
     let render_output =
@@ -221,7 +222,7 @@ fn note_timings_with_visibility_filter_match_filter_induced_merged_rest() {
 #[test]
 fn note_timings_for_range_start_at_zero_and_match_full_score_ids() {
     let source = multi_part_source_with_ties_rests_and_chord();
-    let filename = "note_highlight_identity_range.jianpu";
+    let filename = "note_highlight_identity_range.poentaro";
 
     let render_output = render_svgs_from_source(source, filename, &[]).unwrap();
     let svg_ids = note_ids_in_svg(&render_output.svgs);
@@ -321,7 +322,7 @@ fn sequence_source_with_reordered_spans() -> &'static str {
 #[test]
 fn note_timings_for_range_ignore_sequence_use_written_index_identity() {
     let source = sequence_source_with_reordered_spans();
-    let filename = "note_highlight_identity_ignore_sequence.jianpu";
+    let filename = "note_highlight_identity_ignore_sequence.poentaro";
 
     let render_output = render_svgs_from_source(source, filename, &[]).unwrap();
     let svg_ids = note_ids_in_svg(&render_output.svgs);

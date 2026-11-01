@@ -19,7 +19,7 @@ const SOURCE_WITH_UNDERFLOW_IN_MEASURE_1 = [
   '[Melodyv1] do re mi fa',
 ].join('\n')
 
-const FILE_STORE_KEY = 'jianpu:files:v1'
+const FILE_STORE_KEY = 'poentaro:files:v1'
 
 Given(
   'a user file with lyric underflow in measure 1 but valid lyrics in measure 2',
@@ -29,10 +29,10 @@ Given(
     await page.addInitScript(
       ({ key, source }: { key: string; source: string }) => {
         const store = {
-          active: 'test.jianpu',
-          userFiles: { 'test.jianpu': source },
+          active: 'test.poentaro',
+          userFiles: { 'test.poentaro': source },
           bin: {},
-          fileIds: { 'test.jianpu': 'test-file-id' },
+          fileIds: { 'test.poentaro': 'test-file-id' },
         }
         localStorage.setItem(key, JSON.stringify(store))
       },

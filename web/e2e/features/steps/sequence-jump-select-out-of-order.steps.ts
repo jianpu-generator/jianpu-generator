@@ -65,12 +65,14 @@ Given(
   ) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'sequence-out-of-order-test.jianpu',
-          userFiles: { 'sequence-out-of-order-test.jianpu': src },
+          active: 'sequence-out-of-order-test.poentaro',
+          userFiles: { 'sequence-out-of-order-test.poentaro': src },
           bin: {},
-          fileIds: { 'sequence-out-of-order-test.jianpu': crypto.randomUUID() },
+          fileIds: {
+            'sequence-out-of-order-test.poentaro': crypto.randomUUID(),
+          },
         }),
       )
     }, SOURCE)

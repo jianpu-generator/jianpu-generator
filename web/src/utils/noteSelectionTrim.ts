@@ -1,4 +1,4 @@
-import type { NoteTiming } from '../jianpuWasm'
+import type { NoteTiming } from '../poentaroWasm'
 import type { NoteCell } from './noteSpanSelection'
 
 /** Elapsed-seconds window, relative to the start of a generated audio clip. */

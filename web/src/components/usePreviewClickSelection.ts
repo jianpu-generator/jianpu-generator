@@ -1,6 +1,6 @@
 import type { RefObject } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import type { ClickableElementId } from '../jianpuWasm'
+import type { ClickableElementId } from '../poentaroWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import type { StaffScore } from '../worker/messages'
 import { clickableElementIdFromElement } from './clickableElementId'

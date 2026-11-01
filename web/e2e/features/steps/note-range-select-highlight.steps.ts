@@ -44,12 +44,12 @@ Given(
   async ({ page }) => {
     await page.addInitScript((source) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'note-range-test.jianpu',
-          userFiles: { 'note-range-test.jianpu': source },
+          active: 'note-range-test.poentaro',
+          userFiles: { 'note-range-test.poentaro': source },
           bin: {},
-          fileIds: { 'note-range-test.jianpu': 'note-range-test-id-001' },
+          fileIds: { 'note-range-test.poentaro': 'note-range-test-id-001' },
         }),
       )
     }, rangeTestSource)

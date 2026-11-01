@@ -5,7 +5,7 @@ use crate::parser;
 
 fn parse_and_group(parts: &str, score: &str) -> Score {
     let input = format!("# parts\n{parts}\n\n# score\ntime=4/4 key=C4 bpm=120\n{score}\n");
-    let doc = parser::parse(&input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(&input, "test.poentaro", &[]).unwrap();
     group(doc).unwrap()
 }
 
@@ -92,12 +92,12 @@ fn octave_offset_shifts_the_sounding_pitch() {
 #[test]
 fn key_shifts_the_sounding_pitch() {
     let input = "# parts\nAlto [A] = notes alto\n\n# score\ntime=4/4 key=A3 bpm=120\n[A] 1 3 5 3\n";
-    let score = group(parser::parse(input, "test.jianpu", &[]).unwrap()).unwrap();
+    let score = group(parser::parse(input, "test.poentaro", &[]).unwrap()).unwrap();
     assert!(range_warnings(&score).is_empty());
 
     let input =
         "# parts\nAlto [A] = notes alto\n\n# score\ntime=4/4 key=Eb4 bpm=120\n[A] 1 3 5 1'\n";
-    let score = group(parser::parse(input, "test.jianpu", &[]).unwrap()).unwrap();
+    let score = group(parser::parse(input, "test.poentaro", &[]).unwrap()).unwrap();
     assert_eq!(
         range_messages(&score),
         vec!["A: note sounds as Eb5, above the alto's highest note D5"]
@@ -128,7 +128,7 @@ fn follow_part_can_override_its_targets_instrument() {
 #[test]
 fn chords_part_cannot_name_an_instrument() {
     let input = "# parts\nChords [C] = chords guitar\n\n# score\n[C] 1 - - -\n";
-    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(input, "test.poentaro", &[]).unwrap();
     assert!(doc
         .parts_parse_errors
         .iter()
@@ -138,7 +138,7 @@ fn chords_part_cannot_name_an_instrument() {
 #[test]
 fn unknown_instrument_is_reported_and_the_part_kept() {
     let input = "# parts\nViolin [V] = notes viola\n\n# score\n[V] 1 2 3 4\n";
-    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(input, "test.poentaro", &[]).unwrap();
     assert!(doc
         .parts_parse_errors
         .iter()

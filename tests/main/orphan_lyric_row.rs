@@ -1,6 +1,6 @@
 #![allow(clippy::disallowed_macros)]
-use jianpu_generator::grid_layout::types::{GridContent, Header};
-use jianpu_generator::render_config::RenderConfig;
+use poentaro::grid_layout::types::{GridContent, Header};
+use poentaro::render_config::RenderConfig;
 
 const SOURCE: &str = concat!(
     "# parts\n",
@@ -36,9 +36,9 @@ const SOURCE: &str = concat!(
 /// content.
 #[test]
 fn no_orphan_empty_lyric_row_when_no_part_has_lyric_text() {
-    let score = jianpu_generator::compile(SOURCE, "test.jianpu", &[]).unwrap();
-    let compile_result = jianpu_generator::compiler::compile(&score);
-    let compile_result = jianpu_generator::consolidator::consolidate(compile_result);
+    let score = poentaro::compile(SOURCE, "test.poentaro", &[]).unwrap();
+    let compile_result = poentaro::compiler::compile(&score);
+    let compile_result = poentaro::consolidator::consolidate(compile_result);
     let config = RenderConfig::from_metadata(&score.metadata);
     let header = Header {
         title: None,
@@ -54,15 +54,8 @@ fn no_orphan_empty_lyric_row_when_no_part_has_lyric_text() {
         part_legend_font_size: score.metadata.part_legend.font_size as f32,
         ..Default::default()
     };
-    let pages = jianpu_generator::grid_layout::layout(
-        &compile_result,
-        &config,
-        &header,
-        595.0,
-        842.0,
-        None,
-    )
-    .pages;
+    let pages =
+        poentaro::grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None).pages;
 
     let has_orphan_lyric_row = pages[0].rows.iter().any(|row| {
         !row.elements.is_empty()

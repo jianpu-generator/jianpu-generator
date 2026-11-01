@@ -31,7 +31,7 @@ export type MeasureSpec = {
 /** Per-scenario accumulated fixture state, reset at the start of every
  * scenario's first `Given` step (see `resetState`). Subsequent `Given`
  * steps mutate it; `When the score is laid out` renders it into a
- * `.jianpu` source string and loads it. */
+ * `.poentaro` source string and loads it. */
 export let state: {
   maxMeasuresPerSystem: number
   hideRestingParts: boolean | null
@@ -64,7 +64,7 @@ const NOTE_TOKENS: Record<string, string> = {
 }
 export const NOTE_TOKEN_COUNT = 4
 
-/** Builds the `.jianpu` source from accumulated state. Also returns the
+/** Builds the `.poentaro` source from accumulated state. Also returns the
  * 1-based line number of the first measure's first content line, so the
  * "go to line" priming dance (see `primeMeasureSpans`) can put the cursor
  * somewhere guaranteed to fall inside a real measure span — a fixed line
@@ -126,13 +126,13 @@ export async function loadFixture(
   const { source, firstMeasureLine } = buildSource()
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'system-part-union-packing-test.jianpu',
-        userFiles: { 'system-part-union-packing-test.jianpu': src },
+        active: 'system-part-union-packing-test.poentaro',
+        userFiles: { 'system-part-union-packing-test.poentaro': src },
         bin: {},
         fileIds: {
-          'system-part-union-packing-test.jianpu':
+          'system-part-union-packing-test.poentaro':
             'system-part-union-packing-test-id-001',
         },
       }),

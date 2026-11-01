@@ -37,7 +37,7 @@ fn play_selected_sequence_entry_range_respects_part_omission() {
     // per-occurrence part omissions apply to the generated MIDI, not just
     // the written score.
     let source = sequence_omission_source();
-    let score = compile(source, "test.jianpu", &[]).unwrap();
+    let score = compile(source, "test.poentaro", &[]).unwrap();
 
     let (expanded, start, end) =
         midi::expand_for_measure_range(&score, 1, 1, false, true, Some(1..=1)).unwrap();
@@ -62,7 +62,7 @@ fn play_selected_sequence_entry_range_disambiguates_repeated_label() {
     // which one was actually clicked. Passing the entry's own `# sequence`
     // index (2) instead must select this exact occurrence.
     let source = sequence_omission_source();
-    let score = compile(source, "test.jianpu", &[]).unwrap();
+    let score = compile(source, "test.poentaro", &[]).unwrap();
 
     let (expanded, start, end) =
         midi::expand_for_measure_range(&score, 1, 1, false, true, Some(2..=2)).unwrap();

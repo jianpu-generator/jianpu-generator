@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
-import type { FileTreeViewRow, FolderSnapshot } from '../jianpuWasm'
+import type { FileTreeViewRow, FolderSnapshot } from '../poentaroWasm'
 import { sharedFolderFirstFile, sharedFolderView } from '../sharedFolder'
 import { clearShareHash, parseFolderShareFromHash } from '../shareUrl'
 import type { StorageBackend } from '../storage/types'

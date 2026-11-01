@@ -8,7 +8,7 @@ const SOURCE: &str = "# parts\nSoprano [S] = notes\nAlto [A] = notes\nWords [w] 
 fn split_meis_give_each_sounding_part_its_own_score_and_lyrics() {
     let entries = render_split_meis_from_source(
         SOURCE,
-        "test.jianpu",
+        "test.poentaro",
         "song",
         SplitSelection::default(),
         &[],
@@ -59,7 +59,7 @@ mod pdf {
         let pdf = write_staff_pdf(&[VEROVIO_PAGE.to_string()], &fonts, Some("[S] 1")).unwrap();
         let jianpu = crate::write_pdf_from_source_with_visibility(
             "[S] 1",
-            "test.jianpu",
+            "test.poentaro",
             &crate::ResolvedPartVisibility::default(),
             &fonts,
             &[],

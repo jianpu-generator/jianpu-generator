@@ -1,4 +1,4 @@
-//! Keyword highlighting for the editor: the spans of every `.jianpu`
+//! Keyword highlighting for the editor: the spans of every `.poentaro`
 //! keyword, found by the same lexers the parser uses, so the editor never
 //! re-spells the vocabulary. See `ARCHITECTURE.md` ("Highlight token").
 

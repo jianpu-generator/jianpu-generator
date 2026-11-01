@@ -28,6 +28,8 @@ const rateLimitOverride = process.env.RATE_LIMIT_PER_MINUTE_OVERRIDE
 
 export default defineConfig({
   worker: {
+    // Still `jianpu`: renaming a Worker or a D1 database means recreating
+    // it (see "Naming" in AGENTS.md). Name anything new `poentaro-…`.
     name: 'jianpu-live-share-worker-rs',
     compatibilityDate: '2024-09-23',
     // `worker-build`'s default output layout: a `build/` dir here containing

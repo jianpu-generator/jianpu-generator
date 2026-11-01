@@ -1,8 +1,8 @@
 import type { RefObject } from 'react'
 import { useCallback, useRef, useState } from 'react'
-import type { NoteTiming } from '../jianpuWasm'
+import type { NoteTiming } from '../poentaroWasm'
 import type { NoteCell } from '../utils/noteSpanSelection'
-import type { WorkerRequest } from '../worker/jianpu.worker'
+import type { WorkerRequest } from '../worker/poentaro.worker'
 
 interface UseMeasureAudioPlaybackParams {
   workerRef: RefObject<Worker | null>
@@ -13,7 +13,7 @@ interface UseMeasureAudioPlaybackParams {
   /**
    * Read at click time rather than depended on directly, since the selection
    * is owned by `useSequenceNavigation` in `App.tsx`, downstream of this hook
-   * (which is itself owned by `useJianpuWorker`) — a ref avoids the circular
+   * (which is itself owned by `usePoentaroWorker`) — a ref avoids the circular
    * dependency of threading a fresh value back into this hook's own call.
    */
   selectedSequenceRangeRef: RefObject<{
