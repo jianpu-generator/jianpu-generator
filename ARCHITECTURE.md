@@ -758,8 +758,14 @@ one-time **origin migration** handoff in the worker.
   path (minus the old base path), query and fragment, which share links
   carry their payload in. A failed upload shows "Try again" / "Continue
   without my files" and leaves the mark unset. The old origin's data is
-  never deleted. Link-preview crawlers that fetch an old link get the
-  bridge page, not the share's title (`web/functions/` isn't deployed there).
+  never deleted. The old Cloudflare Pages project is deployed with
+  `web/functions/` too, so link-preview crawlers fetching an old `?s=` link
+  still get the share's title (the bridge carries the same `og:` tags);
+  GitHub Pages has no functions and serves the plain bridge page.
+- Deploy (`.github/workflows/pages.yml`): the app goes to the `poentaro`
+  Cloudflare Pages project; once that succeeds, the bridge goes to the old
+  `jianpu-generator` project and to GitHub Pages (with a `404.html` copy so
+  every path reaches it).
 - Import on arrival (`web/src/originMigration/importOriginMigration.ts`,
   awaited in `web/src/main.tsx` before the app renders): reads `?migrate=`,
   strips it from the URL, claims the handoff and saves each carried

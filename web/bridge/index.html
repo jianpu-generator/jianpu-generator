@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex" />
     <title>簡譜 is now Poentaro</title>
+    <!-- Link-preview tags. On the old Cloudflare Pages origin,
+         `functions/index.ts` (deployed alongside) rewrites them with a
+         shared score's title for `?s=` links, as it does for the app. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Poentaro" />
+    <meta
+      property="og:description"
+      content="Jianpu (numbered musical notation) score editor"
+    />
+    <meta name="twitter:card" content="summary" />
     <style>
       body {
         font-family: system-ui, sans-serif;

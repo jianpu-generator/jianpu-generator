@@ -41,9 +41,9 @@ survives context compression. Branch: `feat/rename-to-poentaro`.
   `crates/jianpu-wasm/wit/world.wit` (`file-store-state` record); TS calls
   via `jianpuWasm().fileStoreXxx` in `web/src/fileStore.ts`.
 - `web/functions/index.ts` (Pages Function) rewrites OG tags for `?s=`
-  share links. The bridge deploy has no function, so link-preview crawlers
-  hitting OLD links get the bridge page (no rich preview). Accepted; mention
-  in the PR.
+  share links. It is deployed with the bridge on the old Cloudflare project
+  too (the bridge page has the same `og:` tags), so old links keep rich
+  previews there; GitHub Pages can't run it.
 
 ## Steps
 
@@ -86,12 +86,15 @@ survives context compression. Branch: `feat/rename-to-poentaro`.
       new table had to be applied there by hand.
 
 ### 4. Deploy workflow
-- [ ] `.github/workflows/pages.yml`: deploy app to project `poentaro`
+- [x] `.github/workflows/pages.yml`: deploy app to project `poentaro`
       (env URL `https://poentaro.pages.dev`); deploy bridge to project
-      `jianpu-generator`.
-- [ ] GitHub Pages: deploy bridge instead of the app (or retire). Note: if the
-      repo is renamed, `github.io/jianpu-generator/` dies unless a tiny repo
-      with that name hosts the bridge.
+      `jianpu-generator` (job `deploy-cloudflare-bridge`, with
+      `web/functions/` so old `?s=` links keep rich previews).
+- [x] GitHub Pages: deploys the bridge (`dist-bridge` + `404.html` copy).
+      Both bridge jobs `needs: deploy-cloudflare`, so the old origins only
+      redirect once Poentaro is live. Note: if the repo is renamed,
+      `github.io/jianpu-generator/` dies unless a tiny repo with that name
+      hosts the bridge.
 
 ### 5. Rebrand
 - [ ] `web/index.html` title, header/brand text, README, `ARCHITECTURE.md`,
