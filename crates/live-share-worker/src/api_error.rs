@@ -38,6 +38,10 @@ pub enum ApiError {
     /// allow: refused when starting the share, and answered to a viewer
     /// whose folder has grown past the limits since.
     SharedFolderTooLarge { message: String },
+    /// An origin-migration upload (`POST /origin-migrations`) larger than
+    /// `origin_migration::MAX_ORIGIN_MIGRATION_PAYLOAD_BYTES`; `message`
+    /// says by how much.
+    OriginMigrationTooLarge { message: String },
     /// A content save's `expectedRevision` lost the race -- feeds the
     /// "Overwrite mine"/"Discard mine" UI with the row's actual revision.
     RevisionConflict {
@@ -88,7 +92,7 @@ impl ApiError {
             | ApiError::NamesTaken { .. }
             | ApiError::FileFolderConflict { .. }
             | ApiError::RevisionConflict { .. } => 409,
-            ApiError::SharedFolderTooLarge { .. } => 413,
+            ApiError::SharedFolderTooLarge { .. } | ApiError::OriginMigrationTooLarge { .. } => 413,
             ApiError::SignInLocked { .. } | ApiError::RateLimited => 429,
             ApiError::Internal { .. } => 500,
         }

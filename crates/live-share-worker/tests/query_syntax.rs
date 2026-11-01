@@ -46,6 +46,18 @@ const QUERIES: &[(&str, &str)] = &[
         include_str!("../queries/advance_file_version_link.sql"),
     ),
     (
+        "prune_origin_migrations.sql",
+        include_str!("../queries/prune_origin_migrations.sql"),
+    ),
+    (
+        "claim_origin_migration.sql",
+        include_str!("../queries/claim_origin_migration.sql"),
+    ),
+    (
+        "insert_origin_migration.sql",
+        include_str!("../queries/insert_origin_migration.sql"),
+    ),
+    (
         "delete_files_of_users.sql",
         include_str!("../queries/delete_files_of_users.sql"),
     ),
