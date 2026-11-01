@@ -97,8 +97,11 @@ survives context compression. Branch: `feat/rename-to-poentaro`.
       hosts the bridge.
 
 ### 5. Rebrand
-- [ ] `web/index.html` title, header/brand text, README, `ARCHITECTURE.md`,
-      `syntax.md` mentions (only user-facing name, not `.jianpu` format).
+- [x] `web/index.html` title + `og:title`, tab title (`useDocumentTitle`),
+      OG title in `web/functions/index.ts`, README, `syntax.md` intro. The
+      app has no in-page brand header. `ARCHITECTURE.md` already names
+      Poentaro in "Origin migration". Kept: the GitHub issues URL (the repo
+      isn't renamed), `.jianpu` format, `jianpu:` keys, crate/worker names.
 
 ### 6. Ship
 - [ ] Commit per step on the branch, open PR (description lists the manual

@@ -1,6 +1,11 @@
-# jianpu-generator
+# Poentaro
 
-Renders `.jianpu` scores (numbered musical notation) to SVG, PDF and MIDI, with a
+Poentaro (Esperanto for "a tally of points", so a score) lives at
+<https://poentaro.pages.dev>. It used to be called jianpu-generator, at
+`jianpu-generator.pages.dev`, which now hands your saved files over and
+redirects (see "Origin migration" in [`ARCHITECTURE.md`](ARCHITECTURE.md)).
+
+It renders `.jianpu` scores (numbered musical notation) to SVG, PDF and MIDI, with a
 web editor and a Cloudflare worker for synced sharing.
 
 - Input syntax: [`syntax.md`](syntax.md)

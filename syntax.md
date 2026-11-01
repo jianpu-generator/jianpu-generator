@@ -1,6 +1,6 @@
 # Jianpu Generator — `.jianpu` Syntax Reference
 
-This document describes the input syntax accepted by **jianpu-generator** as implemented today. File extension: `.jianpu`.
+This document describes the input syntax accepted by **Poentaro** (formerly jianpu-generator) as implemented today. File extension: `.jianpu`.
 
 ---
 
