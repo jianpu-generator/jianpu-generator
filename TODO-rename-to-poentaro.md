@@ -72,11 +72,18 @@ survives context compression. Branch: `feat/rename-to-poentaro`.
       (flag stays unset, so the next visit retries).
 
 ### 3. New app: import on arrival
-- [ ] Detect `migrate=<id>`, claim payload, strip the param from the URL.
-- [ ] Merge in Rust (wasm), per "frontend stays dumb": file store merge never
-      overwrites files already on the new origin; session token copied only
-      if not signed in; prefs copied only if unset.
-- [ ] Gherkin e2e scenario for the handoff.
+- [x] Detect `migrate=<id>`, claim payload, strip the param from the URL
+      (`web/src/originMigration/importOriginMigration.ts`, awaited in
+      `main.tsx` before render).
+- [x] Merge in Rust (wasm), per "frontend stays dumb": file store merge never
+      overwrites files already on the new origin
+      (`src/file_tree/origin_migration.rs`, `file-store-merge-migrated`);
+      session token copied only if not signed in; prefs copied only if unset;
+      outbox restored only if the new one is empty.
+- [x] Gherkin e2e scenario for the handoff
+      (`web/e2e/features/origin-migration.feature`; bridge served on :5184).
+      Note: locally `cf dev` read `.wrangler/state`, not `e2e-state`, so the
+      new table had to be applied there by hand.
 
 ### 4. Deploy workflow
 - [ ] `.github/workflows/pages.yml`: deploy app to project `poentaro`

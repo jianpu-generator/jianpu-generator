@@ -152,6 +152,23 @@ function applyOrKeep(
   return result.ok ? result.state : state
 }
 
+/** The file store an origin migration carried from the old origin merged
+ * into `current` (see `file_tree::merge_migrated_file_store`), or `null` if
+ * Rust refused it. */
+export function mergeMigratedFileStore(
+  current: FileStoreState,
+  carried: FileStoreState,
+): FileStoreState | null {
+  const result = storeResult(
+    jianpuWasm().fileStoreMergeMigrated(
+      toWasmState(current),
+      toWasmState(carried),
+      operationContext(),
+    ),
+  )
+  return result.ok ? result.state : null
+}
+
 /** New file `name` in `folder` (top level when omitted). Kept as is when
  * `createFileError` objects. */
 export function createFile(

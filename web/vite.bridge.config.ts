@@ -2,7 +2,7 @@ import path from 'node:path'
 import { defineConfig } from 'vite'
 import { workerDeployConfigPlugin } from './vite.config'
 
-// Builds the bridge page (`bridge/index.html`, `src/bridge/main.ts`) the
+// Builds the bridge page (`bridge/index.html`, `bridge/entry.ts` -> `src/bridge/main.ts`) the
 // app's old origins serve after the move to `poentaro.pages.dev` -- see
 // "Origin migration" in `ARCHITECTURE.md`. Deployed instead of the app to
 // the old Cloudflare Pages project and GitHub Pages. Cloudflare Pages serves
@@ -13,6 +13,8 @@ export default defineConfig({
   base: process.env.VITE_BASE_PATH ?? '/',
   envDir: __dirname,
   plugins: [workerDeployConfigPlugin()],
+  // `bridge/entry.ts` imports `src/bridge/`, outside the root.
+  server: { fs: { allow: [__dirname] } },
   build: {
     outDir: path.resolve(__dirname, 'dist-bridge'),
     emptyOutDir: true,

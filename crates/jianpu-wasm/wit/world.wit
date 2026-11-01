@@ -2134,6 +2134,9 @@ world jianpu-wasm {
     // The reason creating the file `name` inside `folder` would be rejected, if it would.
     export file-store-create-file-error: func(state: file-store-state, folder: option<string>, name: string, context: file-operation-context) -> option<string>;
     export file-store-duplicate-file: func(state: file-store-state, source: string, context: file-operation-context) -> file-store-response;
+    // The file store an origin migration carried from the old origin merged into
+    // `current` (see `file_tree::merge_migrated_file_store`).
+    export file-store-merge-migrated: func(current: file-store-state, carried: file-store-state, context: file-operation-context) -> file-store-response;
     export file-store-rename-file: func(state: file-store-state, from-path: string, to-path: string, context: file-operation-context) -> file-store-response;
     export file-store-delete-file: func(state: file-store-state, path: string, context: file-operation-context) -> file-store-response;
     export file-store-restore-file: func(state: file-store-state, bin-key: string, context: file-operation-context) -> file-store-response;
