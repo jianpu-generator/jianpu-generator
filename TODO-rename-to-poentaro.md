@@ -104,5 +104,6 @@ survives context compression. Branch: `feat/rename-to-poentaro`.
       isn't renamed), `.jianpu` format, `jianpu:` keys, crate/worker names.
 
 ### 6. Ship
-- [ ] Commit per step on the branch, open PR (description lists the manual
+- [x] Commit per step on the branch, open PR (description lists the manual
       Cloudflare steps for the user).
+- [ ] User: create the `poentaro` Pages project, then merge (see the PR).
