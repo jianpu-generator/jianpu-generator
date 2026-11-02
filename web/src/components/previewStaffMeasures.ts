@@ -74,7 +74,7 @@ function insertMeasureRect(
 
 /** Gives every staff measure a transparent rect over its whole box, so the
  * blank space between its notes (which Verovio leaves unpainted) is hovered
- * too — `preview.css` tints it and shows a pointer, like the jianpu view's
+ * too — `preview.css` tints it and shows a pointer, like the numbered view's
  * click targets. Run once per set of pages. */
 export function applyStaffMeasureHitTargets(
   container: HTMLElement,

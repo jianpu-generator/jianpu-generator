@@ -94,7 +94,7 @@ Given(
 )
 
 Given(
-  'a jianpu score with 40 measures and row_height 200 is loaded, and the viewport is 1400 by 900',
+  'a numbered score with 40 measures and row_height 200 is loaded, and the viewport is 1400 by 900',
   async ({ page }) => {
     const manyMeasures = Array.from({ length: 40 }, () => '1 1 5 5').join('\n')
     const source = [

@@ -1,9 +1,9 @@
 use super::*;
-use crate::ast::parsed::JianPuPitch;
+use crate::ast::parsed::NumberedPitch;
 
 #[test]
 fn suffix_dash_after_rest_is_allowed() {
-    // `0---` is conventional jianpu for a rest held across the whole measure.
+    // `0---` is conventional numbered notation for a rest held across the whole measure.
     let score = parse_and_group(concat!(
         "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\na = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[a] 0---\n",
@@ -92,7 +92,7 @@ fn standalone_tie_marker_sets_tie_on_preceding_note() {
         }
     }
     match &notes[1] {
-        NoteEvent::Note(n) => assert_eq!(n.pitch, JianPuPitch::Seven),
+        NoteEvent::Note(n) => assert_eq!(n.pitch, NumberedPitch::Seven),
         NoteEvent::Rest(_) | NoteEvent::Chord(_) | NoteEvent::Percussion(_) => {
             panic!("expected Note")
         }

@@ -5,8 +5,8 @@ Poentaro (Esperanto for "a tally of points", so a score) lives at
 `jianpu-generator.pages.dev`, which now hands your saved files over and
 redirects (see "Origin migration" in [`ARCHITECTURE.md`](ARCHITECTURE.md)).
 
-It renders `.poentaro` scores (jianpu, i.e. numbered musical notation; files from
-before the rename end in `.jianpu`) to SVG, PDF and MIDI, with a
+It renders `.poentaro` scores (numbered musical notation; files from before
+the rename end in `.jianpu`) to SVG, PDF and MIDI, with a
 web editor and a Cloudflare worker for synced sharing.
 
 - Input syntax: [`syntax.md`](syntax.md)

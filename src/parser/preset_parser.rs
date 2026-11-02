@@ -74,7 +74,7 @@ fn parse_preset(section: PresetSection, declarations: &[PartDecl]) -> ParsedPres
             Some(PresetKey::VisibleParts) => {
                 visible_parts = Some(parse_visible_parts(&line, declarations, &mut errors));
             }
-            Some(PresetKey::Notation) => match Notation::from_keyword(line.value) {
+            Some(PresetKey::Notation) => match Notation::from_source_value(line.value) {
                 Some(value) => notation = Some(Spanned::new(value, line.value_span)),
                 None => errors.push(RecoverableError::metadata_invalid_enum(
                     line.value_span,

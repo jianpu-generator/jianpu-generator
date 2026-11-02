@@ -1,4 +1,4 @@
-use crate::ast::parsed::{Accidental, JianPuPitch, Offset};
+use crate::ast::parsed::{Accidental, NumberedPitch, Offset};
 use crate::compiler::types::{
     ColumnElement, CompileResult, ElementContent, MeasureBlock, MeasureRow, RowId,
 };
@@ -34,7 +34,7 @@ fn notes_row_with_two_notes() -> MeasureRow {
             ColumnElement {
                 column: 0,
                 content: ElementContent::NoteHead {
-                    pitch: JianPuPitch::One,
+                    pitch: NumberedPitch::One,
                     accidental: Accidental::Natural,
                     octave: 0,
                     dotted: false,
@@ -46,7 +46,7 @@ fn notes_row_with_two_notes() -> MeasureRow {
             ColumnElement {
                 column: 1,
                 content: ElementContent::NoteHead {
-                    pitch: JianPuPitch::Two,
+                    pitch: NumberedPitch::Two,
                     accidental: Accidental::Natural,
                     octave: 0,
                     dotted: false,

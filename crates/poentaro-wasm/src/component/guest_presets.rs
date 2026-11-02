@@ -10,7 +10,7 @@ use poentaro::source_edit;
 
 fn notation_to_wit(notation: CoreNotation) -> Notation {
     match notation {
-        CoreNotation::Jianpu => Notation::Jianpu,
+        CoreNotation::Numbered => Notation::Numbered,
         CoreNotation::Violin => Notation::Violin,
         CoreNotation::Cello => Notation::Cello,
         CoreNotation::Abc => Notation::Abc,
@@ -21,7 +21,7 @@ fn notation_to_wit(notation: CoreNotation) -> Notation {
 
 fn notation_from_wit(notation: Notation) -> CoreNotation {
     match notation {
-        Notation::Jianpu => CoreNotation::Jianpu,
+        Notation::Numbered => CoreNotation::Numbered,
         Notation::Violin => CoreNotation::Violin,
         Notation::Cello => CoreNotation::Cello,
         Notation::Abc => CoreNotation::Abc,

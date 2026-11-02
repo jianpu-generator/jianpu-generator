@@ -278,7 +278,7 @@ measure markers and the changed-measure count, then uses `source` on Apply.
 - Selecting a part shows the stream editor in the same modal:
   - `DiffEditor` from `@monaco-editor/react` (pattern:
     `web/src/components/mergeEditor/MergeEditor.tsx`), `original` = extracted
-    stream (read-only), `modified` = editable copy, word wrap on, jianpu
+    stream (read-only), `modified` = editable copy, word wrap on, numbered
     language for highlighting if it applies cleanly to a bare stream.
   - On every change: `apply_part_stream` → Monaco markers on the modified
     editor from `diagnostics` (byte → UTF-16 offset conversion like the main

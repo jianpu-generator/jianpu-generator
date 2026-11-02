@@ -120,7 +120,7 @@ fn list_measure_spans_view_zone_start_includes_directive_line() {
 #[test]
 fn list_measure_spans_returns_empty_for_invalid_source() {
     // Missing sections are recoverable; the response is Ok with no spans.
-    let resp = list_measure_spans_response("not valid jianpu");
+    let resp = list_measure_spans_response("not valid poentaro");
     match resp {
         ListMeasureSpansResponse::Ok { spans, .. } => assert!(spans.is_empty()),
         ListMeasureSpansResponse::Err => {}

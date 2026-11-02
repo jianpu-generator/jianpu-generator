@@ -1,4 +1,4 @@
-use crate::ast::parsed::JianPuPitch;
+use crate::ast::parsed::NumberedPitch;
 use crate::grid_layout::types::GridContent;
 
 use super::cfg;
@@ -43,7 +43,7 @@ time=4/4
     let pages =
         crate::grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None).pages;
 
-    let note_heads: Vec<(JianPuPitch, u32)> = pages
+    let note_heads: Vec<(NumberedPitch, u32)> = pages
         .iter()
         .flat_map(|page| page.rows.iter())
         .flat_map(|row| row.elements.iter())
@@ -53,7 +53,11 @@ time=4/4
         })
         .collect();
 
-    for pitch in [JianPuPitch::Two, JianPuPitch::Three, JianPuPitch::Four] {
+    for pitch in [
+        NumberedPitch::Two,
+        NumberedPitch::Three,
+        NumberedPitch::Four,
+    ] {
         let columns: Vec<u32> = note_heads
             .iter()
             .filter(|(p, _)| *p == pitch)

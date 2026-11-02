@@ -154,7 +154,7 @@ Feature: Edit Metadata modal
     Then the metadata modal stays within the editor pane and does not cover the preview pane
 
   Scenario: Preview pane stays scrollable while the modal is open
-    Given a jianpu score with 40 measures and row_height 200 is loaded, and the viewport is 1400 by 900
+    Given a numbered score with 40 measures and row_height 200 is loaded, and the viewport is 1400 by 900
     Then the preview pane is scrollable
     When I open the Edit Metadata modal
     And I hover the preview pane and scroll the mouse wheel down by 400

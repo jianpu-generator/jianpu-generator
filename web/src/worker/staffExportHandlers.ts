@@ -18,7 +18,7 @@ const FONTS_NOT_LOADED = 'Fonts are not yet loaded.'
 
 /** PDF export while the preview shows staff notation: Rust writes the MEI,
  * Verovio engraves it, and Rust writes Verovio's pages as the PDF. Replies
- * with the same `pdf`/`pdfErr` messages as the jianpu export. */
+ * with the same `pdf`/`pdfErr` messages as the numbered export. */
 export async function handleGenerateStaffPdf(
   msg: Extract<WorkerRequest, { type: 'generatePdf' }>,
   clef: StaffClef,

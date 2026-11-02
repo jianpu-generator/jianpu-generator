@@ -52,7 +52,7 @@ Feature: Presets
     When I turn the "Mv1" part pill off
     And I create a new preset called "No lyrics"
     Then the "No lyrics" preset has the line "visible_parts = M, C"
-    And the "No lyrics" preset has the line "notation = jianpu"
+    And the "No lyrics" preset has the line "notation = numbered"
     And the preset menu shows "No lyrics"
     And the "Mv1" part pill is off
 
@@ -68,7 +68,7 @@ Feature: Presets
     When I choose the "Violin" preset
     Then the preview shows a staff notation page
     When I choose "Default" in the preset menu
-    Then the preview shows jianpu pages
+    Then the preview shows numbered pages
 
   Scenario: Picking a notation under a preset rewrites its notation line
     Given the presets fixture is loaded
@@ -81,8 +81,8 @@ Feature: Presets
     Given the presets fixture is opened as a shared link
     When I choose the "Violin" preset
     Then the preview shows a staff notation page
-    When I switch the preview notation to "jianpu"
-    Then the preview shows jianpu pages
+    When I switch the preview notation to "numbered"
+    Then the preview shows numbered pages
 
   Scenario: Export > PDF under a preset is named after it
     Given the presets fixture is loaded

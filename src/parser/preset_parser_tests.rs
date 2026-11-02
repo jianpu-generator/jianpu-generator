@@ -149,6 +149,15 @@ fn every_notation_keyword_parses() {
 }
 
 #[test]
+fn the_legacy_jianpu_keyword_reads_as_numbered() {
+    let doc = parse_document(&document_with_presets(
+        "# preset \"P\"\nnotation = jianpu\n",
+    ));
+    assert_eq!(only_preset(&doc).notation, Some(Notation::Numbered));
+    assert!(error_kinds(&doc).is_empty());
+}
+
+#[test]
 fn unknown_key_is_an_error() {
     let doc = parse_document(&document_with_presets("# preset \"P\"\ncolour = red\n"));
     assert!(matches!(
@@ -239,9 +248,9 @@ fn staff_notation_without_text_styles_does_not_warn() {
 }
 
 #[test]
-fn jianpu_notation_with_text_styles_does_not_warn() {
+fn numbered_notation_with_text_styles_does_not_warn() {
     let doc = parse_document(&document_with_presets(
-        "# preset \"P\"\nnotation = jianpu\ntitle = { font_size: 30 }\n",
+        "# preset \"P\"\nnotation = numbered\ntitle = { font_size: 30 }\n",
     ));
     assert!(doc.preset_diagnostics.is_empty());
 }

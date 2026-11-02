@@ -54,10 +54,10 @@ mod pdf {
     }
 
     #[test]
-    fn staff_pages_print_at_the_jianpu_page_size_and_keep_the_source() {
+    fn staff_pages_print_at_the_numbered_page_size_and_keep_the_source() {
         let fonts = FontBytesByFamily::embedded();
         let pdf = write_staff_pdf(&[VEROVIO_PAGE.to_string()], &fonts, Some("[S] 1")).unwrap();
-        let jianpu = crate::write_pdf_from_source_with_visibility(
+        let numbered = crate::write_pdf_from_source_with_visibility(
             "[S] 1",
             "test.poentaro",
             &crate::ResolvedPartVisibility::default(),
@@ -66,7 +66,7 @@ mod pdf {
             crate::NoteLabels::Degrees,
         )
         .unwrap();
-        assert_eq!(media_box(&pdf), media_box(&jianpu));
+        assert_eq!(media_box(&pdf), media_box(&numbered));
         assert_eq!(
             crate::source_embed::extract_embedded_source_from_pdf(&pdf).as_deref(),
             Some("[S] 1")

@@ -1,11 +1,11 @@
-//! The letter-name and harmonica-tab views: every note head's jianpu degree
+//! The letter-name and harmonica-tab views: every note head's numbered degree
 //! replaced by its pitch's letter name (`F♯`) or its harmonica tab (`-4`),
 //! resolved against the key in effect at its measure. The letter-name view
 //! also respells chord symbols (`F♯m⁷/C♯`). Everything else about the layout
-//! stays as in the jianpu view. The guitar chord view spells the same letter
+//! stays as in the numbered view. The guitar chord view spells the same letter
 //! names after the degrees instead (`3 (F♯)`, `6m (Bm)`). Also home to
 //! `label_note_heads`, which
-//! dispatches to every view that keeps the jianpu layout — see `NoteLabels`.
+//! dispatches to every view that keeps the numbered layout — see `NoteLabels`.
 
 use super::harmonica_tabs::HarmonicaTabs;
 use super::types::{
@@ -16,8 +16,8 @@ use crate::ast::grouped::Score;
 use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName};
 use crate::pitch_description::spelling::SpelledPitch;
 
-/// Which view of the jianpu layout to draw: what a note head reads as — its
-/// jianpu degree (`1`–`7`), its letter name (`C`–`B`, with any sharps/flats
+/// Which view of the numbered layout to draw: what a note head reads as — its
+/// numbered degree (`1`–`7`), its letter name (`C`–`B`, with any sharps/flats
 /// the key implies), or its tab on a 10-hole diatonic harmonica (see
 /// `harmonica_tabs`) — and whether chord symbols carry guitar chord diagrams.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]

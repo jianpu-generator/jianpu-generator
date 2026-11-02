@@ -1,4 +1,4 @@
-use crate::ast::parsed::{JianPuPitch, Offset};
+use crate::ast::parsed::{NumberedPitch, Offset};
 use crate::compiler::types::{
     ColumnElement, CompileResult, Decoration, ElementContent, MeasureBlock, MeasureRow, RowId,
 };
@@ -19,7 +19,7 @@ fn make_block_with_decorations(decorations: Vec<Decoration>) -> MeasureBlock {
                 ColumnElement {
                     column: 0,
                     content: ElementContent::NoteHead {
-                        pitch: JianPuPitch::One,
+                        pitch: NumberedPitch::One,
                         accidental: crate::ast::parsed::Accidental::Natural,
                         octave: 0,
                         dotted: false,
@@ -117,7 +117,7 @@ fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
                 ColumnElement {
                     column: 0,
                     content: ElementContent::NoteHead {
-                        pitch: JianPuPitch::One,
+                        pitch: NumberedPitch::One,
                         accidental: crate::ast::parsed::Accidental::Natural,
                         octave: 0,
                         dotted: false,

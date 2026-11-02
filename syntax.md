@@ -408,7 +408,7 @@ Chorus, Verse, Chorus(S)
 
 ## Presets
 
-A `# preset "Name"` section saves a way of viewing and exporting the song: which parts are shown, the notation, and any `# metadata` field to change. The preview's preset menu lists every preset; **Default** means no preset — the song's own `# metadata`, every part, jianpu.
+A `# preset "Name"` section saves a way of viewing and exporting the song: which parts are shown, the notation, and any `# metadata` field to change. The preview's preset menu lists every preset; **Default** means no preset — the song's own `# metadata`, every part, numbered notation.
 
 ```
 # metadata
@@ -424,10 +424,10 @@ max_measures_per_system = 3
 
 - The name is quoted and required. Names must be unique, and `Default` (in any case) is reserved.
 - `visible_parts` — a comma-separated list of part abbreviations (as declared in `# parts`) to show. Parts not listed are hidden and silent, the same as hiding them in the preview. Unset, every part is shown; empty (`visible_parts =`), none is. An abbreviation that matches no declared part is an error and is dropped; a part whose abbreviation contains a comma can't be listed.
-- `notation` — `jianpu`, `violin`, `cello`, `abc`, `guitar` or `harmonica`. Unset means jianpu. Violin and cello are drawn as a staff, which ignores text styles, so setting a text style in such a preset is a warning.
+- `notation` — `numbered`, `violin`, `cello`, `abc`, `guitar` or `harmonica`. Unset means numbered. Files written before this was renamed say `jianpu`, which still reads as `numbered`. Violin and cello are drawn as a staff, which ignores text styles, so setting a text style in such a preset is a warning.
 - Every `# metadata` field may also appear. The preset changes only the fields it sets; the rest come from `# metadata`. Header text (`title`, `subtitle`, `author`) can be changed but not removed.
 - `visible_parts` and `notation` belong only in a preset; in `# metadata` they're an error.
-- From the CLI, `--preset "Name"` exports under a preset (the file is named after it); `--tracks` replaces its `visible_parts`. The CLI draws jianpu only, so `notation` doesn't apply there.
+- From the CLI, `--preset "Name"` exports under a preset (the file is named after it); `--tracks` replaces its `visible_parts`. The CLI draws numbered notation only, so `notation` doesn't apply there.
 
 ---
 

@@ -8,10 +8,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 #[derive(Parser)]
-#[command(
-    name = "poentaro",
-    about = "Generate numbered musical notation (jianpu) files"
-)]
+#[command(name = "poentaro", about = "Generate numbered musical notation files")]
 struct Args {
     #[command(subcommand)]
     command: Commands,

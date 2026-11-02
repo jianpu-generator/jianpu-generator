@@ -1,15 +1,15 @@
-use crate::ast::parsed::{Accidental, JianPuPitch};
+use crate::ast::parsed::{Accidental, NumberedPitch};
 use crate::compiler::NoteHeadLabel;
 use crate::compositor::types::FontFamily;
 use crate::font_metrics;
 use crate::renderer::new_types::SvgVariant;
 
-/// What a note head reads as: its jianpu degree (with any written
+/// What a note head reads as: its numbered degree (with any written
 /// sharp/flat), or, in the letter-name and harmonica-tab views, `head_label`
 /// in its place, or, in the guitar chord view, the degree followed by
 /// `head_label`.
 pub(in crate::renderer::new_renderer) struct NoteHeadGlyph<'a> {
-    pub(in crate::renderer::new_renderer) pitch: &'a JianPuPitch,
+    pub(in crate::renderer::new_renderer) pitch: &'a NumberedPitch,
     pub(in crate::renderer::new_renderer) accidental: &'a Accidental,
     pub(in crate::renderer::new_renderer) head_label: Option<&'a NoteHeadLabel>,
 }

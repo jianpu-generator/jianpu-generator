@@ -1,5 +1,5 @@
 use super::ChordDegrees;
-use crate::ast::parsed::{Accidental, JianPuPitch, PartKind};
+use crate::ast::parsed::{Accidental, NumberedPitch, PartKind};
 use crate::error::{Diagnostic, Span};
 use crate::pitch_description::GuitarVoicing;
 
@@ -111,7 +111,7 @@ pub struct ColumnElement {
     pub note_id: Option<usize>,
 }
 
-/// What a note head reads as besides, or in place of, its jianpu digit: its
+/// What a note head reads as besides, or in place of, its numbered digit: its
 /// letter name (`F♯`) or its harmonica tab (`-4`), as set by
 /// `label_note_heads`.
 #[derive(Debug, Clone, PartialEq)]
@@ -162,7 +162,7 @@ impl NoteHeadLabel {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ElementContent {
     NoteHead {
-        pitch: JianPuPitch,
+        pitch: NumberedPitch,
         accidental: Accidental,
         octave: i8,
         dotted: bool,

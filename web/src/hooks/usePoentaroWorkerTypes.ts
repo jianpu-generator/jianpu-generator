@@ -262,7 +262,7 @@ export interface PoentaroWorkerState {
    * has no embedded source.
    */
   importFromFile: (file: File) => Promise<string>
-  /** The jianpu/staff preview toggle and, while it's on staff, the
+  /** The numbered/staff preview toggle and, while it's on staff, the
    * Verovio-engraved pages. */
   staffNotation: StaffNotation
 }

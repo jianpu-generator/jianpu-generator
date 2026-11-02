@@ -5,7 +5,7 @@ use crate::ast::parsed::{KeyChange, PartKind};
 use crate::error::IrrecoverableError;
 use crate::parser::parts_parser::DEFAULT_PART_VOLUME;
 
-pub use crate::ast::parsed::JianPuPitch;
+pub use crate::ast::parsed::NumberedPitch;
 
 mod channel_volume;
 mod chord_voicing;

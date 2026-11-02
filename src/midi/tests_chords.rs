@@ -53,7 +53,7 @@ fn chord_major_expands_to_three_notes() {
         TimeSignature,
     };
     use crate::ast::parsed::{
-        Accidental, JianPuPitch, KeyChange, Note, NoteName, PartKind, Soundfont, TriadQuality,
+        Accidental, KeyChange, Note, NoteName, NumberedPitch, PartKind, Soundfont, TriadQuality,
     };
 
     let key = KeyChange {
@@ -64,7 +64,7 @@ fn chord_major_expands_to_three_notes() {
         },
     };
     let chord = GroupedChordNote {
-        degree: JianPuPitch::One,
+        degree: NumberedPitch::One,
         accidental: Accidental::Natural,
         triad: TriadQuality::Major,
         extension: None,
@@ -171,11 +171,11 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
     use crate::ast::grouped::{
         MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
     };
-    use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
+    use crate::ast::parsed::{NumberedPitch, PartKind, Soundfont};
 
     let make_note = |slur: bool| {
         NoteEvent::Note(GroupedNote {
-            pitch: JianPuPitch::One,
+            pitch: NumberedPitch::One,
             accidental: crate::ast::parsed::Accidental::Natural,
             octave: 0,
             duration: 4,

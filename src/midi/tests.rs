@@ -91,7 +91,7 @@ fn key(name: NoteName, octave: u8) -> KeyChange {
 #[test]
 fn middle_c_degree_one() {
     assert_eq!(
-        resolve_midi_note(&JianPuPitch::One, 0, &key(NoteName::C, 4)),
+        resolve_midi_note(&NumberedPitch::One, 0, &key(NoteName::C, 4)),
         60
     );
 }
@@ -99,7 +99,7 @@ fn middle_c_degree_one() {
 #[test]
 fn degree_five_c4_is_g4() {
     assert_eq!(
-        resolve_midi_note(&JianPuPitch::Five, 0, &key(NoteName::C, 4)),
+        resolve_midi_note(&NumberedPitch::Five, 0, &key(NoteName::C, 4)),
         67
     );
 }
@@ -107,7 +107,7 @@ fn degree_five_c4_is_g4() {
 #[test]
 fn octave_up_shifts_by_12() {
     assert_eq!(
-        resolve_midi_note(&JianPuPitch::One, 1, &key(NoteName::C, 4)),
+        resolve_midi_note(&NumberedPitch::One, 1, &key(NoteName::C, 4)),
         72
     );
 }
@@ -115,7 +115,7 @@ fn octave_up_shifts_by_12() {
 #[test]
 fn key_g4_degree_one_is_midi_67() {
     assert_eq!(
-        resolve_midi_note(&JianPuPitch::One, 0, &key(NoteName::G, 4)),
+        resolve_midi_note(&NumberedPitch::One, 0, &key(NoteName::G, 4)),
         67
     );
 }
@@ -140,7 +140,7 @@ pub(super) fn one_measure_score() -> Score {
     use crate::ast::grouped::{
         MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
     };
-    use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
+    use crate::ast::parsed::{NumberedPitch, PartKind, Soundfont};
     Score {
         metadata: default_test_metadata(),
         measures: vec![MultiPartMeasure {
@@ -170,7 +170,7 @@ pub(super) fn one_measure_score() -> Score {
                 octave_offset: 0,
                 notes: Notes {
                     events: vec![NoteEvent::Note(GroupedNote {
-                        pitch: JianPuPitch::One,
+                        pitch: NumberedPitch::One,
                         accidental: Accidental::Natural,
                         octave: 0,
                         duration: 16,
@@ -198,7 +198,7 @@ pub(super) fn one_measure_score() -> Score {
 
 #[test]
 fn sharp_note_midi_pitch_is_one_semitone_higher_than_natural() {
-    use crate::ast::parsed::{JianPuPitch, Note, NoteName};
+    use crate::ast::parsed::{Note, NoteName, NumberedPitch};
 
     let key = KeyChange {
         note: Note {
@@ -207,8 +207,9 @@ fn sharp_note_midi_pitch_is_one_semitone_higher_than_natural() {
             accidental: Accidental::Natural,
         },
     };
-    let natural = resolve_midi_note(&JianPuPitch::Seven, 0, &key);
-    let sharp = resolve_midi_note_with_accidental(&JianPuPitch::Seven, &Accidental::Sharp, 0, &key);
+    let natural = resolve_midi_note(&NumberedPitch::Seven, 0, &key);
+    let sharp =
+        resolve_midi_note_with_accidental(&NumberedPitch::Seven, &Accidental::Sharp, 0, &key);
     assert_eq!(
         sharp,
         natural + 1,
@@ -221,7 +222,7 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
     use crate::ast::grouped::{
         MultiPartMeasure, NoteEvent, Notes, PartRow, PartSlice, Score, TimeSignature,
     };
-    use crate::ast::parsed::{JianPuPitch, PartKind, Soundfont};
+    use crate::ast::parsed::{NumberedPitch, PartKind, Soundfont};
 
     Score {
         metadata: default_test_metadata(),
@@ -252,7 +253,7 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
                 octave_offset,
                 notes: Notes {
                     events: vec![NoteEvent::Note(GroupedNote {
-                        pitch: JianPuPitch::One,
+                        pitch: NumberedPitch::One,
                         accidental: Accidental::Natural,
                         octave: 0,
                         duration: 16,

@@ -8,7 +8,7 @@ import type {
   WorkerResponse,
 } from './messages'
 
-/** A4 at Verovio's tenth-of-a-millimetre page units, matching the jianpu
+/** A4 at Verovio's tenth-of-a-millimetre page units, matching the numbered
  * preview's page size. `condense: 'encoded'` plus the MEI's
  * `scoreDef optimize="true"` hides staves that are empty for a whole system. */
 const VEROVIO_OPTIONS = {

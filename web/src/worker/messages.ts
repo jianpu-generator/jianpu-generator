@@ -4,6 +4,7 @@ import type {
   StaffClef,
   StaffMeasure,
   SvgDocument,
+  Notation as WasmNotation,
 } from '../poentaroWasm'
 import type {
   Diagnostic,
@@ -24,18 +25,12 @@ import type {
 import type { NoteCell } from '../utils/noteSpanSelection'
 
 /** Which notation the preview (and so PDF export) shows. `violin` and `cello`
- * are western staff notation, every staff in treble or bass clef. `abc` is the jianpu
+ * are western staff notation, every staff in treble or bass clef. `abc` is the numbered
  * layout with letter names (`D E F♯`) in place of degree numbers; `guitar` is
- * the jianpu layout with each degree followed by its letter name (`1 (D)`)
+ * the numbered layout with each degree followed by its letter name (`1 (D)`)
  * and a guitar chord diagram at each chord symbol; and
- * `harmonica` the jianpu layout with diatonic harmonica tabs (`4 -4 5`). */
-export type Notation =
-  | 'jianpu'
-  | 'violin'
-  | 'cello'
-  | 'abc'
-  | 'guitar'
-  | 'harmonica'
+ * `harmonica` the numbered layout with diatonic harmonica tabs (`4 -4 5`). */
+export type Notation = WasmNotation
 
 /** Verovio's pages for MEI Rust exported (see `staffMessageHandlers.ts`). */
 export type StaffEngraveResult =
