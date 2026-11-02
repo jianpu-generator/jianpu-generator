@@ -1,6 +1,5 @@
 # metadata
 title = "Turn by turn"
-bpm = 100
 
 # parts
 Piano [P] = notes
@@ -13,18 +12,42 @@ Harmonica [H] = notes harmonica
 Choir [A] = notes alto
 
 # score
-[P] 1 2 3 5 | 6 5 3 0
+label="Piano"
+[P] 1 2 3 5
 
-[G] 1 2 3 5 | 6 5 3 0
+[P] 6 5 3 0
 
-[V] 1 2 3 5 | 6 5 3 0
+label="Guitar"
+[G] 1 2 3 5
 
-[C] 1 2 3 5 | 6 5 3 0
+[G] 6 5 3 0
 
-[L] 1 2 3 5 | 6 5 3 0
+label="Violin"
+[V] 1 2 3 5
 
-[Z] 1 2 3 5 | 6 5 3 0
+[V] 6 5 3 0
 
-[H] 1 2 3 5 | 6 5 3 0
+label="Cello"
+[C] 1 2 3 5
 
-[A] 1 2 3 5 | 6 5 3 0
+[C] 6 5 3 0
+
+label="Liuqin"
+[L] 1 2 3 5
+
+[L] 6 5 3 0
+
+label="Guzheng"
+[Z] 1 2 3 5
+
+[Z] 6 5 3 0
+
+label="Harmonica"
+[H] 1 2 3 5
+
+[H] 6 5 3 0
+
+label="Choir"
+[A] 1 2 3 5
+
+[A] 6 5 3 0
