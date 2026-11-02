@@ -1,0 +1,14 @@
+# metadata
+title = "Liuqin and piano"
+bpm = 100
+
+# parts
+Liuqin [L] = notes liuqin
+Piano [C] = chords
+
+# score
+[L] 3 5 6 1' | 5 - 3 2
+[C] C - - - | G - - -
+
+[L] 1 2 3 5 | 2 - - 0
+[C] Am - - - | G - - -

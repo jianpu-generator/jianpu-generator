@@ -1,0 +1,30 @@
+# metadata
+title = "Turn by turn"
+bpm = 100
+
+# parts
+Piano [P] = notes
+Guitar [G] = notes guitar
+Violin [V] = notes violin
+Cello [C] = notes cello
+Liuqin [L] = notes liuqin
+Guzheng [Z] = notes guzheng
+Harmonica [H] = notes harmonica
+Choir [A] = notes alto
+
+# score
+[P] 1 2 3 5 | 6 5 3 0
+
+[G] 1 2 3 5 | 6 5 3 0
+
+[V] 1 2 3 5 | 6 5 3 0
+
+[C] 1 2 3 5 | 6 5 3 0
+
+[L] 1 2 3 5 | 6 5 3 0
+
+[Z] 1 2 3 5 | 6 5 3 0
+
+[H] 1 2 3 5 | 6 5 3 0
+
+[A] 1 2 3 5 | 6 5 3 0
