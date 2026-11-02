@@ -98,6 +98,12 @@ function partPillCheckbox(page: Page, abbreviation: string) {
   return partPillEye(page, abbreviation).locator('input[type="checkbox"]')
 }
 
+function partPillSoloCheckbox(page: Page, abbreviation: string) {
+  return page
+    .locator('.part-toggle-pill', { has: partPillEye(page, abbreviation) })
+    .locator('.part-toggle-segment--headphones input[type="checkbox"]')
+}
+
 function newPresetDialog(page: Page) {
   return page.getByRole('dialog', { name: 'New preset' })
 }
@@ -165,6 +171,25 @@ When(
   },
 )
 
+When(
+  'I solo the {string} part pill',
+  async ({ page }, abbreviation: string) => {
+    const solo = partPillSoloCheckbox(page, abbreviation)
+    await expect(solo).not.toBeChecked()
+    // The checkbox is visually hidden; click its segment like a user would.
+    await solo.locator('..').click()
+  },
+)
+
+When(
+  'I unsolo the {string} part pill',
+  async ({ page }, abbreviation: string) => {
+    const solo = partPillSoloCheckbox(page, abbreviation)
+    await expect(solo).toBeChecked()
+    await solo.locator('..').click()
+  },
+)
+
 When('I reload the presets page', async ({ page }) => {
   await page.reload()
   await waitForPreviewReady(page)
@@ -222,6 +247,20 @@ Then(
 Then('the {string} part pill is on', async ({ page }, abbreviation: string) => {
   await expect(partPillCheckbox(page, abbreviation)).toBeChecked()
 })
+
+Then(
+  'the {string} part pill is soloed',
+  async ({ page }, abbreviation: string) => {
+    await expect(partPillSoloCheckbox(page, abbreviation)).toBeChecked()
+  },
+)
+
+Then(
+  'the {string} part pill is not soloed',
+  async ({ page }, abbreviation: string) => {
+    await expect(partPillSoloCheckbox(page, abbreviation)).not.toBeChecked()
+  },
+)
 
 Then(
   'the {string} preset has the line {string}',

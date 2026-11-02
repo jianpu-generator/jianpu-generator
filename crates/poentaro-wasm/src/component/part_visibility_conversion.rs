@@ -24,6 +24,7 @@ pub(super) fn resolved_part_visibility_from_wit(
         sounding_display_names: visibility.sounding_display_names,
         preset_name: visibility.preset_name,
         hidden_parts: visibility.hidden_parts,
+        soloed_parts: visibility.soloed_parts,
     }
 }
 
@@ -36,5 +37,6 @@ pub(super) fn resolved_part_visibility_to_wit(
         sounding_display_names: visibility.sounding_display_names,
         preset_name: visibility.preset_name,
         hidden_parts: visibility.hidden_parts,
+        soloed_parts: visibility.soloed_parts,
     }
 }

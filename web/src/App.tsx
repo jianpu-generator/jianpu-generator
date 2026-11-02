@@ -305,7 +305,7 @@ export default function App() {
         parts={parts}
         hiddenParts={new Set(hiddenParts)}
         presetMenu={<PresetMenu {...presetMenuProps} />}
-        soloedParts={soloedParts}
+        soloedParts={new Set(soloedParts)}
         onPartToggle={handlePartPillToggle}
         onSoloToggle={handleSoloToggle}
       />

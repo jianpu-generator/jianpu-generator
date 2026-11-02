@@ -118,6 +118,7 @@ fn preset(visible_parts: Option<&[&str]>) -> ChosenPreset {
     ChosenPreset {
         name: "Choir".to_string(),
         visible_parts: visible_parts.map(names),
+        soloed_parts: Vec::new(),
     }
 }
 
@@ -189,4 +190,51 @@ fn solo_wins_over_the_preset() {
     );
 
     assert_eq!(resolved.rendered_tracks, Some(names(&["C"])));
+}
+
+#[test]
+fn preset_solo_shows_only_its_soloed_parts() {
+    let chosen = ChosenPreset {
+        soloed_parts: names(&["C"]),
+        ..preset(Some(&["M", "v1"]))
+    };
+
+    let resolved = resolve_part_visibility(
+        &melody_verse_and_chords(),
+        &PartToggleState::default(),
+        Some(&chosen),
+    );
+
+    assert_eq!(resolved.rendered_tracks, Some(names(&["C"])));
+    assert_eq!(resolved.soloed_parts, names(&["C"]));
+    assert_eq!(resolved.hidden_parts, names(&["C"]));
+}
+
+#[test]
+fn soloed_parts_join_the_toggles_and_the_preset_in_parts_order() {
+    let state = PartToggleState {
+        soloed_parts: names(&["C", "gone"]),
+        ..Default::default()
+    };
+    let chosen = ChosenPreset {
+        soloed_parts: names(&["M"]),
+        ..preset(None)
+    };
+
+    let resolved = resolve_part_visibility(&melody_verse_and_chords(), &state, Some(&chosen));
+
+    assert_eq!(resolved.soloed_parts, names(&["M", "C"]));
+    assert_eq!(resolved.rendered_tracks, Some(names(&["M", "C"])));
+}
+
+#[test]
+fn a_preset_exports_its_soloed_parts_over_its_visible_parts() {
+    let chosen = ChosenPreset {
+        soloed_parts: names(&["C"]),
+        ..preset(Some(&["M"]))
+    };
+
+    assert_eq!(chosen.exported_parts(), names(&["C"]));
+    assert_eq!(preset(Some(&["M"])).exported_parts(), names(&["M"]));
+    assert!(preset(None).exported_parts().is_empty());
 }

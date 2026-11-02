@@ -219,6 +219,7 @@ impl Guest for Component {
         list_presets(source: String) -> Vec<PresetSummary>;
         update_preset_field(source: String, preset_name: String, edit: PresetEdit) -> String;
         set_preset_part_shown(source: String, preset_name: String, all_parts: Vec<String>, part: PartShown) -> String;
+        set_preset_part_soloed(source: String, preset_name: String, all_parts: Vec<String>, part: PartSoloed) -> String;
         new_preset_name_error(source: String, name: String) -> Option<String>;
         add_preset_section(source: String, preset: NewPreset) -> String;
         follow_preset_rename(previous_source: String, source: String, preset_name: String) -> Option<String>;

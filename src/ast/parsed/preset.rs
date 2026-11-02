@@ -1,4 +1,4 @@
-//! A `# preset "Name"` section: a named set of visible parts, a notation,
+//! A `# preset "Name"` section: a named set of visible and soloed parts, a notation,
 //! and `# metadata` overrides (see `syntax.md`, "Presets").
 
 use super::{AbbreviationReference, ParsedDocument, ParsedMetadata, TextStyle, TextStyleKind};
@@ -12,6 +12,7 @@ keyword_enum! {
     /// The keys only a `# preset` section takes, besides every `# metadata` key.
     pub enum PresetKey {
         VisibleParts => "visible_parts",
+        SoloedParts => "soloed_parts",
         Notation => "notation",
     }
 }
@@ -59,6 +60,9 @@ pub struct ParsedPreset {
     /// The parts shown and heard, in the order written; `None` shows every
     /// part. Unknown abbreviations are already dropped.
     pub visible_parts: Option<Vec<AbbreviationReference>>,
+    /// The parts soloed, in the order written: once any is, only soloed
+    /// parts show and sound. Unknown abbreviations are already dropped.
+    pub soloed_parts: Vec<AbbreviationReference>,
     pub notation: Option<Notation>,
 }
 
@@ -137,6 +141,14 @@ impl ParsedPreset {
                 .map(|reference| reference.abbreviation.clone())
                 .collect()
         })
+    }
+
+    /// The abbreviations of `soloed_parts`, in the order written.
+    pub fn soloed_abbreviations(&self) -> Vec<String> {
+        self.soloed_parts
+            .iter()
+            .map(|reference| reference.abbreviation.clone())
+            .collect()
     }
 }
 

@@ -101,7 +101,6 @@ export function useAppController() {
   const {
     partToggles,
     setDisabledParts,
-    soloedParts,
     setSoloedParts,
     handlePartToggle,
     handleSoloToggle,
@@ -173,6 +172,7 @@ export function useAppController() {
   )
   const {
     handlePartPillToggle,
+    handleSoloPillToggle,
     presetMenuProps,
     staffNotation: presetStaffNotation,
   } = usePresetMenu({
@@ -184,6 +184,7 @@ export function useAppController() {
     staffNotation,
     setChosenPreset,
     handlePartToggle,
+    handleSoloToggle,
     handleSourceChange,
   })
   const panels = useAppPanels(
@@ -300,11 +301,11 @@ export function useAppController() {
     wasm,
     soundfontReady,
     pdfFontsReady,
-    soloedParts,
+    soloedParts: visibility.soloedParts,
     hiddenParts: visibility.hiddenParts,
     partToggles,
     handlePartPillToggle,
-    handleSoloToggle,
+    handleSoloToggle: handleSoloPillToggle,
     presetMenuProps,
     parts,
     selectedSequenceRange,

@@ -151,6 +151,7 @@ pub fn chosen_preset_from_source(
     Ok(doc.preset(preset_name).map(|preset| ChosenPreset {
         name: preset.name.clone(),
         visible_parts: preset.visible_abbreviations(),
+        soloed_parts: preset.soloed_abbreviations(),
     }))
 }
 

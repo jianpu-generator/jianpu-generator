@@ -25,6 +25,29 @@ Feature: Presets
     Then the "Melody only" preset has the line "visible_parts = M, Mv1"
     And the "Mv1" part pill is on
 
+  Scenario: Soloing a part under a preset rewrites soloed_parts, and undo restores it
+    Given the presets fixture is loaded
+    When I choose the "Melody only" preset
+    And I solo the "C" part pill
+    Then the "Melody only" preset has the line "soloed_parts = C"
+    And the stored file's "Melody only" preset has the line "soloed_parts = C"
+    And the "C" part pill is soloed
+    And the preview contains the chord content
+    When I unsolo the "C" part pill
+    Then the "Melody only" preset has no "soloed_parts" line
+    And the "C" part pill is not soloed
+    And the preview does not contain the chord content
+    When I press undo in the main editor
+    Then the "Melody only" preset has the line "soloed_parts = C"
+    And the "C" part pill is soloed
+
+  Scenario: On Default, soloing stays in this browser and the file doesn't change
+    Given the presets fixture is loaded
+    When I solo the "M" part pill
+    Then the "M" part pill is soloed
+    And the preview does not contain the chord content
+    And the stored source is the presets fixture
+
   Scenario: On Default, pills stay in this browser and the file doesn't change
     Given the presets fixture is loaded
     When I turn the "C" part pill off
