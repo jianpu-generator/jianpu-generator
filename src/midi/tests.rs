@@ -53,6 +53,7 @@ fn default_test_metadata() -> Metadata {
         section_label: text_style(12, 0, 0),
         part_label: text_style(12, 0, 0),
         page_number: text_style(14, 0, 0),
+        running_title: text_style(14, 0, 0),
         merge_duplicate_measures_across_parts: true,
         hide_resting_parts: true,
         hide_system_dividers: false,

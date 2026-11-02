@@ -74,7 +74,7 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 
 ### Text styles
 
-Every rendered text kind — `title`, `subtitle`, `author`, `sequence`, `part_legend`, `measure_number`, `section_label`, `page_number`, `part_label`, `lyrics`, `notes`, `chords`, `note_dash` — is configured with the same object-literal syntax:
+Every rendered text kind — `title`, `subtitle`, `author`, `sequence`, `part_legend`, `measure_number`, `section_label`, `page_number`, `running_title`, `part_label`, `lyrics`, `notes`, `chords`, `note_dash` — is configured with the same object-literal syntax:
 
 ```
 <kind> = { font_size: N, horizontal_padding_pt: N, vertical_padding_pt: N, bold: yes/no, italic: yes/no, underline: yes/no, font_family: serif/sans_serif/monospace }
@@ -94,6 +94,8 @@ Every rendered text kind — `title`, `subtitle`, `author`, `sequence`, `part_le
 | `underline` | Whether the element renders underlined (`yes`/`no`) |
 | `font_family` | Which of the app's three embedded font roles the element renders in: `serif`, `sans_serif`, or `monospace`. Accepted on every kind, including `notes`/`chords`/`note_dash` — those three kinds' glyph widths are re-measured against whichever font this resolves to, as part of column layout, so an override there can't desync rendered glyph widths from the widths layout computes. |
 
+`running_title` is the small title shown alone (no subtitle or author) at the top of every page after the first; its text is always `title`. Pages after the first also omit the part list and `# sequence` line, so they have more room for music.
+
 Defaults by kind:
 
 | Kind | `font_size` default | `horizontal_padding_pt` default | `vertical_padding_pt` default | `bold` default | `italic` default | `underline` default | `font_family` default |
@@ -106,6 +108,7 @@ Defaults by kind:
 | `measure_number` | `10` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
 | `section_label` | `12` | `0` | `0` | `yes` | `yes` | `no` | `sans_serif` |
 | `page_number` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
+| `running_title` | `row_height * 0.6` | `0` | `0` | `no` | `yes` | `no` | `serif` |
 | `part_label` | `12` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
 | `lyrics` | `row_height * 0.6` | `4` | `12` | `no` | `no` | `no` | `serif` |
 | `notes` | `lyrics.font_size` | `4` | `0` | `no` | `no` | `no` | `monospace` |

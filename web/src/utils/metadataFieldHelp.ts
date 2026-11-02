@@ -44,6 +44,8 @@ See **Part Label Width** below for the column's reserved width.`,
 
 **V. Padding** pushes the page number upward from the page's bottom edge, without moving anything else.`,
 
+  'running-title': `Style of the small title shown at the top of every page after the first (the subtitle and author appear on the first page only).`,
+
   lyrics: `Style of lyric syllable text under notes.
 
 **Font Size** also affects how far a syllable is allowed to shift horizontally to avoid overlapping its neighbors. **H. Padding** widens spacing between syllables. **V. Padding** is extra padding around a lyric syllable's hover/click-target box, on top of the lyric font's own measured height.`,

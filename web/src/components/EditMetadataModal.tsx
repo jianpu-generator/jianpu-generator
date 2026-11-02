@@ -37,6 +37,7 @@ const styleRowLabels: Record<TextStyleKind, string> = {
   'section-label': 'Section Label Style',
   'part-label': 'Part Label Style',
   'page-number': 'Page Number Style',
+  'running-title': 'Running Title Style',
   lyrics: 'Lyrics Style',
   notes: 'Notes Style',
   chords: 'Chords Style',

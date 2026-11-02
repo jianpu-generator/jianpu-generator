@@ -46,9 +46,11 @@ impl TextStyleKind {
         match self {
             Self::Title => RowHeightPercent { percent: 150 },
             Self::Subtitle => RowHeightPercent { percent: 80 },
-            Self::Author | Self::PartLegend | Self::PageNumber | Self::Lyrics => {
-                RowHeightPercent { percent: 60 }
-            }
+            Self::Author
+            | Self::PartLegend
+            | Self::PageNumber
+            | Self::RunningTitle
+            | Self::Lyrics => RowHeightPercent { percent: 60 },
             Self::Sequence | Self::SectionLabel | Self::PartLabel => Fixed { points: 12 },
             Self::MeasureNumber => Fixed { points: 10 },
             Self::Notes | Self::Chords => SameAs { kind: Self::Lyrics },
@@ -181,6 +183,7 @@ impl super::Metadata {
             TextStyleKind::SectionLabel => &self.section_label,
             TextStyleKind::PartLabel => &self.part_label,
             TextStyleKind::PageNumber => &self.page_number,
+            TextStyleKind::RunningTitle => &self.running_title,
             TextStyleKind::Lyrics => &self.lyrics,
             TextStyleKind::Notes => &self.notes,
             TextStyleKind::Chords => &self.chords,
@@ -199,6 +202,7 @@ impl super::Metadata {
             TextStyleKind::SectionLabel => &mut self.section_label,
             TextStyleKind::PartLabel => &mut self.part_label,
             TextStyleKind::PageNumber => &mut self.page_number,
+            TextStyleKind::RunningTitle => &mut self.running_title,
             TextStyleKind::Lyrics => &mut self.lyrics,
             TextStyleKind::Notes => &mut self.notes,
             TextStyleKind::Chords => &mut self.chords,

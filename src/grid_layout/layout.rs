@@ -61,12 +61,17 @@ pub(crate) use systems::{
 
 #[path = "layout_decoration.rs"]
 mod decoration;
+#[path = "layout_page_heights.rs"]
+mod page_heights;
+#[path = "layout_running_title.rs"]
+mod running_title;
 pub(crate) use super::expand::expand_system_to_rows;
 use super::expand::make_footer_row;
 pub(crate) use decoration::{
     directive_line_rod_width, directive_line_should_emit, make_header_rows,
 };
 use decoration::{make_decoration_row, make_separator_row};
+use page_heights::PageUsableHeights;
 
 fn system_total_height(
     system: &[MeasureBlock],
@@ -230,7 +235,7 @@ fn pack_page_systems(
     systems: Vec<Vec<MeasureBlock>>,
     tuplet_bracket_map: &HashMap<(usize, usize), Vec<GridElement>>,
     base: f32,
-    usable_h: f32,
+    usable_heights: PageUsableHeights,
     hide_system_dividers: bool,
     lyric_sizing: LyricSizing,
 ) -> Vec<Vec<Vec<MeasureBlock>>> {
@@ -246,6 +251,7 @@ fn pack_page_systems(
         } else {
             separator_row_height()
         };
+        let usable_h = usable_heights.for_page(page_systems.len());
         if !current_page.is_empty() && used_h + gap + sys_h > usable_h {
             page_systems.push(std::mem::take(&mut current_page));
             used_h = 0.0;
@@ -286,18 +292,11 @@ pub fn layout(
     let tuplet_bracket_map =
         resolve_tuplet_spans(&compile_result.tuplet_spans, &measure_placements);
 
-    let header_h: f32 = make_header_rows(header, base, true)
-        .iter()
-        .map(|r| r.height_pt)
-        .sum();
-    let footer_h = base * 0.40;
-    let usable_h = frame.usable_height_pt(page_height_pt) - header_h - footer_h;
-
     let page_systems = pack_page_systems(
         systems,
         &tuplet_bracket_map,
         base,
-        usable_h,
+        PageUsableHeights::new(header, config, page_height_pt),
         config.hide_system_dividers,
         config.lyric_sizing(),
     );
