@@ -28,7 +28,7 @@ import type { NoteCell } from '../utils/noteSpanSelection'
  * layout with letter names (`D E F♯`) in place of degree numbers; `guitar` is
  * the jianpu layout with each degree followed by its letter name (`1 (D)`)
  * and a guitar chord diagram at each chord symbol; and
- * `harmonica` the jianpu layout with diatonic harmonica tabs (`4 -4 5`). */
+ * `harmonica` the jianpu layout with chromatic harmonica tabs (`1 (1) 2`). */
 export type Notation =
   | 'jianpu'
   | 'violin'

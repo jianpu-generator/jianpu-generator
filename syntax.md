@@ -178,7 +178,7 @@ An optional instrument name may follow the kind token (or `follow[X]` bracket), 
 | `cello` | Cello | C2–E5 | `42: Cello` |
 | `liuqin` | 柳琴 | G3–G6 | `106: Shamisen` |
 | `guzheng` | 古箏 | D2–D6 | `107: Koto` |
-| `harmonica` | Harmonica | C4–C7 | `22: Harmonica` |
+| `harmonica` | Harmonica | C4–C♯7 | `22: Harmonica` |
 | `bass` | Bass voice | F2–D4 | `52: Choir Aahs` |
 | `tenor` | Tenor voice | C3–G4 | `52: Choir Aahs` |
 | `alto` | Alto voice | G3–D5 | `52: Choir Aahs` |

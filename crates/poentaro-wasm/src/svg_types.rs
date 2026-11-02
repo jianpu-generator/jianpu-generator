@@ -22,6 +22,7 @@ pub enum SvgVariantOut {
     Text,
     NoteHead,
     UnplayableNoteHead,
+    HarmonicaSlide,
     Rest,
     OmittedPartRest,
     MultiMeasureRest,

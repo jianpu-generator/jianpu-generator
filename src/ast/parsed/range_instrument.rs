@@ -61,8 +61,8 @@ impl RangeInstrument {
             Self::Liuqin => (55, 91),
             // 21 strings in D major pentatonic, four octaves.
             Self::Guzheng => (38, 86),
-            // 10-hole diatonic in C, blow notes.
-            Self::Harmonica => (60, 96),
+            // 12-hole chromatic in C, hole 1 blow to hole 12 blow with the slide.
+            Self::Harmonica => (60, 97),
             // SATB part-writing ranges.
             Self::Bass => (41, 62),
             Self::Tenor => (48, 67),
