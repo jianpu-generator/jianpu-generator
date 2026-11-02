@@ -68,13 +68,13 @@ When('the lyric-row-rest-run score is laid out', async ({ page }) => {
   const source = buildSource()
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'lyric-row-rest-run-test.jianpu',
-        userFiles: { 'lyric-row-rest-run-test.jianpu': src },
+        active: 'lyric-row-rest-run-test.poentaro',
+        userFiles: { 'lyric-row-rest-run-test.poentaro': src },
         bin: {},
         fileIds: {
-          'lyric-row-rest-run-test.jianpu': 'lyric-row-rest-run-test-id-001',
+          'lyric-row-rest-run-test.poentaro': 'lyric-row-rest-run-test-id-001',
         },
       }),
     )

@@ -1,8 +1,12 @@
 import { FILE_STORE_KEY, mergeMigratedFileStore } from '../fileStore'
 import { parseStoredFileStore } from '../fileStorePersistence'
 import {
-  createIndexedDbOutboxStore,
+  currentLocalStorageKey,
+  currentOutboxDatabaseName,
+} from '../legacyStorage/legacyStorageNames'
+import {
   OUTBOX_DATABASE_PREFIX,
+  openIndexedDbOutboxStore,
 } from '../storage/outbox/outboxStore'
 import { callWorker, createWorkerClient } from '../syncedShare/workerClient'
 import { ensureWasmInit } from '../wasmInit'
@@ -14,15 +18,17 @@ import {
 
 /** Where a carried file store goes when Rust can't merge it, so it is never
  * lost (only reachable by hand). */
-const UNMERGED_FILE_STORE_KEY = 'jianpu:files:v1:unmerged-origin-migration'
+const UNMERGED_FILE_STORE_KEY = 'poentaro:files:v1:unmerged-origin-migration'
 
 /**
  * Claims the data the old origin's bridge page handed over (the
  * `?migrate=<id>` it redirected with) and saves it here, before the app
  * first reads storage. See "Origin migration" in `ARCHITECTURE.md`. The
  * param is removed from the address bar first, so a reload never claims
- * twice. Anything already saved here wins, except the file store, which
- * Rust merges. A failed claim is only logged: the app still starts.
+ * twice. The carried data has the names the app had before the rename to
+ * Poentaro, so it is saved under the current ones. Anything already saved
+ * here wins, except the file store, which Rust merges. A failed claim is
+ * only logged: the app still starts.
  */
 export async function importOriginMigration(): Promise<void> {
   const url = new URL(window.location.href)
@@ -47,7 +53,8 @@ export async function importOriginMigration(): Promise<void> {
 }
 
 async function saveLocalStorage(entries: Record<string, string>) {
-  for (const [key, value] of Object.entries(entries)) {
+  for (const [carriedKey, value] of Object.entries(entries)) {
+    const key = currentLocalStorageKey(carriedKey)
     const existing = localStorage.getItem(key)
     if (existing === null) {
       localStorage.setItem(key, value)
@@ -76,15 +83,14 @@ async function saveMergedFileStore(existing: string, carried: string) {
 /** Restores one account's cloud outbox, unless this origin already queued
  * edits for that account (then its own queue wins). */
 async function saveOutbox(database: SavedDatabase) {
+  const name = currentOutboxDatabaseName(database.name)
   if (
-    !database.name.startsWith(OUTBOX_DATABASE_PREFIX) ||
+    !name.startsWith(OUTBOX_DATABASE_PREFIX) ||
     database.records.length === 0
   ) {
     return
   }
-  const store = createIndexedDbOutboxStore(
-    database.name.slice(OUTBOX_DATABASE_PREFIX.length),
-  )
+  const store = openIndexedDbOutboxStore(name)
   if ((await store.loadAll()).length > 0) return
   await store.apply({ puts: database.records, deletes: [] })
 }

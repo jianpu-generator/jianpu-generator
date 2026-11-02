@@ -2,17 +2,17 @@ import MonacoEditor, { type OnMount } from '@monaco-editor/react'
 import type { editor } from 'monaco-editor'
 import { type RefObject, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  jianpuWasm,
   type PartToggleState,
+  poentaroWasm,
   type StreamablePart,
-} from '../../jianpuWasm'
+} from '../../poentaroWasm'
 import type { EditorSelection, PartFocusSelectionHandle } from '../../types'
 import {
   byteOffsetToStringIndex,
   stringIndexToByteOffset,
 } from '../../utils/byteSpan'
 import { buildDiagnosticMarkers } from '../editorDiagnosticViewZones'
-import { defineJianpuEditorTheme, EDITOR_THEME } from '../editorTheme'
+import { definePoentaroEditorTheme, EDITOR_THEME } from '../editorTheme'
 import '../FileDialogs.css'
 import { applyPartFocusViewZones } from './partFocusViewZones'
 import './PartFocusEditor.css'
@@ -105,7 +105,7 @@ export function PartFocusEditor({
   }, [])
 
   const result = useMemo(
-    () => jianpuWasm().applyPartStream(source, abbreviation, text),
+    () => poentaroWasm().applyPartStream(source, abbreviation, text),
     [source, abbreviation, text],
   )
   // A draft with errors has no source; the preview keeps the last good one.
@@ -117,7 +117,7 @@ export function PartFocusEditor({
   useEffect(() => () => onDraftChange(null), [onDraftChange])
 
   const focusMeasures = useMemo(() => {
-    const response = jianpuWasm().partFocusMeasures(
+    const response = poentaroWasm().partFocusMeasures(
       source,
       abbreviation,
       partToggles,
@@ -167,7 +167,7 @@ export function PartFocusEditor({
     const format = () => {
       const current = model.getValue()
       const selections = ed.getSelections() ?? []
-      const formatted = jianpuWasm().formatPartStream(
+      const formatted = poentaroWasm().formatPartStream(
         sourceRef.current,
         abbreviation,
         current,
@@ -280,7 +280,7 @@ export function PartFocusEditor({
           theme={EDITOR_THEME}
           path={`part-focus://${fileId}/${abbreviation}`}
           defaultValue={initialStream}
-          beforeMount={defineJianpuEditorTheme}
+          beforeMount={definePoentaroEditorTheme}
           onMount={handleMount}
           options={{
             minimap: { enabled: false },

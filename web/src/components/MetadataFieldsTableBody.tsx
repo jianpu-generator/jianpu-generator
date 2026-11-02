@@ -4,7 +4,7 @@ import type {
   MetadataFlagKey,
   MetadataNumberKey,
   MetadataTextKey,
-} from '../jianpuWasm'
+} from '../poentaroWasm'
 import { metadataFieldHelp } from '../utils/metadataFieldHelp'
 import {
   CheckboxFieldRow,

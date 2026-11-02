@@ -34,7 +34,7 @@ Given(
     await page.addInitScript(
       ({ src, fileName }) => {
         localStorage.setItem(
-          'jianpu:files:v1',
+          'poentaro:files:v1',
           JSON.stringify({
             active: fileName,
             userFiles: { [fileName]: src },
@@ -92,7 +92,7 @@ When('I import the exported PDF file', async ({ page }) => {
 Then(
   'the recovered file opens under a deduped name {string}',
   async ({ page }, name: string) => {
-    // "test.jianpu" is already open, so the recovered file lands under a
+    // "test.poentaro" is already open, so the recovered file lands under a
     // deduped name rather than overwriting it.
     await expect(fileSwitcherTrigger(page)).toContainText(name)
   },

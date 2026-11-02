@@ -53,7 +53,7 @@ export const onRequestGet: PagesFunction = async (context) => {
     .catch(() => undefined)
   if (!doc || doc.ended || !doc.filename) return response
 
-  const title = `${doc.filename.replace(/\.jianpu$/, '')} - Poentaro`
+  const title = `${doc.filename.replace(/\.poentaro$/, '')} - Poentaro`
 
   // Rewrites the static shell's existing tags in place rather than
   // appending new ones: per the Open Graph spec, a parser takes the first

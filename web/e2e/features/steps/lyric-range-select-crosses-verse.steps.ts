@@ -59,13 +59,13 @@ Given(
   async ({ page }) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'cross-verse-lyric-range-test.jianpu',
-          userFiles: { 'cross-verse-lyric-range-test.jianpu': src },
+          active: 'cross-verse-lyric-range-test.poentaro',
+          userFiles: { 'cross-verse-lyric-range-test.poentaro': src },
           bin: {},
           fileIds: {
-            'cross-verse-lyric-range-test.jianpu':
+            'cross-verse-lyric-range-test.poentaro':
               'cross-verse-lyric-range-test-id-001',
           },
         }),

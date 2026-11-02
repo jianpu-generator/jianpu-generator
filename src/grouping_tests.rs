@@ -7,7 +7,7 @@ fn parse_score(notes_line: &str) -> Result<crate::RenderOutput, crate::error::Ir
         ),
         notes_line = notes_line
     );
-    crate::render_svgs_from_source(&input, "test.jianpu", &[])
+    crate::render_svgs_from_source(&input, "test.poentaro", &[])
 }
 
 #[test]
@@ -26,7 +26,7 @@ fn chord_half_bar_boundary_validation_matches_notes() {
         "[c] 1. 2. 3_ 4_\n",
         "[n] 1 2 3 4\n",
     );
-    let output = crate::render_svgs_from_source(input, "t.jianpu", &[]).unwrap();
+    let output = crate::render_svgs_from_source(input, "t.poentaro", &[]).unwrap();
     assert!(output
         .diagnostics
         .iter()
@@ -115,7 +115,7 @@ fn skips_validation_for_non_four_four() {
         "# score\ntime=3/4 key=C4 bpm=120\n",
         "[Melody] 1 2 3\n",
     );
-    assert!(crate::render_svgs_from_source(input, "test.jianpu", &[]).is_ok());
+    assert!(crate::render_svgs_from_source(input, "test.poentaro", &[]).is_ok());
 }
 
 #[test]
@@ -142,7 +142,7 @@ fn dotted_extension_fills_compound_meter_measure() {
         "# score\ntime=9/8\n",
         "[a] 1. -. -.\n",
     );
-    let output = crate::render_svgs_from_source(input, "test.jianpu", &[]).unwrap();
+    let output = crate::render_svgs_from_source(input, "test.poentaro", &[]).unwrap();
     assert!(
         output.diagnostics.is_empty(),
         "expected no diagnostics, got: {:?}",
@@ -164,7 +164,7 @@ fn double_dotted_extension_fills_measure() {
         "# score\ntime=7/4\n",
         "[a] 1.. -.. -.. -..\n",
     );
-    let output = crate::render_svgs_from_source(input, "test.jianpu", &[]).unwrap();
+    let output = crate::render_svgs_from_source(input, "test.poentaro", &[]).unwrap();
     assert!(
         output.diagnostics.is_empty(),
         "expected no diagnostics, got: {:?}",

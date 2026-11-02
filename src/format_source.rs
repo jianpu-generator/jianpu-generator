@@ -66,7 +66,7 @@ pub fn format_score(source: &str) -> String {
     // would put every dropped fixed-schema (Notes/Chords/Percussion) rest
     // line right back. The actual output is built directly from
     // `filtered_groups` below, so intentionally-dropped lines stay dropped
-    // and real `.jianpu` parsing's own implicit-fill covers them, exactly as
+    // and real `.poentaro` parsing's own implicit-fill covers them, exactly as
     // it already does for any measure group that omits a part's line.
     if desugar::desugar_groups(filtered_groups.clone(), &declarations, score_offset).is_err() {
         return source.to_string();

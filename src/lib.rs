@@ -114,7 +114,7 @@ pub fn collect_measure_diagnostics(score: &Score) -> Vec<Diagnostic> {
         .collect()
 }
 
-/// Parse and group a `.jianpu` source string into a [`Score`].
+/// Parse and group a `.poentaro` source string into a [`Score`].
 pub fn compile(
     source: &str,
     filename: &str,
@@ -328,7 +328,7 @@ pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
     Ok(render_svgs_with_parts(score, &[], None, NoteLabels::Degrees)?.svgs)
 }
 
-/// Parse, group, and render a `.jianpu` source string into SVG page strings.
+/// Parse, group, and render a `.poentaro` source string into SVG page strings.
 pub fn render_svgs_from_source(
     source: &str,
     filename: &str,

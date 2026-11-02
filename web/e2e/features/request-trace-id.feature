@@ -5,11 +5,11 @@ Feature: Trace IDs on failed requests
   # and the app shows it next to the error so it can be looked up.
 
   Scenario: A refused sign-in shows the request's trace ID
-    Given the account "e2e-trace-id@jianpu.test" is reset
-    And an account exists for "e2e-trace-id@jianpu.test"
+    Given the account "e2e-trace-id@poentaro.test" is reset
+    And an account exists for "e2e-trace-id@poentaro.test"
     When the app loads for the account flow
     And I click "Sign in" in the header
-    And I enter the email "e2e-trace-id@jianpu.test" in the account dialog
+    And I enter the email "e2e-trace-id@poentaro.test" in the account dialog
     And I sign in with the password "not-the-right-password" and record the worker's trace ID
     Then the account dialog shows the error "Incorrect email or password."
     And the account dialog shows the recorded trace ID

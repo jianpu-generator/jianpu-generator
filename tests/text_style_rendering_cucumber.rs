@@ -4,7 +4,7 @@
 //! rendering/layout effect, not just a resolved config value.
 //!
 //! Each scenario's `# metadata` overrides are spliced into a minimal
-//! `.jianpu` document and run through the full pipeline —
+//! `.poentaro` document and run through the full pipeline —
 //! `compile` → `compiler::compile` → `consolidator::consolidate` →
 //! `grid_layout::layout` → `coordinate_resolver::resolve` →
 //! `renderer::new_renderer::render_new`. "Then" steps compare the configured run
@@ -28,11 +28,11 @@
 )]
 
 use cucumber::{given, then, when, World as _};
-use jianpu_generator::compositor::types::{AbsoluteContent, AbsolutePage};
-use jianpu_generator::grid_layout::types::{GridContent, GridPage};
-use jianpu_generator::renderer::new_renderer::render_new;
-use jianpu_generator::renderer::new_types::{SvgDocument, SvgKind};
-use jianpu_generator::{coordinate_resolver, grid_layout};
+use poentaro::compositor::types::{AbsoluteContent, AbsolutePage};
+use poentaro::grid_layout::types::{GridContent, GridPage};
+use poentaro::renderer::new_renderer::render_new;
+use poentaro::renderer::new_types::{SvgDocument, SvgKind};
+use poentaro::{coordinate_resolver, grid_layout};
 
 /// One full pipeline run's outputs — everything a "Then" step needs to
 /// inspect, at whichever stage (grid/absolute/SVG) its assertion lives at.
@@ -47,7 +47,7 @@ struct RenderResult {
 /// needed because `RenderConfig::element_paddings` is `pub(crate)` and this
 /// file is an external integration test.
 fn element_paddings(
-    config: &jianpu_generator::render_config::RenderConfig,
+    config: &poentaro::render_config::RenderConfig,
 ) -> coordinate_resolver::ElementPaddings {
     coordinate_resolver::ElementPaddings {
         notes: config.notes_horizontal_padding_pt(),
@@ -63,9 +63,9 @@ fn render_source(metadata_lines: &[String], title: &str, score_body: &str) -> Re
     let metadata_block = lines.join("\n");
     let source =
         format!("# metadata\n{metadata_block}\n\n# parts\nS = notes\n\n# score\n{score_body}\n");
-    let score = jianpu_generator::compile(&source, "test.jianpu", &[])
+    let score = poentaro::compile(&source, "test.poentaro", &[])
         .unwrap_or_else(|err| panic!("compile returned an irrecoverable error: {}", err.message()));
-    let config = jianpu_generator::render_config::RenderConfig::from_metadata(&score.metadata);
+    let config = poentaro::render_config::RenderConfig::from_metadata(&score.metadata);
     let header = grid_layout::types::Header {
         title: score.metadata.title.clone(),
         subtitle: score.metadata.subtitle.clone(),
@@ -91,8 +91,8 @@ fn render_source(metadata_lines: &[String], title: &str, score_body: &str) -> Re
         author_vertical_padding_pt: score.metadata.author_style.vertical_padding_pt as f32,
         ..Default::default()
     };
-    let compile_result = jianpu_generator::compiler::compile(&score);
-    let compile_result = jianpu_generator::consolidator::consolidate(compile_result);
+    let compile_result = poentaro::compiler::compile(&score);
+    let compile_result = poentaro::consolidator::consolidate(compile_result);
     let grid_pages =
         grid_layout::layout(&compile_result, &config, &header, 595.0, 842.0, None).pages;
     let abs_pages = coordinate_resolver::resolve(

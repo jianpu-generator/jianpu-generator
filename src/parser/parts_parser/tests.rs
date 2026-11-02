@@ -341,7 +341,7 @@ fn source_level_line_numbers_in_multi_section_file() {
         "1 - - -\n",
     );
 
-    let declarations = list_part_declarations_from_source(source, "test.jianpu", &[]).unwrap();
+    let declarations = list_part_declarations_from_source(source, "test.poentaro", &[]).unwrap();
     assert_eq!(declarations.len(), 2);
     assert_eq!(declarations[0].line_number, 5);
     assert_eq!(declarations[1].line_number, 6);
@@ -394,7 +394,7 @@ fn source_level_instrument_labels_its_sound_without_writing_a_program() {
     };
     let source = "# parts\nViolin [V] = notes violin\n\n# score\n1 - - -\n";
     let declarations =
-        list_part_declarations_from_source(source, "test.jianpu", &[violin]).unwrap();
+        list_part_declarations_from_source(source, "test.poentaro", &[violin]).unwrap();
     assert_eq!(declarations[0].settings.program, None);
     assert_eq!(declarations[0].sound_label.as_deref(), Some("40: Violin"));
 }

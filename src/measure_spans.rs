@@ -124,7 +124,7 @@ mod tests {
             "[A1,Tv1] la la la\n",
             "[C] 6m/3\n",
         );
-        let spans = list_measure_spans_from_source(source, "test.jianpu")
+        let spans = list_measure_spans_from_source(source, "test.poentaro")
             .unwrap()
             .spans;
         assert_eq!(spans.len(), 2);
@@ -161,7 +161,7 @@ mod tests {
             "\n",
             "4 3 2 1\n",
         );
-        let spans = list_measure_spans_from_source(source, "test.jianpu")
+        let spans = list_measure_spans_from_source(source, "test.poentaro")
             .unwrap()
             .spans;
         assert_eq!(spans.len(), 4);

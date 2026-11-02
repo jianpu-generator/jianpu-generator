@@ -49,12 +49,12 @@ Given(
   async ({ page }) => {
     await page.addInitScript((source) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'lyric-range-test.jianpu',
-          userFiles: { 'lyric-range-test.jianpu': source },
+          active: 'lyric-range-test.poentaro',
+          userFiles: { 'lyric-range-test.poentaro': source },
           bin: {},
-          fileIds: { 'lyric-range-test.jianpu': 'lyric-range-test-id-001' },
+          fileIds: { 'lyric-range-test.poentaro': 'lyric-range-test-id-001' },
         }),
       )
     }, rangeTestSource)

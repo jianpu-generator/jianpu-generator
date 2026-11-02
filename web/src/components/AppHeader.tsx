@@ -5,7 +5,7 @@ import type { FolderShares } from '../hooks/useFolderShares'
 import type { SharedFolderViewer } from '../hooks/useSharedFolderViewer'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SyncedShareViewerStatus } from '../hooks/useSyncedShareViewer'
-import type { SelectionMove, SelectionUnit } from '../jianpuWasm'
+import type { SelectionMove, SelectionUnit } from '../poentaroWasm'
 import type { SharePayload } from '../shareUrl'
 import type { SyncedShareFailure } from '../syncedShare/errors'
 import {

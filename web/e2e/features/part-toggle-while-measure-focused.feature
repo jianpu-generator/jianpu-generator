@@ -1,6 +1,6 @@
 Feature: Toggling a part while a measure is focused
 
-  # The default demo source (demo/01-pitches.jianpu) declares a single part:
+  # The default demo source (demo/01-pitches.poentaro) declares a single part:
   #
   #   # parts
   #   Melody [M] = notes

@@ -46,13 +46,13 @@ Given(
   async ({ page }, _chain: string) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'sequence-preview-reveal-target-test.jianpu',
-          userFiles: { 'sequence-preview-reveal-target-test.jianpu': src },
+          active: 'sequence-preview-reveal-target-test.poentaro',
+          userFiles: { 'sequence-preview-reveal-target-test.poentaro': src },
           bin: {},
           fileIds: {
-            'sequence-preview-reveal-target-test.jianpu': crypto.randomUUID(),
+            'sequence-preview-reveal-target-test.poentaro': crypto.randomUUID(),
           },
         }),
       )

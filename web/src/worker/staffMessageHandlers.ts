@@ -1,5 +1,5 @@
 import type { VerovioToolkit } from 'verovio/esm'
-import { jianpuWasm } from '../jianpuWasm'
+import { poentaroWasm } from '../poentaroWasm'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
 import type {
   StaffEngraveResult,
@@ -67,7 +67,7 @@ export async function engraveMei(mei: string): Promise<StaffEngraveResult> {
 async function renderStaff(
   msg: Extract<WorkerRequest, { type: 'renderStaff' }>,
 ): Promise<StaffRenderResult> {
-  const mei = jianpuWasm().renderMei(
+  const mei = poentaroWasm().renderMei(
     msg.source,
     msg.visibility,
     GM_INSTRUMENTS,

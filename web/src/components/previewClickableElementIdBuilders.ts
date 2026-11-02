@@ -1,4 +1,4 @@
-import type { ClickableElementId } from '../jianpuWasm'
+import type { ClickableElementId } from '../poentaroWasm'
 import type { LyricLabelHit, PartLabelHit } from './previewLabelSelection'
 import {
   getLyricLabelAtPoint,

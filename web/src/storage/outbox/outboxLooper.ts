@@ -3,15 +3,15 @@ import {
   type FileName,
   type HistoryFilter,
   type HistoryRow,
-  jianpuWasm,
   type Message,
+  poentaroWasm,
   type Queue,
   type QueueSummary,
   type Resolution,
   type SendRequest,
   type SendResult,
   type StoredRecord,
-} from '../../jianpuWasm'
+} from '../../poentaroWasm'
 import type { Scheduler } from './outboxScheduler'
 import type { OutboxStore } from './outboxStore'
 
@@ -112,7 +112,7 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
   const snapshot = (): OutboxSnapshot => ({
     queue,
     summary: loaded
-      ? jianpuWasm().outboxSummarize(queue, nowMs())
+      ? poentaroWasm().outboxSummarize(queue, nowMs())
       : {
           lanes: [],
           totalPending: 0,
@@ -130,7 +130,7 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
 
   const persistNow = async (): Promise<void> => {
     if (halted) return
-    const records = jianpuWasm().outboxEncodeQueue(queue)
+    const records = poentaroWasm().outboxEncodeQueue(queue)
     const next = new Map(records.map((record) => [record.key, record.value]))
     const puts = records.filter(
       (record) => persisted.get(record.key) !== record.value,
@@ -155,7 +155,7 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
     )
     const owned = records.filter((record) => isCodecKey(record.key))
     try {
-      queue = jianpuWasm().outboxDecodeQueue(owned)
+      queue = poentaroWasm().outboxDecodeQueue(owned)
       halted = null
       persisted = new Map(owned.map((record) => [record.key, record.value]))
     } catch (error) {
@@ -173,7 +173,7 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
     request: SendRequest,
     revision: bigint,
   ): Promise<void> => {
-    const write = jianpuWasm().outboxRecordSent(
+    const write = poentaroWasm().outboxRecordSent(
       queueBefore,
       sentRecords,
       request.fileId,
@@ -192,7 +192,7 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
   }
 
   const wakeAtNextDue = () => {
-    const next = jianpuWasm().outboxNextWakeMs(queue)
+    const next = poentaroWasm().outboxNextWakeMs(queue)
     scheduler?.wakeAt(next === undefined ? null : Number(next))
   }
 
@@ -206,7 +206,7 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
 
   const drainOnce = async (signal: AbortSignal): Promise<void> => {
     while (!signal.aborted && !halted) {
-      const begun = jianpuWasm().outboxBeginSend(queue, nowMs())
+      const begun = poentaroWasm().outboxBeginSend(queue, nowMs())
       queue = begun.queue
       await persist()
       notify()
@@ -216,7 +216,7 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
       if (result.tag === 'ok') {
         await runHook(() => recordSent(queue, request, result.val.revision))
       }
-      queue = jianpuWasm().outboxOnResult(
+      queue = poentaroWasm().outboxOnResult(
         queue,
         request.fileId,
         request.messageId,
@@ -350,7 +350,7 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
     },
     enqueue: (fileId, message) =>
       mutate(() =>
-        jianpuWasm().outboxEnqueue(
+        poentaroWasm().outboxEnqueue(
           queue,
           fileId,
           message,
@@ -359,15 +359,19 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
         ),
       ),
     resolve: async (fileId, resolution) => {
-      await mutate(() => jianpuWasm().outboxResolve(queue, fileId, resolution))
+      await mutate(() =>
+        poentaroWasm().outboxResolve(queue, fileId, resolution),
+      )
       if (resolution.tag === 'discard') {
         await runHook(() => deps.onDiscarded?.(fileId))
       }
     },
     resolveSignedIn: () =>
-      mutate(() => jianpuWasm().outboxResolveSignedIn(queue)),
+      mutate(() => poentaroWasm().outboxResolveSignedIn(queue)),
     recordRevision: (fileId, revision) =>
-      mutate(() => jianpuWasm().outboxRecordRevision(queue, fileId, revision)),
+      mutate(() =>
+        poentaroWasm().outboxRecordRevision(queue, fileId, revision),
+      ),
     subscribe(listener) {
       listeners.add(listener)
       if (started) listener(snapshot())
@@ -376,7 +380,7 @@ export function createOutboxLooper(deps: OutboxLooperDeps): OutboxLooper {
     snapshot,
     historyRows: (fileNames, filter) =>
       loaded
-        ? jianpuWasm().outboxHistoryRows(
+        ? poentaroWasm().outboxHistoryRows(
             queue,
             sentRecords,
             fileNames,

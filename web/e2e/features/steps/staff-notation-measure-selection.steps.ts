@@ -51,16 +51,16 @@ Given(
     test.info().setTimeout(90_000)
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'staff-selection.jianpu',
-          userFiles: { 'staff-selection.jianpu': src },
+          active: 'staff-selection.poentaro',
+          userFiles: { 'staff-selection.poentaro': src },
           bin: {},
-          fileIds: { 'staff-selection.jianpu': 'staff-selection-file' },
+          fileIds: { 'staff-selection.poentaro': 'staff-selection-file' },
         }),
       )
       localStorage.setItem(
-        'jianpu:chosen-preset:v1',
+        'poentaro:chosen-preset:v1',
         JSON.stringify({ 'staff-selection-file': 'Violin' }),
       )
       // Records the range of every measure-audio request (see

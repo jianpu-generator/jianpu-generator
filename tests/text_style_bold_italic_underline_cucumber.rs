@@ -15,7 +15,7 @@
 //! path (plain `SvgKind::Text` vs. tspan-based `SvgKind::TextWithTspans`)
 //! produced it.
 //!
-//! Each kind gets its own minimal `.jianpu` fixture in [`kind_fixture`]
+//! Each kind gets its own minimal `.poentaro` fixture in [`kind_fixture`]
 //! producing one distinctively-named text element; the "Then" step locates
 //! that element's `<text>`/`<tspan>` tag in the raw SVG and asserts its
 //! attributes. Content strings are chosen to be unique within their own
@@ -215,7 +215,7 @@ fn when_rendered_to_svg(world: &mut BoldItalicUnderlineWorld) {
         "# metadata\n{metadata_block}\n\n# parts\n{}\n\n{}# score\n{}",
         fixture.parts_block, fixture.sequence_block, fixture.score_block
     );
-    let result = jianpu_generator::render_svgs_from_source(&source, "test.jianpu", &[])
+    let result = poentaro::render_svgs_from_source(&source, "test.poentaro", &[])
         .unwrap_or_else(|err| panic!("compile returned an irrecoverable error: {}", err.message()));
     world.svgs = result.svgs;
 }

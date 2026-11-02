@@ -43,12 +43,12 @@ const clickTestSource = [
 async function loadClickTestFixture(page: import('@playwright/test').Page) {
   await page.addInitScript((source) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'measure-click-test.jianpu',
-        userFiles: { 'measure-click-test.jianpu': source },
+        active: 'measure-click-test.poentaro',
+        userFiles: { 'measure-click-test.poentaro': source },
         bin: {},
-        fileIds: { 'measure-click-test.jianpu': 'measure-click-test-id-001' },
+        fileIds: { 'measure-click-test.poentaro': 'measure-click-test-id-001' },
       }),
     )
   }, clickTestSource)
@@ -270,12 +270,12 @@ const mergedRestSource = [
 Given('the merged-rest test fixture is loaded', async ({ page }) => {
   await page.addInitScript((source) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'merged-rest-test.jianpu',
-        userFiles: { 'merged-rest-test.jianpu': source },
+        active: 'merged-rest-test.poentaro',
+        userFiles: { 'merged-rest-test.poentaro': source },
         bin: {},
-        fileIds: { 'merged-rest-test.jianpu': 'merged-rest-test-id-001' },
+        fileIds: { 'merged-rest-test.poentaro': 'merged-rest-test-id-001' },
       }),
     )
   }, mergedRestSource)

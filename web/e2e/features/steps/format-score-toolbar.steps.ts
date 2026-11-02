@@ -69,12 +69,12 @@ async function setEditorPosition(
 Given('the format-score-toolbar test fixture is loaded', async ({ page }) => {
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'original.jianpu',
-        userFiles: { 'original.jianpu': src },
+        active: 'original.poentaro',
+        userFiles: { 'original.poentaro': src },
         bin: {},
-        fileIds: { 'original.jianpu': crypto.randomUUID() },
+        fileIds: { 'original.poentaro': crypto.randomUUID() },
       }),
     )
   }, SOURCE)

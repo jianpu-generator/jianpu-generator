@@ -4,7 +4,7 @@ import type {
   TextStyleDefaults,
   TextStyleFields,
   TextStyleKind,
-} from '../jianpuWasm'
+} from '../poentaroWasm'
 import { FieldLabel } from './FieldHelpModal'
 import {
   inheritedStyle,

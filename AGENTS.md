@@ -21,10 +21,10 @@ When you run Playwright e2e tests yourself locally, run only the specific tests 
 
 ## Syntax documentation
 
-The `.jianpu` input syntax is documented in `syntax.md`.
+The `.poentaro` input syntax is documented in `syntax.md`.
 
-- When a commit introduces or changes user-facing `.jianpu` syntax, **MUST update `syntax.md`** in the same commit.
-- When a commit introduces or changes user-facing `.jianpu` syntax, **MUST update the `demo/` folder** in the same commit (add/update the example measure demonstrating the feature in the relevant `demo/NN-*.jianpu` file). Each file in `demo/` is a complete, standalone-valid `.jianpu` document (its own `# metadata`/`# parts`/`# score`) — the web editor opens them individually as a folder of demo files, so a fragment missing its own header would fail to render there even though it's never concatenated with the others.
+- When a commit introduces or changes user-facing `.poentaro` syntax, **MUST update `syntax.md`** in the same commit.
+- When a commit introduces or changes user-facing `.poentaro` syntax, **MUST update the `demo/` folder** in the same commit (add/update the example measure demonstrating the feature in the relevant `demo/NN-*.poentaro` file). Each file in `demo/` is a complete, standalone-valid `.poentaro` document (its own `# metadata`/`# parts`/`# score`) — the web editor opens them individually as a folder of demo files, so a fragment missing its own header would fail to render there even though it's never concatenated with the others.
 - Syntax-affecting code lives under `src/parser/` and `src/desugar.rs`.
 
 ## Architecture documentation
@@ -64,7 +64,7 @@ Reuse the shared components in `web/src/components/` before building a new contr
 - **`ResponsiveMenu`**: every dropdown or menu, including pickers like the notation view. It renders a Radix `DropdownMenu` on desktop and a full-screen `vaul` drawer on mobile, so mobile is handled for you. Style the trigger with `.preview-export-btn` and the content with `.export-menu-list` / `.export-menu-item` (`web/src/preview-toolbar.css`). See `ExportMenuButton` and `NotationToggle` for examples. Don't use a native `<select>` or a bare Radix `DropdownMenu` for these.
 - **`ExportMenuButton`**: a button that opens a sectioned menu of actions (built on `ResponsiveMenu`).
 - **`RadixSelectItem`** (`RadixTableSelect.tsx`): items for a Radix `Select` inside a table cell.
-- **`JianpuDiffEditor`** / **`DiffLayoutToggle`**: a Monaco diff of two `.jianpu` texts (read-only, or with an editable right side) and its inline / side-by-side switch, whose choice `useDiffLayout` remembers. Used by the History modal.
+- **`PoentaroDiffEditor`** / **`DiffLayoutToggle`**: a Monaco diff of two `.poentaro` texts (read-only, or with an editable right side) and its inline / side-by-side switch, whose choice `useDiffLayout` remembers. Used by the History modal.
 - **`EditorToolbarButton`**: an icon button with a tooltip for the editor toolbar.
 - **`SpinnerLabel`**: a button label with the shared pending spinner.
 - **`accountDialogParts.tsx`**: `AccountDialogFrame`, `Field`, `ErrorBanner` and friends for account modals.
@@ -148,7 +148,7 @@ in `sqruff-cli-lib`) and newer releases require a rustc ahead of this repo's.
 ## Generating an SVG
 
 ```sh
-cargo run -- generate svg simple.jianpu
+cargo run -- generate svg simple.poentaro
 ```
 
 ## Running the app locally
@@ -181,6 +181,15 @@ Database: `jianpu-live-share-staging` (id `e388837b-aed7-495c-96d3-fca824639cfc`
 - **Apply migrations:** `d1 migrations apply` needs a config naming the database, and there is none in the repo. Write a throwaway `wrangler.staging.jsonc` outside the repo: `{"name":"staging-tmp","compatibility_date":"2024-09-23","d1_databases":[{"binding":"DB","database_name":"jianpu-live-share-staging","database_id":"e388837b-aed7-495c-96d3-fca824639cfc","migrations_dir":"<absolute path to live-share-worker/migrations>"}]}`, then `npx wrangler d1 migrations apply DB --remote -c <that file>`. Wrangler asks no confirmation in a non-interactive shell, and `-y` is rejected.
 - **Run SQL:** `npx wrangler d1 execute DB --remote -c <that file> --command "..."`. It can't bind parameters, so inline literals when replaying a query from `crates/live-share-worker/queries/`.
 - **Never** point `deploy.json`, `cloudflare.config.ts` or the deploy workflow at the staging id, or the next push to `master` would deploy against it.
+
+## Naming: the app is Poentaro, the notation is jianpu
+
+The app was renamed from jianpu-generator to Poentaro (see "Rename to Poentaro" in `ARCHITECTURE.md`). Anything that means **the app** is named `poentaro`: crates, modules, identifiers, storage keys, the `.poentaro` file extension, and every new cloud resource. Anything that means **the notation** (the Jianpu view, `Notation::Jianpu`, `JianPuPitch`, jianpu digits) keeps the word jianpu.
+
+Some cloud resources still say `jianpu` because they can't be renamed, only recreated and migrated, which nobody chose to do: the worker `jianpu-live-share-worker-rs` (its workers.dev host is what every deployed client calls), the D1 databases `jianpu-live-share` and `jianpu-live-share-staging`, the B2 bucket `jianpu-live-share-backups`, the Keychain service `jianpu-backup-reader`, and the old origins `jianpu-generator.pages.dev` and the `jianpu-generator` GitHub org. Use them by their real names. Don't "fix" them in config: a renamed value points at a resource that doesn't exist.
+
+- **Never create anything new with `jianpu` in its name** that means the app: no new worker, database, bucket, Pages project, secret, Keychain entry, storage key or crate. Use `poentaro` (e.g. `poentaro-<purpose>`), even next to an old `jianpu-…` resource.
+- Code that reads a legacy name (`.jianpu` files, `jianpu:` keys, `jianpu-outbox:` databases, the `jianpu-source` embed tag) exists only so old data keeps working. Keep it next to the current name, as in `file-extension.json` and `web/src/legacyStorage/`, and never write a legacy name.
 
 ## Cloudflare stays on the free plan
 

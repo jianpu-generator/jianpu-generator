@@ -28,7 +28,7 @@ fn text_content(element: &str) -> &str {
 fn render() -> String {
     render_svgs_from_source_with_visibility(
         SOURCE,
-        "test.jianpu",
+        "test.poentaro",
         &ResolvedPartVisibility::default(),
         &[],
         NoteLabels::HarmonicaTabs,

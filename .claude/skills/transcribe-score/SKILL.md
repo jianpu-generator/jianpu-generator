@@ -1,9 +1,9 @@
 ---
 name: transcribe-score
-description: Transcribe a real, public-domain musical score into this repo's .jianpu format — either starting a new file or adding a part/voice to one already transcribed — by finding the actual source and parsing it programmatically, instead of composing freehand. Use when asked to transcribe, continue, or add a part to a .jianpu file "from the real score" / "from the original" / by composer+opus, or when a requested part doesn't exist in whatever source was already used for the file.
+description: Transcribe a real, public-domain musical score into this repo's .poentaro format — either starting a new file or adding a part/voice to one already transcribed — by finding the actual source and parsing it programmatically, instead of composing freehand. Use when asked to transcribe, continue, or add a part to a .poentaro file "from the real score" / "from the original" / by composer+opus, or when a requested part doesn't exist in whatever source was already used for the file.
 ---
 
-# Transcribing real scores into `.jianpu`
+# Transcribing real scores into `.poentaro`
 
 The goal is never to compose "in the style of" a piece — it's to find the
 real score and transcribe it faithfully, matching whatever conventions the
@@ -11,7 +11,7 @@ file's already-transcribed measures established. If the file has no existing
 measures yet, you're establishing those conventions from scratch and should
 say so explicitly.
 
-`scores/Air on G String.jianpu` (Bach, BWV 1068) is a worked example of this
+`scores/Air on G String.poentaro` (Bach, BWV 1068) is a worked example of this
 whole procedure, including a part (`d`, second violin) added later from a
 *different* source edition than the one used for the rest of the file — see
 §0 and §1 below for why that came up and how it was resolved.
@@ -108,12 +108,12 @@ Hand-roll a small parser rather than reading rhythm by eye. Key rules:
   copy of the duplicate bar before parsing, rather than reimplementing
   unnesting logic. If the endings differ or there's a genuine nested repeat,
   you do need to manually unnest into a linear pass, matching however the
-  existing `.jianpu` file already handles repeats (usually: no repeats at
+  existing `.poentaro` file already handles repeats (usually: no repeats at
   all, just written out once).
 
 ## 2b. OMR-parsing a notation-software PDF (no LilyPond/MusicXML available)
 
-Worked example: `scores/Minuet in G.jianpu`'s G-minor companion section
+Worked example: `scores/Minuet in G.poentaro`'s G-minor companion section
 (BWV Anh. 115), transcribed entirely from an IMSLP PDF with no plain-text
 source anywhere. Use `pymupdf` (`pip3 install pymupdf`, imported as `fitz`).
 
@@ -154,11 +154,11 @@ source anywhere. Use `pymupdf` (`pip3 install pymupdf`, imported as `fitz`).
   visual reading.
 - **Verify the per-note octave field, don't just trust it — a `step // 7`
   boundary bug can silently mislabel specific letters by a whole octave.**
-  Caught post-hoc in `Minuet in G.jianpu`'s BWV Anh. 115 section: every
+  Caught post-hoc in `Minuet in G.poentaro`'s BWV Anh. 115 section: every
   single letter-C and letter-D note across the whole piece (both staves) had
   been extracted one octave too low, while every other letter was correct —
   a fencepost error at the C-boundary in whatever `step`→octave conversion
-  ran, not a random OMR noise. It reproduced faithfully into the `.jianpu`
+  ran, not a random OMR noise. It reproduced faithfully into the `.poentaro`
   output (each buggy note was internally consistent with its own wrong
   octave, so `check`/render showed no error) and was only caught because a
   human listener noticed degree 4/5 sitting an octave below its neighbors.
@@ -241,7 +241,7 @@ source anywhere. Use `pymupdf` (`pip3 install pymupdf`, imported as `fitz`).
 ## 3. Establishing alignment and scaling
 
 1. Parse the already-transcribed portion of the source.
-2. Find the duration-scaling factor between source and `.jianpu` measures
+2. Find the duration-scaling factor between source and `.poentaro` measures
    (e.g. "1 real 4/4 bar = 2 jianpu measures", every duration doubles).
    Verify on a simple bar (a single held whole note scales to the expected
    measure count).

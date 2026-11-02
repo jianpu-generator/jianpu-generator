@@ -3,7 +3,7 @@ import {
   tagFromElement,
   tagSelector,
 } from '../dataAttributes'
-import type { Tag } from '../jianpuWasm'
+import type { Tag } from '../poentaroWasm'
 import type { LyricCell, NoteCell } from './previewSelection'
 
 export interface AnchorPoint {

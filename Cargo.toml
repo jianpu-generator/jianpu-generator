@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "crates/cloud-outbox", "crates/jianpu-wasm", "crates/live-share-worker", "tools/dead-pub-check"]
+members = [".", "crates/cloud-outbox", "crates/poentaro-wasm", "crates/live-share-worker", "tools/dead-pub-check"]
 resolver = "2"
 
 [patch.crates-io]
@@ -61,7 +61,7 @@ debug = false
 strip = true
 
 [package]
-name = "jianpu-generator"
+name = "poentaro"
 version = "0.1.0"
 edition = "2021"
 
@@ -69,7 +69,7 @@ edition = "2021"
 path = "src/lib.rs"
 
 [[bin]]
-name = "jianpu"
+name = "poentaro"
 path = "src/main.rs"
 required-features = ["cli"]
 

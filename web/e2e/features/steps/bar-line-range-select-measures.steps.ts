@@ -44,12 +44,14 @@ const barLineTestSource = [
 async function loadBarLineTestFixture(page: import('@playwright/test').Page) {
   await page.addInitScript((source) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'bar-line-range-test.jianpu',
-        userFiles: { 'bar-line-range-test.jianpu': source },
+        active: 'bar-line-range-test.poentaro',
+        userFiles: { 'bar-line-range-test.poentaro': source },
         bin: {},
-        fileIds: { 'bar-line-range-test.jianpu': 'bar-line-range-test-id-001' },
+        fileIds: {
+          'bar-line-range-test.poentaro': 'bar-line-range-test-id-001',
+        },
       }),
     )
   }, barLineTestSource)

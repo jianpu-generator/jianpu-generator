@@ -55,12 +55,12 @@ function noteIdOf(label: string, token: string) {
 async function loadScore(page: Page, source: string) {
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'pitch-drawer-test.jianpu',
-        userFiles: { 'pitch-drawer-test.jianpu': src },
+        active: 'pitch-drawer-test.poentaro',
+        userFiles: { 'pitch-drawer-test.poentaro': src },
         bin: {},
-        fileIds: { 'pitch-drawer-test.jianpu': crypto.randomUUID() },
+        fileIds: { 'pitch-drawer-test.poentaro': crypto.randomUUID() },
       }),
     )
   }, source)
@@ -147,7 +147,7 @@ Given(
     })
     await gotoShareUrl(
       page,
-      'pitch-drawer-test.jianpu',
+      'pitch-drawer-test.poentaro',
       scoreSource(key, 'Melody [M] = notes', body),
     )
     await expect(page.getByText('Import this score')).toBeVisible({

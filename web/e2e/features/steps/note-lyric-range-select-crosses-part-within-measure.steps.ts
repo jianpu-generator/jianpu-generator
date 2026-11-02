@@ -12,7 +12,7 @@ import { Given, Then, When } from './fixtures'
  * `Note ↔ Lyric` counterpart to
  * `note-range-select-crosses-part-within-measure.feature`'s `Note ↔ Note`
  * case. `cross_part` in
- * `crates/jianpu-wasm/src/selection_range/note_lyric.rs` still ranges only
+ * `crates/poentaro-wasm/src/selection_range/note_lyric.rs` still ranges only
  * by `measure_index`, so two clicks landing in the same measure on
  * different parts (e.g. note 0 of `1 2 3`/"do re mi" on one part, syllable
  * 1 of `4 5 6`/"fa so la" on another) wrongly selects that whole measure's
@@ -86,15 +86,15 @@ Given(
   async ({ page }) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'cross-part-within-measure-note-lyric-range-test.jianpu',
+          active: 'cross-part-within-measure-note-lyric-range-test.poentaro',
           userFiles: {
-            'cross-part-within-measure-note-lyric-range-test.jianpu': src,
+            'cross-part-within-measure-note-lyric-range-test.poentaro': src,
           },
           bin: {},
           fileIds: {
-            'cross-part-within-measure-note-lyric-range-test.jianpu':
+            'cross-part-within-measure-note-lyric-range-test.poentaro':
               'cross-part-within-measure-note-lyric-range-test-id-001',
           },
         }),

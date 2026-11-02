@@ -1,5 +1,7 @@
+import { withFileExtension } from '../../fileExtension'
+
 export function downloadLocalCopy(fileName: string, content: string): void {
-  const name = fileName.endsWith('.jianpu') ? fileName : `${fileName}.jianpu`
+  const name = withFileExtension(fileName)
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')

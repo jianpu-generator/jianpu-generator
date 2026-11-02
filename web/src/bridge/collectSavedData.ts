@@ -1,16 +1,17 @@
 import {
+  LEGACY_LOCAL_STORAGE_PREFIX,
+  LEGACY_OUTBOX_DATABASE_PREFIX,
+} from '../legacyStorage/legacyStorageNames'
+import {
   ORIGIN_MIGRATED_KEY,
   type OriginMigrationPayload,
-  SAVED_LOCAL_STORAGE_PREFIX,
   type SavedDatabase,
 } from '../originMigration/originMigrationPayload'
-import {
-  createIndexedDbOutboxStore,
-  OUTBOX_DATABASE_PREFIX,
-} from '../storage/outbox/outboxStore'
+import { openIndexedDbOutboxStore } from '../storage/outbox/outboxStore'
 
 /** Everything this origin saved: the app's `localStorage` entries and every
- * account's cloud outbox. Storage that can't be read counts as empty. */
+ * account's cloud outbox, all under the names the app had before the rename
+ * to Poentaro. Storage that can't be read counts as empty. */
 export async function collectSavedData(): Promise<OriginMigrationPayload> {
   return {
     version: 1,
@@ -27,7 +28,7 @@ function savedLocalStorage(): Record<string, string> {
       )
         .filter(
           (key): key is string =>
-            key?.startsWith(SAVED_LOCAL_STORAGE_PREFIX) === true &&
+            key?.startsWith(LEGACY_LOCAL_STORAGE_PREFIX) === true &&
             key !== ORIGIN_MIGRATED_KEY,
         )
         .flatMap((key) => {
@@ -46,14 +47,12 @@ async function savedOutboxes(): Promise<SavedDatabase[]> {
     .map((database) => database.name)
     .filter(
       (name): name is string =>
-        name?.startsWith(OUTBOX_DATABASE_PREFIX) === true,
+        name?.startsWith(LEGACY_OUTBOX_DATABASE_PREFIX) === true,
     )
   return Promise.all(
     names.map(async (name) => ({
       name,
-      records: await createIndexedDbOutboxStore(
-        name.slice(OUTBOX_DATABASE_PREFIX.length),
-      )
+      records: await openIndexedDbOutboxStore(name)
         .loadAll()
         .catch(() => []),
     })),

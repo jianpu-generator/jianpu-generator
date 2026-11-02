@@ -31,12 +31,12 @@ const FOLLOW_SOURCE = [
 async function loadSource(page: import('@playwright/test').Page, src: string) {
   await page.addInitScript((source) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'test.jianpu',
-        userFiles: { 'test.jianpu': source },
+        active: 'test.poentaro',
+        userFiles: { 'test.poentaro': source },
         bin: {},
-        fileIds: { 'test.jianpu': crypto.randomUUID() },
+        fileIds: { 'test.poentaro': crypto.randomUUID() },
       }),
     )
   }, src)
@@ -63,7 +63,7 @@ async function getEditorSource(page: import('@playwright/test').Page) {
 
 async function getStoredSource(page: import('@playwright/test').Page) {
   return page.evaluate(() => {
-    const raw = localStorage.getItem('jianpu:files:v1')
+    const raw = localStorage.getItem('poentaro:files:v1')
     if (!raw) return ''
     const store = JSON.parse(raw) as {
       active: string

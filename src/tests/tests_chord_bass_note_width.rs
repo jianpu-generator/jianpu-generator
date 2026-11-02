@@ -22,7 +22,7 @@ fn measure_click_target_widths(svg: &str) -> Vec<f32> {
 
 /// Renders `input` and returns the two measures' click-target rect widths.
 fn two_measure_widths(input: &str) -> (f32, f32) {
-    let svgs = render_svgs_from_source(input, "test.jianpu", &[])
+    let svgs = render_svgs_from_source(input, "test.poentaro", &[])
         .unwrap()
         .svgs;
     let widths = measure_click_target_widths(&svgs[0]);

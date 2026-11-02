@@ -45,7 +45,7 @@ fn parses_full_document() {
         "[Melody] 1 2 3 4\n",
         "[Melodyv1] 你好wo rld\n",
     );
-    let doc = parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parse(input, "test.poentaro", &[]).unwrap();
     assert_eq!(doc.metadata.title, Some("hello world".to_string()));
     assert_eq!(doc.metadata.author, Some("foo".to_string()));
     assert_eq!(doc.declarations.len(), 2);
@@ -67,7 +67,7 @@ fn parses_full_document() {
 #[test]
 fn unknown_section_recoverable() {
     let input = "# unknown\nfoo\n";
-    let doc = parse(input, "test.jianpu", &[]).expect("unknown section must not abort parsing");
+    let doc = parse(input, "test.poentaro", &[]).expect("unknown section must not abort parsing");
     assert!(doc
         .section_structure_errors
         .iter()
@@ -83,7 +83,7 @@ fn duplicate_score_section_recoverable() {
         "# score\n[Melody] 5 6 7 1\n",
     );
     let doc =
-        parse(input, "test.jianpu", &[]).expect("duplicate score section must not abort parsing");
+        parse(input, "test.poentaro", &[]).expect("duplicate score section must not abort parsing");
     assert!(doc
         .section_structure_errors
         .iter()
@@ -103,7 +103,7 @@ title = "hello world"
 Melody = notes
 "#;
     let doc =
-        parse(input, "test.jianpu", &[]).expect("out-of-order sections must not abort parsing");
+        parse(input, "test.poentaro", &[]).expect("out-of-order sections must not abort parsing");
     assert!(
         !doc.section_structure_errors.iter().any(|e| matches!(
             &e.kind,
@@ -125,8 +125,8 @@ fn missing_metadata_section_is_allowed() {
         "# parts\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 2 3 4\n"
     );
-    let doc =
-        parse(input, "test.jianpu", &[]).expect("missing metadata section must not abort parsing");
+    let doc = parse(input, "test.poentaro", &[])
+        .expect("missing metadata section must not abort parsing");
     assert!(
         !doc.section_structure_errors.iter().any(|e| matches!(
             &e.kind,
@@ -148,7 +148,7 @@ fn parses_two_named_parts() {
         "[Soprano] 1 2 3 4\n",
         "[Alto] 5 6 7 1\n",
     );
-    let doc = parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parse(input, "test.poentaro", &[]).unwrap();
     assert_eq!(doc.tracks.len(), 2);
     let soprano = doc
         .tracks
@@ -188,7 +188,7 @@ fn too_many_lines_recoverable_error_span_points_to_absolute_file_position() {
         "[Melody] 5 6 7 1\n",
     );
     let expected_offset = input.rfind("5 6 7 1").unwrap();
-    let doc = parse(input, "test.jianpu", &[]).expect("too-many-lines must not abort parsing");
+    let doc = parse(input, "test.poentaro", &[]).expect("too-many-lines must not abort parsing");
     let error = doc.per_measure_parse_errors[0]
         .as_ref()
         .expect("recoverable error must be recorded for the measure");
@@ -214,7 +214,7 @@ fn too_many_lines_recoverable_error_lists_declared_parts() {
         "[Melody] 1 2 3 4\n",
         "[Melody] 5 6 7 1\n",
     );
-    let doc = parse(input, "test.jianpu", &[]).expect("too-many-lines must not abort parsing");
+    let doc = parse(input, "test.poentaro", &[]).expect("too-many-lines must not abort parsing");
     let error = doc.per_measure_parse_errors[0]
         .as_ref()
         .expect("recoverable error must be recorded for the measure");
@@ -241,7 +241,7 @@ fn single_unnamed_part_remains_compatible() {
         "[Melody] 1 2 3 4\n",
         "[Melodyv1] a b c d\n",
     );
-    let doc = parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parse(input, "test.poentaro", &[]).unwrap();
     assert_eq!(doc.tracks.len(), 2);
     let notes = notes_track(&doc);
     assert_eq!(notes.abbreviation, "Melody");

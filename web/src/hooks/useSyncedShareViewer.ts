@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FileStoreState } from '../fileStore'
-import type { FolderSnapshot } from '../jianpuWasm'
+import type { FolderSnapshot } from '../poentaroWasm'
 import type { SharePayload } from '../shareUrl'
 import type { StorageBackend } from '../storage/types'
 import {

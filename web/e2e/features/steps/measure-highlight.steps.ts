@@ -2,7 +2,7 @@ import { expect } from '@playwright/test'
 import { Then, When } from './fixtures'
 
 /**
- * The default demo source (demo/01-pitches.jianpu) has the following Monaco
+ * The default demo source (demo/01-pitches.poentaro) has the following Monaco
  * line numbers (1-based):
  *
  *   1  # metadata

@@ -36,13 +36,13 @@ const editorSelectionTestSource = [
 async function loadFixture(page: import('@playwright/test').Page) {
   await page.addInitScript((source) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'editor-selection-test.jianpu',
-        userFiles: { 'editor-selection-test.jianpu': source },
+        active: 'editor-selection-test.poentaro',
+        userFiles: { 'editor-selection-test.poentaro': source },
         bin: {},
         fileIds: {
-          'editor-selection-test.jianpu': 'editor-selection-test-id-001',
+          'editor-selection-test.poentaro': 'editor-selection-test-id-001',
         },
       }),
     )

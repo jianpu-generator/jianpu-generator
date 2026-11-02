@@ -18,7 +18,7 @@ fn lyrics_overflow_recovers_with_error_on_measure() {
         "[Melody] 1 2 0 0\n",
         "[Melodyv1] a b c d e f\n",
     );
-    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(input, "test.poentaro", &[]).unwrap();
     let score = group(doc).expect("overflow must not abort grouping");
     assert_eq!(score.measures.len(), 1);
     assert_eq!(score.measures[0].diagnostics.len(), 1);
@@ -48,7 +48,7 @@ fn lyrics_underflow_recovers_with_error_on_measure() {
         "[Melody] 1 2 3 4\n",
         "[Melodyv1] a b\n",
     );
-    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(input, "test.poentaro", &[]).unwrap();
     let score = group(doc).expect("underflow must not abort grouping");
     assert_eq!(score.measures.len(), 1);
     assert_eq!(score.measures[0].diagnostics.len(), 1);
@@ -79,7 +79,7 @@ fn lyrics_underflow_error_span_covers_lyrics_line_not_notes() {
         "[Melody] 1 2 3 4\n",
         "[Melodyv1] a b\n",
     );
-    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(input, "test.poentaro", &[]).unwrap();
     let score = group(doc).expect("underflow must not abort grouping");
 
     let lyrics_line_offset = input.find("a b").unwrap();
@@ -116,7 +116,7 @@ fn measures_without_lyrics_underflow_have_no_errors() {
         "[Melody] 1 2 3 4\n",
         "[Melodyv1] a b c d\n",
     );
-    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(input, "test.poentaro", &[]).unwrap();
     let score = group(doc).unwrap();
     assert!(score.measures[0].diagnostics.is_empty());
 }
@@ -140,7 +140,7 @@ fn explicit_no_lyrics_marker_produces_no_paired_syllables() {
         "[Melody] 1 2 3 4\n",
         "[Melodyv1] _\n",
     );
-    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(input, "test.poentaro", &[]).unwrap();
     let score = group(doc).unwrap();
     assert!(score.measures[0].diagnostics.is_empty());
     let melody = score.measures[0].parts[0].slice();
@@ -168,7 +168,7 @@ fn follow_part_with_no_lyric_line_gets_no_implicit_syllables() {
         "# parts\nMelody [m] = notes\nHarmony [h] = follow[m]\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[m] 1 2 3 4\n[h] 5 6 7 1\n",
     );
-    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(input, "test.poentaro", &[]).unwrap();
     let score = group(doc).unwrap();
     let harmony = score.measures[0]
         .parts
@@ -211,7 +211,7 @@ time=4/4 key=C4 bpm=120
 [Melody] 4 5 6 7
 [Melodyv1] ha ko da
 "#;
-    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(input, "test.poentaro", &[]).unwrap();
     let score = group(doc).unwrap();
     assert_eq!(score.measures.len(), 2);
     assert!(
@@ -247,7 +247,7 @@ time=4/4 key=C4 bpm=120
 [Melody] 4 5
 [Melodyv1] c d
 "#;
-    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(input, "test.poentaro", &[]).unwrap();
     let score = group(doc).unwrap();
     assert_eq!(score.measures.len(), 3);
     assert!(
@@ -281,7 +281,7 @@ fn cross_measure_slur_note_consumes_syllable() {
         "[Melody] 5) 6 7 0\n",
         "[Melodyv1] hi ha ho\n",
     );
-    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(input, "test.poentaro", &[]).unwrap();
     let score = group(doc).unwrap();
     assert_eq!(score.measures.len(), 2);
     assert!(

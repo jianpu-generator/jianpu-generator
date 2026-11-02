@@ -1,14 +1,17 @@
 use clap::{Parser, Subcommand};
-use jianpu_generator::cli::generate::{
+use poentaro::cli::generate::{
     generate_mei, generate_midi, generate_mp3, generate_pdf, generate_svg, generate_wav,
 };
-use jianpu_generator::cli::{check, GenerateInput};
-use jianpu_generator::{self as jg, error_reporter};
+use poentaro::cli::{check, GenerateInput};
+use poentaro::{self as jg, error_reporter};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 #[derive(Parser)]
-#[command(name = "jianpu", about = "Generate JianPu notation files")]
+#[command(
+    name = "poentaro",
+    about = "Generate numbered musical notation (jianpu) files"
+)]
 struct Args {
     #[command(subcommand)]
     command: Commands,
@@ -165,9 +168,9 @@ fn run_migrate_lyrics(paths: &[PathBuf]) -> Result<(), jg::error::IrrecoverableE
         return Ok(());
     }
     paths.iter().try_for_each(|path| {
-        let source = jianpu_generator::cli::read_source(path)?;
+        let source = poentaro::cli::read_source(path)?;
         let migrated = jg::migrate_lyrics::migrate_lyrics_syntax(&source);
-        jianpu_generator::cli::write_file(path, migrated.as_bytes())
+        poentaro::cli::write_file(path, migrated.as_bytes())
     })
 }
 

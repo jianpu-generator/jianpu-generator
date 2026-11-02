@@ -1,5 +1,5 @@
 #![allow(clippy::disallowed_macros)]
-use jianpu_generator::list_measure_spans_from_source;
+use poentaro::list_measure_spans_from_source;
 
 const TWO_MEASURE_SOURCE: &str = concat!(
     "# metadata\n",
@@ -43,7 +43,7 @@ const LABEL_DIRECTIVE_SOURCE: &str = concat!(
 
 #[test]
 fn returns_one_span_per_measure() {
-    let spans = list_measure_spans_from_source(TWO_MEASURE_SOURCE, "test.jianpu")
+    let spans = list_measure_spans_from_source(TWO_MEASURE_SOURCE, "test.poentaro")
         .unwrap()
         .spans;
     assert_eq!(spans.len(), 2);
@@ -51,7 +51,7 @@ fn returns_one_span_per_measure() {
 
 #[test]
 fn spans_are_ordered_by_source_position() {
-    let spans = list_measure_spans_from_source(TWO_MEASURE_SOURCE, "test.jianpu")
+    let spans = list_measure_spans_from_source(TWO_MEASURE_SOURCE, "test.poentaro")
         .unwrap()
         .spans;
     assert!(spans[0].start < spans[1].start);
@@ -62,7 +62,7 @@ fn view_zone_start_is_at_or_before_content_start_without_directive() {
     // When there is no leading directive line, the view zone starts at the beginning
     // of the first data line (the [Abbrev] prefix), which is at or before the
     // note content start.
-    let spans = list_measure_spans_from_source(TWO_MEASURE_SOURCE, "test.jianpu")
+    let spans = list_measure_spans_from_source(TWO_MEASURE_SOURCE, "test.poentaro")
         .unwrap()
         .spans;
     assert!(spans[0].view_zone_start <= spans[0].start);
@@ -76,7 +76,7 @@ fn view_zone_start_is_at_or_before_content_start_without_directive() {
 
 #[test]
 fn view_zone_start_includes_leading_directive_line() {
-    let spans = list_measure_spans_from_source(DIRECTIVE_MEASURE_SOURCE, "test.jianpu")
+    let spans = list_measure_spans_from_source(DIRECTIVE_MEASURE_SOURCE, "test.poentaro")
         .unwrap()
         .spans;
     assert_eq!(spans.len(), 1);
@@ -93,7 +93,7 @@ fn view_zone_start_includes_leading_directive_line() {
 fn returns_empty_spans_on_source_with_no_sections() {
     // Section-structure errors are recoverable; a source with no section headers
     // produces an empty score (no measures), not an Err.
-    let result = list_measure_spans_from_source("not valid jianpu", "test.jianpu").unwrap();
+    let result = list_measure_spans_from_source("not valid jianpu", "test.poentaro").unwrap();
     assert!(result.spans.is_empty());
 }
 
@@ -102,7 +102,7 @@ fn returns_empty_spans_on_source_with_no_sections() {
 /// only to the first note line.
 #[test]
 fn start_line_includes_label_directive_line() {
-    let spans = list_measure_spans_from_source(LABEL_DIRECTIVE_SOURCE, "test.jianpu")
+    let spans = list_measure_spans_from_source(LABEL_DIRECTIVE_SOURCE, "test.poentaro")
         .unwrap()
         .spans;
     assert_eq!(spans.len(), 1);
@@ -156,7 +156,7 @@ bpm=80 key=C4 time=4/4 label="Verse 1"
 
     // Line 23 (1-based) contains "2. 3_ 4_ 3= 3= (2_1_)" — the notes line of group 3.
     let caret_line: usize = 23;
-    let spans = list_measure_spans_from_source(source, "test.jianpu")
+    let spans = list_measure_spans_from_source(source, "test.poentaro")
         .unwrap()
         .spans;
 
@@ -205,7 +205,7 @@ const SEQUENCE_SOURCE: &str = concat!(
 /// single occurrence without re-deriving it from written order.
 #[test]
 fn sequence_field_reflects_playback_order_with_repeats() {
-    let result = list_measure_spans_from_source(SEQUENCE_SOURCE, "test.jianpu").unwrap();
+    let result = list_measure_spans_from_source(SEQUENCE_SOURCE, "test.poentaro").unwrap();
     let sequence = result.sequence.expect("expected a resolved sequence");
 
     let labels: Vec<&str> = sequence.iter().map(|s| s.label.as_str()).collect();
@@ -217,6 +217,6 @@ fn sequence_field_reflects_playback_order_with_repeats() {
 
 #[test]
 fn sequence_field_is_none_without_sequence_section() {
-    let result = list_measure_spans_from_source(TWO_MEASURE_SOURCE, "test.jianpu").unwrap();
+    let result = list_measure_spans_from_source(TWO_MEASURE_SOURCE, "test.poentaro").unwrap();
     assert!(result.sequence.is_none());
 }

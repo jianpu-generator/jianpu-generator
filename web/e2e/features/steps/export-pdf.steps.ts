@@ -33,12 +33,12 @@ async function loadSource(
 ) {
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'test.jianpu',
-        userFiles: { 'test.jianpu': src },
+        active: 'test.poentaro',
+        userFiles: { 'test.poentaro': src },
         bin: {},
-        fileIds: { 'test.jianpu': crypto.randomUUID() },
+        fileIds: { 'test.poentaro': crypto.randomUUID() },
       }),
     )
   }, source)
@@ -133,7 +133,7 @@ When(
     // Dispatch two click events back-to-back in a single browser task so both
     // reach the handler before React can re-render the menu as closed,
     // exercising the `pdfExporting`/`splitPdfExporting` re-entrancy guard in
-    // `exportPdf` (useJianpuWorker.ts) rather than relying on real user timing.
+    // `exportPdf` (usePoentaroWorker.ts) rather than relying on real user timing.
     // The dedup happens before `requestDownload` is ever called twice, so
     // only a single rename modal opens.
     await item.evaluate((el: HTMLElement) => {

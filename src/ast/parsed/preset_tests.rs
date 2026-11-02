@@ -82,7 +82,7 @@ fn only_staff_notations_ignore_text_styles() {
 }
 
 fn document(source: &str) -> ParsedDocument {
-    crate::parser::parse(source, "test.jianpu", &[]).expect("parses")
+    crate::parser::parse(source, "test.poentaro", &[]).expect("parses")
 }
 
 const SONG_WITH_CHOIR_PRESET: &str = "# metadata\ntitle = \"Song\"\nsubtitle = \"Base\"\n\n# parts\nMain [main] = notes\nSoprano [S1] = notes\n\n# score\n[main] 1\n[S1] 2\n\n# preset \"Choir\"\nvisible_parts = S1, main\nsubtitle = \"Choir\"\n";

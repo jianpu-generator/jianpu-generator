@@ -17,7 +17,7 @@ fn render_svgs_from_source_smoke() {
         "[Melody] 1 2 3 4\n",
         "[Melodyv1] a b c d\n",
     );
-    let svgs = render_svgs_from_source(input, "test.jianpu", &[])
+    let svgs = render_svgs_from_source(input, "test.poentaro", &[])
         .unwrap()
         .svgs;
     assert_eq!(svgs.len(), 1);
@@ -38,7 +38,7 @@ fn bpm_change_mid_score_renders_both_bpm_labels() {
         "bpm=130\n",
         "[b] 1\n",
     );
-    let svgs = render_svgs_from_source(input, "test.jianpu", &[])
+    let svgs = render_svgs_from_source(input, "test.poentaro", &[])
         .unwrap()
         .svgs;
     assert_eq!(svgs.len(), 1);
@@ -69,7 +69,7 @@ fn lyrics_underflow_render_returns_svgs_and_non_empty_errors() {
         "[Melody] 1 2 3 4\n",
         "[Melodyv1] a b\n",
     );
-    let output = render_svgs_from_source(input, "test.jianpu", &[])
+    let output = render_svgs_from_source(input, "test.poentaro", &[])
         .expect("underflow must not abort the render");
     assert!(
         !output.svgs.is_empty(),
@@ -108,7 +108,7 @@ fn follow_part_with_tied_note_produces_exactly_one_arc() {
         "[p1] 1~1\n",
         "[a] 3\n",
     );
-    let svgs = render_svgs_from_source(input, "test.jianpu", &[])
+    let svgs = render_svgs_from_source(input, "test.poentaro", &[])
         .unwrap()
         .svgs;
     let arc_count = svgs[0].matches("data-variant=\"tie-or-slur\"").count();
@@ -126,7 +126,7 @@ fn lex_unexpected_char_renders_error_highlight_and_reports_error() {
         "# parts\nMelody = notes\n\n",
         "# score\ntime=4/4 key=C4 bpm=120\n[Melody] 1 @ 3 4\n",
     );
-    let output = render_svgs_from_source(input, "test.jianpu", &[])
+    let output = render_svgs_from_source(input, "test.poentaro", &[])
         .expect("LexUnexpectedChar must not abort the render");
     assert!(
         !output.svgs.is_empty(),
@@ -379,7 +379,7 @@ fn tie_operator_on_notes_renders_exactly_two_arcs() {
         "# parts\nMelody[m] = notes\n\n",
         "# score\n[m]7_6=5=~5~5\n",
     );
-    let svgs = render_svgs_from_source(input, "test.jianpu", &[])
+    let svgs = render_svgs_from_source(input, "test.poentaro", &[])
         .unwrap()
         .svgs;
     let arc_count = svgs[0].matches(r#"data-variant="tie-or-slur""#).count();

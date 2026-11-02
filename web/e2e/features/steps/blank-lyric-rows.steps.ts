@@ -132,13 +132,13 @@ When('the blank-lyric-rows score is laid out', async ({ page }) => {
   const source = buildSource()
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'blank-lyric-rows-test.jianpu',
-        userFiles: { 'blank-lyric-rows-test.jianpu': src },
+        active: 'blank-lyric-rows-test.poentaro',
+        userFiles: { 'blank-lyric-rows-test.poentaro': src },
         bin: {},
         fileIds: {
-          'blank-lyric-rows-test.jianpu': 'blank-lyric-rows-test-id-001',
+          'blank-lyric-rows-test.poentaro': 'blank-lyric-rows-test-id-001',
         },
       }),
     )

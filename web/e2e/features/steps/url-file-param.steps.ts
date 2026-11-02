@@ -22,7 +22,7 @@ Given(
     await page.addInitScript(
       ({ a, b, fileNameA, fileNameB }) => {
         localStorage.setItem(
-          'jianpu:files:v1',
+          'poentaro:files:v1',
           JSON.stringify({
             active: fileNameA,
             userFiles: { [fileNameA]: a, [fileNameB]: b },
@@ -70,7 +70,7 @@ Then(
 When(
   'the app loads with the URL param {string}',
   async ({ page }, param: string) => {
-    // Stored `active` is a.jianpu, but the URL names b.jianpu — the URL should win.
+    // Stored `active` is a.poentaro, but the URL names b.poentaro — the URL should win.
     await page.goto(`/?${param}`)
     await page.waitForSelector('.preview-page', { timeout: 15_000 })
   },

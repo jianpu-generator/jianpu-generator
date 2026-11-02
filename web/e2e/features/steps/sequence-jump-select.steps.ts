@@ -78,12 +78,12 @@ Given(
   async ({ page }, _sequence: string) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'sequence-select-test.jianpu',
-          userFiles: { 'sequence-select-test.jianpu': src },
+          active: 'sequence-select-test.poentaro',
+          userFiles: { 'sequence-select-test.poentaro': src },
           bin: {},
-          fileIds: { 'sequence-select-test.jianpu': crypto.randomUUID() },
+          fileIds: { 'sequence-select-test.poentaro': crypto.randomUUID() },
         }),
       )
     }, source)

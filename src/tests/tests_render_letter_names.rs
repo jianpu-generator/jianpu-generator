@@ -26,7 +26,7 @@ fn note_head_texts(svg: &str) -> Vec<String> {
 fn render(note_labels: NoteLabels) -> String {
     render_svgs_from_source_with_visibility(
         SOURCE,
-        "test.jianpu",
+        "test.poentaro",
         &ResolvedPartVisibility::default(),
         &[],
         note_labels,

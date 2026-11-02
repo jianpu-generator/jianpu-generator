@@ -1,12 +1,12 @@
-# Jianpu Generator — `.jianpu` Syntax Reference
+# Poentaro — `.poentaro` Syntax Reference
 
-This document describes the input syntax accepted by **Poentaro** (formerly jianpu-generator) as implemented today. File extension: `.jianpu`.
+This document describes the input syntax accepted by **Poentaro** (formerly jianpu-generator) as implemented today. File extension: `.poentaro` (files saved before the rename end in `.jianpu`; they still open and import).
 
 ---
 
 ## File structure
 
-A `.jianpu` file has up to four kinds of section, plus any number of presets, which may appear in any order:
+A `.poentaro` file has up to four kinds of section, plus any number of presets, which may appear in any order:
 
 ```
 # metadata
@@ -259,7 +259,7 @@ Every data line must begin with `[Abbrev]` to route it to a specific part by abb
 
 **Example — only part C plays, A and B are not-mentioned:**
 
-```jianpu
+```poentaro
 # parts
 A = notes
 B = notes
@@ -276,7 +276,7 @@ Measure 2: C plays `5 6 7 0`. A and B have no explicit lines → filled with `0`
 
 **Example — key-based lines in one measure with a follow part:**
 
-```jianpu
+```poentaro
 # parts
 A = notes
 B = follow[A]
@@ -291,7 +291,7 @@ A: `1 2 3 4`. B: not mentioned → copies A's content via `follow`. C: `5 6 7 0`
 
 **Example — follow part with partial key override:**
 
-```jianpu
+```poentaro
 # parts
 Soprano [S] = notes
 Soprano lyrics [Sv1] = lyrics[S]
@@ -715,7 +715,7 @@ Mismatch is a non-fatal **warning** (rendering continues, with empty-string syll
 
 Lyrics are declared as their own parts in `# parts`, with `lyrics[X]` naming the `notes`, `chords` or `follow` part (declared earlier) whose notes they sing along to:
 
-```jianpu
+```poentaro
 # parts
 bass [b] = notes
 Verse 1 [v1] = lyrics[b]
@@ -744,7 +744,7 @@ time=4/4 key=C4 bpm=120
 
 Chords are sparse (one attack per chord, `-` only extends), so a chord part's lyrics are **not** paired one-syllable-per-note. Instead the lyric line carries its own timing: each chord attack is paired with one **bracketed item**, and any syllables written outside brackets flow freely between them.
 
-```jianpu
+```poentaro
 # parts
 c = chords
 l = lyrics[c]
@@ -760,7 +760,7 @@ l = lyrics[c]
 - **Unbracketed syllables** (tokenised as in [Lyrics syntax](#lyrics-syntax)) are spread **evenly** between the neighbouring bracketed items; those after the last bracketed item spread evenly up to the bar line. They are not tallied.
 - **Unbracketed first syllable**: when the first chord attack is on beat 1, an unbracketed first syllable takes that attack as if it were bracketed (it is drawn without brackets), and the following unbracketed syllables spread after it. When the first chord attack is **not** on beat 1 (the chord line starts with a rest), the unbracketed syllables before the first bracketed item are a pickup instead, spread evenly from the bar start. Here `天` sits under the `6` chord and `(好)` under the `5`:
 
-```jianpu
+```poentaro
 # parts
 c = chords
 l = lyrics[c]
@@ -775,7 +775,7 @@ l = lyrics[c]
 
 #### Migrating from positional lyric lines
 
-Earlier versions attached a bare line to the `[Key]` line above it. That form is no longer supported (a bare line is a `score_line_missing_key_prefix` error). Run `jianpu migrate-lyrics <file>...` (or pipe a source through it on stdin) to rewrite a file: it adds one `lyrics[...]` part per verse position a part used (`Melody lyrics [Mv1]` for one verse, `Melody verse 1 [Mv1]`, `Melody verse 2 [Mv2]`, … for several) and prefixes each bare line with its key. `scripts/migrate-lyrics-d1.py` does the same for the `docs` and `files` tables of the production D1 database.
+Earlier versions attached a bare line to the `[Key]` line above it. That form is no longer supported (a bare line is a `score_line_missing_key_prefix` error). Run `poentaro migrate-lyrics <file>...` (or pipe a source through it on stdin) to rewrite a file: it adds one `lyrics[...]` part per verse position a part used (`Melody lyrics [Mv1]` for one verse, `Melody verse 1 [Mv1]`, `Melody verse 2 [Mv2]`, … for several) and prefixes each bare line with its key. `scripts/migrate-lyrics-d1.py` does the same for the `docs` and `files` tables of the production D1 database.
 
 ---
 
@@ -887,7 +887,7 @@ When a part is **not mentioned** in a measure (no `[Key]` line covers it), it is
 
 **Example — part B not mentioned:**
 
-```jianpu
+```poentaro
 # parts
 A = chords
 B = notes
@@ -910,7 +910,7 @@ The web editor's **Edit part as stream** menu picks **one part** of the `# score
 
 Inserting or deleting a note shifts every later note across the following barlines. The stream is written back into the measure-grouped source only on **Apply** (Cancel or Escape discards it), and only the measures whose content changed are rewritten — every other line (other parts, directives, comments) stays byte-for-byte.
 
-```jianpu
+```poentaro
 # parts
 Melody [M] = notes
 Harmony [H] = follow[M]
@@ -968,7 +968,7 @@ A lyric stream is cut into measures by its target's **lyric slots**: each measur
 
 A lyric part bound to a `chords` part (or a `follow` of one) has no lyric slots to cut by — its unbracketed syllables flow freely (see [Lyrics under a chord part](#lyrics-under-a-chord-part-lyricsx-where-x-is-a-chords-part)) — so its stream marks every measure boundary with `|`. The editor shows one measure per line, each ended by `|`:
 
-```jianpu
+```poentaro
 # parts
 c = chords
 l = lyrics[c]
@@ -1021,7 +1021,7 @@ Apply is refused while the stream has any error; warnings don't block it.
 
 ## Complete minimal example
 
-```jianpu
+```poentaro
 # metadata
 title = "Demo"
 author = "Author"

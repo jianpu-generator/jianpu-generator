@@ -1,4 +1,4 @@
-import type { StaffClef } from '../jianpuWasm'
+import type { StaffClef } from '../poentaroWasm'
 import type { Notation } from './messages'
 
 const STAFF_CLEFS: Partial<Record<Notation, StaffClef>> = {

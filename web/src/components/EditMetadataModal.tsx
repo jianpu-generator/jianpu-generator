@@ -6,7 +6,7 @@ import type {
   MetadataFields,
   TextStyleComponentValue,
   TextStyleKind,
-} from '../jianpuWasm'
+} from '../poentaroWasm'
 import { metadataFieldHelp } from '../utils/metadataFieldHelp'
 import { FieldHelpModal } from './FieldHelpModal'
 import { MetadataFieldsTableBody } from './MetadataFieldsTableBody'

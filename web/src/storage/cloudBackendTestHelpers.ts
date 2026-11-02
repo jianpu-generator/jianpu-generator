@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { beforeEach, vi } from 'vitest'
-import { instantiate } from '../../../crates/jianpu-wasm/pkg-component/jianpu_wasm.js'
-import { setWasmRoot } from '../jianpuWasm'
+import { instantiate } from '../../../crates/poentaro-wasm/pkg-component/poentaro_wasm.js'
+import { setWasmRoot } from '../poentaroWasm'
 import {
   callWorker,
   createWorkerClient,
@@ -79,7 +79,7 @@ export function lastCall(): Promise<RecordedCall> {
 export async function installRealWasm(): Promise<void> {
   const bytes = readFileSync(
     new URL(
-      '../../../crates/jianpu-wasm/pkg-component/jianpu_wasm.core.wasm',
+      '../../../crates/poentaro-wasm/pkg-component/poentaro_wasm.core.wasm',
       import.meta.url,
     ),
   )
@@ -113,7 +113,7 @@ export function createTestBackend(overrides: Partial<CloudBackendConfig> = {}) {
             response.files.find((file) => file.id === fileId)?.content ?? ''
           )
         },
-        restoreName: () => 'restored.jianpu',
+        restoreName: () => 'restored.poentaro',
       }),
     createScheduler: (onWake) => {
       wake = onWake

@@ -97,9 +97,9 @@ function readLegacyFileStore(): FileStoreState | null {
   try {
     const legacy = localStorage.getItem(STORAGE_KEY)
     if (legacy != null) {
-      const userFiles = { 'untitled.jianpu': legacy }
+      const userFiles = { 'untitled.poentaro': legacy }
       return {
-        active: 'untitled.jianpu',
+        active: 'untitled.poentaro',
         userFiles,
         bin: {},
         fileIds: ensureFileIds(userFiles, {}, undefined),

@@ -64,7 +64,7 @@ async function editorSource(page: Page) {
 
 async function storedSource(page: Page) {
   return page.evaluate(() => {
-    const raw = localStorage.getItem('jianpu:files:v1')
+    const raw = localStorage.getItem('poentaro:files:v1')
     if (!raw) return ''
     const store = JSON.parse(raw) as {
       active: string
@@ -120,14 +120,14 @@ Given('the presets fixture is loaded', async ({ page }) => {
   await page.addInitScript((source) => {
     // Seed once: a reload must keep the same file id so its chosen preset
     // survives.
-    if (localStorage.getItem('jianpu:files:v1')) return
+    if (localStorage.getItem('poentaro:files:v1')) return
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'test.jianpu',
-        userFiles: { 'test.jianpu': source },
+        active: 'test.poentaro',
+        userFiles: { 'test.poentaro': source },
         bin: {},
-        fileIds: { 'test.jianpu': crypto.randomUUID() },
+        fileIds: { 'test.poentaro': crypto.randomUUID() },
       }),
     )
   }, PRESETS_SOURCE)
@@ -138,7 +138,7 @@ Given('the presets fixture is loaded', async ({ page }) => {
 Given('the presets fixture is opened as a shared link', async ({ page }) => {
   // The decoder's plain URI-encoded JSON fallback, so no wasm is needed here.
   const payload = JSON.stringify({
-    filename: 'test.jianpu',
+    filename: 'test.poentaro',
     content: PRESETS_SOURCE,
   })
   await page.goto(`/#share=${encodeURIComponent(payload)}`)

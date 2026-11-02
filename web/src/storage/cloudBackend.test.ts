@@ -19,14 +19,14 @@ describe('createCloudBackend: load()', () => {
         files: [
           {
             id: 'id-a',
-            name: 'a.jianpu',
+            name: 'a.poentaro',
             content: '1 2 3',
             revision: 3,
             trashedAt: null,
           },
           {
             id: 'id-b',
-            name: 'b.jianpu',
+            name: 'b.poentaro',
             content: 'x',
             revision: 0,
             trashedAt: 12345,
@@ -43,9 +43,12 @@ describe('createCloudBackend: load()', () => {
     expect(method).toBe('POST')
     expect(body).toEqual({ identityToken: 'test-token' })
 
-    expect(state.userFiles).toEqual({ 'a.jianpu': '1 2 3' })
-    expect(state.bin).toEqual({ 'b.jianpu': 'x' })
-    expect(state.fileIds).toEqual({ 'a.jianpu': 'id-a', 'b.jianpu': 'id-b' })
+    expect(state.userFiles).toEqual({ 'a.poentaro': '1 2 3' })
+    expect(state.bin).toEqual({ 'b.poentaro': 'x' })
+    expect(state.fileIds).toEqual({
+      'a.poentaro': 'id-a',
+      'b.poentaro': 'id-b',
+    })
   })
 })
 
@@ -54,7 +57,7 @@ describe('createCloudBackend: createFile()', () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         id: 'whatever',
-        name: 'untitled.jianpu',
+        name: 'untitled.poentaro',
         content: '',
         revision: 0,
         trashedAt: null,
@@ -74,19 +77,19 @@ describe('createCloudBackend: createFile()', () => {
     const { url, body } = await lastCall()
     expect(url).toBe('http://localhost:8787/files')
     expect(body.identityToken).toBe('test-token')
-    expect(body.name).toBe('untitled.jianpu')
+    expect(body.name).toBe('untitled.poentaro')
     expect(typeof body.id).toBe('string')
-    expect(nextState.active).toBe('untitled.jianpu')
+    expect(nextState.active).toBe('untitled.poentaro')
   })
 })
 
 describe('createCloudBackend: saveContent()', () => {
   function seededState(): FileStoreState {
     return {
-      active: 'a.jianpu',
-      userFiles: { 'a.jianpu': 'new content' },
+      active: 'a.poentaro',
+      userFiles: { 'a.poentaro': 'new content' },
       bin: {},
-      fileIds: { 'a.jianpu': 'id-a' },
+      fileIds: { 'a.poentaro': 'id-a' },
     }
   }
 
@@ -99,7 +102,7 @@ describe('createCloudBackend: saveContent()', () => {
         files: [
           {
             id: 'id-a',
-            name: 'a.jianpu',
+            name: 'a.poentaro',
             content: 'old content',
             revision,
             trashedAt: null,
@@ -165,7 +168,7 @@ describe('createCloudBackend: saveContent()', () => {
         files: [
           {
             id: 'id-a',
-            name: 'a.jianpu',
+            name: 'a.poentaro',
             content: 'theirs',
             revision: 9,
             trashedAt: null,
@@ -251,7 +254,7 @@ describe('createCloudBackend: base snapshots', () => {
       files: [
         {
           id: 'id-a',
-          name: 'a.jianpu',
+          name: 'a.poentaro',
           content,
           revision: 1,
           trashedAt: null,

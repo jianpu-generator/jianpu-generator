@@ -56,13 +56,13 @@ const source = [
 async function loadFixture(page: import('@playwright/test').Page) {
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'playback-cursor-hidden-part-test.jianpu',
-        userFiles: { 'playback-cursor-hidden-part-test.jianpu': src },
+        active: 'playback-cursor-hidden-part-test.poentaro',
+        userFiles: { 'playback-cursor-hidden-part-test.poentaro': src },
         bin: {},
         fileIds: {
-          'playback-cursor-hidden-part-test.jianpu':
+          'playback-cursor-hidden-part-test.poentaro':
             'playback-cursor-hidden-part-test-id-001',
         },
       }),

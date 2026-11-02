@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test'
 import { highlightKindStyles } from '../../../src/components/editorTheme'
-import type { HighlightKind } from '../../../src/jianpuWasm'
+import type { HighlightKind } from '../../../src/poentaroWasm'
 import { Given, Then } from './fixtures'
 
 const SOURCE = [
@@ -60,12 +60,12 @@ async function editorTokenColor(page: Page, text: string): Promise<string> {
 Given('the editor keyword-highlighting fixture is loaded', async ({ page }) => {
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'highlighting.jianpu',
-        userFiles: { 'highlighting.jianpu': src },
+        active: 'highlighting.poentaro',
+        userFiles: { 'highlighting.poentaro': src },
         bin: {},
-        fileIds: { 'highlighting.jianpu': crypto.randomUUID() },
+        fileIds: { 'highlighting.poentaro': crypto.randomUUID() },
       }),
     )
   }, SOURCE)

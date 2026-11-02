@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { instantiate } from '../../../../crates/jianpu-wasm/pkg-component/jianpu_wasm.js'
+import { instantiate } from '../../../../crates/poentaro-wasm/pkg-component/poentaro_wasm.js'
 import {
   type SendRequest,
   type SendResult,
   setWasmRoot,
-} from '../../jianpuWasm'
+} from '../../poentaroWasm'
 import { createMemoryOutboxStore } from './memoryOutboxStore'
 import { createOutboxLooper } from './outboxLooper'
 import type { OutboxStore, StoredRecord } from './outboxStore'
@@ -13,7 +13,7 @@ import type { OutboxStore, StoredRecord } from './outboxStore'
 beforeAll(async () => {
   const bytes = readFileSync(
     new URL(
-      '../../../../crates/jianpu-wasm/pkg-component/jianpu_wasm.core.wasm',
+      '../../../../crates/poentaro-wasm/pkg-component/poentaro_wasm.core.wasm',
       import.meta.url,
     ),
   )

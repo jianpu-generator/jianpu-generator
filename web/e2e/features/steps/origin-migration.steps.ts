@@ -6,14 +6,19 @@ const SOURCE = ['# parts', 'Melody [M] = notes', '', '# score', '1 2 3 4'].join(
   '\n',
 )
 
-/** Saves a local file store holding `name` on `origin` before any of that
- * origin's page scripts run. */
-async function seedLocalFile(page: Page, origin: string, name: string) {
+/** Saves a local file store holding `name` on `origin`, under the
+ * `localStorage` key `key`, before any of that origin's page scripts run. */
+async function seedLocalFile(
+  page: Page,
+  origin: string,
+  name: string,
+  key: string,
+) {
   await page.addInitScript(
-    ({ targetOrigin, fileName, source }) => {
+    ({ targetOrigin, fileName, source, storageKey }) => {
       if (window.location.origin !== targetOrigin) return
       localStorage.setItem(
-        'jianpu:files:v1',
+        storageKey,
         JSON.stringify({
           active: fileName,
           userFiles: { [fileName]: source },
@@ -22,21 +27,47 @@ async function seedLocalFile(page: Page, origin: string, name: string) {
         }),
       )
     },
-    { targetOrigin: origin, fileName: name, source: SOURCE },
+    { targetOrigin: origin, fileName: name, source: SOURCE, storageKey: key },
   )
 }
 
+// The old origin only ever ran the app before the rename to Poentaro, so it
+// saved under the legacy key.
 Given(
   'the old origin has a saved local file {string}',
   async ({ page }, name: string) => {
-    await seedLocalFile(page, OLD_ORIGIN, name)
+    await seedLocalFile(page, OLD_ORIGIN, name, 'jianpu:files:v1')
   },
 )
 
 Given(
   'the new origin has a saved local file {string}',
   async ({ page }, name: string) => {
-    await seedLocalFile(page, NEW_ORIGIN, name)
+    await seedLocalFile(page, NEW_ORIGIN, name, 'poentaro:files:v1')
+  },
+)
+
+Given(
+  'the new origin has a local file {string} saved before the rename',
+  async ({ page }, name: string) => {
+    await seedLocalFile(page, NEW_ORIGIN, name, 'jianpu:files:v1')
+  },
+)
+
+When('I open the new origin', async ({ page }) => {
+  await page.goto(NEW_ORIGIN)
+  await page.waitForSelector('.monaco-editor .view-lines', {
+    timeout: 30_000,
+  })
+})
+
+Then(
+  'the new origin has no data saved under a legacy name',
+  async ({ page }) => {
+    const legacyKeys = await page.evaluate(() =>
+      Object.keys(localStorage).filter((key) => key.startsWith('jianpu:')),
+    )
+    expect(legacyKeys).toEqual([])
   },
 )
 
@@ -71,7 +102,7 @@ Then(
     await expect
       .poll(() =>
         page.evaluate(() => {
-          const raw = localStorage.getItem('jianpu:files:v1')
+          const raw = localStorage.getItem('poentaro:files:v1')
           const store = raw
             ? (JSON.parse(raw) as { userFiles: Record<string, string> })
             : { userFiles: {} }

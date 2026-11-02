@@ -9,7 +9,7 @@ fn document_with_presets(presets: &str) -> String {
 }
 
 fn parse_document(source: &str) -> ParsedDocument {
-    parse(source, "test.jianpu", &[]).expect("presets never abort parsing")
+    parse(source, "test.poentaro", &[]).expect("presets never abort parsing")
 }
 
 fn only_preset(doc: &ParsedDocument) -> &ParsedPreset {

@@ -9,7 +9,7 @@ import { Given, Then } from './fixtures'
 /**
  * Regression fixture for the cross-part `Note ↔ Note` click-and-click
  * range gesture when both clicks land in the *same* measure (see
- * `cross_part` in `crates/jianpu-wasm/src/selection_range/note_note.rs`):
+ * `cross_part` in `crates/poentaro-wasm/src/selection_range/note_note.rs`):
  * ranging by `measure_index` alone made two same-measure clicks on
  * different parts select the whole measure on both sides regardless of
  * where in the measure either click landed. Fixed by adding a second axis,
@@ -53,15 +53,15 @@ Given(
   async ({ page }) => {
     await page.addInitScript((source) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'cross-part-within-measure-range-test.jianpu',
+          active: 'cross-part-within-measure-range-test.poentaro',
           userFiles: {
-            'cross-part-within-measure-range-test.jianpu': source,
+            'cross-part-within-measure-range-test.poentaro': source,
           },
           bin: {},
           fileIds: {
-            'cross-part-within-measure-range-test.jianpu':
+            'cross-part-within-measure-range-test.poentaro':
               'cross-part-within-measure-range-test-id-001',
           },
         }),
