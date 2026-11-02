@@ -75,6 +75,11 @@ pub(crate) fn default_font_size(
     }
 }
 
+/// Default `vertical_padding_pt` of `title`, `subtitle`, `author`
+/// and `part_legend`, used when unset in `# metadata`. A header row is one
+/// font size tall plus this padding above and below, so `0` is the tightest.
+pub const DEFAULT_HEADER_VERTICAL_PADDING_PT: u32 = 4;
+
 /// Default `lyrics.vertical_padding_pt` (formerly `lyric_click_target_padding_pt`),
 /// used when unset in `# metadata`.
 pub const DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT: u32 = 12;

@@ -1,7 +1,7 @@
 use crate::ast::parsed::{TextStyle, TextStyleComponent, TextStyleComponentValue};
 use crate::error::{RecoverableError, Span};
 
-use super::{parse_bool, parse_font_family, parse_positive_u32};
+use super::{parse_bool, parse_font_family, parse_non_negative_u32, parse_positive_u32};
 
 /// Parses one `component: value` pair of a `<kind> = { ... }` object literal.
 /// `qualified_field` (`<kind>.<component>`) names the field in errors.
@@ -12,14 +12,15 @@ fn parse_component_value(
     value_span: Span,
 ) -> Result<TextStyleComponentValue, RecoverableError> {
     let number = || parse_positive_u32(qualified_field, field_value, value_span).map(Some);
+    let padding = || parse_non_negative_u32(qualified_field, field_value, value_span).map(Some);
     let flag = || parse_bool(qualified_field, field_value, value_span).map(Some);
     Ok(match component {
         TextStyleComponent::FontSize => TextStyleComponentValue::FontSize(number()?),
         TextStyleComponent::HorizontalPaddingPt => {
-            TextStyleComponentValue::HorizontalPaddingPt(number()?)
+            TextStyleComponentValue::HorizontalPaddingPt(padding()?)
         }
         TextStyleComponent::VerticalPaddingPt => {
-            TextStyleComponentValue::VerticalPaddingPt(number()?)
+            TextStyleComponentValue::VerticalPaddingPt(padding()?)
         }
         TextStyleComponent::Bold => TextStyleComponentValue::Bold(flag()?),
         TextStyleComponent::Italic => TextStyleComponentValue::Italic(flag()?),

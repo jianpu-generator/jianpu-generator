@@ -107,19 +107,6 @@ pub(crate) fn text_vertical_extent(family: FontFamily, font_size: f32) -> f32 {
     face_vertical_extent(font_source::face_for_family(family), font_size)
 }
 
-/// Line height (in points) of `family`'s pinned font at the given font size:
-/// its ascender+descender span plus the font's own designed line gap
-/// (`hhea.lineGap`), i.e. the spacing the font's designer intends between
-/// consecutive lines. Used to size the header's text rows, so stacked
-/// header lines (title over subtitle) are spaced the way the font expects.
-pub(crate) fn text_line_height(family: FontFamily, font_size: f32) -> f32 {
-    let face = font_source::face_for_family(family);
-    let line_gap = face.map_or(0.0, |face| {
-        face.line_gap() as f32 / face.units_per_em() as f32 * font_size
-    });
-    face_vertical_extent(face, font_size) + line_gap
-}
-
 /// Whether `c` falls in the CJK Unified Ideographs block, the single check
 /// shared by every place that needs to pick a CJK-sized font/glyph metric
 /// for a character or decide a string counts as CJK (a lyric syllable's

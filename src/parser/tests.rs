@@ -248,3 +248,12 @@ fn single_unnamed_part_remains_compatible() {
     assert!(notes.lyrics.is_none());
     assert!(lyrics_track(&doc, "Melodyv1").lyrics.is_some());
 }
+
+#[test]
+fn accepts_zero_vertical_and_horizontal_padding() {
+    let content = "title = { vertical_padding_pt: 0, horizontal_padding_pt: 0 }\n";
+    let (meta, errors) = metadata_parser::parse_metadata(content, 0);
+    assert!(errors.is_empty());
+    assert_eq!(meta.title_style.vertical_padding_pt, Some(0));
+    assert_eq!(meta.title_style.horizontal_padding_pt, Some(0));
+}

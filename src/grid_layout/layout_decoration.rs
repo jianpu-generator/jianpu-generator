@@ -208,11 +208,7 @@ fn make_sequence_rows(header: &Header, base: f32, include_part_list: bool) -> Ve
 
 fn make_title_row(header: &Header) -> Option<GridRow> {
     header.title.as_ref().map(|title| GridRow {
-        height_pt: text_row_height(
-            header.title_font_family,
-            header.title_font_size,
-            header.title_vertical_padding_pt,
-        ),
+        height_pt: text_row_height(header.title_font_size, header.title_vertical_padding_pt),
         column_count: 1,
         has_label_region: false,
         measure_layout: vec![],
@@ -272,17 +268,14 @@ fn make_subtitle_author_row(header: &Header) -> Option<GridRow> {
     let padding = header
         .subtitle_vertical_padding_pt
         .max(header.author_vertical_padding_pt);
-    let subtitle_height = header.subtitle.as_ref().map(|_| {
-        text_row_height(
-            header.subtitle_font_family,
-            header.subtitle_font_size,
-            padding,
-        )
-    });
+    let subtitle_height = header
+        .subtitle
+        .as_ref()
+        .map(|_| text_row_height(header.subtitle_font_size, padding));
     let author_height = header
         .author
         .as_ref()
-        .map(|_| text_row_height(header.author_font_family, header.author_font_size, padding));
+        .map(|_| text_row_height(header.author_font_size, padding));
     let height_pt = subtitle_height
         .into_iter()
         .chain(author_height)
@@ -340,7 +333,6 @@ fn make_part_list_rows(entries: &[&PartListEntry], header: &Header) -> Vec<GridR
         .chunks(header.parts_list_columns as usize)
         .map(|chunk| GridRow {
             height_pt: text_row_height(
-                header.part_legend_font_family,
                 header.part_legend_font_size,
                 header.part_legend_vertical_padding_pt,
             ),
