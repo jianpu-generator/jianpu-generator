@@ -1,4 +1,4 @@
-use super::{cjk_glyph_left_bearing, glyph_left_bearing_for_family, lyric_vertical_extent};
+use super::{cjk_glyph_left_bearing, glyph_left_bearing_for_family, text_vertical_extent};
 use crate::compositor::types::FontFamily;
 
 #[test]
@@ -28,12 +28,12 @@ fn glyph_left_bearing_for_family_is_positive_for_a_real_monospace_character() {
 }
 
 #[test]
-fn lyric_vertical_extent_is_close_to_font_size_for_the_pinned_font() {
+fn serif_vertical_extent_is_close_to_font_size_for_the_pinned_font() {
     // The pinned lyric font's own ascender+descender span is close to
     // 1.0 em, so the measured extent should track font_size closely
     // rather than the old hardcoded 1.3x/1.0x ratios.
     let font_size = 40.0;
-    let extent = lyric_vertical_extent(font_size);
+    let extent = text_vertical_extent(FontFamily::Serif, font_size);
     assert!(
         (extent - font_size).abs() < font_size * 0.2,
         "extent={extent} should be close to font_size={font_size}"
