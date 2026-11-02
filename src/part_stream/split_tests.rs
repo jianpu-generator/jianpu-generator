@@ -106,3 +106,25 @@ fn a_new_line_every_four_measures_does_not_affect_measure_starts() {
     let result = apply("1 2 3 4\n  5 6 7 1");
     assert_eq!(result.measure_starts, vec![0, 10]);
 }
+
+#[test]
+fn an_unclosed_slur_is_an_error() {
+    let result = apply("1 (2 3 4");
+    assert_eq!(error_spans(&result), vec![Span::new(2, 3)]);
+    assert_eq!(result.source, None);
+}
+
+#[test]
+fn a_leading_extension_is_an_error() {
+    let result = apply("- 1 2 3 4");
+    assert_eq!(result.source, None);
+    assert_eq!(error_spans(&result), vec![Span::new(0, 1)]);
+    assert!(error_messages(&result)[0].contains("no note before it to extend"));
+}
+
+#[test]
+fn a_stream_of_only_extensions_is_an_error_rather_than_deleting_the_part() {
+    let result = apply("- -");
+    assert_eq!(result.source, None);
+    assert_eq!(error_spans(&result), vec![Span::new(0, 1), Span::new(2, 3)]);
+}

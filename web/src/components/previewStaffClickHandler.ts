@@ -1,5 +1,5 @@
 import type { MouseEvent } from 'react'
-import type { StaffMeasure } from '../jianpuWasm'
+import type { StaffMeasure } from '../poentaroWasm'
 import type { PreviewAnchorState } from './previewAnchorState'
 import {
   anchorAndCommit,

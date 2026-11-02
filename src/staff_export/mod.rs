@@ -6,7 +6,7 @@ use crate::mei_export::ClefChoice;
 use crate::parser::parts_parser::InstrumentInfo;
 use crate::split_track::{
     part_display_name_map, split_pdf_filename, split_track_label, split_track_names,
-    track_with_its_lyric_parts,
+    track_with_its_lyric_parts, SplitSelection,
 };
 
 /// One part's MEI for a split (one PDF per part) staff export.
@@ -24,13 +24,15 @@ pub fn render_split_meis_from_source(
     source: &str,
     filename: &str,
     base_name: &str,
+    selection: SplitSelection,
     instruments: &[InstrumentInfo],
     clef_choice: ClefChoice,
 ) -> Result<Vec<SplitMeiEntry>, IrrecoverableError> {
-    let score = crate::compile(source, filename, instruments)?;
+    let score = crate::compile_with_preset(source, filename, instruments, selection.preset_name)?;
+    let base_name = selection.file_base_name(base_name);
     let labels = part_display_name_map(source, filename)?;
     let all_parts = crate::list_parts_from_source(source, filename, instruments)?;
-    Ok(split_track_names(source, filename, &score, &[])?
+    Ok(split_track_names(source, filename, &score, selection)?
         .into_iter()
         .map(|track| {
             let enabled_tracks = track_with_its_lyric_parts(&score, &track);
@@ -41,7 +43,7 @@ pub fn render_split_meis_from_source(
                 .map(|part| (part.abbreviation, part.display_name))
                 .collect();
             SplitMeiEntry {
-                filename: split_pdf_filename(base_name, &split_track_label(&labels, &track)),
+                filename: split_pdf_filename(&base_name, &split_track_label(&labels, &track)),
                 mei: crate::mei_export::score_to_mei(&part_score, &display_names, clef_choice).mei,
                 track_name: track,
             }

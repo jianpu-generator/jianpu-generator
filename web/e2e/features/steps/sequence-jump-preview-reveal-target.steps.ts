@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test'
 import { tagSelector } from '../../../src/dataAttributes'
+import { waitForAssetLoadingBannerGone } from '../../assetLoadingHelpers'
 import { Given, Then, When } from './fixtures'
 
 // Padded with filler measures so "Intro" and "C" can't both fit in one
@@ -45,13 +46,13 @@ Given(
   async ({ page }, _chain: string) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'sequence-preview-reveal-target-test.jianpu',
-          userFiles: { 'sequence-preview-reveal-target-test.jianpu': src },
+          active: 'sequence-preview-reveal-target-test.poentaro',
+          userFiles: { 'sequence-preview-reveal-target-test.poentaro': src },
           bin: {},
           fileIds: {
-            'sequence-preview-reveal-target-test.jianpu': crypto.randomUUID(),
+            'sequence-preview-reveal-target-test.poentaro': crypto.randomUUID(),
           },
         }),
       )
@@ -66,6 +67,7 @@ When(
     await expect(sequenceToolbarButtons(page)).toHaveCount(2, {
       timeout: 15_000,
     })
+    await waitForAssetLoadingBannerGone(page)
     // "C" is the last written measure (index 61): "Intro" (index 0) plus 60
     // filler measures (indices 1-60).
     await expect(page.locator(tagSelector('measure'))).toHaveCount(62, {

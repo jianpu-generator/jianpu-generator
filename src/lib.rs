@@ -49,6 +49,7 @@ pub mod render_config;
 pub mod renderer;
 pub mod serializer;
 pub mod sound_label;
+mod sounding_pitch;
 pub mod source_edit;
 pub mod source_embed;
 pub mod split_track;
@@ -113,7 +114,7 @@ pub fn collect_measure_diagnostics(score: &Score) -> Vec<Diagnostic> {
         .collect()
 }
 
-/// Parse and group a `.jianpu` source string into a [`Score`].
+/// Parse and group a `.poentaro` source string into a [`Score`].
 pub fn compile(
     source: &str,
     filename: &str,
@@ -121,6 +122,36 @@ pub fn compile(
 ) -> Result<Score, IrrecoverableError> {
     let doc = parser::parse(source, filename, instruments)?;
     grouper::group(doc)
+}
+
+/// Like [`compile`], with `# metadata` overlaid by the `# preset` named
+/// `preset_name`. `None`, or a name no preset has, compiles the song's own
+/// `# metadata`.
+pub fn compile_with_preset(
+    source: &str,
+    filename: &str,
+    instruments: &[InstrumentInfo],
+    preset_name: Option<&str>,
+) -> Result<Score, IrrecoverableError> {
+    let doc = parser::parse(source, filename, instruments)?;
+    grouper::group(match preset_name {
+        Some(name) => doc.with_preset(name),
+        None => doc,
+    })
+}
+
+/// The `# preset` named `preset_name`, for [`resolve_part_visibility`].
+/// `None` when the source has no such preset (the menu then shows Default).
+pub fn chosen_preset_from_source(
+    source: &str,
+    filename: &str,
+    preset_name: &str,
+) -> Result<Option<ChosenPreset>, IrrecoverableError> {
+    let doc = parser::parse(source, filename, &[])?;
+    Ok(doc.preset(preset_name).map(|preset| ChosenPreset {
+        name: preset.name.clone(),
+        visible_parts: preset.visible_abbreviations(),
+    }))
 }
 
 /// Supply every `FontFamily` role's raw font bytes for real glyph-advance
@@ -201,6 +232,11 @@ fn build_header(score: &Score, parts: &[PartInfo]) -> grid_layout::types::Header
         part_legend_italic: score.metadata.part_legend.italic,
         part_legend_underline: score.metadata.part_legend.underline,
         part_legend_font_family: score.metadata.part_legend.font_family,
+        part_legend_vertical_padding_pt: score.metadata.part_legend.vertical_padding_pt as f32,
+        sequence_vertical_padding_pt: score.metadata.sequence.vertical_padding_pt as f32,
+        title_vertical_padding_pt: score.metadata.title_style.vertical_padding_pt as f32,
+        subtitle_vertical_padding_pt: score.metadata.subtitle_style.vertical_padding_pt as f32,
+        author_vertical_padding_pt: score.metadata.author_style.vertical_padding_pt as f32,
     }
 }
 
@@ -292,7 +328,7 @@ pub fn render_svgs(score: &Score) -> Result<Vec<String>, IrrecoverableError> {
     Ok(render_svgs_with_parts(score, &[], None, NoteLabels::Degrees)?.svgs)
 }
 
-/// Parse, group, and render a `.jianpu` source string into SVG page strings.
+/// Parse, group, and render a `.poentaro` source string into SVG page strings.
 pub fn render_svgs_from_source(
     source: &str,
     filename: &str,
@@ -318,28 +354,6 @@ pub fn render_svgs_from_source_filtered(
             rendered_tracks: enabled_tracks.map(<[String]>::to_vec),
             ..Default::default()
         },
-        instruments,
-        NoteLabels::Degrees,
-    )
-}
-
-/// Parse, group, optionally filter tracks, and write PDF bytes.
-#[cfg(feature = "pdf")]
-pub fn write_pdf_from_source_filtered(
-    source: &str,
-    filename: &str,
-    enabled_tracks: Option<&[String]>,
-    fonts: &fonts::FontBytesByFamily,
-    instruments: &[InstrumentInfo],
-) -> Result<Vec<u8>, IrrecoverableError> {
-    write_pdf_from_source_with_visibility(
-        source,
-        filename,
-        &ResolvedPartVisibility {
-            rendered_tracks: enabled_tracks.map(<[String]>::to_vec),
-            ..Default::default()
-        },
-        fonts,
         instruments,
         NoteLabels::Degrees,
     )

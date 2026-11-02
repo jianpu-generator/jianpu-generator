@@ -311,6 +311,17 @@ pub struct Header {
     pub part_legend_italic: bool,
     pub part_legend_underline: bool,
     pub part_legend_font_family: crate::compositor::types::FontFamily,
+    /// Extra space (points) added above and below each part legend row (see
+    /// `Metadata::part_legend.vertical_padding_pt`).
+    pub part_legend_vertical_padding_pt: f32,
+    /// Extra space (points) added above and below the `# sequence` summary
+    /// line (see `Metadata::sequence.vertical_padding_pt`).
+    pub sequence_vertical_padding_pt: f32,
+    /// Extra space (points) added above and below the title row and the shared subtitle/author
+    /// row (the larger of the two wins); see `Metadata::*_style.vertical_padding_pt`.
+    pub title_vertical_padding_pt: f32,
+    pub subtitle_vertical_padding_pt: f32,
+    pub author_vertical_padding_pt: f32,
 }
 
 #[derive(Debug, Clone)]

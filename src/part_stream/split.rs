@@ -4,13 +4,14 @@ use itertools::Itertools;
 
 use crate::error::{Span, Spanned};
 use crate::parser::score::timed_parser::{GroupStack, TimedLexToken};
+use crate::parser::score::token_parser::TimedLineParse;
 
 use super::diagnostics::{
-    error_at, forbidden_character_errors, inline_directive_errors, placeholder_offsets,
+    error_at, forbidden_character_errors, has_error, inline_directive_errors, placeholder_offsets,
     stream_diagnostic, AllowedMarkers,
 };
 use super::editable::TimedGrammar;
-use super::timing::{normalize_whitespace, rest_fill, timed_layout, TimedCluster};
+use super::timing::{normalize_whitespace, rest_fill, timed_layout, TimedCluster, TimedLayout};
 use super::{StreamDiagnostic, FOLLOW_PLACEHOLDER};
 
 /// Capacity used past the last measure group when no capacity is known at all.
@@ -21,6 +22,14 @@ pub(super) struct SplitStream {
     pub(super) chunks: Vec<String>,
     pub(super) measure_starts: Vec<usize>,
     pub(super) diagnostics: Vec<StreamDiagnostic>,
+    /// An error that re-barring can't cause or fix, so the stream should be
+    /// left as typed. A note or tuplet crossing a barline doesn't count: the
+    /// re-bar itself can move it there, and it stays a diagnostic.
+    pub(super) blocks_rebarring: bool,
+    /// No-lyrics placeholders pushed past the last slot by syllables typed
+    /// before them, from the end of the last measure: the formatter deletes
+    /// them, and Apply ignores them.
+    pub(super) dropped_placeholders: Option<Span>,
 }
 
 /// Where a measure starts in the stream: the first cluster's index and the
@@ -77,7 +86,8 @@ pub(super) fn split_timed_stream(
         Vec::new()
     };
     let sanitized = without_forbidden_characters(stream);
-    let parsed = match grammar.kind.parse(&sanitized, &mut GroupStack::default()) {
+    let mut groups = GroupStack::default();
+    let parsed = match grammar.kind.parse(&sanitized, &mut groups) {
         Ok(parsed) => parsed,
         Err(error) => {
             let span = error.span().copied().unwrap_or(Span::new(0, stream.len()));
@@ -86,20 +96,15 @@ pub(super) fn split_timed_stream(
                 chunks: Vec::new(),
                 measure_starts: Vec::new(),
                 diagnostics,
+                blocks_rebarring: true,
+                dropped_placeholders: None,
             };
         }
     };
     let tokens = grammar.kind.lex(&sanitized).unwrap_or_default();
-    diagnostics.extend(
-        parsed
-            .lex_errors
-            .iter()
-            .map(|error| error_at(error.span, error.message())),
-    );
-    diagnostics.extend(parsed.chord_errors.iter().map(stream_diagnostic));
-    diagnostics.extend(inline_directive_errors(&parsed.events));
-
     let timed = timed_layout(&parsed.events);
+    diagnostics.extend(parse_errors(&parsed, &groups, &timed));
+    let mut blocks_rebarring = has_error(&diagnostics);
     let capacity_of = |measure: usize| {
         capacities
             .get(measure)
@@ -117,6 +122,7 @@ pub(super) fn split_timed_stream(
     );
     let trailing_rest = layout.trailing_rest / timed.multiplier;
     if layout.trailing_rest % timed.multiplier != 0 {
+        blocks_rebarring = true;
         diagnostics.push(error_at(
             Span::new(stream.len(), stream.len()),
             "the stream ends partway through a tuplet beat",
@@ -136,7 +142,35 @@ pub(super) fn split_timed_stream(
             .map(|range| first_non_whitespace(stream, range.start))
             .collect(),
         diagnostics,
+        blocks_rebarring,
+        dropped_placeholders: None,
     }
+}
+
+/// What the line parser and the timing layout found wrong with the stream.
+fn parse_errors(
+    parsed: &TimedLineParse,
+    groups: &GroupStack,
+    timed: &TimedLayout,
+) -> Vec<StreamDiagnostic> {
+    let lex_errors = parsed
+        .lex_errors
+        .iter()
+        .map(|error| error_at(error.span, error.message()));
+    let unclosed_groups = groups
+        .frames
+        .iter()
+        .map(|frame| error_at(frame.open_paren_span, "this `(` is never closed"));
+    let orphan_extensions = timed
+        .orphan_extensions
+        .iter()
+        .map(|&span| error_at(span, "this `-` has no note before it to extend"));
+    lex_errors
+        .chain(parsed.chord_errors.iter().map(stream_diagnostic))
+        .chain(inline_directive_errors(&parsed.events))
+        .chain(unclosed_groups)
+        .chain(orphan_extensions)
+        .collect()
 }
 
 /// `|` and `@` become spaces so the line parser never sees them; offsets stay put.

@@ -1,6 +1,6 @@
 import type { RefObject } from 'react'
 import { useMemo } from 'react'
-import { jianpuWasm } from '../jianpuWasm'
+import { poentaroWasm } from '../poentaroWasm'
 import type { EditorHandle, NoteSpan } from '../types'
 import type { NoteCell, NoteSelectionRun } from '../utils/noteSpanSelection'
 import { distinctPartAbbreviations } from '../utils/partAbbreviations'
@@ -20,7 +20,7 @@ export async function groupSelectedNotesIntoContiguousRuns(
   noteSpans: NoteSpan[],
 ): Promise<NoteSelectionRun[]> {
   await ensureWasmInit()
-  const response = jianpuWasm().groupNoteSelection(noteSpans, selectedCells)
+  const response = poentaroWasm().groupNoteSelection(noteSpans, selectedCells)
   return response.tag === 'ok' ? response.val.runs : []
 }
 

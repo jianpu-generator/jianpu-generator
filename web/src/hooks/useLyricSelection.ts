@@ -1,6 +1,6 @@
 import type { RefObject } from 'react'
 import type { LyricCell } from '../components/previewSelection'
-import { jianpuWasm, type LyricSelectionRun } from '../jianpuWasm'
+import { type LyricSelectionRun, poentaroWasm } from '../poentaroWasm'
 import type { EditorHandle, LyricSpan } from '../types'
 import { ensureWasmInit } from '../wasmInit'
 import { useByteRangeSelectionCore } from './useByteRangeSelectionCore'
@@ -24,7 +24,7 @@ export async function groupSelectedLyricsIntoContiguousRuns(
   lyricSpans: LyricSpan[],
 ): Promise<LyricSelectionRun[]> {
   await ensureWasmInit()
-  const response = jianpuWasm().groupLyricSelection(lyricSpans, selectedCells)
+  const response = poentaroWasm().groupLyricSelection(lyricSpans, selectedCells)
   return response.tag === 'ok' ? response.val.runs : []
 }
 

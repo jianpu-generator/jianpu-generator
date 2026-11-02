@@ -212,9 +212,9 @@ fn is_chord_only_row_detects_chord() {
 fn note_part_sub_row_heights_sums_correctly() {
     let heights = note_part_sub_row_heights(30.0, 0.0);
     // tuplet_bracket + arc + above_dot + note_head + below_dot + ul + ul
-    // = 30.0 + 9.0 + 7.5 + 30.0 + 7.5 + 4.5 + 4.5 = 93.0
+    // = 30.0 + 9.0 + 7.5 + 30.0 + 7.5 + 7.5 + 7.5 = 99.0
     let sum: f32 = heights.iter().sum();
-    assert!((sum - 93.0).abs() < 0.001, "sum={sum}");
+    assert!((sum - 99.0).abs() < 0.001, "sum={sum}");
     assert_eq!(heights.len(), 7);
 }
 
@@ -227,7 +227,7 @@ fn chord_part_sub_row_heights_has_four_rows() {
 #[test]
 fn single_block_is_one_system() {
     let blocks = vec![make_block("S", 3)]; // 4 columns
-    let systems = pack_into_systems(&blocks, &cfg());
+    let systems = pack_into_systems(&blocks, &cfg(), f32::INFINITY);
     assert_eq!(systems.len(), 1);
     assert_eq!(systems[0].len(), 1);
 }
@@ -236,7 +236,7 @@ fn single_block_is_one_system() {
 fn blocks_exceeding_max_measures_per_system_split_into_two_systems() {
     // max_measures_per_system=2 → fits 2 blocks per system
     let blocks = vec![make_block("S", 3), make_block("S", 3), make_block("S", 3)];
-    let systems = pack_into_systems(&blocks, &cfg());
+    let systems = pack_into_systems(&blocks, &cfg(), f32::INFINITY);
     assert_eq!(systems.len(), 2);
     assert_eq!(systems[0].len(), 2);
     assert_eq!(systems[1].len(), 1);

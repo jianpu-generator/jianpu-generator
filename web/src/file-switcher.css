@@ -234,6 +234,17 @@ input.file-tab-name:focus {
   color: var(--text);
 }
 
+/* The folders holding the hovered row (or the active file): softer than the
+ * hover itself, so a deep row's place in the tree is easy to trace. */
+.file-tree-row--ancestor .file-tree-folder {
+  background: color-mix(in srgb, var(--preview-bg) 50%, transparent);
+  color: var(--text);
+}
+
+.file-tree-row--ancestor .file-tree-folder:hover {
+  background: var(--preview-bg);
+}
+
 .file-tree-folder svg {
   flex: none;
   width: 0.8rem;

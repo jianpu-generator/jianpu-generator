@@ -8,7 +8,7 @@
 //! it's a layout constant rather than a text style component.
 //!
 //! Each scenario's `# metadata` lines are spliced into a minimal otherwise-valid
-//! `.jianpu` document and run through the public `compile` entry point, so
+//! `.poentaro` document and run through the public `compile` entry point, so
 //! "then" steps can read the fully-resolved `Metadata` (`score.metadata`)
 //! directly, rather than only checking that parsing produced no error.
 //!
@@ -27,8 +27,8 @@
 )]
 
 use cucumber::{given, then, when, World as _};
-use jianpu_generator::ast::grouped::{Metadata, TextStyle};
-use jianpu_generator::compile;
+use poentaro::ast::grouped::{Metadata, TextStyle};
+use poentaro::compile;
 
 #[derive(Debug, Default, cucumber::World)]
 struct TextStyleWorld {
@@ -49,7 +49,7 @@ fn when_compiled(world: &mut TextStyleWorld) {
         "# metadata\n{metadata_block}\n\n# parts\nMelody = notes\n\n# score\n[Melody] 1 2 3 4\n"
     );
     let score =
-        compile(&source, "test.jianpu", &[]).unwrap_or_else(|err| panic!("{}", err.message()));
+        compile(&source, "test.poentaro", &[]).unwrap_or_else(|err| panic!("{}", err.message()));
     world.errors = score
         .document_diagnostics
         .iter()

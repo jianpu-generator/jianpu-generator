@@ -31,12 +31,12 @@ const INDENTED_HEADER_LIKE_SOURCE = [
 async function loadSource(page: Page, source: string) {
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'code-lens.jianpu',
-        userFiles: { 'code-lens.jianpu': src },
+        active: 'code-lens.poentaro',
+        userFiles: { 'code-lens.poentaro': src },
         bin: {},
-        fileIds: { 'code-lens.jianpu': crypto.randomUUID() },
+        fileIds: { 'code-lens.poentaro': crypto.randomUUID() },
       }),
     )
   }, source)

@@ -19,7 +19,7 @@ const SOURCE: &str = concat!(
 fn render(visibility: &ResolvedPartVisibility) -> String {
     render_svgs_from_source_with_visibility(
         SOURCE,
-        "test.jianpu",
+        "test.poentaro",
         visibility,
         &[],
         NoteLabels::Degrees,
@@ -125,7 +125,7 @@ fn lyrics_only_measure_without_lyrics_is_a_blank_lyric_row_not_a_rest() {
 
     let svg = render_svgs_from_source_with_visibility(
         source,
-        "test.jianpu",
+        "test.poentaro",
         &melody_lyrics_only(),
         &[],
         NoteLabels::Degrees,

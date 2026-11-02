@@ -20,7 +20,7 @@
 
 use cucumber::gherkin::Step;
 use cucumber::{given, then, when, World as _};
-use jianpu_generator::format_source::format_score;
+use poentaro::format_source::format_score;
 
 #[derive(Debug, Default, cucumber::World)]
 struct FormatWorld {

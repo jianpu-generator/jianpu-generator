@@ -66,6 +66,11 @@ pub enum IrrecoverableErrorKind {
         span: Span,
         detail: String,
     },
+    /// The CLI's `--preset` names no `# preset` section in the file.
+    UnknownPreset {
+        span: Span,
+        name: String,
+    },
 }
 
 impl IrrecoverableErrorKind {

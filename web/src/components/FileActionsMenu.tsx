@@ -1,6 +1,7 @@
 import {
   ArchiveIcon,
   CopyIcon,
+  CounterClockwiseClockIcon,
   DotsHorizontalIcon,
   FilePlusIcon,
   GearIcon,
@@ -39,6 +40,8 @@ export interface FileActionsMenuProps {
   onShare: () => void
   onDelete: (name: string) => void
   onOpenBin: () => void
+  /** Absent outside cloud storage, which keeps no history. */
+  onOpenHistory?: () => void
   onOpenStorageSettings: () => void
 }
 
@@ -64,6 +67,7 @@ export function FileActionsMenu({
   onShare,
   onDelete,
   onOpenBin,
+  onOpenHistory,
   onOpenStorageSettings,
 }: FileActionsMenuProps) {
   const [actionsOpen, setActionsOpen] = useState(false)
@@ -167,6 +171,22 @@ export function FileActionsMenu({
             <Link2Icon aria-hidden="true" />
             Share
           </button>
+          {onOpenHistory ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="export-menu-item"
+              aria-haspopup="dialog"
+              disabled={isReadOnlyFile(activePath)}
+              onClick={() => {
+                setActionsOpen(false)
+                onOpenHistory()
+              }}
+            >
+              <CounterClockwiseClockIcon aria-hidden="true" />
+              History
+            </button>
+          ) : null}
           {onImportFile ? (
             <ImportButton
               disabled={isLoadingCloud}

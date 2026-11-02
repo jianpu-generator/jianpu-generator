@@ -1,3 +1,5 @@
+# Byte-exact diff fixtures (no final newline, mixed CRLF) must stay as written.
+exclude: ^crates/live-share-worker/tests/fixtures/file_history/
 repos:
   - repo: builtin
     hooks:

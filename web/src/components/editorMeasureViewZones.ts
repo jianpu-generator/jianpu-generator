@@ -2,11 +2,12 @@ import type { editor } from 'monaco-editor'
 import type { MeasureSpan } from '../types'
 import { byteOffsetToStringIndex } from '../utils/byteSpan'
 
+/** A measure's header row: its section label, or else its bar number. */
 export function createMeasureViewZoneDomNode(
-  span: MeasureSpan,
+  label: string | null,
   index: number,
 ): HTMLElement {
-  const hasLabel = span.sectionLabel != null
+  const hasLabel = label != null
   const domNode = document.createElement('div')
   domNode.style.cssText = [
     'width: 100%',
@@ -21,7 +22,7 @@ export function createMeasureViewZoneDomNode(
     'padding-left: 8px',
     'box-sizing: border-box',
   ].join(';')
-  domNode.textContent = span.sectionLabel ?? `${index + 1}`
+  domNode.textContent = label ?? `${index + 1}`
   return domNode
 }
 

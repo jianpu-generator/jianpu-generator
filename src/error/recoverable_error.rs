@@ -200,3 +200,6 @@ impl RecoverableError {
 
 #[path = "recoverable_error_parts.rs"]
 mod recoverable_error_parts;
+
+#[path = "recoverable_error_presets.rs"]
+mod recoverable_error_presets;

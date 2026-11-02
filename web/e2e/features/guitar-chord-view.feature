@@ -20,11 +20,6 @@ Feature: Guitar chord view
     Then the preview's note heads read "1, 2, 3, 4"
     And the preview's chord symbols read "1, 6m, 4, 5"
 
-  Scenario: The guitar chord view is remembered after a reload
-    When I switch the preview notation to "guitar"
-    And I reload the page
-    Then the preview's guitar chord diagrams read "x 3 2 0 1 0, x 0 2 2 1 0, 1 3 3 2 1 1, 3 2 0 0 0 3"
-
   Scenario: Exporting a PDF from the guitar chord view draws the diagrams
     When I export "PDF" from the preview, keeping it as the jianpu PDF
     And I switch the preview notation to "guitar"

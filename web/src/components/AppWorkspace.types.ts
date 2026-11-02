@@ -4,8 +4,9 @@ import type {
   MetadataEdit,
   MetadataFields,
   NoteTiming,
+  PartToggleState,
   SvgDocument,
-} from '../jianpuWasm'
+} from '../poentaroWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -15,6 +16,7 @@ import type {
   MeasureSpan,
   NoteSpan,
   PartDeclaration,
+  PartFocusSelectionHandle,
   PartInfo,
   PartSettings,
   PitchDescription,
@@ -41,6 +43,9 @@ export interface AppWorkspaceProps {
    * nothing to edit or expand back into. */
   hideEditor: boolean
   editorRef: RefObject<EditorHandle | null>
+  /** Set by the part focus editor while it is open, so the preview selects
+   * in it. */
+  partFocusHandleRef: RefObject<PartFocusSelectionHandle | null>
   fileId: string
   source: string
   handleSourceChange: (value: string) => void
@@ -108,6 +113,7 @@ export interface AppWorkspaceProps {
   previewAudioPlaying: boolean
   editMetadataOpen: boolean
   parsedMetadata: MetadataFields | null
+  metadataPresetName: string | null
   handleMetadataFieldChange: (edit: MetadataEdit) => void
   documents: SvgDocument[]
   highlightedDocuments: SvgDocument[]
@@ -162,4 +168,8 @@ export interface AppWorkspaceProps {
   measureAudioElement: HTMLAudioElement | null
   noPartsSelected: boolean
   staffNotation: StaffNotation
+  /** Passed through to the part focus editor's ghost lines. */
+  partToggles: PartToggleState
+  /** The part focus editor's draft source, which the preview follows. */
+  onPartFocusDraftChange: (draftSource: string | null) => void
 }

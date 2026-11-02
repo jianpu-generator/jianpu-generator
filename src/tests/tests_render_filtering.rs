@@ -18,7 +18,7 @@ fn list_parts_from_source_returns_declarations() {
         "[A1&T] 1 2 3 4\n",
         "[A1&Tv1] a b c d\n",
     );
-    let parts = list_parts_from_source(input, "test.jianpu", &[]).unwrap();
+    let parts = list_parts_from_source(input, "test.poentaro", &[]).unwrap();
     assert_eq!(parts.len(), 3);
     assert_eq!(parts[0].abbreviation, "main");
     assert_eq!(parts[0].display_name, "main");
@@ -48,12 +48,12 @@ fn hidden_lyrics_do_not_reserve_lyric_row_space() {
         "[Alto] 5 6 7 1\n",
         "[Altov1] alt alt alt alt\n",
     );
-    let all = render_svgs_from_source(input, "test.jianpu", &[])
+    let all = render_svgs_from_source(input, "test.poentaro", &[])
         .unwrap()
         .svgs;
     let alto_lyrics_hidden = render_svgs_from_source_filtered(
         input,
-        "test.jianpu",
+        "test.poentaro",
         Some(&["Soprano".into(), "Sopranov1".into(), "Alto".into()]),
         &[],
     )
@@ -86,12 +86,12 @@ fn render_svgs_from_source_filtered_can_hide_lyrics_per_part() {
         "[Alto] 5 6 7 1\n",
         "[Altov1] alt alt alt alt\n",
     );
-    let all = render_svgs_from_source(input, "test.jianpu", &[])
+    let all = render_svgs_from_source(input, "test.poentaro", &[])
         .unwrap()
         .svgs;
     let alto_lyrics_hidden = render_svgs_from_source_filtered(
         input,
-        "test.jianpu",
+        "test.poentaro",
         Some(&["Soprano".into(), "Sopranov1".into(), "Alto".into()]),
         &[],
     )
@@ -119,11 +119,11 @@ fn render_svgs_from_source_filtered_can_hide_parts() {
         "[Soprano] 1 2 3 4\n",
         "[Alto] 5 6 7 1\n",
     );
-    let all = render_svgs_from_source(input, "test.jianpu", &[])
+    let all = render_svgs_from_source(input, "test.poentaro", &[])
         .unwrap()
         .svgs;
     let soprano_only =
-        render_svgs_from_source_filtered(input, "test.jianpu", Some(&["Soprano".into()]), &[])
+        render_svgs_from_source_filtered(input, "test.poentaro", Some(&["Soprano".into()]), &[])
             .unwrap()
             .svgs;
     assert_ne!(all[0], soprano_only[0]);
@@ -145,14 +145,14 @@ fn render_svgs_from_source_filtered_hides_legend_entry_for_filtered_out_parts() 
         "[S] 1 2 3 4\n",
         "[A] 5 6 7 1\n",
     );
-    let all = render_svgs_from_source(input, "test.jianpu", &[])
+    let all = render_svgs_from_source(input, "test.poentaro", &[])
         .unwrap()
         .svgs;
     assert!(all[0].contains(">S ") || all[0].contains("S \u{2014}"));
     assert!(all[0].contains(">A ") || all[0].contains("A \u{2014}"));
 
     let soprano_only =
-        render_svgs_from_source_filtered(input, "test.jianpu", Some(&["S".into()]), &[])
+        render_svgs_from_source_filtered(input, "test.poentaro", Some(&["S".into()]), &[])
             .unwrap()
             .svgs;
     assert!(soprano_only[0].contains("S \u{2014} Soprano"));
@@ -177,7 +177,7 @@ fn render_documents_from_source_with_visibility_hides_legend_entry_for_filtered_
     );
     let soprano_only = render_documents_from_source_with_visibility(
         input,
-        "test.jianpu",
+        "test.poentaro",
         &ResolvedPartVisibility {
             rendered_tracks: Some(vec!["S".into()]),
             ..Default::default()
@@ -208,8 +208,9 @@ fn split_track_names_falls_back_to_part_declarations() {
         "[Melody] 1 2 3 4\n",
         "[Melodyv1] a b c d\n",
     );
-    let score = compile(input, "test.jianpu", &[]).unwrap();
-    let names = split_track_names(input, "test.jianpu", &score, &[]).unwrap();
+    let score = compile(input, "test.poentaro", &[]).unwrap();
+    let names =
+        split_track_names(input, "test.poentaro", &score, SplitSelection::default()).unwrap();
     assert_eq!(names, vec!["Melody"]);
 }
 
@@ -245,7 +246,7 @@ fn apply_track_filter_keeps_only_enabled_lyric_parts() {
         "[Alto] 5 6 7 1\n",
         "[Altov1] alt alt alt alt\n",
     );
-    let mut score = compile(input, "test.jianpu", &[]).unwrap();
+    let mut score = compile(input, "test.poentaro", &[]).unwrap();
     apply_track_filter(
         &mut score,
         Some(&["Soprano".into(), "Alto".into(), "Altov1".into()]),
@@ -274,7 +275,7 @@ fn apply_track_filter_keeps_a_lyric_part_whose_target_is_hidden() {
         "[M] 1 2 3 4\n",
         "[v1] do re mi fa\n",
     );
-    let mut score = compile(input, "test.jianpu", &[]).unwrap();
+    let mut score = compile(input, "test.poentaro", &[]).unwrap();
     apply_track_filter(&mut score, Some(&["v1".into()]));
     assert_eq!(score.measures[0].parts.len(), 1);
     let lyrics = score.measures[0].parts[0].slice().lyrics.as_ref().unwrap();
@@ -301,7 +302,7 @@ fn key_prefix_only_b_omits_rest_filled_a() {
         "# score\n",
         "[B] 1 2 3 4\n",
     );
-    let svgs = render_svgs_from_source(input, "test.jianpu", &[])
+    let svgs = render_svgs_from_source(input, "test.poentaro", &[])
         .unwrap()
         .svgs;
     let svg = &svgs[0];
@@ -316,4 +317,68 @@ fn key_prefix_only_b_omits_rest_filled_a() {
     assert!(svg.contains(">3<"), "part B note 3 should appear");
     assert!(svg.contains(">4<"), "part B note 4 should appear");
     assert!(!svg.contains(">0<"), "part A rests should not appear");
+}
+
+#[test]
+fn rendering_under_a_preset_draws_its_header_text() {
+    let input = concat!(
+        "# metadata\n",
+        "title = \"Song\"\n",
+        "subtitle = \"Base subtitle\"\n",
+        "\n",
+        "# parts\n",
+        "Soprano [S] = notes\n",
+        "\n",
+        "# score\n",
+        "time=4/4 key=C4 bpm=120\n",
+        "[S] 1 2 3 4\n",
+        "\n",
+        "# preset \"Choir\"\n",
+        "subtitle = \"Choir subtitle\"\n",
+    );
+    let render = |preset_name: Option<&str>| {
+        let documents = render_documents_from_source_with_visibility(
+            input,
+            "test.poentaro",
+            &ResolvedPartVisibility {
+                preset_name: preset_name.map(str::to_string),
+                ..Default::default()
+            },
+            &[],
+            NoteLabels::Degrees,
+        )
+        .unwrap()
+        .documents;
+        serializer::serialize(&documents, None).concat()
+    };
+    assert!(render(Some("Choir")).contains("Choir subtitle"));
+    assert!(render(None).contains("Base subtitle"));
+    assert!(render(Some("Gone")).contains("Base subtitle"));
+}
+
+#[test]
+fn chosen_preset_from_source_reads_the_named_preset() {
+    let input = concat!(
+        "# parts\n",
+        "Soprano [S] = notes\n",
+        "Alto [A] = notes\n",
+        "\n",
+        "# score\n",
+        "[S] 1\n",
+        "[A] 2\n",
+        "\n",
+        "# preset \"Choir\"\n",
+        "visible_parts = A\n",
+    );
+    assert_eq!(
+        chosen_preset_from_source(input, "test.poentaro", "Choir").unwrap(),
+        Some(ChosenPreset {
+            name: "Choir".to_string(),
+            visible_parts: Some(vec!["A".to_string()]),
+        })
+    );
+    assert_eq!(
+        chosen_preset_from_source(input, "test.poentaro", "Gone").unwrap(),
+        None
+    );
 }

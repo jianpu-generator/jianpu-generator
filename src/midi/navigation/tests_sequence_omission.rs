@@ -80,7 +80,7 @@ fn measure_with_parts(index: usize, part_names: &[&str]) -> MultiPartMeasure {
                 PartRow::Timed(PartSlice {
                     name: Some(name.to_string()),
                     kind: PartKind::Notes,
-                    soundfont: Soundfont::default(),
+                    soundfont: Soundfont::CHOIR_AAHS,
                     volume: 100,
                     octave_offset: 0,
                     notes: Notes { events: vec![] },

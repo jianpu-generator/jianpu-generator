@@ -3,7 +3,7 @@ import type {
   MetadataFlagKey,
   MetadataNumberKey,
   TextStyleKind,
-} from '../jianpuWasm'
+} from '../poentaroWasm'
 
 /** Markdown help text shown in the field-help modal, keyed by the generated
  * wasm key types: the 13 `TextStyleKind`s (shared by both the content row

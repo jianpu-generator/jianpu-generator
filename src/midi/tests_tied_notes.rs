@@ -29,7 +29,7 @@ fn tied_note_part(tied: bool) -> PartRow {
         resolution_multiplier: 1,
         beat_group_size: 4,
         kind: PartKind::Notes,
-        soundfont: Soundfont::default(),
+        soundfont: Soundfont::CHOIR_AAHS,
         volume: 100,
         octave_offset: 0,
         notes: Notes {

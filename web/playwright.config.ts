@@ -78,6 +78,20 @@ export default defineConfig({
       },
     },
     {
+      // The bridge page the app's old origins serve (see "Origin migration"
+      // in ARCHITECTURE.md), standing in for the old origin on its own port
+      // and pointed at the app above.
+      command:
+        'pnpm exec vite --config vite.bridge.config.ts --port 5184 --strictPort',
+      url: 'http://localhost:5184',
+      reuseExistingServer: true,
+      timeout: 60_000,
+      env: {
+        VITE_SYNCED_SHARE_HOST: 'localhost:8797',
+        VITE_ORIGIN_MIGRATION_TARGET: 'http://localhost:5183',
+      },
+    },
+    {
       // Plain HTTP (no `--local-protocol https`): `syncedShareWorkerOrigin`
       // (`web/src/syncedShare/workerUrl.ts`) only uses `https://` for the
       // real `*.workers.dev` host, plain `http://` for localhost -- avoids

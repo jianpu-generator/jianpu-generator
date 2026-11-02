@@ -156,7 +156,12 @@ pub fn render_documents_from_source_with_visibility(
         crate::list_parts_from_source(source, filename, instruments)?,
         enabled_tracks,
     );
-    let mut score = crate::compile(source, filename, instruments)?;
+    let mut score = crate::compile_with_preset(
+        source,
+        filename,
+        instruments,
+        visibility.preset_name.as_deref(),
+    )?;
     crate::apply_track_filter(&mut score, enabled_tracks);
     let mut diagnostics = crate::collect_measure_diagnostics(&score);
     let result = render_documents(&score, &parts, note_labels)?;
@@ -185,7 +190,12 @@ pub fn render_mei_from_source_with_visibility(
     .into_iter()
     .map(|part| (part.abbreviation, part.display_name))
     .collect();
-    let mut score = crate::compile(source, filename, instruments)?;
+    let mut score = crate::compile_with_preset(
+        source,
+        filename,
+        instruments,
+        visibility.preset_name.as_deref(),
+    )?;
     crate::apply_track_filter(&mut score, enabled_tracks);
     Ok(crate::mei_export::score_to_mei(
         &score,
@@ -209,7 +219,12 @@ pub fn render_documents_with_highlight_range_and_visibility(
         crate::list_parts_from_source(source, filename, instruments)?,
         enabled_tracks,
     );
-    let mut score = crate::compile(source, filename, instruments)?;
+    let mut score = crate::compile_with_preset(
+        source,
+        filename,
+        instruments,
+        visibility.preset_name.as_deref(),
+    )?;
     crate::apply_track_filter(&mut score, enabled_tracks);
     let mut diagnostics = crate::collect_measure_diagnostics(&score);
     let result = render_documents_with_range(&score, &parts, measure_ranges, note_labels)?;

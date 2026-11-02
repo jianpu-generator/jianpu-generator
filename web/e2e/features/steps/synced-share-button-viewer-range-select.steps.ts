@@ -70,7 +70,7 @@ Then("the viewer's file switcher shows the synced filename", async () => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   if (!state.ownerFileName) throw new Error('ownerFileName was not seeded yet')
   await expect(fileSwitcherTrigger(state.viewerPage)).toContainText(
-    state.ownerFileName.replace(/\.jianpu$/, ''),
+    state.ownerFileName.replace(/\.poentaro$/, ''),
   )
 })
 
@@ -236,7 +236,7 @@ Then("the viewer's note highlight still shows after settling", async () => {
   if (!state.viewerPage) throw new Error('viewerPage was not opened yet')
   // Regression coverage: a no-mounted-editor measure/bar-line selection
   // used to paint its blue note highlight instantly, then lose it entirely
-  // once `notifySelection`'s debounce (`useJianpuWorkerRenderRequests.ts`,
+  // once `notifySelection`'s debounce (`usePoentaroWorkerRenderRequests.ts`,
   // 300ms default) fired and re-ran `Preview.tsx`'s persisted-highlight
   // effect from `selectedNoteCells`/`selectedLyricCells` — which this
   // no-mounted-editor gesture never updated (see

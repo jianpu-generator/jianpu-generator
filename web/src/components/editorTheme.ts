@@ -1,7 +1,7 @@
 import type { Monaco } from '@monaco-editor/react'
-import type { HighlightKind } from '../jianpuWasm'
+import type { HighlightKind } from '../poentaroWasm'
 
-export const EDITOR_THEME = 'jianpu'
+export const EDITOR_THEME = 'poentaro'
 // Matches preview measure highlight (rgba(255, 200, 0, 0.25)); Monaco only accepts hex.
 const MEASURE_HIGHLIGHT_COLOR = '#ffc80040'
 
@@ -19,7 +19,7 @@ export const highlightKindStyles: Record<HighlightKind, TokenStyle> = {
   'directive-key': { foreground: '0000ff' },
 }
 
-export function defineJianpuEditorTheme(monacoApi: Monaco) {
+export function definePoentaroEditorTheme(monacoApi: Monaco) {
   monacoApi.editor.defineTheme(EDITOR_THEME, {
     base: 'vs',
     inherit: true,

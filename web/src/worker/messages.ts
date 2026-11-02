@@ -4,7 +4,7 @@ import type {
   StaffClef,
   StaffMeasure,
   SvgDocument,
-} from '../jianpuWasm'
+} from '../poentaroWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -28,7 +28,7 @@ import type { NoteCell } from '../utils/noteSpanSelection'
  * layout with letter names (`D E F♯`) in place of degree numbers; `guitar` is
  * the jianpu layout with each degree followed by its letter name (`1 (D)`)
  * and a guitar chord diagram at each chord symbol; and
- * `harmonica` the jianpu layout with diatonic harmonica tabs (`4 -4 5`). */
+ * `harmonica` the jianpu layout with chromatic harmonica tabs (`1 (1) 2`). */
 export type Notation =
   | 'jianpu'
   | 'violin'
@@ -91,6 +91,9 @@ export type WorkerRequest =
       source: string
       id: number
       baseName: string
+      /** The preset in force: only its parts are split, and the files are
+       * named after it. */
+      presetName?: string
       notation: Notation
     }
   | {
@@ -104,12 +107,14 @@ export type WorkerRequest =
       source: string
       id: number
       baseName: string
+      presetName?: string
     }
   | {
       type: 'generateSplitWav'
       source: string
       id: number
       baseName: string
+      presetName?: string
     }
   | {
       type: 'generateMp3'
@@ -122,6 +127,7 @@ export type WorkerRequest =
       source: string
       id: number
       baseName: string
+      presetName?: string
     }
   | {
       type: 'generateAudio'
@@ -168,7 +174,7 @@ export type WorkerRequest =
        * When present, narrows the generated clip down to exactly these
        * range-selected `(sourcePartIndex, noteId)` cells' elapsed-seconds
        * span (sample-accurately trimmed/faded in Rust — see
-       * `jianpu_generator::wav::TrimWindow`) instead of playing the whole
+       * `poentaro::wav::TrimWindow`) instead of playing the whole
        * `[startMeasureIndex, endMeasureIndex]` range — what the web app's
        * "play selection" needs. Omit for every other measure-range playback
        * (e.g. "play current measure"/"play from current measure"/"play

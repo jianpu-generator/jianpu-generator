@@ -15,7 +15,7 @@ const SOURCE = [
 
 async function getStoredSource(page: import('@playwright/test').Page) {
   return page.evaluate(() => {
-    const raw = localStorage.getItem('jianpu:files:v1')
+    const raw = localStorage.getItem('poentaro:files:v1')
     if (!raw) return ''
     const store = JSON.parse(raw) as {
       active: string
@@ -31,7 +31,7 @@ Given(
     await page.addInitScript(
       ({ src, fileName }) => {
         localStorage.setItem(
-          'jianpu:files:v1',
+          'poentaro:files:v1',
           JSON.stringify({
             active: fileName,
             userFiles: { [fileName]: src },

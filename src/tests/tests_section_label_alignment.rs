@@ -50,7 +50,7 @@ fn section_labels_align_when_leading_measures_are_hidden_via_part_filter() {
 
     let svgs = render_svgs_from_source_filtered(
         input,
-        "test.jianpu",
+        "test.poentaro",
         Some(&["b".into(), "c".into()]),
         &[],
     )

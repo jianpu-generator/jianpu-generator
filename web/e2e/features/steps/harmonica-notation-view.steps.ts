@@ -1,7 +1,9 @@
 import { expect } from '@playwright/test'
+import { variantSelector } from '../../../src/dataAttributes'
 import { Given, Then } from './fixtures'
 
-// The last measure's `5,,` sits below a C harmonica's lowest hole.
+// The last measure's `5,,` sits below the harmonica's lowest hole (middle
+// C), and its `4#` (F♯) is played with the slide button pressed in.
 const SOURCE = [
   '# metadata',
   'title = "Harmonica View Test"',
@@ -15,7 +17,7 @@ const SOURCE = [
   '',
   "[M] 5 6 7 1'",
   '',
-  "[M] 5,, 1, 3' 1''",
+  "[M] 5,, 4# 3' 1''",
 ].join('\n')
 
 Given(
@@ -23,12 +25,12 @@ Given(
   async ({ page }) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'harmonica.jianpu',
-          userFiles: { 'harmonica.jianpu': src },
+          active: 'harmonica.poentaro',
+          userFiles: { 'harmonica.poentaro': src },
           bin: {},
-          fileIds: { 'harmonica.jianpu': crypto.randomUUID() },
+          fileIds: { 'harmonica.poentaro': crypto.randomUUID() },
         }),
       )
     }, SOURCE)
@@ -43,5 +45,17 @@ Then(
     await expect(
       page.locator('.preview-page text[data-variant="unplayable-note-head"]'),
     ).toHaveText(expected.split(' '))
+  },
+)
+
+/** Each slide arrow is drawn as three strokes: a shaft and its head's two. */
+const STROKES_PER_SLIDE_ARROW = 3
+
+Then(
+  'the preview draws {int} slide arrow(s)',
+  async ({ page }, expected: number) => {
+    await expect(
+      page.locator(`.preview-page line${variantSelector('harmonica-slide')}`),
+    ).toHaveCount(expected * STROKES_PER_SLIDE_ARROW)
   },
 )

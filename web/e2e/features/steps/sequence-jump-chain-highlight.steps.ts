@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test'
 import { tagSelector } from '../../../src/dataAttributes'
+import { waitForAssetLoadingBannerGone } from '../../assetLoadingHelpers'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
@@ -70,13 +71,13 @@ Given(
   ) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'sequence-chain-highlight-test.jianpu',
-          userFiles: { 'sequence-chain-highlight-test.jianpu': src },
+          active: 'sequence-chain-highlight-test.poentaro',
+          userFiles: { 'sequence-chain-highlight-test.poentaro': src },
           bin: {},
           fileIds: {
-            'sequence-chain-highlight-test.jianpu': crypto.randomUUID(),
+            'sequence-chain-highlight-test.poentaro': crypto.randomUUID(),
           },
         }),
       )
@@ -92,6 +93,7 @@ When(
     await expect(sequenceToolbarButtons(page)).toHaveCount(4, {
       timeout: 15_000,
     })
+    await waitForAssetLoadingBannerGone(page)
     // The toolbar can render before Monaco mounts (it comes from the worker's
     // parse); a drag before then selects nothing in the editor.
     await page.waitForFunction(

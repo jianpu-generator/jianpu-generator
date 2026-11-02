@@ -98,7 +98,7 @@ fn chord_major_expands_to_three_notes() {
                 resolution_multiplier: 1,
                 beat_group_size: 4,
                 kind: PartKind::Chords,
-                soundfont: Soundfont::default(),
+                soundfont: Soundfont::CHOIR_AAHS,
                 volume: 100,
                 octave_offset: 0,
                 notes: Notes {
@@ -215,7 +215,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
                 resolution_multiplier: 1,
                 beat_group_size: 4,
                 kind: PartKind::Notes,
-                soundfont: Soundfont::default(),
+                soundfont: Soundfont::CHOIR_AAHS,
                 volume: 100,
                 octave_offset: 0,
                 notes: Notes {

@@ -5,7 +5,7 @@ import {
   tagHasPointerCursor,
 } from '../dataAttributes'
 import { previewFontFamilyCss } from '../fontRoles'
-import type { SvgDocument } from '../jianpuWasm'
+import type { SvgDocument } from '../poentaroWasm'
 
 /** Renders `doc.elements[index]` — the Rust side flattens the element tree
  * into this arena in pre-order, with each group naming its children by
@@ -92,6 +92,7 @@ function renderSvgElement(doc: SvgDocument, index: number): ReactNode {
           y1={el.y}
           x2={kind.x2}
           y2={kind.y2}
+          data-variant={el.variantTag satisfies DataVariant | undefined}
           stroke="black"
           strokeWidth={kind.strokeWidth}
         />

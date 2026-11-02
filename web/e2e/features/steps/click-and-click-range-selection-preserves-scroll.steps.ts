@@ -46,13 +46,13 @@ Given(
   async ({ page }) => {
     await page.addInitScript((source) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'scroll-preserving-range-test.jianpu',
-          userFiles: { 'scroll-preserving-range-test.jianpu': source },
+          active: 'scroll-preserving-range-test.poentaro',
+          userFiles: { 'scroll-preserving-range-test.poentaro': source },
           bin: {},
           fileIds: {
-            'scroll-preserving-range-test.jianpu':
+            'scroll-preserving-range-test.poentaro':
               'scroll-preserving-range-test-id-001',
           },
         }),

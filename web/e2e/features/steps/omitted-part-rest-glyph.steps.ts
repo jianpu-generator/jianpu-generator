@@ -66,13 +66,13 @@ When('the omitted-part-rest-glyph score is laid out', async ({ page }) => {
   const source = buildSource()
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'omitted-part-rest-glyph-test.jianpu',
-        userFiles: { 'omitted-part-rest-glyph-test.jianpu': src },
+        active: 'omitted-part-rest-glyph-test.poentaro',
+        userFiles: { 'omitted-part-rest-glyph-test.poentaro': src },
         bin: {},
         fileIds: {
-          'omitted-part-rest-glyph-test.jianpu':
+          'omitted-part-rest-glyph-test.poentaro':
             'omitted-part-rest-glyph-test-id-001',
         },
       }),

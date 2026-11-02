@@ -12,7 +12,7 @@ import { Given, Then, When } from './fixtures'
  * *after* a currently-hidden part.
  *
  * Root cause: `noteSpans` (fetched via the `listNoteSpans` worker message,
- * see `jianpu.worker.ts`) comes from `list_note_spans_from_source`, which
+ * see `poentaro.worker.ts`) comes from `list_note_spans_from_source`, which
  * used to compile the score with no track filter at all — so each span's
  * `sourcePartIndex` was the event's raw index into `MultiPartMeasure::parts`,
  * i.e. every declared part counted, including hidden ones.
@@ -37,7 +37,7 @@ import { Given, Then, When } from './fixtures'
  * walking the score, so their indices always match whatever the renderer
  * used for the same `enabledTracks`. The frontend now threads the current
  * `enabledTracks` through the `listNoteSpans`/`listLyricSpans` worker
- * messages (see `useJianpuWorkerRenderRequests.ts`) instead of omitting it.
+ * messages (see `usePoentaroWorkerRenderRequests.ts`) instead of omitting it.
  *
  * Fixture: three parts, Melody / Harmony / Bass, two systems (one measure
  * each). Harmony (the middle part) is hidden, which compacts Bass from
@@ -74,13 +74,13 @@ const source = [
 async function loadFixture(page: import('@playwright/test').Page) {
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'measure-range-hidden-part-test.jianpu',
-        userFiles: { 'measure-range-hidden-part-test.jianpu': src },
+        active: 'measure-range-hidden-part-test.poentaro',
+        userFiles: { 'measure-range-hidden-part-test.poentaro': src },
         bin: {},
         fileIds: {
-          'measure-range-hidden-part-test.jianpu':
+          'measure-range-hidden-part-test.poentaro':
             'measure-range-hidden-part-test-id-001',
         },
       }),

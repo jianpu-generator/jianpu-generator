@@ -1,6 +1,6 @@
 use super::{
-    block_column_width, chord_part_sub_row_heights, is_chord_only_row, is_lyric_row,
-    lyric_row_height, note_part_height_pt, LyricSizing, SystemBands,
+    block_column_width, build_measure_column_layout, chord_part_sub_row_heights, is_chord_only_row,
+    is_lyric_row, lyric_row_height, note_part_height_pt, LyricSizing, SystemBands,
 };
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
 use crate::render_config::RenderConfig;
@@ -270,17 +270,18 @@ fn clear_label_if_lone_resting_row(padded: &mut [MeasureBlock]) {
 /// always starts a new system, even if the current one has room left under
 /// `max_measures_per_system` — a no-op if the block would already be first
 /// in its system.
+///
+/// `max_measures_per_system` is only a ceiling: a block also starts a new
+/// system when adding it would push the system's summed column rods past
+/// `usable_music_width_pt` (see [`overflows_with`]), so a view with wider
+/// note heads (e.g. guitar's `1 (C)`) breaks earlier instead of overflowing
+/// the page. A block that overflows on its own still gets a system to
+/// itself — the overflow warning then flags it.
 pub(crate) fn pack_into_systems(
     blocks: &[MeasureBlock],
     config: &RenderConfig,
+    usable_music_width_pt: f32,
 ) -> Vec<Vec<MeasureBlock>> {
-    fn finish_chunk(chunk: &[MeasureBlock]) -> Vec<MeasureBlock> {
-        let union = union_row_order(chunk);
-        let mut padded = pad_chunk_to_union(chunk, &union);
-        clear_label_if_lone_resting_row(&mut padded);
-        padded
-    }
-
     let mut systems: Vec<Vec<MeasureBlock>> = Vec::new();
     let mut current: Vec<MeasureBlock> = Vec::new();
 
@@ -290,6 +291,7 @@ pub(crate) fn pack_into_systems(
                 || block.merge_duplicate_measures_across_parts
                     != first.merge_duplicate_measures_across_parts
                 || block.system_break
+                || overflows_with(&current, block, config, usable_music_width_pt)
         } else {
             false
         };
@@ -306,6 +308,36 @@ pub(crate) fn pack_into_systems(
     }
 
     systems
+}
+
+/// `chunk`'s blocks padded to their union of rows, ready to be a system.
+fn finish_chunk(chunk: &[MeasureBlock]) -> Vec<MeasureBlock> {
+    let union = union_row_order(chunk);
+    let mut padded = pad_chunk_to_union(chunk, &union);
+    clear_label_if_lone_resting_row(&mut padded);
+    padded
+}
+
+/// Whether appending `block` to `current` would make a system whose summed
+/// column rods exceed `usable_music_width_pt`. Measured on the padded
+/// candidate system, since a block's rows (and so its rods) depend on the
+/// union of rows across the system it lands in.
+fn overflows_with(
+    current: &[MeasureBlock],
+    block: &MeasureBlock,
+    config: &RenderConfig,
+    usable_music_width_pt: f32,
+) -> bool {
+    let candidate = current
+        .iter()
+        .chain(std::iter::once(block))
+        .cloned()
+        .collect_vec();
+    let total_rod: f32 = build_measure_column_layout(&finish_chunk(&candidate), config)
+        .iter()
+        .map(|m| m.rod_pt)
+        .sum();
+    total_rod > usable_music_width_pt
 }
 
 pub(crate) fn compute_bar_height(

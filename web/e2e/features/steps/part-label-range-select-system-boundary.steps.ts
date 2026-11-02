@@ -34,13 +34,13 @@ const source = [
 async function loadFixture(page: import('@playwright/test').Page) {
   await page.addInitScript((source) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'part-label-range-system-boundary-test.jianpu',
-        userFiles: { 'part-label-range-system-boundary-test.jianpu': source },
+        active: 'part-label-range-system-boundary-test.poentaro',
+        userFiles: { 'part-label-range-system-boundary-test.poentaro': source },
         bin: {},
         fileIds: {
-          'part-label-range-system-boundary-test.jianpu':
+          'part-label-range-system-boundary-test.poentaro':
             'part-label-range-system-boundary-test-id-001',
         },
       }),

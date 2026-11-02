@@ -1,5 +1,6 @@
 mod metadata_edit;
 mod octave_shift;
+mod preset_edit;
 mod range_edit;
 mod slur_toggle;
 mod tie_toggle;
@@ -7,10 +8,15 @@ pub use metadata_edit::{
     parse_metadata_fields, update_metadata_field, MetadataEdit, MetadataFields,
 };
 pub use octave_shift::{shift_part_octave, shift_range_octave};
+pub use preset_edit::{
+    add_preset_section, follow_preset_rename, list_presets, new_preset_name_error,
+    set_preset_part_shown, update_preset_field, NewPreset, PartShown, PresetEdit, PresetSummary,
+};
 pub use range_edit::{ByteRange, RangeEditResult};
 pub use slur_toggle::toggle_range_slur;
 pub use tie_toggle::toggle_range_tie;
 
+use crate::ast::parsed::RangeInstrument;
 use crate::parser::parts_parser::{
     InstrumentInfo, SourcePartMode, DEFAULT_PART_OCTAVE_OFFSET, DEFAULT_PART_VOLUME,
     PART_SETTING_LIMITS,
@@ -60,6 +66,10 @@ impl PartMode {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PartSettings {
     pub mode: PartMode,
+    /// The instrument whose range the part's notes are checked against;
+    /// `None` when the line names none (a follow part then inherits its
+    /// target's).
+    pub range_instrument: Option<RangeInstrument>,
     /// The quoted sound's GM program number (a GM percussion key on a
     /// percussion part); `None` when the line quotes no sound.
     pub program: Option<u8>,
@@ -142,8 +152,13 @@ pub fn update_part_declaration(
     };
 
     let new_rhs = settings.mode.to_rhs_str();
-    let new_line =
-        format!("{lhs_with_eq} {new_rhs}{soundfont_suffix}{volume_suffix}{octave_suffix}");
+    let instrument_suffix = settings
+        .range_instrument
+        .map(|instrument| format!(" {}", instrument.keyword()))
+        .unwrap_or_default();
+    let new_line = format!(
+        "{lhs_with_eq} {new_rhs}{instrument_suffix}{soundfont_suffix}{volume_suffix}{octave_suffix}"
+    );
 
     let result = lines
         .iter()

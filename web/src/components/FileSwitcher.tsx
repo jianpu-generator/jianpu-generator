@@ -48,11 +48,13 @@ export function FileSwitcher({
   duplicating = false,
   renamingName = null,
   isLoadingCloud = false,
+  cloudLoadFailure = null,
   importing = false,
   onImportFile,
   binNames,
   onOpenBin,
   onOpenSyncPanel,
+  onOpenHistory,
   canSync,
   isSynced,
   syncedShareLink,
@@ -142,6 +144,7 @@ export function FileSwitcher({
           onQueryChange={setQuery}
           rows={rows}
           isLoadingCloud={isLoadingCloud}
+          cloudLoadFailure={cloudLoadFailure}
           storeIsEmpty={showEmptyHint}
           creating={creating}
           creatingFolder={creatingFolder}
@@ -205,6 +208,7 @@ export function FileSwitcher({
         onShare={() => setShareModalOpen(true)}
         onDelete={onDelete}
         onOpenBin={onOpenBin}
+        onOpenHistory={onOpenHistory}
         onOpenStorageSettings={onOpenStorageSettings}
       />
       <RenameFileDialog

@@ -150,3 +150,45 @@ fn section_header_kind_ignores_spacing() {
     assert_eq!(section_header_kind("#    metadata  "), Some("metadata"));
     assert_eq!(section_header_kind("title = 1"), None);
 }
+
+#[test]
+fn preset_header_carries_its_name_and_span() {
+    let input = "# metadata\n#  preset   \"Soprano 1\"  \nrow_height = 30\n";
+    let (sections, errors) = split_sections(input);
+    assert!(errors.is_empty());
+    assert_eq!(sections[1].kind, SectionKind::Preset);
+    assert_eq!(sections[1].content.trim(), "row_height = 30");
+    let name = sections[1].preset_name.clone().expect("preset name");
+    assert_eq!(name.text, "Soprano 1");
+    assert_eq!(&input[name.span.start..name.span.end], "\"Soprano 1\"");
+    assert_eq!(sections[0].preset_name, None);
+}
+
+#[test]
+fn preset_header_without_quoted_name_is_skipped_with_error() {
+    for header in [
+        "# preset",
+        "# preset Choir",
+        "# preset \"\"",
+        "# preset \"a\"b\"",
+    ] {
+        let input = format!("{header}\nrow_height = 30\n# parts\nMelody = notes\n");
+        let (sections, errors) = split_sections(&input);
+        assert!(
+            matches!(errors.as_slice(), [error] if error.kind == RecoverableErrorKind::PresetMissingName),
+            "{header}: {errors:?}"
+        );
+        assert_eq!(sections.len(), 1, "{header}");
+        assert_eq!(sections[0].kind, SectionKind::Parts);
+    }
+}
+
+#[test]
+fn presets_header_is_an_unknown_section() {
+    let (sections, errors) = split_sections("# presets \"A\"\nrow_height = 1\n");
+    assert!(sections.is_empty());
+    assert!(matches!(
+        &errors[0].kind,
+        RecoverableErrorKind::SectionUnknown { .. }
+    ));
+}

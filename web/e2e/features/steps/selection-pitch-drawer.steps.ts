@@ -55,12 +55,12 @@ function noteIdOf(label: string, token: string) {
 async function loadScore(page: Page, source: string) {
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'pitch-drawer-test.jianpu',
-        userFiles: { 'pitch-drawer-test.jianpu': src },
+        active: 'pitch-drawer-test.poentaro',
+        userFiles: { 'pitch-drawer-test.poentaro': src },
         bin: {},
-        fileIds: { 'pitch-drawer-test.jianpu': crypto.randomUUID() },
+        fileIds: { 'pitch-drawer-test.poentaro': crypto.randomUUID() },
       }),
     )
   }, source)
@@ -147,7 +147,7 @@ Given(
     })
     await gotoShareUrl(
       page,
-      'pitch-drawer-test.jianpu',
+      'pitch-drawer-test.poentaro',
       scoreSource(key, 'Melody [M] = notes', body),
     )
     await expect(page.getByText('Import this score')).toBeVisible({
@@ -330,15 +330,6 @@ Then(
 )
 
 Then(
-  'the pitch drawer shows a guitar diagram with frets {string}',
-  async ({ page }, frets: string) => {
-    await expect(
-      page.getByTestId('pitch-drawer-guitar-diagram').locator('svg'),
-    ).toHaveAttribute('data-guitar-frets', frets, { timeout: 10_000 })
-  },
-)
-
-Then(
   'the pitch drawer shows a keyboard with tones {string}',
   async ({ page }, tones: string) => {
     await expect(
@@ -365,15 +356,6 @@ Then(
     )
   },
 )
-
-Then('the pitch drawer shows no guitar diagram', async ({ page }) => {
-  // Wait for the drawer's content to be in place first, so this doesn't
-  // pass before the description arrives.
-  await expect(page.getByTestId('pitch-drawer-letter-names')).toBeVisible({
-    timeout: 10_000,
-  })
-  await expect(page.getByTestId('pitch-drawer-guitar-diagram')).toHaveCount(0)
-})
 
 Then(
   'the note {string} on the M line is still range-selected',

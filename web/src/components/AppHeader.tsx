@@ -1,10 +1,11 @@
 import type { FileStoreState } from '../fileStore'
 import { sortedBinNames } from '../fileStore'
+import type { CloudLoadFailure } from '../hooks/useCloudStoreLoader'
 import type { FolderShares } from '../hooks/useFolderShares'
 import type { SharedFolderViewer } from '../hooks/useSharedFolderViewer'
 import type { DisplaySaveStatus } from '../hooks/useStorageBackend'
 import type { SyncedShareViewerStatus } from '../hooks/useSyncedShareViewer'
-import type { SelectionMove, SelectionUnit } from '../jianpuWasm'
+import type { SelectionMove, SelectionUnit } from '../poentaroWasm'
 import type { SharePayload } from '../shareUrl'
 import type { SyncedShareFailure } from '../syncedShare/errors'
 import {
@@ -41,6 +42,7 @@ interface SyncedShareHeaderProps {
   viewerStatus: SyncedShareViewerStatus
   viewerFilename: string | null
   onImportSyncedShare: () => void
+  onDiscardSyncedShare: () => void
   /** Whether the active file can have a live link (cloud files only) --
    * see `useSyncedShareOwner.ts`. */
   canSync: boolean
@@ -110,8 +112,10 @@ interface AppHeaderProps {
   duplicatingFile?: boolean
   renamingFileName?: string | null
   isLoadingCloud?: boolean
+  cloudLoadFailure?: CloudLoadFailure | null
   onOpenBin: () => void
   onOpenSyncPanel?: () => void
+  onOpenHistory?: () => void
   hasDocuments: boolean
   rendering: boolean
   audioGenerating?: boolean
@@ -182,8 +186,10 @@ export function AppHeader({
   duplicatingFile,
   renamingFileName,
   isLoadingCloud,
+  cloudLoadFailure,
   onOpenBin,
   onOpenSyncPanel,
+  onOpenHistory,
   hasDocuments,
   rendering,
   audioGenerating,
@@ -243,6 +249,7 @@ export function AppHeader({
                 ? sharedFolder.onImport
                 : syncedShare.onImportSyncedShare
             }
+            onDiscard={syncedShare.onDiscardSyncedShare}
           />
         )
       )}
@@ -327,11 +334,13 @@ export function AppHeader({
             duplicating={duplicatingFile}
             renamingName={renamingFileName}
             isLoadingCloud={isLoadingCloud}
+            cloudLoadFailure={cloudLoadFailure}
             importing={importing}
             onImportFile={onImportFile}
             binNames={sortedBinNames(store)}
             onOpenBin={onOpenBin}
             onOpenSyncPanel={onOpenSyncPanel}
+            onOpenHistory={onOpenHistory}
             canSync={syncedShare.canSync}
             isSynced={syncedShare.isSynced}
             syncedShareLink={syncedShare.syncedShareLink}

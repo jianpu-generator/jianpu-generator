@@ -4,9 +4,13 @@ mod events;
 mod metadata_access;
 mod metadata_keys;
 mod pitch;
+mod preset;
+mod range_instrument;
 pub use events::*;
 pub use metadata_keys::*;
 pub use pitch::*;
+pub use preset::*;
+pub use range_instrument::*;
 
 #[derive(Debug)]
 pub enum ParsedMeasureSlot {
@@ -29,10 +33,11 @@ pub struct ParsedLyrics {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Soundfont(pub u8);
 
-impl Default for Soundfont {
-    fn default() -> Self {
-        Self(52) // Choir Aahs
-    }
+impl Soundfont {
+    pub const ACOUSTIC_GRAND_PIANO: Self = Self(0);
+    pub const CHOIR_AAHS: Self = Self(52);
+    /// A GM percussion key (not a program), for `percussion` parts.
+    pub const ACOUSTIC_SNARE: Self = Self(38);
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -48,6 +53,9 @@ pub struct PartDecl {
     pub volume: u8,
     /// MIDI-only octave shift applied to every note in this part (−4..=+4).
     pub octave_offset: i8,
+    /// The instrument whose range this part's notes are checked against;
+    /// `None` checks nothing. A follow part inherits its target's.
+    pub range_instrument: Option<RangeInstrument>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -68,6 +76,16 @@ impl PartKind {
     /// target's notes.
     pub fn sounds(self) -> bool {
         !matches!(self, Self::Lyrics { .. })
+    }
+
+    /// The soundfont a concrete part of this kind plays with when its
+    /// declaration names none.
+    pub fn default_soundfont(self) -> Soundfont {
+        match self {
+            Self::Chords | Self::Notes => Soundfont::ACOUSTIC_GRAND_PIANO,
+            Self::Percussion => Soundfont::ACOUSTIC_SNARE,
+            Self::Lyrics { .. } => Soundfont::CHOIR_AAHS,
+        }
     }
 }
 
@@ -168,6 +186,10 @@ pub struct ParsedDocument {
     pub sequence: Option<crate::parser::sequence_parser::SequenceSection>,
     /// Recoverable errors from parsing the `# sequence` section (e.g. empty entries).
     pub sequence_parse_errors: Vec<RecoverableError>,
+    /// Every valid `# preset` section, in file order.
+    pub presets: Vec<ParsedPreset>,
+    /// Errors and warnings from the `# preset` sections.
+    pub preset_diagnostics: Vec<Diagnostic>,
 }
 
 keyword_enum! {

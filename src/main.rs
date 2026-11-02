@@ -1,14 +1,17 @@
 use clap::{Parser, Subcommand};
-use jianpu_generator::cli::generate::{
+use poentaro::cli::generate::{
     generate_mei, generate_midi, generate_mp3, generate_pdf, generate_svg, generate_wav,
 };
-use jianpu_generator::cli::{check, GenerateInput};
-use jianpu_generator::{self as jg, error_reporter};
+use poentaro::cli::{check, GenerateInput};
+use poentaro::{self as jg, error_reporter};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 #[derive(Parser)]
-#[command(name = "jianpu", about = "Generate JianPu notation files")]
+#[command(
+    name = "poentaro",
+    about = "Generate numbered musical notation (jianpu) files"
+)]
 struct Args {
     #[command(subcommand)]
     command: Commands,
@@ -40,6 +43,11 @@ enum GenerateFormat {
         tracks: Vec<String>,
         #[arg(
             long,
+            help = "Export with this # preset's metadata and visible parts (--tracks overrides its parts)"
+        )]
+        preset: Option<String>,
+        #[arg(
+            long,
             help = "Generate one file per track instead of a single combined file"
         )]
         split_tracks: bool,
@@ -50,6 +58,11 @@ enum GenerateFormat {
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0.., help = "Comma-separated list of track names to include (e.g. --tracks S1,S2)")]
         tracks: Vec<String>,
+        #[arg(
+            long,
+            help = "Export with this # preset's metadata and visible parts (--tracks overrides its parts)"
+        )]
+        preset: Option<String>,
         #[arg(
             long,
             help = "Generate one file per track instead of a single combined file"
@@ -63,6 +76,11 @@ enum GenerateFormat {
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0.., help = "Comma-separated list of track names to include (e.g. --tracks S1,S2)")]
         tracks: Vec<String>,
+        #[arg(
+            long,
+            help = "Export with this # preset's metadata and visible parts (--tracks overrides its parts)"
+        )]
+        preset: Option<String>,
     },
     Midi {
         input: PathBuf,
@@ -70,6 +88,11 @@ enum GenerateFormat {
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0.., help = "Comma-separated list of track names to include (e.g. --tracks S1,S2)")]
         tracks: Vec<String>,
+        #[arg(
+            long,
+            help = "Export with this # preset's metadata and visible parts (--tracks overrides its parts)"
+        )]
+        preset: Option<String>,
         #[arg(
             long,
             help = "Generate one file per track instead of a single combined file"
@@ -84,6 +107,11 @@ enum GenerateFormat {
         tracks: Vec<String>,
         #[arg(
             long,
+            help = "Export with this # preset's metadata and visible parts (--tracks overrides its parts)"
+        )]
+        preset: Option<String>,
+        #[arg(
+            long,
             help = "Generate one file per track instead of a single combined file"
         )]
         split_tracks: bool,
@@ -94,6 +122,11 @@ enum GenerateFormat {
         output: Option<PathBuf>,
         #[arg(long, value_delimiter = ',', num_args = 0.., help = "Comma-separated list of track names to include (e.g. --tracks S1,S2)")]
         tracks: Vec<String>,
+        #[arg(
+            long,
+            help = "Export with this # preset's metadata and visible parts (--tracks overrides its parts)"
+        )]
+        preset: Option<String>,
         #[arg(
             long,
             help = "Generate one file per track instead of a single combined file"
@@ -135,9 +168,9 @@ fn run_migrate_lyrics(paths: &[PathBuf]) -> Result<(), jg::error::IrrecoverableE
         return Ok(());
     }
     paths.iter().try_for_each(|path| {
-        let source = jianpu_generator::cli::read_source(path)?;
+        let source = poentaro::cli::read_source(path)?;
         let migrated = jg::migrate_lyrics::migrate_lyrics_syntax(&source);
-        jianpu_generator::cli::write_file(path, migrated.as_bytes())
+        poentaro::cli::write_file(path, migrated.as_bytes())
     })
 }
 
@@ -160,66 +193,78 @@ fn run_generate(format: GenerateFormat) -> Result<(), jg::error::IrrecoverableEr
             input,
             output,
             tracks,
+            preset,
             split_tracks,
         } => generate_pdf(&GenerateInput {
             input,
             output,
             tracks,
             split_tracks,
+            preset,
         }),
         GenerateFormat::Svg {
             input,
             output,
             tracks,
+            preset,
             split_tracks,
         } => generate_svg(&GenerateInput {
             input,
             output,
             tracks,
             split_tracks,
+            preset,
         }),
         GenerateFormat::Mei {
             input,
             output,
             tracks,
+            preset,
         } => generate_mei(&GenerateInput {
             input,
             output,
             tracks,
             split_tracks: false,
+            preset,
         }),
         GenerateFormat::Midi {
             input,
             output,
             tracks,
+            preset,
             split_tracks,
         } => generate_midi(&GenerateInput {
             input,
             output,
             tracks,
             split_tracks,
+            preset,
         }),
         GenerateFormat::Wav {
             input,
             output,
             tracks,
+            preset,
             split_tracks,
         } => generate_wav(&GenerateInput {
             input,
             output,
             tracks,
             split_tracks,
+            preset,
         }),
         GenerateFormat::Mp3 {
             input,
             output,
             tracks,
+            preset,
             split_tracks,
         } => generate_mp3(&GenerateInput {
             input,
             output,
             tracks,
             split_tracks,
+            preset,
         }),
     }
 }

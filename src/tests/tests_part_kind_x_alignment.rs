@@ -70,7 +70,7 @@ fn wide_chord_symbols_align_their_root_digit_with_the_note() {
 
     let output = render_documents_from_source_with_visibility(
         input,
-        "test.jianpu",
+        "test.poentaro",
         &ResolvedPartVisibility::default(),
         &[],
         NoteLabels::Degrees,
@@ -118,7 +118,7 @@ n = notes
 
     let output = render_documents_from_source_with_visibility(
         input,
-        "test.jianpu",
+        "test.poentaro",
         &ResolvedPartVisibility::default(),
         &[],
         NoteLabels::Degrees,
@@ -178,7 +178,7 @@ fn notes_and_chords_parts_align_on_the_same_beat() {
 
     let output = render_documents_from_source_with_visibility(
         input,
-        "test.jianpu",
+        "test.poentaro",
         &ResolvedPartVisibility::default(),
         &[],
         NoteLabels::Degrees,

@@ -54,13 +54,14 @@ Given(
   async ({ page }) => {
     await page.addInitScript((source) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'cross-system-range-test.jianpu',
-          userFiles: { 'cross-system-range-test.jianpu': source },
+          active: 'cross-system-range-test.poentaro',
+          userFiles: { 'cross-system-range-test.poentaro': source },
           bin: {},
           fileIds: {
-            'cross-system-range-test.jianpu': 'cross-system-range-test-id-001',
+            'cross-system-range-test.poentaro':
+              'cross-system-range-test-id-001',
           },
         }),
       )

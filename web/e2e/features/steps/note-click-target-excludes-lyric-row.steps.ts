@@ -40,13 +40,13 @@ Given(
   async ({ page }) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'note-click-target-lyric-row-test.jianpu',
-          userFiles: { 'note-click-target-lyric-row-test.jianpu': src },
+          active: 'note-click-target-lyric-row-test.poentaro',
+          userFiles: { 'note-click-target-lyric-row-test.poentaro': src },
           bin: {},
           fileIds: {
-            'note-click-target-lyric-row-test.jianpu':
+            'note-click-target-lyric-row-test.poentaro':
               'note-click-target-lyric-row-test-id-001',
           },
         }),

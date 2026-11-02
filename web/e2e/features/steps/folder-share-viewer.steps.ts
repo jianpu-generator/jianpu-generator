@@ -39,14 +39,14 @@ async function openViewer(
   const page = await state.viewerContext.newPage()
   if (options.localFolder) {
     await page.addInitScript((folder: string) => {
-      if (localStorage.getItem('jianpu:files:v1')) return
+      if (localStorage.getItem('poentaro:files:v1')) return
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: `${folder}/mine.jianpu`,
-          userFiles: { [`${folder}/mine.jianpu`]: '# score\n1 2 3 4' },
+          active: `${folder}/mine.poentaro`,
+          userFiles: { [`${folder}/mine.poentaro`]: '# score\n1 2 3 4' },
           bin: {},
-          fileIds: { [`${folder}/mine.jianpu`]: crypto.randomUUID() },
+          fileIds: { [`${folder}/mine.poentaro`]: crypto.randomUUID() },
           folders: [],
         }),
       )
@@ -56,7 +56,7 @@ async function openViewer(
     await seedSignedInSession(page, options.cloudAccount)
     await page.addInitScript(() => {
       localStorage.setItem(
-        'jianpu:storage-backend:v1',
+        'poentaro:storage-backend:v1',
         JSON.stringify({ backend: 'cloud' }),
       )
     })
@@ -185,7 +185,7 @@ When('the viewer imports the folder', async () => {
   await viewer().getByRole('button', { name: 'Import this folder' }).click()
 })
 
-When('the viewer discards the folder', async () => {
+When('the viewer clicks Discard', async () => {
   await viewer().getByRole('button', { name: 'Discard' }).click()
 })
 
@@ -249,6 +249,10 @@ Then("the viewer's page URL has no synced share param", async () => {
 
 Then("the viewer's page URL has no share hash", async () => {
   await expect.poll(() => new URL(viewer().url()).hash).toBe('')
+})
+
+Then('the viewer sees no shared viewer notice', async () => {
+  await expect(viewer().getByTestId('shared-viewer-notice')).toHaveCount(0)
 })
 
 Then('the viewer sees the "no longer shared" screen', async () => {

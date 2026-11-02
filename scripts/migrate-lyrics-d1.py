@@ -2,7 +2,7 @@
 """Migrate positional lyric lines to lyric parts in the production D1 database.
 
 Reads every `docs` and `files` row through `wrangler d1 execute --json`, runs
-each `content` through `jianpu migrate-lyrics` (stdin -> stdout), and writes
+each `content` through `poentaro migrate-lyrics` (stdin -> stdout), and writes
 one SQL file of `UPDATE`s for the rows that changed. Nothing is written to the
 database unless `--apply` is passed; the default is a dry run that only
 writes the SQL file and prints a summary.
@@ -56,7 +56,7 @@ def main() -> None:
     parser.add_argument("--database", default=json.loads((WORKER_DIR / "deploy.json").read_text())["d1DatabaseId"])
     parser.add_argument("--remote", action="store_true", help="use the remote database (default: local)")
     parser.add_argument("--apply", action="store_true", help="execute the generated SQL")
-    parser.add_argument("--jianpu", default="target/debug/jianpu", help="path to the jianpu binary")
+    parser.add_argument("--poentaro", default="target/debug/poentaro", help="path to the poentaro binary")
     parser.add_argument("--output", default="migrate-lyrics.sql")
     args = parser.parse_args()
 
@@ -65,7 +65,7 @@ def main() -> None:
         rows = fetch_rows(args.database, table, key, args.remote)
         changed = 0
         for row in rows:
-            migrated = run([args.jianpu, "migrate-lyrics"], stdin=row["content"])
+            migrated = run([args.poentaro, "migrate-lyrics"], stdin=row["content"])
             if migrated == row["content"]:
                 continue
             changed += 1

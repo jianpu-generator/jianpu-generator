@@ -1,10 +1,10 @@
 import {
   type Diagnostic,
   type FontBytesByFamily,
-  jianpuWasm,
-} from '../jianpuWasm'
-import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
+  poentaroWasm,
+} from '../poentaroWasm'
 import { noteLabelsFor } from './noteLabels'
+import type { WorkerRequest, WorkerResponse } from './poentaro.worker'
 
 type LoadedFonts = FontBytesByFamily | null
 
@@ -28,7 +28,7 @@ export function handleGeneratePdf(
     } satisfies WorkerResponse)
     return
   }
-  const result = jianpuWasm().generatePdf(
+  const result = poentaroWasm().generatePdf(
     msg.source,
     msg.visibility,
     loadedFonts,
@@ -66,9 +66,10 @@ export function handleGenerateSplitPdf(
     } satisfies WorkerResponse)
     return
   }
-  const result = jianpuWasm().generateSplitPdfs(
+  const result = poentaroWasm().generateSplitPdfs(
     msg.source,
     msg.baseName,
+    msg.presetName,
     loadedFonts,
     noteLabelsFor(msg.notation),
   )
@@ -95,7 +96,7 @@ export function handleGenerateSplitPdf(
 export function handleGenerateMidi(
   msg: Extract<WorkerRequest, { type: 'generateMidi' }>,
 ): void {
-  const result = jianpuWasm().generateMidi(msg.source, msg.enabledTracks)
+  const result = poentaroWasm().generateMidi(msg.source, msg.enabledTracks)
   if (result.tag === 'ok') {
     const midiBuffer = binaryBufferFromResult(result.val.midi)
     postMessage(
@@ -119,7 +120,11 @@ export function handleGenerateMidi(
 export function handleGenerateSplitMidi(
   msg: Extract<WorkerRequest, { type: 'generateSplitMidi' }>,
 ): void {
-  const result = jianpuWasm().generateSplitMidis(msg.source, msg.baseName)
+  const result = poentaroWasm().generateSplitMidis(
+    msg.source,
+    msg.baseName,
+    msg.presetName,
+  )
   if (result.tag === 'ok') {
     const zipBuffer = binaryBufferFromResult(result.val.zip)
     postMessage(
@@ -152,9 +157,10 @@ export function handleGenerateSplitWav(
     } satisfies WorkerResponse)
     return
   }
-  const result = jianpuWasm().generateSplitWavs(
+  const result = poentaroWasm().generateSplitWavs(
     msg.source,
     msg.baseName,
+    msg.presetName,
     loadedSoundfont,
   )
   if (result.tag === 'ok') {
@@ -189,9 +195,10 @@ export function handleGenerateSplitMp3(
     } satisfies WorkerResponse)
     return
   }
-  const result = jianpuWasm().generateSplitMp3s(
+  const result = poentaroWasm().generateSplitMp3s(
     msg.source,
     msg.baseName,
+    msg.presetName,
     loadedSoundfont,
   )
   if (result.tag === 'ok') {

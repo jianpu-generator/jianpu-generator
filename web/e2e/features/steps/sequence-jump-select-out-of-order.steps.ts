@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test'
+import { waitForAssetLoadingBannerGone } from '../../assetLoadingHelpers'
 import { Given, Then, When } from './fixtures'
 
 // Lines (1-based):
@@ -64,12 +65,14 @@ Given(
   ) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'sequence-out-of-order-test.jianpu',
-          userFiles: { 'sequence-out-of-order-test.jianpu': src },
+          active: 'sequence-out-of-order-test.poentaro',
+          userFiles: { 'sequence-out-of-order-test.poentaro': src },
           bin: {},
-          fileIds: { 'sequence-out-of-order-test.jianpu': crypto.randomUUID() },
+          fileIds: {
+            'sequence-out-of-order-test.poentaro': crypto.randomUUID(),
+          },
         }),
       )
     }, SOURCE)
@@ -83,6 +86,7 @@ When(
     await expect(sequenceToolbarButtons(page)).toHaveCount(2, {
       timeout: 15_000,
     })
+    await waitForAssetLoadingBannerGone(page)
   },
 )
 

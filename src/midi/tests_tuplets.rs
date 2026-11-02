@@ -83,7 +83,7 @@ fn triplet_measure_produces_same_total_ticks_as_equivalent_non_tuplet_measure() 
         resolution_multiplier: 3,
         beat_group_size: 4,
         kind: PartKind::Notes,
-        soundfont: Soundfont::default(),
+        soundfont: Soundfont::CHOIR_AAHS,
         volume: 100,
         octave_offset: 0,
         notes: Notes {
@@ -103,7 +103,7 @@ fn triplet_measure_produces_same_total_ticks_as_equivalent_non_tuplet_measure() 
         resolution_multiplier: 1,
         beat_group_size: 4,
         kind: PartKind::Notes,
-        soundfont: Soundfont::default(),
+        soundfont: Soundfont::CHOIR_AAHS,
         volume: 100,
         octave_offset: 0,
         notes: Notes {

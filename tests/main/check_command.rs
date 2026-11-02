@@ -1,11 +1,11 @@
 #![allow(clippy::disallowed_macros)]
-use jianpu_generator::cli::check;
+use poentaro::cli::check;
 use std::fs;
 use std::path::Path;
 
 #[test]
 fn check_succeeds_on_valid_file() {
-    let input_path = "/tmp/test_check_valid.jianpu";
+    let input_path = "/tmp/test_check_valid.poentaro";
     fs::write(
         input_path,
         r#"# parts
@@ -29,7 +29,7 @@ Melody = notes
 
 #[test]
 fn check_fails_on_recoverable_error() {
-    let input_path = "/tmp/test_check_recoverable_error.jianpu";
+    let input_path = "/tmp/test_check_recoverable_error.poentaro";
     fs::write(
         input_path,
         r#"# parts
@@ -56,7 +56,7 @@ Melody = notes
 
 #[test]
 fn check_fails_on_irrecoverable_error() {
-    let input_path = "/tmp/test_check_irrecoverable_error.jianpu";
+    let input_path = "/tmp/test_check_irrecoverable_error.poentaro";
     fs::write(input_path, "# score\n[Melody] 1 2 3 4\n").unwrap();
 
     let outcome = check(Path::new(input_path)).unwrap();

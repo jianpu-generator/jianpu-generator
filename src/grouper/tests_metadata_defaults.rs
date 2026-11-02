@@ -5,7 +5,7 @@ use crate::parser::metadata_parser::parse_metadata;
 fn defaults_of(source: &str) -> crate::ast::grouped::Metadata {
     let (metadata, errors) = parse_metadata(source, 0);
     assert!(errors.is_empty(), "{errors:?}");
-    metadata_defaults(&metadata)
+    metadata_defaults(&ParsedMetadata::default(), &metadata)
 }
 
 fn font_size(metadata: &crate::ast::grouped::Metadata, kind: TextStyleKind) -> u32 {
@@ -14,7 +14,7 @@ fn font_size(metadata: &crate::ast::grouped::Metadata, kind: TextStyleKind) -> u
 
 #[test]
 fn row_height_scaled_defaults_follow_an_explicit_row_height() {
-    let unset = metadata_defaults(&ParsedMetadata::default());
+    let unset = metadata_defaults(&ParsedMetadata::default(), &ParsedMetadata::default());
     let scaled = defaults_of("row_height = 40");
     assert_eq!(font_size(&unset, TextStyleKind::Title), 36);
     assert_eq!(font_size(&scaled, TextStyleKind::Title), 60);

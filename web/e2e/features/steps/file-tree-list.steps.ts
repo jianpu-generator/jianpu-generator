@@ -28,9 +28,9 @@ async function applySeed(page: Page, seed: TreeSeed) {
   await page.addInitScript(
     ({ src, files, folders, active, bin }) => {
       // Only seed on the first load so a reload keeps what the app saved.
-      if (localStorage.getItem('jianpu:files:v1')) return
+      if (localStorage.getItem('poentaro:files:v1')) return
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
           active,
           userFiles: Object.fromEntries(files.map((name) => [name, src])),

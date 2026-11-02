@@ -3,7 +3,7 @@ use crate::ast::grouped::{GroupedPercussionHit, NoteEvent, Score};
 use crate::parser;
 
 fn parse_and_group(input: &str) -> Score {
-    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(input, "test.poentaro", &[]).unwrap();
     group(doc).unwrap()
 }
 

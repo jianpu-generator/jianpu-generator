@@ -11,6 +11,9 @@
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
+mod origin_migration;
+pub use origin_migration::*;
+
 /// What `GET /shares/{share_id}` returns. `filename`/`content`/`revision`
 /// are the pointed-at `files` row's current `name`/`content`/`revision` --
 /// a share holds no copy of its own (see `crate::share`). `ended` is true
@@ -58,7 +61,7 @@ pub struct SharedFolder {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SharedFolderFile {
-    /// Path relative to the shared folder, e.g. `Advent/O Come.jianpu`.
+    /// Path relative to the shared folder, e.g. `Advent/O Come.poentaro`.
     pub path: String,
     pub content: String,
     pub revision: i64,
@@ -211,6 +214,46 @@ pub struct UpdateFileContentRequest {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateFileContentResponse {
     pub revision: i64,
+}
+
+/// Body of `POST /files/{id}/versions`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ListFileVersionsRequest {
+    pub identity_token: String,
+}
+
+/// One earlier version of a file, as the History panel lists it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FileVersionSummary {
+    pub revision: i64,
+    /// When this version was saved (epoch millis).
+    pub saved_at: i64,
+}
+
+/// `200` response of `POST /files/{id}/versions`: the file's earlier
+/// versions, newest first. The current text is not one of them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ListFileVersionsResponse {
+    pub versions: Vec<FileVersionSummary>,
+}
+
+/// Body of `POST /files/{id}/versions/get`. `ApiError::NotFound` when the
+/// file is not the caller's or `revision` is not in its history.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GetFileVersionRequest {
+    pub identity_token: String,
+    pub revision: i64,
+}
+
+/// `200` response of `POST /files/{id}/versions/get`: the version's text.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FileVersionResponse {
+    pub content: String,
 }
 
 /// Body of `POST /files/{id}/rename`. No revision gate -- rename has no

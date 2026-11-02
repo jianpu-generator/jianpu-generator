@@ -4,13 +4,17 @@ import type { EditorHandle } from '../types'
 import { useAppPanels } from './useAppPanels'
 import { useAppSelectionAndNavigation } from './useAppSelectionAndNavigation'
 import { useAssetLoader } from './useAssetLoader'
+import { useChosenPreset } from './useChosenPreset'
 import { useDocumentTitle } from './useDocumentTitle'
 import { useFileImport } from './useFileImport'
 import { useFileOperations } from './useFileOperations'
 import { useFontsLoader } from './useFontsLoader'
-import { useJianpuWorker } from './useJianpuWorker'
+import { useKeyboardShortcuts } from './useKeyboardShortcuts'
+import { usePartFocusSelectionRouting } from './usePartFocusSelectionRouting'
 import { usePartTogglePruning } from './usePartTogglePruning'
 import { usePartToggles } from './usePartToggles'
+import { usePoentaroWorker } from './usePoentaroWorker'
+import { usePresetMenu } from './usePresetMenu'
 import { useScoreSource } from './useScoreSource'
 import type { SelectedSequenceRange } from './useSequenceNavigation'
 import { useStorageBackend } from './useStorageBackend'
@@ -26,6 +30,7 @@ export function useAppController() {
     setStore,
     backend,
     isLoadingCloud,
+    cloudLoadFailure,
     saveStatus,
     saveLabel,
     autosaveDeadline,
@@ -76,6 +81,8 @@ export function useAppController() {
   const fileId = sharedFolder?.fileId ?? fileIdForName(store, store.active)
   useDocumentTitle(store.active)
   const editorRef = useRef<EditorHandle>(null)
+  const { partFocusHandleRef, selectionEditorRef } =
+    usePartFocusSelectionRouting(editorRef)
   const selectedSequenceRangeRef = useRef<SelectedSequenceRange | null>(null)
   const measureRangeSelectedPartNamesRef = useRef<string[] | undefined>(
     undefined,
@@ -86,86 +93,52 @@ export function useAppController() {
   const soundfontReady = soundfont.status === 'ready'
   const pdfFontsReady = fonts.status === 'ready'
 
+  // The part focus editor's last good draft. While it is set, everything
+  // that reads the score (preview, spans, playback, pitch description)
+  // follows it instead of the untouched `source`.
+  const [partFocusDraft, setPartFocusDraft] = useState<string | null>(null)
+
   const {
     partToggles,
-    disabledParts,
     setDisabledParts,
     soloedParts,
     setSoloedParts,
     handlePartToggle,
     handleSoloToggle,
   } = usePartToggles(fileId)
+  const { chosenPreset, setChosenPreset } = useChosenPreset(
+    fileId,
+    source,
+    wasm.status === 'ready',
+  )
 
   const {
     parts,
     visibility,
-    partDeclarations,
-    documents,
-    pendingDownload,
-    requestDownload,
-    confirmPendingDownload,
-    cancelPendingDownload,
-    wavUrl,
-    wavFilename,
-    mp3Url,
-    mp3Filename,
-    noteTimings,
-    audioAvailable,
-    pdfAvailable,
-    pdfExporting,
-    diagnostics,
-    diagnosticViewZones,
-    rendering,
-    audioGenerating,
-    exportPdf,
-    splitPdfExporting,
-    exportSplitPdf,
-    midiAvailable,
-    midiExporting,
-    exportMidi,
-    splitMidiExporting,
-    exportSplitMidi,
-    splitWavExporting,
-    exportSplitWav,
-    mp3Available,
-    mp3Exporting,
-    exportMp3,
-    splitMp3Exporting,
-    exportSplitMp3,
-    generateFullAudio,
-    selectedMeasureRange,
-    measureAudioGenerating,
-    measureAudioPlaying,
-    measureAudioNoteTimings,
-    measureAudioElement,
-    measureSpans,
     sectionRanges,
     sequenceEntries,
-    notifySelection,
-    playSelectedMeasures,
-    playFromCurrentMeasure,
     playNoteSelection,
-    playAll,
-    metronomeEnabled,
-    setMetronomeEnabled,
-    stopMeasurePlayback,
-    highlightedDocuments,
-    noteSpans,
-    lyricSpans,
-    previewInstrument,
-    previewPercussion,
-    stopPreviewInstrument,
-    previewAudioPlaying,
     updatePartDeclaration,
     formatScore,
     shiftPartOctave,
     editRange,
-    describeSelection,
     importFromFile,
     staffNotation,
-  } = useJianpuWorker(
-    source,
+    notifySelection,
+    measureSpans,
+    noteSpans,
+    lyricSpans,
+    measureAudioPlaying,
+    measureAudioGenerating,
+    selectedMeasureRange,
+    playSelectedMeasures,
+    playFromCurrentMeasure,
+    stopMeasurePlayback,
+    ...workerResults
+  } = usePoentaroWorker(
+    partFocusDraft ?? source,
     partToggles,
+    chosenPreset,
     wasm.status === 'ready',
     store.active,
     soundfont.bytes,
@@ -199,25 +172,26 @@ export function useAppController() {
     importFromFile,
   )
   const {
-    editPartsOpen,
-    setEditPartsOpen,
-    editMetadataOpen,
-    setEditMetadataOpen,
-    storageSettingsOpen,
-    setStorageSettingsOpen,
-    binOpen,
-    setBinOpen,
-    syncPanelOpen,
-    setSyncPanelOpen,
-    handlePartDeclarationChange,
-    handleShiftPartOctave,
-    parsedMetadata,
-    handleMetadataFieldChange,
-  } = useAppPanels(
+    handlePartPillToggle,
+    presetMenuProps,
+    staffNotation: presetStaffNotation,
+  } = usePresetMenu({
+    source,
+    readOnly,
+    wasmReady: wasm.status === 'ready',
+    parts,
+    visibility,
+    staffNotation,
+    setChosenPreset,
+    handlePartToggle,
+    handleSourceChange,
+  })
+  const panels = useAppPanels(
     source,
     updatePartDeclaration,
     shiftPartOctave,
     handleSourceChange,
+    visibility.presetName ?? null,
   )
 
   const {
@@ -239,7 +213,7 @@ export function useAppController() {
     handleEditSelection,
   } = useAppSelectionAndNavigation(
     sectionRanges,
-    editorRef,
+    selectionEditorRef,
     notifySelection,
     sequenceEntries,
     measureSpans,
@@ -252,12 +226,39 @@ export function useAppController() {
     measureRangeSelectedPartNamesRef,
   )
 
+  useKeyboardShortcuts({
+    measureAudioPlaying,
+    measureAudioGenerating,
+    soundfontReady,
+    selectedMeasureRange,
+    selectedSequenceRange,
+    playSelectedMeasures,
+    playFromCurrentMeasure,
+    notePlaybackSelectionActive: selectedNoteRangePlaybackInfo !== null,
+    playNoteSelection: handlePlayNoteSelection,
+    stopMeasurePlayback,
+    forceSave,
+  })
+
   const noPartsSelected = computeNoPartsSelected(parts, visibility)
   return {
+    ...workerResults,
+    staffNotation: presetStaffNotation,
+    notifySelection,
+    measureSpans,
+    noteSpans,
+    lyricSpans,
+    measureAudioPlaying,
+    measureAudioGenerating,
+    selectedMeasureRange,
+    playSelectedMeasures,
+    playFromCurrentMeasure,
+    stopMeasurePlayback,
     store,
     setStore,
     backend,
     isLoadingCloud,
+    cloudLoadFailure,
     saveStatus,
     saveLabel,
     autosaveDeadline,
@@ -267,6 +268,7 @@ export function useAppController() {
     refreshSaveStatus,
     editorCollapsed,
     setEditorCollapsed,
+    setPartFocusDraft,
     creatingFile,
     creatingFolder,
     deletingFileName,
@@ -292,93 +294,28 @@ export function useAppController() {
     syncedShare,
     fileId,
     editorRef,
+    partFocusHandleRef,
     soundfont,
     fonts,
     wasm,
     soundfontReady,
     pdfFontsReady,
-    disabledParts,
     soloedParts,
-    handlePartToggle,
+    hiddenParts: visibility.hiddenParts,
+    partToggles,
+    handlePartPillToggle,
     handleSoloToggle,
+    presetMenuProps,
     parts,
-    partDeclarations,
-    documents,
-    pendingDownload,
-    requestDownload,
-    confirmPendingDownload,
-    cancelPendingDownload,
-    wavUrl,
-    wavFilename,
-    mp3Url,
-    mp3Filename,
-    noteTimings,
-    audioAvailable,
-    pdfAvailable,
-    pdfExporting,
-    diagnostics,
-    diagnosticViewZones,
-    rendering,
-    audioGenerating,
-    exportPdf,
-    splitPdfExporting,
-    exportSplitPdf,
-    midiAvailable,
-    midiExporting,
-    exportMidi,
-    splitMidiExporting,
-    exportSplitMidi,
-    splitWavExporting,
-    exportSplitWav,
-    mp3Available,
-    mp3Exporting,
-    exportMp3,
-    splitMp3Exporting,
-    exportSplitMp3,
-    generateFullAudio,
-    selectedMeasureRange,
-    measureAudioGenerating,
-    measureAudioPlaying,
-    measureAudioNoteTimings,
-    measureAudioElement,
-    measureSpans,
     selectedSequenceRange,
     sequenceJumpToolbarProps,
-    notifySelection,
-    playSelectedMeasures,
-    playFromCurrentMeasure,
-    playAll,
-    metronomeEnabled,
-    setMetronomeEnabled,
-    stopMeasurePlayback,
-    highlightedDocuments,
-    noteSpans,
-    lyricSpans,
-    previewInstrument,
-    previewPercussion,
-    stopPreviewInstrument,
-    previewAudioPlaying,
     handleSourceChange,
     handleSelect,
     handleFormatScore,
     handleEditSelection,
-    describeSelection,
     importingFile,
     handleImportFile,
-    editPartsOpen,
-    setEditPartsOpen,
-    editMetadataOpen,
-    setEditMetadataOpen,
-    storageSettingsOpen,
-    setStorageSettingsOpen,
-    binOpen,
-    setBinOpen,
-    syncPanelOpen,
-    setSyncPanelOpen,
-    handlePartDeclarationChange,
-    handleShiftPartOctave,
-    parsedMetadata,
-    handleMetadataFieldChange,
+    panels,
     setSelectedLineRange,
     handleSectionJump,
     sectionJumpToolbarProps,
@@ -393,6 +330,5 @@ export function useAppController() {
     handleMeasureRangeSelect,
     handlePlayNoteSelection,
     noPartsSelected,
-    staffNotation,
   }
 }

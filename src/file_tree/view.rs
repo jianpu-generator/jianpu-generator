@@ -1,3 +1,4 @@
+use super::extension::strip_file_extension;
 use super::folder_share::{ShareOverview, SharedVia};
 use super::path::TreePath;
 use super::selection::{file_check, folder_check, CheckState};
@@ -62,10 +63,13 @@ pub struct TreeViewRow {
     /// The row's checkbox; `None` for rows that cannot be selected (demo
     /// files and the empty-folder hint).
     pub check: Option<CheckState>,
+    /// Keys of the folder rows this row lies inside, outermost first; empty
+    /// at the top level.
+    pub ancestor_keys: Vec<String>,
 }
 
 /// A half-open range of UTF-16 code units in a row's displayed name (without
-/// the `.jianpu` extension), the unit JavaScript string indices use.
+/// the `.poentaro` extension), the unit JavaScript string indices use.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NameMatch {
     pub start: usize,
@@ -91,7 +95,7 @@ impl FileTree {
         let active_path = TreePath::parse(input.active).ok();
         let query = input.query.trim().to_lowercase();
         let filter = (!query.is_empty()).then_some(query.as_str());
-        folder_rows(&self.root, 0, input, active_path.as_ref(), filter)
+        folder_rows(&self.root, 0, &[], input, active_path.as_ref(), filter)
             .into_iter()
             .chain(demo_rows(input, filter))
             .map(|row| TreeViewRow {
@@ -107,6 +111,7 @@ impl FileTree {
 fn folder_rows(
     contents: &FolderContents,
     depth: usize,
+    ancestor_keys: &[String],
     input: &TreeViewInput,
     active_path: Option<&TreePath>,
     filter: Option<&str>,
@@ -141,15 +146,22 @@ fn folder_rows(
                 shared_via: input.shares.shared_via(&folder.path),
                 name_match: None,
                 check: Some(folder_check(&folder.contents, input.selected)),
+                ancestor_keys: ancestor_keys.to_vec(),
             };
+            let child_ancestor_keys: Vec<String> = ancestor_keys
+                .iter()
+                .cloned()
+                .chain(std::iter::once(folder.path.as_str().to_string()))
+                .collect();
             let children = if !expanded {
                 vec![]
             } else if folder.contents.folders.is_empty() && folder.contents.files.is_empty() {
-                vec![hint_row(depth + 1)]
+                vec![hint_row(depth + 1, child_ancestor_keys)]
             } else {
                 folder_rows(
                     &folder.contents,
                     depth + 1,
+                    &child_ancestor_keys,
                     input,
                     active_path,
                     child_filter,
@@ -174,6 +186,7 @@ fn folder_rows(
                     shared_via: input.shares.shared_via(&file.path),
                     name_match: None,
                     check: Some(file_check(&file.path, input.selected)),
+                    ancestor_keys: ancestor_keys.to_vec(),
                 }),
         )
         .collect()
@@ -212,6 +225,7 @@ fn demo_rows(input: &TreeViewInput, filter: Option<&str>) -> Vec<TreeViewRow> {
         shared_via: None,
         name_match: None,
         check: None,
+        ancestor_keys: vec![],
     };
     let files = shown_files
         .into_iter()
@@ -228,11 +242,12 @@ fn demo_rows(input: &TreeViewInput, filter: Option<&str>) -> Vec<TreeViewRow> {
             shared_via: None,
             name_match: None,
             check: None,
+            ancestor_keys: vec![DEMO_EXPANSION_KEY.to_string()],
         });
     std::iter::once(header).chain(files).collect()
 }
 
-fn hint_row(depth: usize) -> TreeViewRow {
+fn hint_row(depth: usize, ancestor_keys: Vec<String>) -> TreeViewRow {
     TreeViewRow {
         key: String::new(),
         name: "Empty folder".to_string(),
@@ -245,23 +260,21 @@ fn hint_row(depth: usize) -> TreeViewRow {
         shared_via: None,
         name_match: None,
         check: None,
+        ancestor_keys,
     }
 }
 
 /// Whether a file or folder name contains the (already lowercased) query.
-/// The `.jianpu` extension is not part of the name the user sees.
+/// The extension is not part of the name the user sees.
 fn name_matches(name: &str, query: &str) -> bool {
-    name.strip_suffix(".jianpu")
-        .unwrap_or(name)
-        .to_lowercase()
-        .contains(query)
+    strip_file_extension(name).to_lowercase().contains(query)
 }
 
 /// Where the (already lowercased) query occurs in the name as the user sees
 /// it, so the list can highlight it. `None` when it does not occur, or when
 /// lowercasing changes the name's length (offsets could not be mapped back).
 fn name_match(name: &str, query: &str) -> Option<NameMatch> {
-    let shown = name.strip_suffix(".jianpu").unwrap_or(name);
+    let shown = strip_file_extension(name);
     let lowered = shown.to_lowercase();
     if lowered.chars().count() != shown.chars().count() {
         return None;

@@ -1,0 +1,81 @@
+/* Covers the main editor (kept mounted beneath, so its model and undo
+   history stay as they were). */
+.part-focus-editor {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--editor-bg);
+}
+
+.part-focus-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.8rem;
+  padding: 0.3rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  min-height: 2rem;
+  font-size: 13px;
+}
+
+.part-focus-title {
+  font-weight: 600;
+}
+
+.part-focus-status {
+  color: var(--muted);
+}
+
+.part-focus-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.part-focus-surface {
+  flex: 1;
+  min-height: 0;
+}
+
+.part-focus-prefix {
+  color: #267f99;
+  font-weight: bold;
+}
+
+.part-focus-ghost {
+  pointer-events: none;
+  user-select: none;
+}
+
+.part-focus-ghost-line {
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 21px;
+  font-style: italic;
+  color: var(--muted);
+  background: var(--surface);
+  padding-left: 8px;
+  white-space: pre;
+  overflow: hidden;
+}
+
+.part-focus-menu-item {
+  flex-wrap: wrap;
+}
+
+.part-focus-menu-item[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.part-focus-menu-kind {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.8em;
+}
+
+.part-focus-menu-reason {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 0.8em;
+}

@@ -165,15 +165,47 @@ fn an_empty_measure_is_an_error() {
 }
 
 #[test]
-fn a_measure_past_the_end_of_the_score_is_an_error() {
-    let result = apply_part_stream(TWO_MEASURES, "W", "(天) | 我 | (啊)");
+fn measures_past_the_end_of_the_score_are_appended() {
+    let result = apply_part_stream(
+        TWO_MEASURES,
+        "W",
+        "(天) 空 好 (藍) | 我 （在）想 你 | 天 空 | _ | 好 藍",
+    );
+    assert_eq!(result.changed_measure_count, 3);
     assert_eq!(
-        errors(&result),
-        vec![(
-            Span::new(14, 19),
-            "this measure is past the end of the score; a lyric stream can't add measures"
-                .to_string()
-        )]
+        applied(result),
+        r"# parts
+Chords [C] = chords
+Words [W] = lyrics[C]
+
+# score
+[C] 1 - 4 -
+[W] (天) 空  好 (藍)
+
+[C] 0 5 - -
+[W] 我 （在）想 你
+
+[W] 天 空
+
+[W] _
+
+[W] 好 藍
+"
+    );
+}
+
+#[test]
+fn a_bracket_past_the_end_of_the_score_has_no_chord_attack() {
+    let stream = "(天) 空 好 (藍) | 我 （在）想 你 | (天)";
+    let result = apply_part_stream(TWO_MEASURES, "W", stream);
+    let errors = errors(&result);
+    let appended_start = stream.rfind('|').unwrap() + 2;
+    assert_eq!(errors.len(), 1, "{errors:?}");
+    assert_eq!(errors[0].0, Span::new(appended_start, stream.len()));
+    assert!(
+        errors[0].1.contains("1 bracketed item for 0 chord attacks"),
+        "{}",
+        errors[0].1
     );
 }
 

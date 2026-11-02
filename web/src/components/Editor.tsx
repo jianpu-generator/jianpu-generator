@@ -10,12 +10,12 @@ import {
   useRef,
 } from 'react'
 import {
-  JIANPU_LANGUAGE_ID,
-  registerJianpuLanguage,
-} from '../monacoJianpuLanguage'
-import { registerJianpuRenameProvider } from '../monacoRenameProvider'
+  POENTARO_LANGUAGE_ID,
+  registerPoentaroLanguage,
+} from '../monacoPoentaroLanguage'
+import { registerPoentaroRenameProvider } from '../monacoRenameProvider'
 import { registerSectionCodeLensProvider } from '../monacoSectionCodeLensProvider'
-import { registerJianpuSemanticTokensProvider } from '../monacoSemanticTokensProvider'
+import { registerPoentaroSemanticTokensProvider } from '../monacoSemanticTokensProvider'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -34,7 +34,7 @@ import {
   createMeasureViewZoneDomNode,
   measureViewZoneLineNumber,
 } from './editorMeasureViewZones'
-import { defineJianpuEditorTheme, EDITOR_THEME } from './editorTheme'
+import { definePoentaroEditorTheme, EDITOR_THEME } from './editorTheme'
 
 export interface EditorProps {
   /** Unique per-file ID; gives each file its own Monaco model and undo stack. */
@@ -75,7 +75,7 @@ export interface EditorProps {
   onEditMetadataClick?: () => void
 }
 
-const MARKER_OWNER = 'jianpu'
+const MARKER_OWNER = 'poentaro'
 
 export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
   {
@@ -145,7 +145,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
 
       measureSpans.forEach((span, index) => {
         const lineNumber = measureViewZoneLineNumber(model, source, span)
-        const domNode = createMeasureViewZoneDomNode(span, index)
+        const domNode = createMeasureViewZoneDomNode(
+          span.sectionLabel ?? null,
+          index,
+        )
 
         const id = accessor.addZone({
           afterLineNumber: lineNumber - 1,
@@ -330,16 +333,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
       <div className="editor-surface">
         <MonacoEditor
           height="100%"
-          language={JIANPU_LANGUAGE_ID}
+          language={POENTARO_LANGUAGE_ID}
           theme={EDITOR_THEME}
           path={path}
           value={value}
           onChange={(next) => onChange(next ?? '')}
           beforeMount={(monacoApi) => {
-            registerJianpuLanguage(monacoApi)
-            registerJianpuRenameProvider(monacoApi)
-            registerJianpuSemanticTokensProvider(monacoApi)
-            defineJianpuEditorTheme(monacoApi)
+            registerPoentaroLanguage(monacoApi)
+            registerPoentaroRenameProvider(monacoApi)
+            registerPoentaroSemanticTokensProvider(monacoApi)
+            definePoentaroEditorTheme(monacoApi)
           }}
           onMount={handleMount}
           options={{

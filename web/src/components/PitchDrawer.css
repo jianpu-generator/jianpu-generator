@@ -95,6 +95,14 @@
   font-size: 0.95rem;
 }
 
+/* Every voicing side by side, wrapping onto more rows on a narrow drawer. */
+.pitch-drawer-guitar-diagrams {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
 .pitch-drawer-guitar-diagram {
   flex: none;
   color: var(--text);
@@ -102,7 +110,7 @@
 
 .pitch-drawer-guitar-diagram svg {
   display: block;
-  width: 132px;
+  width: 100px;
   height: auto;
 }
 

@@ -1,4 +1,4 @@
-import type { ClickableElementId } from '../jianpuWasm'
+import type { ClickableElementId } from '../poentaroWasm'
 import type { AnchorPoint } from './previewRangeHighlights'
 import type { MeasureRange } from './previewSelection'
 

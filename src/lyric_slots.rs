@@ -62,6 +62,36 @@ pub(crate) fn measure_lyric_slots(events: &[NoteEvent], entering_tied: bool) -> 
     }
 }
 
+/// Where a lyric part stands along its target's notes as a measure starts.
+///
+/// A lyric part has to walk its target's notes through *every* measure, even
+/// one where its own row is hidden for having no syllables; otherwise a tie
+/// from before such a measure leaks past it, and the note ids drift from the
+/// ones its target gives the same notes.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct LyricCursor {
+    /// The note id of the measure's first target event.
+    pub(crate) next_note_id: usize,
+    /// The previous measure's last target note is tied into this one.
+    pub(crate) entering_tied: bool,
+}
+
+impl LyricCursor {
+    /// The cursor at the start of the next measure. Ties follow the target's
+    /// notes in every measure, as the grouper pairs them. Note ids advance only
+    /// when `target_visible`, since a hidden target allocates none.
+    pub(crate) fn advance(self, target_events: &[NoteEvent], target_visible: bool) -> Self {
+        LyricCursor {
+            next_note_id: if target_visible {
+                self.next_note_id + target_events.len()
+            } else {
+                self.next_note_id
+            },
+            entering_tied: measure_lyric_slots(target_events, self.entering_tied).exits_tied,
+        }
+    }
+}
+
 /// One chord attack of a measure: a `Chord` event. A chord rest (`0`, a
 /// `Rest` event) and a `-` extension (folded into the previous chord's
 /// duration) are not attacks. Under a chord part the Nth bracketed lyric item

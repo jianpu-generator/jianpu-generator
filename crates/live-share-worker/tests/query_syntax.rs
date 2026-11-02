@@ -30,6 +30,34 @@ use sqlx::{ConnectOptions, Executor};
 
 const QUERIES: &[(&str, &str)] = &[
     (
+        "prune_file_versions.sql",
+        include_str!("../queries/prune_file_versions.sql"),
+    ),
+    (
+        "list_file_versions.sql",
+        include_str!("../queries/list_file_versions.sql"),
+    ),
+    (
+        "insert_file_version.sql",
+        include_str!("../queries/insert_file_version.sql"),
+    ),
+    (
+        "advance_file_version_link.sql",
+        include_str!("../queries/advance_file_version_link.sql"),
+    ),
+    (
+        "prune_origin_migrations.sql",
+        include_str!("../queries/prune_origin_migrations.sql"),
+    ),
+    (
+        "claim_origin_migration.sql",
+        include_str!("../queries/claim_origin_migration.sql"),
+    ),
+    (
+        "insert_origin_migration.sql",
+        include_str!("../queries/insert_origin_migration.sql"),
+    ),
+    (
         "delete_files_of_users.sql",
         include_str!("../queries/delete_files_of_users.sql"),
     ),
@@ -177,6 +205,14 @@ const QUERIES: &[(&str, &str)] = &[
     (
         "observability/auth_rejections.sql",
         include_str!("../queries/observability/auth_rejections.sql"),
+    ),
+    (
+        "observability/by_trace_id.sql",
+        include_str!("../queries/observability/by_trace_id.sql"),
+    ),
+    (
+        "observability/request_failures.sql",
+        include_str!("../queries/observability/request_failures.sql"),
     ),
     (
         "observability/recent.sql",

@@ -2,7 +2,7 @@ import { expect } from '@playwright/test'
 import { Given, Then, When } from './fixtures'
 
 /**
- * The default demo file (demo/01-pitches.jianpu, opened on first load) has
+ * The default demo file (demo/01-pitches.poentaro, opened on first load) has
  * the following Monaco line numbers (1-based):
  *
  *   1  # metadata
@@ -50,12 +50,12 @@ Given(
 
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'chinese-test.jianpu',
-          userFiles: { 'chinese-test.jianpu': src },
+          active: 'chinese-test.poentaro',
+          userFiles: { 'chinese-test.poentaro': src },
           bin: {},
-          fileIds: { 'chinese-test.jianpu': crypto.randomUUID() },
+          fileIds: { 'chinese-test.poentaro': crypto.randomUUID() },
         }),
       )
     }, source)

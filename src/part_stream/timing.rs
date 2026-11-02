@@ -3,7 +3,7 @@
 use itertools::Itertools;
 
 use crate::ast::parsed::{PartKind, ScoreEvent, TupletInfo};
-use crate::error::{IrrecoverableError, Spanned};
+use crate::error::{IrrecoverableError, Span, Spanned};
 use crate::parser::score::interleaved_parser::timed_beats;
 use crate::parser::score::timed_parser::{lex_line, GroupStack, LexContext, TimedLexToken};
 use crate::parser::score::token_parser::{
@@ -67,6 +67,8 @@ pub(super) struct TimedLayout {
     pub(super) clusters: Vec<TimedCluster>,
     /// Every duration in `clusters` is this many times its quarter-beat length.
     pub(super) multiplier: u32,
+    /// `-` extensions with no note before them to extend; they count no beats.
+    pub(super) orphan_extensions: Vec<Span>,
 }
 
 /// Groups `events` into clusters with durations on the line's rescaled grid.
@@ -74,6 +76,7 @@ pub(super) fn timed_layout(events: &[Spanned<ScoreEvent>]) -> TimedLayout {
     let multiplier = resolution_multiplier_of(events);
     let rescaled = apply_resolution_multiplier(events.to_vec(), multiplier);
     let mut clusters: Vec<TimedCluster> = Vec::new();
+    let mut orphan_extensions = Vec::new();
     for event in &rescaled {
         let beats = timed_beats(&event.value);
         match event.value {
@@ -82,6 +85,8 @@ pub(super) fn timed_layout(events: &[Spanned<ScoreEvent>]) -> TimedLayout {
                     last.duration += beats * multiplier;
                     last.end = event.span.end;
                     last.has_extension = true;
+                } else {
+                    orphan_extensions.push(event.span);
                 }
             }
             _ if beats > 0 => clusters.push(TimedCluster {
@@ -97,6 +102,7 @@ pub(super) fn timed_layout(events: &[Spanned<ScoreEvent>]) -> TimedLayout {
     TimedLayout {
         clusters,
         multiplier,
+        orphan_extensions,
     }
 }
 

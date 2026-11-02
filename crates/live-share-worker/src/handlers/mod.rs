@@ -6,7 +6,9 @@
 //! and `POST /shares/overview`; `shares` submodule), the
 //! `/files` routes (the cloud storage backend, see `crate::files`; `files`
 //! submodule), plus the account routes `/auth/sign-up`, `/auth/sign-in`,
-//! `/auth/sign-out` and `/auth/change-password` (`auth` submodule).
+//! `/auth/sign-out` and `/auth/change-password` (`auth` submodule), and the
+//! one-time origin-migration handoff `POST /origin-migrations{,/claim}`
+//! (`origin_migrations` submodule, see `crate::origin_migration`).
 //!
 //! Every write (including starting/stopping a share) resolves its caller's
 //! identity via `identity::resolve_verified_user_id` -- a session lookup,
@@ -21,7 +23,8 @@
 //! `routes()` is the one list of routes: each entry registers into both the
 //! worker `Router` and the OpenAPI spec (see `routes`), so the web client
 //! generated from that spec can't drift from what's actually served. Every
-//! failure is an `ApiError` body.
+//! failure goes through `fail`: an `ApiErrorBody` carrying the request's
+//! trace ID, and one `request_failed` row in `app_log`.
 //!
 //! Helpers below (`is_unique_constraint_violation`, `resolve_files_caller`)
 //! are private to this module but visible to every submodule per Rust's
@@ -31,14 +34,17 @@
 mod auth;
 mod e2e_reset;
 mod files;
+mod origin_migrations;
 pub(crate) mod routes;
 mod shares;
 
-use worker::D1Database;
+use worker::{console_error, D1Database, Env, Response, RouteContext};
 
-use crate::api_error::ApiError;
-use crate::app_log::RequestMeta;
+use crate::api_error::{ApiError, ApiErrorBody};
+use crate::app_log::{LogEvent, RequestEvent, RequestFailed, RequestMeta};
+use crate::db;
 use crate::identity::resolve_verified_user_id;
+pub(crate) use routes::{request_meta, TRACE_ID_HEADER};
 use routes::{HandlerResult, Routes};
 
 /// D1 binding name this worker expects in `deploy.json`/`cloudflare.config.ts`. Wiring the
@@ -60,6 +66,8 @@ pub(crate) fn routes(e2e_reset_enabled: bool) -> worker::Result<Routes> {
         .post("/files/list", files::list_files)?
         .post("/files", files::create_file)?
         .post("/files/{id}/content", files::update_file_content)?
+        .post("/files/{id}/versions", files::list_file_versions)?
+        .post("/files/{id}/versions/get", files::get_file_version)?
         .post("/files/rename-batch", files::rename_files_batch)?
         .post("/files/{id}/rename", files::rename_file)?
         .post("/files/{id}/delete", files::delete_file)?
@@ -71,7 +79,43 @@ pub(crate) fn routes(e2e_reset_enabled: bool) -> worker::Result<Routes> {
         .post("/folders/share/stop", shares::stop_folder_share)?
         .post("/folders/share/status", shares::folder_share_status)?
         .post("/shares/overview", shares::share_overview)?
+        .post("/origin-migrations", origin_migrations::upload)?
+        .post("/origin-migrations/claim", origin_migrations::claim)?
         .post_if(e2e_reset_enabled, "/e2e/reset", e2e_reset::reset)
+}
+
+/// Answers `error` to a request for `route`, and logs it to `app_log` under
+/// the request's trace ID. The one place a failure becomes a response, so no
+/// failure can go unlogged or reach the user without its trace ID.
+pub(crate) async fn fail(
+    env: &Env,
+    route: &str,
+    error: ApiError,
+    request_meta: &RequestMeta,
+) -> worker::Result<Response> {
+    let status = error.status_code();
+    let event = LogEvent::Request(RequestEvent::RequestFailed(RequestFailed {
+        route: route.to_string(),
+        status,
+        code: error.code(),
+        message: error.message().map(str::to_owned),
+    }));
+    match env.d1(D1_BINDING) {
+        Ok(d1) => {
+            let user_id = request_meta.resolved_user_id.borrow().clone();
+            db::record_app_log(&d1, &event, user_id.as_deref(), request_meta).await;
+        }
+        Err(d1_error) => console_error!("app_log: no database to record {event:?}: {d1_error}"),
+    }
+    let body = ApiErrorBody {
+        error,
+        trace_id: request_meta.trace_id.clone().unwrap_or_default(),
+    };
+    let mut response = Response::from_json(&body)?.with_status(status);
+    response
+        .headers_mut()
+        .set(TRACE_ID_HEADER, &body.trace_id)?;
+    Ok(response)
 }
 
 /// D1 surfaces a SQLite `UNIQUE constraint failed` violation as a plain
@@ -93,4 +137,27 @@ async fn resolve_files_caller(
     resolve_verified_user_id(d1, identity_token, request_meta)
         .await?
         .map_err(ApiError::Unauthorized)
+}
+
+fn now_millis() -> i64 {
+    worker::Date::now().as_millis() as i64
+}
+
+/// Refuses the request once `binding`'s per-IP limit is spent. Requests
+/// with no `CF-Connecting-IP` (only local runs) share one bucket.
+async fn check_rate_limit(
+    ctx: &RouteContext<()>,
+    binding: &str,
+    request_meta: &RequestMeta,
+) -> HandlerResult<()> {
+    let key = request_meta
+        .client_ip
+        .clone()
+        .unwrap_or_else(|| "unknown".to_string());
+    let outcome = ctx.rate_limiter(binding)?.limit(key).await?;
+    if outcome.success {
+        Ok(())
+    } else {
+        Err(ApiError::RateLimited)
+    }
 }

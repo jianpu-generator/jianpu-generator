@@ -20,7 +20,7 @@ const SHARED_SOURCE = [
 Given('the cloud storage backend preference is set', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem(
-      'jianpu:storage-backend:v1',
+      'poentaro:storage-backend:v1',
       JSON.stringify({ backend: 'cloud' }),
     )
   })

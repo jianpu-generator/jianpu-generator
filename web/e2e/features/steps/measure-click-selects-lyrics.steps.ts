@@ -42,13 +42,14 @@ const clickTestSource = [
 async function loadClickTestFixture(page: import('@playwright/test').Page) {
   await page.addInitScript((source) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'measure-click-lyric-test.jianpu',
-        userFiles: { 'measure-click-lyric-test.jianpu': source },
+        active: 'measure-click-lyric-test.poentaro',
+        userFiles: { 'measure-click-lyric-test.poentaro': source },
         bin: {},
         fileIds: {
-          'measure-click-lyric-test.jianpu': 'measure-click-lyric-test-id-001',
+          'measure-click-lyric-test.poentaro':
+            'measure-click-lyric-test-id-001',
         },
       }),
     )

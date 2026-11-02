@@ -165,7 +165,7 @@ pub(super) fn one_measure_score() -> Score {
                 resolution_multiplier: 1,
                 beat_group_size: 4,
                 kind: PartKind::Notes,
-                soundfont: Soundfont::default(),
+                soundfont: Soundfont::CHOIR_AAHS,
                 volume: 100,
                 octave_offset: 0,
                 notes: Notes {
@@ -247,7 +247,7 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
                 resolution_multiplier: 1,
                 beat_group_size: 4,
                 kind: PartKind::Notes,
-                soundfont: Soundfont::default(),
+                soundfont: Soundfont::CHOIR_AAHS,
                 volume: 100,
                 octave_offset,
                 notes: Notes {

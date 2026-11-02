@@ -26,7 +26,7 @@ fn two_measure_source() -> &'static str {
 #[test]
 fn find_measure_at_byte_offset_finds_first_measure() {
     let source = two_measure_source();
-    let score = compile(source, "test.jianpu", &[]).unwrap();
+    let score = compile(source, "test.poentaro", &[]).unwrap();
     let first_note_offset = source.find("1 2 3 4").unwrap();
     assert_eq!(
         find_measure_at_byte_offset(&score, first_note_offset),
@@ -37,7 +37,7 @@ fn find_measure_at_byte_offset_finds_first_measure() {
 #[test]
 fn find_measure_at_byte_offset_finds_second_measure() {
     let source = two_measure_source();
-    let score = compile(source, "test.jianpu", &[]).unwrap();
+    let score = compile(source, "test.poentaro", &[]).unwrap();
     let second_note_offset = source.rfind("5 6 7 1").unwrap();
     assert_eq!(
         find_measure_at_byte_offset(&score, second_note_offset),
@@ -48,7 +48,7 @@ fn find_measure_at_byte_offset_finds_second_measure() {
 #[test]
 fn find_measure_at_byte_offset_returns_none_for_header() {
     let source = two_measure_source();
-    let score = compile(source, "test.jianpu", &[]).unwrap();
+    let score = compile(source, "test.poentaro", &[]).unwrap();
     assert_eq!(find_measure_at_byte_offset(&score, 0), None);
 }
 
@@ -75,7 +75,7 @@ fn two_part_source() -> &'static str {
 #[test]
 fn find_measure_at_byte_offset_finds_measure_on_second_part_line() {
     let source = two_part_source();
-    let score = compile(source, "test.jianpu", &[]).unwrap();
+    let score = compile(source, "test.poentaro", &[]).unwrap();
     // The cursor is on the Melody (second part) line "1 2 3 4", not the Chord line "1"
     let melody_note_offset = source.find("1 2 3 4").unwrap();
     assert_eq!(
@@ -120,7 +120,7 @@ fn twinkle_source() -> &'static str {
 #[test]
 fn find_measure_at_byte_offset_covers_all_lines_in_twinkle_star() {
     let source = twinkle_source();
-    let score = compile(source, "test.jianpu", &[]).unwrap();
+    let score = compile(source, "test.poentaro", &[]).unwrap();
     assert_eq!(score.measures.len(), 4, "expected 4 measures");
 
     let check = |label: &str, offset: usize, expected: Option<usize>| {
@@ -205,7 +205,7 @@ fn find_measure_at_byte_offset_detects_measure_when_cursor_is_one_past_last_char
     // Regression: cursor placed directly after the last character of a measure
     // line (e.g. after "4" in "1 2 3 4") must still resolve to that measure.
     let source = two_measure_source();
-    let score = compile(source, "test.jianpu", &[]).unwrap();
+    let score = compile(source, "test.poentaro", &[]).unwrap();
     let after_last_char = source.find("1 2 3 4").unwrap() + "1 2 3 4".len();
     assert_eq!(
         find_measure_at_byte_offset(&score, after_last_char),
@@ -221,7 +221,7 @@ fn write_wav_for_measure_range_from_source_second_measure_uses_context_key() {
     let source = two_measure_source();
     let result = write_wav_for_measure_range_from_source(
         source,
-        "test.jianpu",
+        "test.poentaro",
         &MeasureRangeSelection {
             range: 1..=1,
             extend_to_last_occurrence: false,
@@ -245,7 +245,7 @@ fn write_wav_for_measure_range_from_source_returns_riff_wav() {
     let source = two_measure_source();
     let wav = write_wav_for_measure_range_from_source(
         source,
-        "test.jianpu",
+        "test.poentaro",
         &MeasureRangeSelection {
             range: 0..=1,
             extend_to_last_occurrence: false,
@@ -271,7 +271,7 @@ fn write_wav_for_measure_range_from_source_out_of_range_clamps_to_last_measure()
     let source = two_measure_source();
     let result = write_wav_for_measure_range_from_source(
         source,
-        "test.jianpu",
+        "test.poentaro",
         &MeasureRangeSelection {
             range: 0..=99,
             extend_to_last_occurrence: false,

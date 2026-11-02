@@ -147,7 +147,8 @@ export function useSyncedShareOwner(
 
   /** Sends one owner-side request (`send`, given the worker client).
    * Resolves `{ data }` with its success body, or `null` after recording the
-   * failure. */
+   * failure. A `silent` request shows no dialog, but an auth rejection
+   * still clears the stored session. */
   const runShareRequest = useCallback(
     async <Data>(
       operation: SyncedShareOperation,
@@ -159,13 +160,16 @@ export function useSyncedShareOwner(
       try {
         return { data: await send(createWorkerClient(host)) }
       } catch (error) {
+        const failure = buildSyncedShareFailure(operation, error)
         if (!options?.silent) {
-          recordSyncFailure(buildSyncedShareFailure(operation, error))
+          recordSyncFailure(failure)
+        } else if (failure.authRejected) {
+          setAccountAuth(null)
         }
         return null
       }
     },
-    [recordSyncFailure],
+    [recordSyncFailure, setAccountAuth],
   )
 
   useEffect(() => {
