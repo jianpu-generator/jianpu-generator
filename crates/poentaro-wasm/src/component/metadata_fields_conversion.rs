@@ -76,6 +76,7 @@ fn metadata_number_key_from_wit(key: MetadataNumberKey) -> parsed::MetadataNumbe
         MetadataNumberKey::NoteNumberWidth => parsed::MetadataNumberKey::NoteNumberWidth,
         MetadataNumberKey::PartsListColumns => parsed::MetadataNumberKey::PartsListColumns,
         MetadataNumberKey::PartLabelWidthPt => parsed::MetadataNumberKey::PartLabelWidthPt,
+        MetadataNumberKey::PageMarginPt => parsed::MetadataNumberKey::PageMarginPt,
     }
 }
 
@@ -163,6 +164,7 @@ fn metadata_defaults_to_wit(defaults: &grouped::Metadata) -> MetadataDefaults {
         note_number_width: defaults.note_number_width,
         parts_list_columns: defaults.parts_list_columns,
         part_label_width_pt: defaults.part_label_width_pt,
+        page_margin_pt: defaults.page_margin_pt,
         merge_duplicate_measures_across_parts: defaults.merge_duplicate_measures_across_parts,
         hide_resting_parts: defaults.hide_resting_parts,
         hide_system_dividers: defaults.hide_system_dividers,
@@ -196,6 +198,7 @@ pub(super) fn metadata_fields_to_wit(fields: source_edit::MetadataFields) -> Met
         note_number_width: metadata.note_number_width,
         parts_list_columns: metadata.parts_list_columns,
         part_label_width_pt: metadata.part_label_width_pt,
+        page_margin_pt: metadata.page_margin_pt,
         merge_duplicate_measures_across_parts: metadata.merge_duplicate_measures_across_parts,
         hide_resting_parts: metadata.hide_resting_parts,
         hide_system_dividers: metadata.hide_system_dividers,

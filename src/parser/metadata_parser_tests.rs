@@ -20,11 +20,12 @@ fn parses_optional_row_height() {
 }
 
 #[test]
-fn parses_optional_part_label_width_pt() {
-    let content = "title = \"t\"\nauthor = \"a\"\npart_label_width_pt = 60\n";
+fn parses_optional_part_label_width_pt_and_page_margin_pt() {
+    let content = "title = \"t\"\npart_label_width_pt = 60\npage_margin_pt = 40\n";
     let (meta, errors) = parse_metadata(content, 0);
     assert!(errors.is_empty());
     assert_eq!(meta.part_label_width_pt, Some(60));
+    assert_eq!(meta.page_margin_pt, Some(40));
 }
 
 #[test]

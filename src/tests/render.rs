@@ -22,6 +22,8 @@ mod tests_render_letter_names;
 mod tests_render_low_octave_dots;
 #[path = "tests_render_lyrics_only.rs"]
 mod tests_render_lyrics_only;
+#[path = "tests_render_page_margin.rs"]
+mod tests_render_page_margin;
 #[path = "tests_render_rendering.rs"]
 mod tests_render_rendering;
 #[path = "tests_render_rendering_tuplets.rs"]

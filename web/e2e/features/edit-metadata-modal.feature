@@ -76,6 +76,13 @@ Feature: Edit Metadata modal
     And I close the metadata modal with Escape
     Then the editor source and stored source both contain "part_label_width_pt = 60"
 
+  Scenario: Editing the Page Margin updates the source
+    Given the edit-metadata-modal test fixture is loaded
+    When I open the Edit Metadata modal
+    And I fill the "Page Margin" field with "40"
+    And I close the metadata modal with Escape
+    Then the editor source and stored source both contain "page_margin_pt = 40"
+
   Scenario: Editing the Measure Number Style's Font Size updates the source
     Given the edit-metadata-modal test fixture is loaded
     When I open the Edit Metadata modal

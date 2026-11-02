@@ -38,6 +38,8 @@ See **Part Label Width** below for the column's reserved width.`,
 
   'part-label-width-pt': `Fixed width (points) of the part-label column at the start of each system, shared by every system in the score regardless of how many measures/columns that system's music needs.`,
 
+  'page-margin-pt': `Blank space (points) on every side of the page, between the paper's edge and the header, music and page number. A wider margin also narrows each system, so measures may wrap differently.`,
+
   'page-number': `Style of the page number shown in the footer.
 
 **V. Padding** pushes the page number upward from the page's bottom edge, without moving anything else.`,

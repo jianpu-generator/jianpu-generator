@@ -88,7 +88,7 @@ fn lyric_syllable_halign_center_is_independent_of_column_weight() {
         let abs = resolve(
             &[make_page(column_weight)],
             12.0,
-            40.0,
+            super::tests::TEST_PAGE_FRAME,
             ResolveFontSizes {
                 lyric: LyricFontSizes {
                     base: 14.4,
@@ -151,7 +151,7 @@ fn lyric_syllable_shares_the_note_head_padding_formula() {
     let abs = resolve(
         &[page],
         note_number_width,
-        40.0,
+        super::tests::TEST_PAGE_FRAME,
         ResolveFontSizes {
             lyric: LyricFontSizes {
                 base: base_font_size,
@@ -211,7 +211,7 @@ fn cjk_lyric_syllable_compensates_its_leading_glyphs_left_bearing() {
     let abs = resolve(
         &[page],
         note_number_width,
-        40.0,
+        super::tests::TEST_PAGE_FRAME,
         ResolveFontSizes {
             lyric: LyricFontSizes {
                 base: 14.4,

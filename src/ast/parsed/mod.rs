@@ -242,6 +242,9 @@ pub struct ParsedMetadata {
     /// `part_label_style`, since it's a layout constant rather than a text
     /// style component.
     pub part_label_width_pt: Option<u32>,
+    /// Blank margin (points) on every side of the page (see
+    /// `Metadata::page_margin_pt`).
+    pub page_margin_pt: Option<u32>,
     /// Title text style.
     pub title_style: TextStyle,
     /// Subtitle text style.

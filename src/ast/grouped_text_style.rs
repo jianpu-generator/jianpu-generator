@@ -10,6 +10,9 @@ pub const DEFAULT_MAX_MEASURES_PER_SYSTEM: u32 = 4;
 pub const DEFAULT_NOTE_NUMBER_WIDTH: u32 = 8;
 /// Default `part_label_width_pt`, used when unset in `# metadata`.
 pub const DEFAULT_PART_LABEL_WIDTH_PT: u32 = 40;
+
+/// Default `page_margin_pt`, used when unset in `# metadata`.
+pub const DEFAULT_PAGE_MARGIN_PT: u32 = 25;
 /// Default `parts_list_columns`, used when unset in `# metadata`.
 pub const DEFAULT_PARTS_LIST_COLUMNS: u32 = 4;
 /// Default `merge_duplicate_measures_across_parts`, used when unset in `# metadata`.

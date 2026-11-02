@@ -85,6 +85,7 @@ impl ParsedMetadata {
             note_number_width: overrides.note_number_width.or(self.note_number_width),
             parts_list_columns: overrides.parts_list_columns.or(self.parts_list_columns),
             part_label_width_pt: overrides.part_label_width_pt.or(self.part_label_width_pt),
+            page_margin_pt: overrides.page_margin_pt.or(self.page_margin_pt),
             title_style: style(TextStyleKind::Title),
             subtitle_style: style(TextStyleKind::Subtitle),
             author_style: style(TextStyleKind::Author),

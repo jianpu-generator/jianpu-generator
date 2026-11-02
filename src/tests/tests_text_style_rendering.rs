@@ -68,7 +68,7 @@ fn section_label_vertical_padding_pt_grows_the_label_box_height() {
         let abs = coordinate_resolver::resolve(
             &grid_pages,
             config.note_number_width as f32,
-            config.part_label_width_pt as f32,
+            config.page_frame(),
             coordinate_resolver::ResolveFontSizes {
                 lyric: config.lyric_font_sizes(),
                 notes: config.notes_font_size(),
@@ -143,7 +143,7 @@ fn page_number_vertical_padding_pt_pushes_the_footer_text_up() {
         let abs = coordinate_resolver::resolve(
             &grid_pages,
             config.note_number_width as f32,
-            config.part_label_width_pt as f32,
+            config.page_frame(),
             coordinate_resolver::ResolveFontSizes {
                 lyric: config.lyric_font_sizes(),
                 notes: config.notes_font_size(),

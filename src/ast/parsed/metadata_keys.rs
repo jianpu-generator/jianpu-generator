@@ -47,6 +47,7 @@ keyword_enum! {
         NoteNumberWidth => "note_number_width",
         PartsListColumns => "parts_list_columns",
         PartLabelWidthPt => "part_label_width_pt",
+        PageMarginPt => "page_margin_pt",
     }
 }
 

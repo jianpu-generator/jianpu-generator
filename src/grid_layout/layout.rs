@@ -88,12 +88,6 @@ fn system_total_height(
     musical + lyric + deco
 }
 
-/// The page's usable music width (see [`super::usable_music_width_pt`]),
-/// net of `config`'s part-label column.
-fn usable_music_width_pt(page_width_pt: f32, config: &RenderConfig) -> f32 {
-    super::usable_music_width_pt(page_width_pt, config.part_label_width_pt as f32)
-}
-
 /// One system's summed column rods against the page's usable music width —
 /// the overflow check for the spring-and-rod spacing model (see **Rod and
 /// spring** in `ARCHITECTURE.md`). `None` when the system fits; `Some` with
@@ -107,7 +101,7 @@ fn system_overflow_diagnostic(
     config: &RenderConfig,
 ) -> Option<Diagnostic> {
     let total_rod: f32 = measure_layout.iter().map(|m| m.rod_pt).sum();
-    let available = usable_music_width_pt(page_width_pt, config);
+    let available = config.page_frame().usable_music_width_pt(page_width_pt);
     if total_rod <= available {
         return None;
     }
@@ -284,7 +278,8 @@ pub fn layout(
 ) -> LayoutOutput {
     let base = config.row_height as f32;
     let blocks = &compile_result.blocks;
-    let systems = pack_into_systems(blocks, config, usable_music_width_pt(page_width_pt, config));
+    let frame = config.page_frame();
+    let systems = pack_into_systems(blocks, config, frame.usable_music_width_pt(page_width_pt));
 
     let measure_placements = build_measure_placements(&systems);
     let arc_map = resolve_slur_spans(&compile_result.slur_spans, &measure_placements, &systems);
@@ -296,7 +291,7 @@ pub fn layout(
         .map(|r| r.height_pt)
         .sum();
     let footer_h = base * 0.40;
-    let usable_h = page_height_pt - 2.0 * super::PAGE_MARGIN - header_h - footer_h;
+    let usable_h = frame.usable_height_pt(page_height_pt) - header_h - footer_h;
 
     let page_systems = pack_page_systems(
         systems,
@@ -340,7 +335,7 @@ pub fn layout(
         });
         diagnostics.extend(page_diagnostics);
         let body_height: f32 = rows.iter().map(|r| r.height_pt).sum();
-        let remaining_height = page_height_pt - 2.0 * super::PAGE_MARGIN - body_height;
+        let remaining_height = frame.usable_height_pt(page_height_pt) - body_height;
         rows.push(page_footer_row(
             config,
             page_idx as u32 + 1,

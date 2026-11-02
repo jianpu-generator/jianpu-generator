@@ -77,7 +77,7 @@ fn valign_top_places_y_at_row_top() {
     let abs = resolve(
         &[page],
         12.0,
-        40.0,
+        super::tests::TEST_PAGE_FRAME,
         ResolveFontSizes {
             lyric: LyricFontSizes {
                 base: 14.4,
@@ -103,7 +103,7 @@ fn valign_top_places_y_at_row_top() {
         .iter()
         .find(|e| matches!(e.content, AbsoluteContent::HorizontalLine { .. }))
         .expect("should have HorizontalLine");
-    // row_y = PAGE_MARGIN + 10.0 = 35.0; VAlign::Top → y = row_y
+    // row_y = page margin + 10.0 = 35.0; VAlign::Top → y = row_y
     assert!((line.y - 35.0).abs() < 0.01, "y={}", line.y);
 }
 
@@ -127,7 +127,7 @@ fn halign_end_places_x_at_right_of_column_span() {
     let abs = resolve(
         &[page],
         12.0,
-        40.0,
+        super::tests::TEST_PAGE_FRAME,
         ResolveFontSizes {
             lyric: LyricFontSizes {
                 base: 14.4,
@@ -193,7 +193,7 @@ fn low_octave_dots_resolve_to_the_same_x_as_their_note_head() {
     let abs = resolve(
         &[page],
         12.0,
-        40.0,
+        super::tests::TEST_PAGE_FRAME,
         ResolveFontSizes {
             lyric: LyricFontSizes {
                 base: 14.4,
