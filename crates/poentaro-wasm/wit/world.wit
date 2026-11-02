@@ -284,6 +284,7 @@ world poentaro-wasm {
         text,
         note-head,
         unplayable-note-head,
+        harmonica-slide,
         rest,
         omitted-part-rest,
         multi-measure-rest,

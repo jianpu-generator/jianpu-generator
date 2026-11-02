@@ -39,7 +39,7 @@ const SYNTHETIC_BOLD_WIDTH_RATIO: f32 = 1.08;
 const FALLBACK_ADVANCE_WIDTH_RATIO: f32 = 0.6;
 
 /// Fallback vertical extent (as a fraction of `font_size`) used only if the
-/// pinned lyric font fails to parse or isn't loaded yet — mirrors
+/// pinned font fails to parse or isn't loaded yet — mirrors
 /// `FALLBACK_ADVANCE_WIDTH_RATIO`'s role for horizontal measurement.
 const FALLBACK_VERTICAL_EXTENT_RATIO: f32 = 1.0;
 
@@ -98,13 +98,26 @@ pub(crate) fn cjk_glyph_left_bearing(c: char, font_size: f32) -> f32 {
     )
 }
 
-/// Real vertical extent (in points, ascender to descender) of the pinned
-/// `FontFamily::Serif` (lyric) font at the given font size — used to size a
-/// lyric syllable's click-target row tall enough for its actual glyph
-/// height instead of a hardcoded ratio (see `grid_layout::layout_heights::
-/// lyric_row_height`).
-pub(crate) fn lyric_vertical_extent(font_size: f32) -> f32 {
-    face_vertical_extent(font_source::face_for_family(FontFamily::Serif), font_size)
+/// Real vertical extent (in points, ascender to descender) of `family`'s
+/// pinned font at the given font size — used to size a text row tall enough
+/// for its actual glyph height instead of a hardcoded multiple of
+/// `row_height` (see `grid_layout::layout_heights::lyric_row_height` and the
+/// header rows in `grid_layout::layout_decoration`).
+pub(crate) fn text_vertical_extent(family: FontFamily, font_size: f32) -> f32 {
+    face_vertical_extent(font_source::face_for_family(family), font_size)
+}
+
+/// Line height (in points) of `family`'s pinned font at the given font size:
+/// its ascender+descender span plus the font's own designed line gap
+/// (`hhea.lineGap`), i.e. the spacing the font's designer intends between
+/// consecutive lines. Used to size the header's text rows, so stacked
+/// header lines (title over subtitle) are spaced the way the font expects.
+pub(crate) fn text_line_height(family: FontFamily, font_size: f32) -> f32 {
+    let face = font_source::face_for_family(family);
+    let line_gap = face.map_or(0.0, |face| {
+        face.line_gap() as f32 / face.units_per_em() as f32 * font_size
+    });
+    face_vertical_extent(face, font_size) + line_gap
 }
 
 /// Whether `c` falls in the CJK Unified Ideographs block, the single check

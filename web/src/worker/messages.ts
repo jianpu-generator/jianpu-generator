@@ -29,7 +29,7 @@ import type { NoteCell } from '../utils/noteSpanSelection'
  * layout with letter names (`D E F♯`) in place of degree numbers; `guitar` is
  * the numbered layout with each degree followed by its letter name (`1 (D)`)
  * and a guitar chord diagram at each chord symbol; and
- * `harmonica` the numbered layout with diatonic harmonica tabs (`4 -4 5`). */
+ * `harmonica` the numbered layout with chromatic harmonica tabs (`1 (1) 2`). */
 export type Notation = WasmNotation
 
 /** Verovio's pages for MEI Rust exported (see `staffMessageHandlers.ts`). */

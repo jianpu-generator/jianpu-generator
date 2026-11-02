@@ -37,7 +37,7 @@ function OptionLabel({ icon, label }: { icon: ReactNode; label: string }) {
  * numbered layout with letter names in place of degree numbers), Guitar (the
  * numbered layout with each degree followed by its letter name, `1 (C)`, and
  * a chord diagram at each chord symbol), and Harmonica
- * (the numbered layout with diatonic harmonica tabs). A dropdown rather than a
+ * (the numbered layout with chromatic harmonica tabs). A dropdown rather than a
  * row of buttons so it stays compact as views are added; `ResponsiveMenu`
  * opens it as a full-screen drawer on mobile. */
 export function NotationToggle({ notation, onChange }: NotationToggleProps) {
