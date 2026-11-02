@@ -67,7 +67,7 @@ fn sequence_line_renders_label_and_omit_parts_spans() {
     let abs = resolve(
         &[page],
         12.0,
-        40.0,
+        super::tests::TEST_PAGE_FRAME,
         ResolveFontSizes {
             lyric: LyricFontSizes {
                 base: 14.4,
@@ -129,7 +129,7 @@ fn sequence_line_label_span_uses_the_sequence_style() {
     let abs = resolve(
         &[page],
         12.0,
-        40.0,
+        super::tests::TEST_PAGE_FRAME,
         ResolveFontSizes {
             lyric: LyricFontSizes {
                 base: 14.4,
@@ -203,7 +203,7 @@ fn sequence_line_renders_only_parts_suffix_without_a_dash() {
     let abs = resolve(
         &[page],
         12.0,
-        40.0,
+        super::tests::TEST_PAGE_FRAME,
         ResolveFontSizes {
             lyric: LyricFontSizes {
                 base: 14.4,

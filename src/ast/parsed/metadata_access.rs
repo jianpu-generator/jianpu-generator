@@ -51,6 +51,7 @@ impl ParsedMetadata {
             MetadataNumberKey::NoteNumberWidth => &mut self.note_number_width,
             MetadataNumberKey::PartsListColumns => &mut self.parts_list_columns,
             MetadataNumberKey::PartLabelWidthPt => &mut self.part_label_width_pt,
+            MetadataNumberKey::PageMarginPt => &mut self.page_margin_pt,
         }
     }
 
@@ -61,6 +62,7 @@ impl ParsedMetadata {
             MetadataNumberKey::NoteNumberWidth => self.note_number_width,
             MetadataNumberKey::PartsListColumns => self.parts_list_columns,
             MetadataNumberKey::PartLabelWidthPt => self.part_label_width_pt,
+            MetadataNumberKey::PageMarginPt => self.page_margin_pt,
         }
     }
 

@@ -102,7 +102,13 @@ fn resolve_anchor_x(content: GridContent) -> f32 {
         content,
     };
     let page = single_row_page(el);
-    let abs = resolve(&[page], NOTE_NUMBER_WIDTH, 40.0, RESOLVE_FONT_SIZES).unwrap();
+    let abs = resolve(
+        &[page],
+        NOTE_NUMBER_WIDTH,
+        super::tests::TEST_PAGE_FRAME,
+        RESOLVE_FONT_SIZES,
+    )
+    .unwrap();
     abs[0]
         .elements
         .iter()

@@ -861,6 +861,7 @@ world poentaro-wasm {
         note-number-width: u32,
         parts-list-columns: u32,
         part-label-width-pt: u32,
+        page-margin-pt: u32,
         merge-duplicate-measures-across-parts: bool,
         hide-resting-parts: bool,
         hide-system-dividers: bool,
@@ -930,6 +931,7 @@ world poentaro-wasm {
         note-number-width: option<u32>,
         parts-list-columns: option<u32>,
         part-label-width-pt: option<u32>,
+        page-margin-pt: option<u32>,
         merge-duplicate-measures-across-parts: option<bool>,
         hide-resting-parts: option<bool>,
         hide-system-dividers: option<bool>,
@@ -952,6 +954,7 @@ world poentaro-wasm {
         note-number-width,
         parts-list-columns,
         part-label-width-pt,
+        page-margin-pt,
     }
 
     enum metadata-flag-key {

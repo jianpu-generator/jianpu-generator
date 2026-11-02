@@ -4,6 +4,13 @@ use crate::coordinate_resolver::resolve::{
     resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
 };
 
+/// The page frame these tests resolve against: the default 25pt page margin
+/// and a 40pt part-label column.
+pub(super) const TEST_PAGE_FRAME: crate::grid_layout::PageFrame = crate::grid_layout::PageFrame {
+    margin_pt: 25.0,
+    part_label_width_pt: 40.0,
+};
+
 /// Shared default padding used across this file's `ResolveFontSizes` literals, factored out to keep each test under clippy's line-count cap.
 const DEFAULT_PADDINGS: ElementPaddings = ElementPaddings {
     notes: 4.0,
@@ -43,7 +50,7 @@ fn resolve_empty_pages_returns_empty() {
     assert!(resolve(
         &[],
         12.0,
-        40.0,
+        TEST_PAGE_FRAME,
         ResolveFontSizes {
             lyric: LyricFontSizes {
                 base: 14.4,
@@ -90,7 +97,7 @@ fn note_head_halign_center_is_flush_left_plus_fixed_padding() {
     let abs = resolve(
         &[page],
         note_number_width,
-        40.0,
+        TEST_PAGE_FRAME,
         ResolveFontSizes {
             lyric: LyricFontSizes {
                 base: 14.4,
@@ -153,7 +160,7 @@ fn note_head_anchor_shifts_by_its_own_configured_padding_not_chords_or_lyrics() 
     let abs = resolve(
         &[page],
         12.0,
-        40.0,
+        TEST_PAGE_FRAME,
         ResolveFontSizes {
             lyric: LyricFontSizes {
                 base: 14.4,
@@ -259,7 +266,7 @@ fn note_head_halign_center_is_independent_of_column_weight() {
         let abs = resolve(
             &[column_weight_test_page(column_weight)],
             12.0,
-            40.0,
+            TEST_PAGE_FRAME,
             ResolveFontSizes {
                 lyric: LyricFontSizes {
                     base: 14.4,

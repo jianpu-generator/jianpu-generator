@@ -265,7 +265,7 @@ fn render_svg_docs_with_parts(
     let abs = coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,
-        config.part_label_width_pt as f32,
+        config.page_frame(),
         coordinate_resolver::ResolveFontSizes {
             lyric: config.lyric_font_sizes(),
             notes: config.notes_font_size(),

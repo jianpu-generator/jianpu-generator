@@ -133,7 +133,7 @@ fn when_rendered(world: &mut LyricHoverBoxWorld) {
     let abs = coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,
-        config.part_label_width_pt as f32,
+        config.page_frame(),
         resolve_font_sizes(&config),
     )
     .unwrap_or_else(|err| panic!("coordinate resolver should not fail in tests: {err:?}"));

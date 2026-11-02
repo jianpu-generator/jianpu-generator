@@ -30,6 +30,7 @@ fn cfg_wide() -> RenderConfig {
         row_height: 30,
         note_number_width: 12,
         part_label_width_pt: 40,
+        page_margin_pt: 25,
         max_measures_per_system: 48,
         lyrics_font_size: 18,
         notes_font_size: 18,
@@ -176,7 +177,7 @@ fn footer_row_fills_remaining_page_height() {
         .map(|r| r.height_pt)
         .sum();
     let footer_height = page.rows.last().unwrap().height_pt;
-    let expected = page_height - 2.0 * crate::grid_layout::PAGE_MARGIN - non_footer_height;
+    let expected = page_height - 2.0 * cfg_wide().page_margin_pt as f32 - non_footer_height;
     assert!(
         (footer_height - expected).abs() < 0.001,
         "footer_height={footer_height} expected={expected}"

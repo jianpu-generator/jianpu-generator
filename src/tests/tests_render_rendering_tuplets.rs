@@ -36,7 +36,7 @@ fn triplet_of_sixteenth_notes_gets_double_underline_matching_written_duration() 
     let abs = coordinate_resolver::resolve(
         &grid_pages,
         config.note_number_width as f32,
-        config.part_label_width_pt as f32,
+        config.page_frame(),
         coordinate_resolver::ResolveFontSizes {
             lyric: config.lyric_font_sizes(),
             notes: config.notes_font_size(),

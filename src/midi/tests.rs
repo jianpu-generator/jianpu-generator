@@ -39,6 +39,7 @@ fn default_test_metadata() -> Metadata {
         note_number_width: 8,
         parts_list_columns: 3,
         part_label_width_pt: 40,
+        page_margin_pt: 25,
         lyrics: text_style(14, 4, 12),
         notes: text_style(14, 4, 0),
         chords: text_style(14, 4, 0),

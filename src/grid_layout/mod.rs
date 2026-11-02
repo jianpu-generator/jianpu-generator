@@ -14,17 +14,44 @@ pub use types::{
     VAlign,
 };
 
-pub(crate) const PAGE_MARGIN: f32 = 25.0;
+/// Where a page's content sits: the blank margin on every side of the page
+/// (`Metadata::page_margin_pt`) and the fixed-width part-label column at the
+/// start of each system (`Metadata::part_label_width_pt`). Shared by
+/// `layout::layout` (system width, page breaks) and
+/// `coordinate_resolver::resolve` (absolute positions), so the width a system
+/// is packed into is the same width its columns are later spread across.
+#[derive(Debug, Clone, Copy)]
+pub struct PageFrame {
+    pub margin_pt: f32,
+    pub part_label_width_pt: f32,
+}
 
-/// The music region's usable width in points: the page width minus its
-/// margins on both sides, minus the fixed part-label column. Shared by
-/// `layout::layout`'s overflow check and (via `GridRow::column_geometry`'s
-/// own `usable_width_pt - label_width_pt` step, fed `page_width_pt -
-/// 2*PAGE_MARGIN` by `coordinate_resolver::resolve`) every row's real
-/// rendered geometry, so the overflow check compares against the same
-/// number columns actually get split across.
-pub(crate) fn usable_music_width_pt(page_width_pt: f32, label_width_pt: f32) -> f32 {
-    page_width_pt - 2.0 * PAGE_MARGIN - label_width_pt
+impl PageFrame {
+    /// The page width minus the margin on both sides.
+    pub(crate) fn usable_width_pt(&self, page_width_pt: f32) -> f32 {
+        page_width_pt - 2.0 * self.margin_pt
+    }
+
+    /// The page height minus the margin at the top and bottom.
+    pub(crate) fn usable_height_pt(&self, page_height_pt: f32) -> f32 {
+        page_height_pt - 2.0 * self.margin_pt
+    }
+
+    /// The music region's width: the usable width minus the part-label
+    /// column.
+    pub(crate) fn usable_music_width_pt(&self, page_width_pt: f32) -> f32 {
+        self.usable_width_pt(page_width_pt) - self.part_label_width_pt
+    }
+
+    /// `row`'s column geometry placed on a page `page_width_pt` wide, so its
+    /// `x_start` returns page coordinates (left margin included).
+    pub(crate) fn row_geometry(&self, row: &GridRow, page_width_pt: f32) -> types::ColumnGeometry {
+        row.column_geometry(
+            self.usable_width_pt(page_width_pt),
+            self.part_label_width_pt,
+        )
+        .offset_by(self.margin_pt)
+    }
 }
 
 #[cfg(test)]

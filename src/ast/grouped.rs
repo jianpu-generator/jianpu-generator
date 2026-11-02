@@ -11,8 +11,8 @@ pub use grouped_text_style::{
     DEFAULT_HIDE_RESTING_PARTS, DEFAULT_HIDE_SYSTEM_DIVIDERS, DEFAULT_LYRICS_HORIZONTAL_PADDING_PT,
     DEFAULT_LYRIC_CLICK_TARGET_PADDING_PT, DEFAULT_MAX_MEASURES_PER_SYSTEM,
     DEFAULT_MERGE_DUPLICATE_MEASURES_ACROSS_PARTS, DEFAULT_NOTES_HORIZONTAL_PADDING_PT,
-    DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT, DEFAULT_NOTE_NUMBER_WIDTH, DEFAULT_PARTS_LIST_COLUMNS,
-    DEFAULT_PART_LABEL_WIDTH_PT, DEFAULT_ROW_HEIGHT,
+    DEFAULT_NOTE_DASH_HORIZONTAL_PADDING_PT, DEFAULT_NOTE_NUMBER_WIDTH, DEFAULT_PAGE_MARGIN_PT,
+    DEFAULT_PARTS_LIST_COLUMNS, DEFAULT_PART_LABEL_WIDTH_PT, DEFAULT_ROW_HEIGHT,
 };
 
 #[derive(Debug, Clone)]
@@ -34,6 +34,9 @@ pub struct Metadata {
     /// A flat scalar field, not part of `part_label`'s `TextStyle`, since
     /// it's a layout constant rather than a text style component. Default: 40.
     pub part_label_width_pt: u32,
+    /// Blank margin in points on every side of the page: the space between
+    /// the paper's edge and the header, music and page number. Default: 25.
+    pub page_margin_pt: u32,
     /// Title text style. `font_size` default: 150% of `row_height`.
     pub title_style: TextStyle,
     /// Subtitle text style. `font_size` default: 80% of `row_height`.

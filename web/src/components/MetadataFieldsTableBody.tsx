@@ -147,6 +147,15 @@ export function MetadataFieldsTableBody({
         onReset={resetNumber('part-label-width-pt', metadata.partLabelWidthPt)}
         onChange={setNumber('part-label-width-pt')}
       />
+      <NumberFieldRow
+        label="Page Margin"
+        help={metadataFieldHelp['page-margin-pt']}
+        onShowHelp={showHelp}
+        value={metadata.pageMarginPt ?? ''}
+        placeholder={String(d.pageMarginPt)}
+        onReset={resetNumber('page-margin-pt', metadata.pageMarginPt)}
+        onChange={setNumber('page-margin-pt')}
+      />
       <CheckboxFieldRow
         label="Merge Duplicate Measures Across Parts"
         help={metadataFieldHelp['merge-duplicate-measures-across-parts']}
