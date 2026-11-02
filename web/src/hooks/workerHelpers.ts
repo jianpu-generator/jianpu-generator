@@ -123,7 +123,7 @@ export function pdfFilenameFromActiveFile(
   activeFile: string,
   labels?: string[],
 ): string {
-  const base = `${stripFileExtension(activeFile)}.pdf`
+  const base = `${baseNameFromActiveFile(activeFile)}.pdf`
   return withLabelsSuffix(base, labels)
 }
 
@@ -131,7 +131,7 @@ export function midiFilenameFromActiveFile(
   activeFile: string,
   labels?: string[],
 ): string {
-  const base = `${stripFileExtension(activeFile)}.mid`
+  const base = `${baseNameFromActiveFile(activeFile)}.mid`
   return withLabelsSuffix(base, labels)
 }
 
@@ -139,7 +139,7 @@ export function wavFilenameFromActiveFile(
   activeFile: string,
   labels?: string[],
 ): string {
-  const base = `${stripFileExtension(activeFile)}.wav`
+  const base = `${baseNameFromActiveFile(activeFile)}.wav`
   return withLabelsSuffix(base, labels)
 }
 
@@ -147,7 +147,7 @@ export function mp3FilenameFromActiveFile(
   activeFile: string,
   labels?: string[],
 ): string {
-  const base = `${stripFileExtension(activeFile)}.mp3`
+  const base = `${baseNameFromActiveFile(activeFile)}.mp3`
   return withLabelsSuffix(base, labels)
 }
 
@@ -155,7 +155,7 @@ export function zipFilenameFromActiveFile(
   activeFile: string,
   labels: string[],
 ): string {
-  const base = `${stripFileExtension(activeFile)}.zip`
+  const base = `${baseNameFromActiveFile(activeFile)}.zip`
   return withLabelsSuffix(base, labels)
 }
 
@@ -172,6 +172,14 @@ export function postAfterPaint(worker: Worker, payload: unknown) {
   requestAnimationFrame(() => worker.postMessage(payload))
 }
 
+/** The last segment of a `/`-separated file path, i.e. the file name
+ * without the folders it lives in. */
+export function fileNameWithoutFolder(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1)
+}
+
+/** The name every export of `activeFile` is downloaded under: its file name
+ * without its folders or its extension. */
 export function baseNameFromActiveFile(activeFile: string): string {
-  return stripFileExtension(activeFile)
+  return stripFileExtension(fileNameWithoutFolder(activeFile))
 }
