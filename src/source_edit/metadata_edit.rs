@@ -117,7 +117,7 @@ pub fn parse_metadata_fields(source: &str, preset_name: Option<&str>) -> Metadat
         .unwrap_or_default()
 }
 
-/// A preset's own `visible_parts` and `notation` lines, which the form
+/// A preset's own `visible_parts`, `soloed_parts` and `notation` lines, which the form
 /// leaves as written.
 fn preset_only_lines(section: &RawSection) -> Vec<String> {
     if section.kind != SectionKind::Preset {

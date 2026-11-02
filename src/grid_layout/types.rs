@@ -5,7 +5,8 @@ use crate::pitch_description::GuitarVoicing;
 #[path = "click_target_types.rs"]
 mod click_target_types;
 pub use click_target_types::{
-    BarLineClickTarget, BarNumberClickTarget, MeasureClickTarget, PartLabelClickTarget,
+    BarLineClickTarget, BarNumberClickTarget, LyricClickTarget, LyricLabelClickTarget,
+    MeasureClickTarget, PartLabelClickTarget,
 };
 
 #[path = "sequence_entry_info.rs"]
@@ -322,6 +323,14 @@ pub struct Header {
     pub title_vertical_padding_pt: f32,
     pub subtitle_vertical_padding_pt: f32,
     pub author_vertical_padding_pt: f32,
+    /// See `Metadata::running_title`: the small title (no subtitle/author)
+    /// that replaces the full header on pages after the first.
+    pub running_title_font_size: f32,
+    pub running_title_bold: bool,
+    pub running_title_italic: bool,
+    pub running_title_underline: bool,
+    pub running_title_font_family: crate::compositor::types::FontFamily,
+    pub running_title_vertical_padding_pt: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -365,36 +374,4 @@ pub struct PlaybackCursorTarget {
     pub column_end: f32,
     pub source_part_index: usize,
     pub note_id: usize,
-}
-
-/// Invisible click hit target for one lyric syllable, in its own row,
-/// starting at the syllable's own grid column but widened to match its
-/// note's full written column span (attack plus any dash-continuation
-/// columns — see `grid_layout::click_targets::compute_all_lyric_click_targets`)
-/// so a multi-beat note's syllable box covers its whole duration —
-/// independent of its note's own [`PlaybackCursorTarget`]-derived click
-/// target, so a click on the syllable itself always wins hit-testing there
-/// (see `renderer::new_types::Tag::Lyric`).
-#[derive(Debug, Clone)]
-pub struct LyricClickTarget {
-    pub row: usize,
-    pub column_start: f32,
-    pub column_end: f32,
-    pub source_part_index: usize,
-    pub note_id: usize,
-}
-
-/// Invisible hit target laid over one verse's `RowLabel` text (e.g.
-/// "M:v1"), spanning that one verse row within the fixed-width label region
-/// (columns `0..LABEL_COLS`) — the lyric-side mirror of
-/// [`PartLabelClickTarget`]. Clicking or range-selecting it is a shortcut for
-/// selecting every syllable that verse sings across the whole system the
-/// label sits in — `measure_index_start`/`measure_index_end` give that
-/// system's full measure range, same as `PartLabelClickTarget`'s.
-#[derive(Debug, Clone)]
-pub struct LyricLabelClickTarget {
-    pub row: usize,
-    pub source_part_index: usize,
-    pub measure_index_start: usize,
-    pub measure_index_end: usize,
 }

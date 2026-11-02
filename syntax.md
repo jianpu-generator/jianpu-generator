@@ -74,7 +74,7 @@ A `//` inside a double-quoted string (e.g. `title = "http://example.com"`) is no
 
 ### Text styles
 
-Every rendered text kind — `title`, `subtitle`, `author`, `sequence`, `part_legend`, `measure_number`, `section_label`, `page_number`, `part_label`, `lyrics`, `notes`, `chords`, `note_dash` — is configured with the same object-literal syntax:
+Every rendered text kind — `title`, `subtitle`, `author`, `sequence`, `part_legend`, `measure_number`, `section_label`, `page_number`, `running_title`, `part_label`, `lyrics`, `notes`, `chords`, `note_dash` — is configured with the same object-literal syntax:
 
 ```
 <kind> = { font_size: N, horizontal_padding_pt: N, vertical_padding_pt: N, bold: yes/no, italic: yes/no, underline: yes/no, font_family: serif/sans_serif/monospace }
@@ -94,6 +94,8 @@ Every rendered text kind — `title`, `subtitle`, `author`, `sequence`, `part_le
 | `underline` | Whether the element renders underlined (`yes`/`no`) |
 | `font_family` | Which of the app's three embedded font roles the element renders in: `serif`, `sans_serif`, or `monospace`. Accepted on every kind, including `notes`/`chords`/`note_dash` — those three kinds' glyph widths are re-measured against whichever font this resolves to, as part of column layout, so an override there can't desync rendered glyph widths from the widths layout computes. |
 
+`running_title` is the small title shown alone (no subtitle or author) at the top of every page after the first; its text is always `title`. Pages after the first also omit the part list and `# sequence` line, so they have more room for music.
+
 Defaults by kind:
 
 | Kind | `font_size` default | `horizontal_padding_pt` default | `vertical_padding_pt` default | `bold` default | `italic` default | `underline` default | `font_family` default |
@@ -102,10 +104,11 @@ Defaults by kind:
 | `subtitle` | `row_height * 0.8` | `0` | `4` | `no` | `yes` | `no` | `serif` |
 | `author` | `row_height * 0.6` | `0` | `4` | `no` | `no` | `no` | `serif` |
 | `sequence` | `12` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
-| `part_legend` | `row_height * 0.6` | `0` | `4` | `no` | `no` | `no` | `sans_serif` |
+| `part_legend` | `row_height * 0.6` | `0` | `4` | `no` | `no` | `no` | `serif` |
 | `measure_number` | `10` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
 | `section_label` | `12` | `0` | `0` | `yes` | `yes` | `no` | `sans_serif` |
 | `page_number` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
+| `running_title` | `row_height * 0.6` | `0` | `0` | `no` | `yes` | `no` | `serif` |
 | `part_label` | `12` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
 | `lyrics` | `row_height * 0.6` | `4` | `12` | `no` | `no` | `no` | `serif` |
 | `notes` | `lyrics.font_size` | `4` | `0` | `no` | `no` | `no` | `monospace` |
@@ -409,7 +412,7 @@ Chorus, Verse, Chorus(S)
 
 ## Presets
 
-A `# preset "Name"` section saves a way of viewing and exporting the song: which parts are shown, the notation, and any `# metadata` field to change. The preview's preset menu lists every preset; **Default** means no preset — the song's own `# metadata`, every part, numbered notation.
+A `# preset "Name"` section saves a way of viewing and exporting the song: which parts are shown or soloed, the notation, and any `# metadata` field to change. The preview's preset menu lists every preset; **Default** means no preset — the song's own `# metadata`, every part, numbered notation.
 
 ```
 # metadata
@@ -418,6 +421,7 @@ subtitle = "SATB"
 
 # preset "Soprano 1"
 visible_parts = main, S1
+soloed_parts = S1
 notation = violin
 subtitle = "Soprano 1"
 max_measures_per_system = 3
@@ -425,10 +429,11 @@ max_measures_per_system = 3
 
 - The name is quoted and required. Names must be unique, and `Default` (in any case) is reserved.
 - `visible_parts` — a comma-separated list of part abbreviations (as declared in `# parts`) to show. Parts not listed are hidden and silent, the same as hiding them in the preview. Unset, every part is shown; empty (`visible_parts =`), none is. An abbreviation that matches no declared part is an error and is dropped; a part whose abbreviation contains a comma can't be listed.
+- `soloed_parts` — the same kind of list, naming the parts to solo, the same as soloing them in the preview: once any part is soloed, only soloed parts are shown and heard, whatever `visible_parts` says. Unset or empty, nothing is soloed.
 - `notation` — `numbered`, `violin`, `cello`, `abc`, `guitar` or `harmonica`. Unset means numbered. Files written before this was renamed say `jianpu`, which still reads as `numbered`. Violin and cello are drawn as a staff, which ignores text styles, so setting a text style in such a preset is a warning.
 - Every `# metadata` field may also appear. The preset changes only the fields it sets; the rest come from `# metadata`. Header text (`title`, `subtitle`, `author`) can be changed but not removed.
-- `visible_parts` and `notation` belong only in a preset; in `# metadata` they're an error.
-- From the CLI, `--preset "Name"` exports under a preset (the file is named after it); `--tracks` replaces its `visible_parts`. The CLI draws numbered notation only, so `notation` doesn't apply there.
+- `visible_parts`, `soloed_parts` and `notation` belong only in a preset; in `# metadata` they're an error.
+- From the CLI, `--preset "Name"` exports under a preset (the file is named after it); it exports the preset's `soloed_parts` when it has any, else its `visible_parts`, and `--tracks` replaces both. The CLI draws numbered notation only, so `notation` doesn't apply there.
 
 ---
 

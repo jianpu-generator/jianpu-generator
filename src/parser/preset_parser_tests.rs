@@ -254,3 +254,24 @@ fn numbered_notation_with_text_styles_does_not_warn() {
     ));
     assert!(doc.preset_diagnostics.is_empty());
 }
+
+#[test]
+fn soloed_parts_parses_like_visible_parts() {
+    let source = document_with_presets("# preset \"P\"\nsoloed_parts = A1, , A1, T9\n");
+    let doc = parse_document(&source);
+    assert_eq!(only_preset(&doc).soloed_abbreviations(), vec!["A1"]);
+    assert_eq!(
+        error_kinds(&doc),
+        [RecoverableErrorKind::PresetUnknownPart {
+            abbreviation: "T9".to_string()
+        }]
+    );
+}
+
+#[test]
+fn preset_without_soloed_parts_solos_nothing() {
+    let doc = parse_document(&document_with_presets(
+        "# preset \"P\"\nnotation = violin\n",
+    ));
+    assert!(only_preset(&doc).soloed_parts.is_empty());
+}

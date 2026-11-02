@@ -261,6 +261,8 @@ pub struct ParsedMetadata {
     pub section_label_style: TextStyle,
     /// Page-number footer text style.
     pub page_number_style: TextStyle,
+    /// Running-title text style (the small title on pages after the first).
+    pub running_title_style: TextStyle,
     /// Part row-label text style (see `Metadata::part_label`).
     pub part_label_style: TextStyle,
     /// Lyric syllable text style, including the click-target's extra vertical

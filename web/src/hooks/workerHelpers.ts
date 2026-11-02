@@ -59,7 +59,10 @@ export function measureRangeInSpanWithReveal(
 
 /** What is drawn and what sounds when nothing is hidden or soloed, and what
  * is used while the score's parts are not known yet. */
-export const ALL_PARTS_VISIBLE: ResolvedPartVisibility = { hiddenParts: [] }
+export const ALL_PARTS_VISIBLE: ResolvedPartVisibility = {
+  hiddenParts: [],
+  soloedParts: [],
+}
 
 /** Resolves the toggle UI's raw hide/solo state into what is drawn and what
  * sounds. The rules live in Rust (`resolve_part_visibility`); this only

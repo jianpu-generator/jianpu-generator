@@ -458,13 +458,15 @@ world poentaro-wasm {
     // passed back verbatim to the render and PDF exports. `rendered-tracks`
     // and `sounding-tracks` are `none` when every part is drawn / sounds.
     // `preset-name` is the preset in force, `none` when the chosen one no
-    // longer exists; `hidden-parts` are the pills shown as off.
+    // longer exists; `hidden-parts` are the pills shown as off, and
+    // `soloed-parts` those soloed in the toggles or the preset's `soloed_parts`.
     record resolved-part-visibility {
         rendered-tracks: option<list<string>>,
         sounding-tracks: option<list<string>>,
         sounding-display-names: option<list<string>>,
         preset-name: option<string>,
         hidden-parts: list<string>,
+        soloed-parts: list<string>,
     }
 
     // Resolves hide/solo state into what is drawn and what sounds, given the
@@ -883,6 +885,7 @@ world poentaro-wasm {
         section-label,
         part-label,
         page-number,
+        running-title,
         lyrics,
         notes,
         chords,
@@ -1034,9 +1037,11 @@ world poentaro-wasm {
     export list-presets: func(source: string) -> list<preset-summary>;
 
     // One line the preset menu's controls write into a `# preset` section.
-    // An empty `visible-parts` list hides every part.
+    // An empty `visible-parts` list hides every part; an empty
+    // `soloed-parts` list removes the line.
     variant preset-edit {
         visible-parts(list<string>),
+        soloed-parts(list<string>),
         notation(notation),
     }
 
@@ -1054,13 +1059,26 @@ world poentaro-wasm {
     // rewritten in `all-parts` order (the abbreviations `list-parts` gives).
     export set-preset-part-shown: func(source: string, preset-name: string, all-parts: list<string>, part: part-shown) -> string;
 
+    // A solo button clicked under a preset: which part, and whether it is
+    // now soloed.
+    record part-soloed {
+        abbreviation: string,
+        soloed: bool,
+    }
+
+    // Solos or unsolos one part in the named preset's `soloed_parts`,
+    // rewritten in `all-parts` order; the line goes once nothing is soloed.
+    export set-preset-part-soloed: func(source: string, preset-name: string, all-parts: list<string>, part: part-soloed) -> string;
+
     // Why "New preset…" can't use `name` (empty, quoted, Default or taken).
     export new-preset-name-error: func(source: string, name: string) -> option<string>;
 
-    // A preset for "New preset…", holding the parts and notation shown now.
+    // A preset for "New preset…", holding the parts, solos and notation
+    // shown now.
     record new-preset {
         name: string,
         visible-parts: list<string>,
+        soloed-parts: list<string>,
         notation: notation,
     }
 

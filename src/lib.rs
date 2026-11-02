@@ -151,6 +151,7 @@ pub fn chosen_preset_from_source(
     Ok(doc.preset(preset_name).map(|preset| ChosenPreset {
         name: preset.name.clone(),
         visible_parts: preset.visible_abbreviations(),
+        soloed_parts: preset.soloed_abbreviations(),
     }))
 }
 
@@ -237,6 +238,12 @@ fn build_header(score: &Score, parts: &[PartInfo]) -> grid_layout::types::Header
         title_vertical_padding_pt: score.metadata.title_style.vertical_padding_pt as f32,
         subtitle_vertical_padding_pt: score.metadata.subtitle_style.vertical_padding_pt as f32,
         author_vertical_padding_pt: score.metadata.author_style.vertical_padding_pt as f32,
+        running_title_font_size: score.metadata.running_title.font_size as f32,
+        running_title_bold: score.metadata.running_title.bold,
+        running_title_italic: score.metadata.running_title.italic,
+        running_title_underline: score.metadata.running_title.underline,
+        running_title_font_family: score.metadata.running_title.font_family,
+        running_title_vertical_padding_pt: score.metadata.running_title.vertical_padding_pt as f32,
     }
 }
 

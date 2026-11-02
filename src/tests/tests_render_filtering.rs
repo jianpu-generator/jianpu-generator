@@ -369,12 +369,14 @@ fn chosen_preset_from_source_reads_the_named_preset() {
         "\n",
         "# preset \"Choir\"\n",
         "visible_parts = A\n",
+        "soloed_parts = S\n",
     );
     assert_eq!(
         chosen_preset_from_source(input, "test.poentaro", "Choir").unwrap(),
         Some(ChosenPreset {
             name: "Choir".to_string(),
             visible_parts: Some(vec!["A".to_string()]),
+            soloed_parts: vec!["S".to_string()],
         })
     );
     assert_eq!(

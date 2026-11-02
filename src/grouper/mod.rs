@@ -22,6 +22,7 @@ mod part_grouper;
 mod range_validation;
 mod sequence_resolution;
 mod simple_text_styles;
+mod text_style_helpers;
 mod tie_validation;
 
 use directive_grouper::DirectiveGrouper;
@@ -30,6 +31,7 @@ use part_grouper::{group_lyrics_track, group_timed_track};
 use range_validation::validate_ranges;
 use sequence_resolution::resolve_sequence;
 use simple_text_styles::resolve_simple_text_styles;
+use text_style_helpers::resolve_running_title;
 use tie_validation::validate_ties;
 
 pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
@@ -155,7 +157,7 @@ fn chord_lyrics_multiplier(tracks: &[ParsedTrack], slot_index: usize) -> Option<
         .reduce(crate::tuplet::lcm)
 }
 
-/// The thirteen `TextStyle` fields of `Metadata`, resolved separately from
+/// The fourteen `TextStyle` fields of `Metadata`, resolved separately from
 /// `resolve_metadata`'s other (non-text-style) fields to keep each function
 /// under clippy's line-count limit.
 struct ResolvedTextStyles {
@@ -168,6 +170,7 @@ struct ResolvedTextStyles {
     section_label: TextStyle,
     part_label: TextStyle,
     page_number: TextStyle,
+    running_title: TextStyle,
     lyrics: TextStyle,
     notes: TextStyle,
     chords: TextStyle,
@@ -200,6 +203,7 @@ fn resolve_text_styles(metadata: &ParsedMetadata, row_height: u32) -> ResolvedTe
         section_label,
         part_label,
         page_number,
+        running_title: resolve_running_title(metadata, row_height),
         lyrics: resolve_text_style(
             metadata.lyrics_style,
             font_size(TextStyleKind::Lyrics),
@@ -278,6 +282,7 @@ fn resolve_metadata(metadata: ParsedMetadata) -> Metadata {
         section_label: styles.section_label,
         part_label: styles.part_label,
         page_number: styles.page_number,
+        running_title: styles.running_title,
         lyrics: styles.lyrics,
         notes: styles.notes,
         chords: styles.chords,
