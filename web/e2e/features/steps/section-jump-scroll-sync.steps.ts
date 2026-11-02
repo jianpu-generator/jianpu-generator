@@ -49,12 +49,12 @@ Given(
 
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'section-scroll-sync-test.jianpu',
-          userFiles: { 'section-scroll-sync-test.jianpu': src },
+          active: 'section-scroll-sync-test.poentaro',
+          userFiles: { 'section-scroll-sync-test.poentaro': src },
           bin: {},
-          fileIds: { 'section-scroll-sync-test.jianpu': crypto.randomUUID() },
+          fileIds: { 'section-scroll-sync-test.poentaro': crypto.randomUUID() },
         }),
       )
     }, source)

@@ -1,5 +1,5 @@
 import { tagFromElement, tagSelector } from '../dataAttributes'
-import type { LyricCellIn, NoteCellIn, Tag } from '../jianpuWasm'
+import type { LyricCellIn, NoteCellIn, Tag } from '../poentaroWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import { clickableElementIdFromElement } from './clickableElementId'
 

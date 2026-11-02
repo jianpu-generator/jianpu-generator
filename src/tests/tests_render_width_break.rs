@@ -15,7 +15,7 @@ fn source(measure_count: usize) -> String {
 fn render(source: &str, note_labels: NoteLabels) -> RenderOutput {
     render_svgs_from_source_with_visibility(
         source,
-        "test.jianpu",
+        "test.poentaro",
         &ResolvedPartVisibility::default(),
         &[],
         note_labels,

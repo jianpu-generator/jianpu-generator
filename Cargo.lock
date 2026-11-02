@@ -1404,43 +1404,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
-name = "jianpu-generator"
-version = "0.1.0"
-dependencies = [
- "ariadne",
- "base64",
- "clap",
- "cucumber",
- "hound",
- "itertools 0.13.0",
- "midly",
- "nonempty",
- "oxisynth",
- "pdf-writer",
- "quickcheck",
- "rusty_mp3",
- "serde",
- "serde_json",
- "svg2pdf",
- "tokio",
- "ttf-parser 0.25.1",
- "zip",
-]
-
-[[package]]
-name = "jianpu-wasm"
-version = "0.1.0"
-dependencies = [
- "brotli",
- "cloud-outbox",
- "itertools 0.13.0",
- "jianpu-generator",
- "serde",
- "wit-bindgen",
- "zip",
-]
-
-[[package]]
 name = "js-sys"
 version = "0.3.105"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1548,7 +1511,7 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "diffy",
- "jianpu-generator",
+ "poentaro",
  "proptest",
  "serde",
  "serde_json",
@@ -1939,6 +1902,43 @@ dependencies = [
  "fdeflate",
  "flate2",
  "miniz_oxide",
+]
+
+[[package]]
+name = "poentaro"
+version = "0.1.0"
+dependencies = [
+ "ariadne",
+ "base64",
+ "clap",
+ "cucumber",
+ "hound",
+ "itertools 0.13.0",
+ "midly",
+ "nonempty",
+ "oxisynth",
+ "pdf-writer",
+ "quickcheck",
+ "rusty_mp3",
+ "serde",
+ "serde_json",
+ "svg2pdf",
+ "tokio",
+ "ttf-parser 0.25.1",
+ "zip",
+]
+
+[[package]]
+name = "poentaro-wasm"
+version = "0.1.0"
+dependencies = [
+ "brotli",
+ "cloud-outbox",
+ "itertools 0.13.0",
+ "poentaro",
+ "serde",
+ "wit-bindgen",
+ "zip",
 ]
 
 [[package]]

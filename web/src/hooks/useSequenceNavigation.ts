@@ -125,9 +125,9 @@ export function useSequenceNavigation(
   ) => void,
   /**
    * Owned by the caller (`useAppController`) rather than this hook, and
-   * also handed to `useMeasureAudioPlayback` (inside `useJianpuWorker`,
+   * also handed to `useMeasureAudioPlayback` (inside `usePoentaroWorker`,
    * constructed before this hook runs since this hook needs
-   * `useJianpuWorker`'s own `notifySelection` output) — a ref lets that
+   * `usePoentaroWorker`'s own `notifySelection` output) — a ref lets that
    * earlier-constructed consumer read the latest selection at click time
    * without a circular dependency between the two hooks.
    */

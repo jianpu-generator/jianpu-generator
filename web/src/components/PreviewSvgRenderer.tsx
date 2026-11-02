@@ -5,7 +5,7 @@ import {
   tagHasPointerCursor,
 } from '../dataAttributes'
 import { previewFontFamilyCss } from '../fontRoles'
-import type { SvgDocument } from '../jianpuWasm'
+import type { SvgDocument } from '../poentaroWasm'
 
 /** Renders `doc.elements[index]` — the Rust side flattens the element tree
  * into this arena in pre-order, with each group naming its children by

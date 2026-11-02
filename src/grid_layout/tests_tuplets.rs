@@ -22,7 +22,7 @@ time=4/4
 [B] 1 2 3 4
 [M] 3:{1_1_1_} 2 3 4
 "#;
-    let score = crate::compile(source, "test.jianpu", &[]).expect("should compile");
+    let score = crate::compile(source, "test.poentaro", &[]).expect("should compile");
     let compile_result = crate::compiler::compile(&score);
     let compile_result = crate::consolidator::consolidate(compile_result);
     let header = crate::grid_layout::types::Header {

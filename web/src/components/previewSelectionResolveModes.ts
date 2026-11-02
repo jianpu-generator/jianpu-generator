@@ -1,4 +1,4 @@
-import { type ClickableElementId, jianpuWasm } from '../jianpuWasm'
+import { type ClickableElementId, poentaroWasm } from '../poentaroWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import type { PreviewAnchorState } from './previewAnchorState'
 import {
@@ -61,7 +61,7 @@ export function resolveMeasureSelection(
   const finalRange = point
     ? (getMeasureAtPoint(point.x, point.y) ?? anchorState.current)
     : anchorState.anchor
-  const response = jianpuWasm().resolveSelectionRange(
+  const response = poentaroWasm().resolveSelectionRange(
     noteSpans,
     lyricSpans,
     anchorState.anchorId,
@@ -188,7 +188,7 @@ export function resolveNoteSelection(
     return { noteCells, lyricCells }
   }
 
-  const response = jianpuWasm().resolveSelectionRange(
+  const response = poentaroWasm().resolveSelectionRange(
     noteSpans,
     lyricSpans,
     anchorState.anchorId,
@@ -261,7 +261,7 @@ export function resolveLyricSelection(
   const currentId =
     currentIdHint ?? anyClickableElementIdAtPoint(current.x, current.y)
   const response = currentId
-    ? jianpuWasm().resolveSelectionRange(
+    ? poentaroWasm().resolveSelectionRange(
         noteSpans,
         lyricSpans,
         anchorState.anchorId,

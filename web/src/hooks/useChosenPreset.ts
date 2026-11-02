@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { jianpuWasm } from '../jianpuWasm'
+import { poentaroWasm } from '../poentaroWasm'
 
-export const CHOSEN_PRESET_KEY = 'jianpu:chosen-preset:v1'
+export const CHOSEN_PRESET_KEY = 'poentaro:chosen-preset:v1'
 
 /** File id → the preset chosen in the preset menu. Default has no entry. */
 type ChosenPresetCache = Record<string, string>
@@ -61,7 +61,7 @@ export function useChosenPreset(
 
   useEffect(() => {
     if (!wasmReady || chosenPreset == null) return
-    const followed = jianpuWasm().followPresetRename(
+    const followed = poentaroWasm().followPresetRename(
       sourceWithPresetRef.current ?? source,
       source,
       chosenPreset,

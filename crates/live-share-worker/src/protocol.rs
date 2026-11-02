@@ -61,7 +61,7 @@ pub struct SharedFolder {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SharedFolderFile {
-    /// Path relative to the shared folder, e.g. `Advent/O Come.jianpu`.
+    /// Path relative to the shared folder, e.g. `Advent/O Come.poentaro`.
     pub path: String,
     pub content: String,
     pub revision: i64,

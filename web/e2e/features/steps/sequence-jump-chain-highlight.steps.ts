@@ -71,13 +71,13 @@ Given(
   ) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'sequence-chain-highlight-test.jianpu',
-          userFiles: { 'sequence-chain-highlight-test.jianpu': src },
+          active: 'sequence-chain-highlight-test.poentaro',
+          userFiles: { 'sequence-chain-highlight-test.poentaro': src },
           bin: {},
           fileIds: {
-            'sequence-chain-highlight-test.jianpu': crypto.randomUUID(),
+            'sequence-chain-highlight-test.poentaro': crypto.randomUUID(),
           },
         }),
       )

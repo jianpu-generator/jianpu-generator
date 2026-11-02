@@ -6,7 +6,7 @@ import type {
   NoteTiming,
   PartToggleState,
   SvgDocument,
-} from '../jianpuWasm'
+} from '../poentaroWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,

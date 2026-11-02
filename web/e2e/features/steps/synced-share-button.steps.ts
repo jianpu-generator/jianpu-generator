@@ -132,7 +132,7 @@ export async function waitForSeededSyncedFile(page: Page): Promise<void> {
   )
   if (!signedIn) return
   await expect(fileSwitcherTrigger(page)).toContainText(
-    state.ownerFileName.replace(/\.jianpu$/, ''),
+    state.ownerFileName.replace(/\.poentaro$/, ''),
     { timeout: 15_000 },
   )
 }
@@ -219,7 +219,7 @@ Then(
       throw new Error('ownerFileName was not seeded yet')
     const payload = new URL(state.syncedShareLink).searchParams.get('s')
     expect(payload).toContain(
-      `--${state.ownerFileName.replace(/\.jianpu$/, '').replace(/\s+/g, '-')}`,
+      `--${state.ownerFileName.replace(/\.poentaro$/, '').replace(/\s+/g, '-')}`,
     )
   },
 )

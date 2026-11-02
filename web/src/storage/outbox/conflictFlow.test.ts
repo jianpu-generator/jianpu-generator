@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { instantiate } from '../../../../crates/jianpu-wasm/pkg-component/jianpu_wasm.js'
+import { instantiate } from '../../../../crates/poentaro-wasm/pkg-component/poentaro_wasm.js'
 import {
   type SendRequest,
   type SendResult,
   setWasmRoot,
-} from '../../jianpuWasm'
+} from '../../poentaroWasm'
 import { createBaseSnapshots } from './baseSnapshots'
 import {
   createConflictFlow,
@@ -18,7 +18,7 @@ import { createOutboxLooper } from './outboxLooper'
 beforeAll(async () => {
   const bytes = readFileSync(
     new URL(
-      '../../../../crates/jianpu-wasm/pkg-component/jianpu_wasm.core.wasm',
+      '../../../../crates/poentaro-wasm/pkg-component/poentaro_wasm.core.wasm',
       import.meta.url,
     ),
   )

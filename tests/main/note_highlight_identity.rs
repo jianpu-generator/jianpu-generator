@@ -1,5 +1,5 @@
 #![allow(clippy::disallowed_macros)]
-use jianpu_generator::{note_timings_from_source, render_svgs_from_source};
+use poentaro::{note_timings_from_source, render_svgs_from_source};
 use std::collections::HashSet;
 
 /// Two parts (one with a cross-barline tie and a chord part), plus a rest,
@@ -60,11 +60,11 @@ fn note_ids_match_between_grid_layout_and_midi_timing() {
     let source = multi_part_source_with_ties_rests_and_chord();
 
     let render_output =
-        render_svgs_from_source(source, "note_highlight_identity.jianpu", &[]).unwrap();
+        render_svgs_from_source(source, "note_highlight_identity.poentaro", &[]).unwrap();
     let svg_ids = note_ids_in_svg(&render_output.svgs);
 
     let note_timings =
-        note_timings_from_source(source, "note_highlight_identity.jianpu", None, None, &[])
+        note_timings_from_source(source, "note_highlight_identity.poentaro", None, None, &[])
             .unwrap();
     let timing_ids: HashSet<(usize, usize)> = note_timings
         .iter()
@@ -110,12 +110,12 @@ fn note_ids_match_between_grid_layout_and_midi_timing_with_sequence() {
     let source = sequence_source_repeating_a_span();
 
     let render_output =
-        render_svgs_from_source(source, "note_highlight_identity_sequence.jianpu", &[]).unwrap();
+        render_svgs_from_source(source, "note_highlight_identity_sequence.poentaro", &[]).unwrap();
     let svg_ids = note_ids_in_svg(&render_output.svgs);
 
     let note_timings = note_timings_from_source(
         source,
-        "note_highlight_identity_sequence.jianpu",
+        "note_highlight_identity_sequence.poentaro",
         None,
         None,
         &[],

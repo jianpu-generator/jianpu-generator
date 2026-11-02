@@ -47,7 +47,7 @@ Given(
     otherFileName = `synced-other-${crypto.randomUUID().slice(0, 8)}`
     await seedCloudFile(
       DEFAULT_E2E_EMAIL,
-      `${otherFileName}.jianpu`,
+      `${otherFileName}.poentaro`,
       scoreTitled(title),
     )
   },

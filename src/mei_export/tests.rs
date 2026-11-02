@@ -15,7 +15,7 @@ fn key(name: NoteName, accidental: Accidental) -> KeyChange {
 }
 
 fn mei_of(source: &str) -> String {
-    let doc = crate::parser::parse(source, "test.jianpu", &[]).unwrap();
+    let doc = crate::parser::parse(source, "test.poentaro", &[]).unwrap();
     let score = crate::grouper::group(doc).unwrap();
     score_to_mei(&score, &HashMap::new(), ClefChoice::Automatic).mei
 }
@@ -101,7 +101,7 @@ fn notes_carry_their_source_span_as_id() {
 fn every_measure_is_listed_with_its_element_id() {
     let source =
         "# parts\nMelody [m] = notes\n\n# score\nkey=C4 time=2/4\n[m] 1 2\n\n[m] 3 4\n\n[m] 5 6\n";
-    let doc = crate::parser::parse(source, "test.jianpu", &[]).unwrap();
+    let doc = crate::parser::parse(source, "test.poentaro", &[]).unwrap();
     let score = crate::grouper::group(doc).unwrap();
     let document = score_to_mei(&score, &HashMap::new(), ClefChoice::Automatic);
     assert_eq!(
@@ -157,7 +157,7 @@ fn hidden_parts_get_no_staff() {
     let source = "# parts\nSoprano [S] = notes\nAlto [A] = notes\nWords [w] = lyrics[A]\n\n# score\nkey=C4 time=2/4\n[S] 1 2\n[A] 5 6\n[w] 你好\n";
     let mei = crate::render_mei_from_source_with_visibility(
         source,
-        "test.jianpu",
+        "test.poentaro",
         &crate::ResolvedPartVisibility {
             rendered_tracks: Some(vec!["S".into()]),
             ..Default::default()
@@ -177,7 +177,7 @@ fn shown_lyrics_of_a_hidden_part_ride_an_invisible_staff() {
     let source = "# parts\nSustain [sus] = notes\nBass [B] = notes\nWords [w] = lyrics[B]\n\n# score\nkey=C4 time=2/4\n[sus] 3~\n[B] 1 2\n[w] 你好\n";
     let mei = crate::render_mei_from_source_with_visibility(
         source,
-        "test.jianpu",
+        "test.poentaro",
         &crate::ResolvedPartVisibility {
             rendered_tracks: Some(vec!["sus".into(), "w".into()]),
             ..Default::default()
@@ -205,7 +205,7 @@ fn shown_lyrics_of_a_hidden_part_ride_an_invisible_staff() {
 }
 
 fn mei_with_clef(source: &str, clef_choice: ClefChoice) -> String {
-    let doc = crate::parser::parse(source, "test.jianpu", &[]).unwrap();
+    let doc = crate::parser::parse(source, "test.poentaro", &[]).unwrap();
     let score = crate::grouper::group(doc).unwrap();
     score_to_mei(&score, &HashMap::new(), clef_choice).mei
 }

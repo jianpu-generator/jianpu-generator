@@ -4,7 +4,7 @@ use crate::error::{Diagnostic, RecoverableErrorKind, Span};
 use crate::parser;
 
 fn parse_and_group(input: &str) -> Score {
-    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(input, "test.poentaro", &[]).unwrap();
     group(doc).unwrap()
 }
 

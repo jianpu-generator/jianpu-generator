@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
-import type { NoteTiming, SvgDocument } from '../jianpuWasm'
+import type { NoteTiming, SvgDocument } from '../poentaroWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import type { StaffScore } from '../worker/messages'
 import { PreviewPages } from './PreviewPages'
@@ -46,7 +46,7 @@ interface PreviewProps {
   emptyMessage?: string
   /** Opens the rename-before-download modal for the inline audio player's
    * "Download" button, instead of downloading `audioUrl` immediately —
-   * see `PendingDownload` in `useJianpuWorkerTypes.ts`. */
+   * see `PendingDownload` in `usePoentaroWorkerTypes.ts`. */
   onRequestAudioDownload?: (url: string, filename: string) => void
   onSectionLabelClick?: (label: string) => void
   /** Fired on the commit click of a note-level click-and-click select (see
@@ -165,7 +165,7 @@ export function Preview({
   // `suppressNextRevealRef`.
   const suppressedRangeRef = useRef<typeof selectedMeasureRange>(null)
 
-  // wavUrl/mp3Url are mutually exclusive (see `useJianpuWorkerAudioActions`),
+  // wavUrl/mp3Url are mutually exclusive (see `usePoentaroWorkerAudioActions`),
   // so whichever is set is the one inline player below renders. noteTimings
   // applies to whichever format that is — the worker's `audio`/`mp3`
   // responses each pair their bytes with a matching `noteTimings` computed
@@ -236,7 +236,7 @@ export function Preview({
   //
   // The one-shot flag alone isn't enough, though: `selectedMeasureRange`
   // landing is only the *first* of potentially several effect re-runs that
-  // one self-commit sets off — `useJianpuWorkerRenderRequests`'s
+  // one self-commit sets off — `usePoentaroWorkerRenderRequests`'s
   // highlight-render effect reacts to that same `selectedMeasureRange`
   // change and (whether or not it ends up posting a worker request) calls
   // `setHighlightedDocuments`, which is this effect's other dependency and

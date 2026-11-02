@@ -4,7 +4,7 @@ import type {
   StaffClef,
   StaffMeasure,
   SvgDocument,
-} from '../jianpuWasm'
+} from '../poentaroWasm'
 import type {
   Diagnostic,
   DiagnosticViewZone,
@@ -174,7 +174,7 @@ export type WorkerRequest =
        * When present, narrows the generated clip down to exactly these
        * range-selected `(sourcePartIndex, noteId)` cells' elapsed-seconds
        * span (sample-accurately trimmed/faded in Rust — see
-       * `jianpu_generator::wav::TrimWindow`) instead of playing the whole
+       * `poentaro::wav::TrimWindow`) instead of playing the whole
        * `[startMeasureIndex, endMeasureIndex]` range — what the web app's
        * "play selection" needs. Omit for every other measure-range playback
        * (e.g. "play current measure"/"play from current measure"/"play

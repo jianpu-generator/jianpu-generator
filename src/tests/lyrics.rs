@@ -21,7 +21,7 @@ fn explicit_lyrics_keep_lyric_row() {
         "[Alto] 5 6 7 1\n",
         "[Altov1] la la la la\n",
     );
-    let score = compile(input, "test.jianpu", &[]).unwrap();
+    let score = compile(input, "test.poentaro", &[]).unwrap();
     let parts = &score.measures[0].parts;
     assert_eq!(parts.len(), 4, "each lyric part is a part of its own");
     let lyric_targets: Vec<&str> = parts
@@ -57,7 +57,7 @@ time=4/4 key=C4 bpm=120
 [Melodyv1] do re mi fa
 [Melodyv2] one two three four
 "#;
-    let score = compile(input, "test.jianpu", &[]).unwrap();
+    let score = compile(input, "test.poentaro", &[]).unwrap();
     let parts = &score.measures[0].parts;
     assert_eq!(parts.len(), 3, "notes part plus two lyric parts");
     let verse_texts = |part: usize| -> Vec<String> {
@@ -94,7 +94,7 @@ time=4/4 key=C4 bpm=120
 [Melody] 1 2 3 4
 [Melodyv1] la la la la
 "#;
-    let score = compile(input, "test.jianpu", &[]).unwrap();
+    let score = compile(input, "test.poentaro", &[]).unwrap();
     assert!(matches!(
         score.measures[0].parts[0].slice().kind,
         PartKind::Notes
@@ -139,7 +139,7 @@ time=4/4 key=C4 bpm=120
 [Melodyv1] one two three four
 [Melodyv2] uno dos tres cuatro
 "#;
-    let score = compile(input, "test.jianpu", &[]).unwrap();
+    let score = compile(input, "test.poentaro", &[]).unwrap();
     let compile_result = compiler::compile(&score);
     let compile_result = consolidator::consolidate(compile_result);
     let config = render_config::RenderConfig::from_metadata(&score.metadata);
@@ -163,10 +163,10 @@ fn lyric_parts_are_not_listed_as_editable_part_declarations() {
         "[M] 1 2 3 4\n",
         "[v1] do re mi fa\n",
     );
-    let declarations = list_part_declarations_from_source(input, "test.jianpu", &[]).unwrap();
+    let declarations = list_part_declarations_from_source(input, "test.poentaro", &[]).unwrap();
     assert_eq!(declarations.len(), 1);
     assert_eq!(declarations[0].abbreviation, "M");
-    let parts = list_parts_from_source(input, "test.jianpu", &[]).unwrap();
+    let parts = list_parts_from_source(input, "test.poentaro", &[]).unwrap();
     assert_eq!(parts.len(), 2);
     assert_eq!(parts[1].abbreviation, "v1");
 }

@@ -37,7 +37,7 @@ import { useSwitchToCloudOnSignIn } from './useSwitchToCloudOnSignIn'
  */
 export const AUTOSAVE_DEBOUNCE_MS = 20_000
 
-const STORAGE_BACKEND_PREFERENCE_KEY = 'jianpu:storage-backend:v1'
+const STORAGE_BACKEND_PREFERENCE_KEY = 'poentaro:storage-backend:v1'
 
 /**
  * Persisted choice of backend. Unlike the old GitHub backend, `'cloud'`

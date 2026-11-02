@@ -58,13 +58,13 @@ Given(
   async ({ page, focusEditor }) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'lyric-label-click-test.jianpu',
-          userFiles: { 'lyric-label-click-test.jianpu': src },
+          active: 'lyric-label-click-test.poentaro',
+          userFiles: { 'lyric-label-click-test.poentaro': src },
           bin: {},
           fileIds: {
-            'lyric-label-click-test.jianpu': 'lyric-label-click-test-id-001',
+            'lyric-label-click-test.poentaro': 'lyric-label-click-test-id-001',
           },
         }),
       )

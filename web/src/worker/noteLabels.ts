@@ -1,4 +1,4 @@
-import type { NoteLabels } from '../jianpuWasm'
+import type { NoteLabels } from '../poentaroWasm'
 import type { Notation } from './messages'
 
 const NOTE_LABELS: Record<Notation, NoteLabels> = {

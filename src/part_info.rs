@@ -58,7 +58,7 @@ fn map_raw_to_source_declaration(
     }
 }
 
-/// List source-level part declarations from a `.jianpu` source string.
+/// List source-level part declarations from a `.poentaro` source string.
 ///
 /// Returns what is written on each `# parts` line, without follow inheritance.
 pub fn list_part_declarations_from_source(
@@ -91,7 +91,7 @@ pub fn list_part_declarations_from_source(
         .collect())
 }
 
-/// List part declarations from a `.jianpu` source string.
+/// List part declarations from a `.poentaro` source string.
 ///
 /// Lyric parts are listed like any other part, right after the part they sing
 /// along to.

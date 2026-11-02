@@ -33,7 +33,7 @@ async function getStoredFile(
   name: string,
 ) {
   return page.evaluate((fileName) => {
-    const raw = localStorage.getItem('jianpu:files:v1')
+    const raw = localStorage.getItem('poentaro:files:v1')
     if (!raw) return ''
     const store = JSON.parse(raw) as {
       active: string
@@ -49,7 +49,7 @@ Given(
     await page.addInitScript(
       ({ sourceA, sourceB, fileNameA, fileNameB }) => {
         localStorage.setItem(
-          'jianpu:files:v1',
+          'poentaro:files:v1',
           JSON.stringify({
             active: fileNameA,
             userFiles: { [fileNameA]: sourceA, [fileNameB]: sourceB },

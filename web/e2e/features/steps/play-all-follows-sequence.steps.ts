@@ -45,12 +45,12 @@ Given(
 
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'sequence-test.jianpu',
-          userFiles: { 'sequence-test.jianpu': src },
+          active: 'sequence-test.poentaro',
+          userFiles: { 'sequence-test.poentaro': src },
           bin: {},
-          fileIds: { 'sequence-test.jianpu': crypto.randomUUID() },
+          fileIds: { 'sequence-test.poentaro': crypto.randomUUID() },
         }),
       )
       window.__recordedWorkerRequests = []

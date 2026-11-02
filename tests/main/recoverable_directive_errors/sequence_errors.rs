@@ -14,7 +14,7 @@ fn sequence_referencing_undefined_label_is_recoverable() {
         "time=4/4 key=C4 bpm=120 label=\"A\"\n[Melody] 1 2 3 4\n",
         "A, Z",
     );
-    let output = render_svgs_from_source(&source, "test.jianpu", &[])
+    let output = render_svgs_from_source(&source, "test.poentaro", &[])
         .expect("sequence referencing undefined label must not abort the render");
     assert!(!output.svgs.is_empty());
     assert!(
@@ -37,7 +37,7 @@ fn sequence_with_duplicate_label_definitions_is_recoverable() {
         ),
         "A",
     );
-    let output = render_svgs_from_source(&source, "test.jianpu", &[])
+    let output = render_svgs_from_source(&source, "test.poentaro", &[])
         .expect("duplicate label definitions must not abort the render");
     assert!(!output.svgs.is_empty());
     assert!(

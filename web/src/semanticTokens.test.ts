@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { HighlightKind, HighlightToken } from './jianpuWasm'
+import type { HighlightKind, HighlightToken } from './poentaroWasm'
 import { encodeSemanticTokens } from './semanticTokens'
 
 const tokenTypes: HighlightKind[] = [

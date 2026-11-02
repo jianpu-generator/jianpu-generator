@@ -13,7 +13,7 @@ Melody lyrics [Mv1] = lyrics[M]
 [M] 1 2 3 4
 [Mv1] a b c d
 "#;
-    let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
+    let spans = list_lyric_spans_from_source(source, "test.poentaro", None)
         .unwrap()
         .spans;
 
@@ -45,7 +45,7 @@ Melody lyrics [Mv1] = lyrics[M]
 [M] 4~4 3 2
 [Mv1] la di dum
 "#;
-    let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
+    let spans = list_lyric_spans_from_source(source, "test.poentaro", None)
         .unwrap()
         .spans;
 
@@ -79,7 +79,7 @@ Melody verse 2 [Mv2] = lyrics[M]
 [Mv1] a b
 [Mv2] one two
 "#;
-    let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
+    let spans = list_lyric_spans_from_source(source, "test.poentaro", None)
         .unwrap()
         .spans;
 
@@ -257,7 +257,7 @@ time=4/4
 [M] 6, 3_2_ 1 6,
 [L] A B C D E
 "#;
-    let spans = list_lyric_spans_from_source(source, "test.jianpu", None)
+    let spans = list_lyric_spans_from_source(source, "test.poentaro", None)
         .unwrap()
         .spans;
 

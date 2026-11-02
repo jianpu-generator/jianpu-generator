@@ -23,12 +23,12 @@ Given(
   async ({ page }) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'abc.jianpu',
-          userFiles: { 'abc.jianpu': src },
+          active: 'abc.poentaro',
+          userFiles: { 'abc.poentaro': src },
           bin: {},
-          fileIds: { 'abc.jianpu': crypto.randomUUID() },
+          fileIds: { 'abc.poentaro': crypto.randomUUID() },
         }),
       )
     }, SOURCE)

@@ -8,14 +8,14 @@ pub use generate::GenerateInput;
 #[cfg(feature = "wav")]
 pub static SF2_BYTES: &[u8] = include_bytes!("../../fonts/GeneralUser_GS.sf2");
 
-/// Outcome of checking a `.jianpu` file for diagnostics.
+/// Outcome of checking a `.poentaro` file for diagnostics.
 pub struct CheckOutcome {
     /// `true` when the file parses with no errors (warnings are still allowed).
     pub ok: bool,
     pub diagnostics: Vec<Diagnostic>,
 }
 
-/// Parse and group a `.jianpu` file, returning whether it has any errors and the
+/// Parse and group a `.poentaro` file, returning whether it has any errors and the
 /// full list of collected diagnostics.
 pub fn check(input: &Path) -> Result<CheckOutcome, IrrecoverableError> {
     let score = parse_and_group(input, None)?;
@@ -36,7 +36,7 @@ pub fn read_source(input: &Path) -> Result<String, IrrecoverableError> {
     })
 }
 
-/// Parse and group a `.jianpu` file, with `# metadata` overlaid by the
+/// Parse and group a `.poentaro` file, with `# metadata` overlaid by the
 /// `# preset` named `preset_name`.
 pub(crate) fn parse_and_group(
     input: &Path,

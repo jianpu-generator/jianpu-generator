@@ -1,17 +1,17 @@
-import { jianpuWasm, type NoteTiming } from '../jianpuWasm'
+import { type NoteTiming, poentaroWasm } from '../poentaroWasm'
 import { computeNoteSelectionTrimWindow } from '../utils/noteSelectionTrim'
 import {
   binaryBufferFromResult,
   singleErrorDiagnostic,
 } from './exportMessageHandlers'
-import type { WorkerRequest, WorkerResponse } from './jianpu.worker'
+import type { WorkerRequest, WorkerResponse } from './poentaro.worker'
 
 function noteTimingsFromSource(
   source: string,
   visibleTracks: string[] | undefined,
   enabledTracks: string[] | undefined,
 ): NoteTiming[] {
-  const result = jianpuWasm().listNoteTimings(
+  const result = poentaroWasm().listNoteTimings(
     source,
     visibleTracks,
     enabledTracks,
@@ -30,7 +30,7 @@ function noteTimingsForRangeFromSource(
   visibleTracks: string[] | undefined,
   enabledTracks: string[] | undefined,
 ): NoteTiming[] {
-  const result = jianpuWasm().listNoteTimingsForRange(
+  const result = poentaroWasm().listNoteTimingsForRange(
     source,
     startMeasureIndex,
     endMeasureIndex,
@@ -52,7 +52,7 @@ export function handleGenerateAudio(
     postMessage({ type: 'audioErr', id: msg.id } satisfies WorkerResponse)
     return
   }
-  const wavResult = jianpuWasm().generateWav(
+  const wavResult = poentaroWasm().generateWav(
     msg.source,
     msg.enabledTracks,
     false,
@@ -142,7 +142,7 @@ export function handleGenerateMeasureRangeAudio(
         fullRangeNoteTimings,
       )
     : null
-  const wavResult = jianpuWasm().generateWavForMeasureRange(
+  const wavResult = poentaroWasm().generateWavForMeasureRange(
     msg.source,
     msg.startMeasureIndex,
     msg.endMeasureIndex,
@@ -197,7 +197,7 @@ export function handleGenerateMp3(
     } satisfies WorkerResponse)
     return
   }
-  const result = jianpuWasm().generateMp3(
+  const result = poentaroWasm().generateMp3(
     msg.source,
     msg.enabledTracks,
     loadedSoundfont,

@@ -1,4 +1,4 @@
-import { jianpuWasm } from '../jianpuWasm'
+import { poentaroWasm } from '../poentaroWasm'
 import type { PreviewAnchorState } from './previewAnchorState'
 import { anyClickableElementIdAtPoint } from './previewClickableElementIdBuilders'
 import {
@@ -53,7 +53,7 @@ export function resolvePartLabelSelection(
     ? (currentIdHint ?? anyClickableElementIdAtPoint(current.x, current.y))
     : undefined
   const response = currentId
-    ? jianpuWasm().resolveSelectionRange(
+    ? poentaroWasm().resolveSelectionRange(
         noteSpans,
         lyricSpans,
         anchorState.anchorId,
@@ -151,7 +151,7 @@ export function resolveLyricLabelSelection(
     ? (currentIdHint ?? anyClickableElementIdAtPoint(current.x, current.y))
     : undefined
   const response = currentId
-    ? jianpuWasm().resolveSelectionRange(
+    ? poentaroWasm().resolveSelectionRange(
         noteSpans,
         lyricSpans,
         anchorState.anchorId,

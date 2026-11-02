@@ -10,9 +10,11 @@ import type { StoredRecord } from '../storage/outbox/outboxStore'
 export interface OriginMigrationPayload {
   version: 1
   /** Every `localStorage` entry whose key starts with
-   * `SAVED_LOCAL_STORAGE_PREFIX`. */
+   * `LEGACY_LOCAL_STORAGE_PREFIX`: the old origin only ever ran the app
+   * under the names it had before the rename to Poentaro. */
   localStorage: Record<string, string>
-  /** Every cloud outbox database (`OUTBOX_DATABASE_PREFIX`), by name. */
+  /** Every cloud outbox database (`LEGACY_OUTBOX_DATABASE_PREFIX`), by
+   * name. */
   indexedDb: SavedDatabase[]
 }
 
@@ -24,11 +26,9 @@ export interface SavedDatabase {
 /** Query param the bridge adds to its redirect: the handoff id to claim. */
 export const MIGRATE_QUERY_PARAM = 'migrate'
 
-/** Every `localStorage` key the app writes starts with this. */
-export const SAVED_LOCAL_STORAGE_PREFIX = 'jianpu:'
-
 /** Set on the OLD origin once its data was handed over, so later visits
- * redirect straight away. Never carried in a payload. */
+ * redirect straight away. Never carried in a payload. Keeps its legacy name:
+ * old origins already hold it under this one. */
 export const ORIGIN_MIGRATED_KEY = 'jianpu:origin-migrated:v1'
 
 /** Where the bridge sends visitors, unless `VITE_ORIGIN_MIGRATION_TARGET`

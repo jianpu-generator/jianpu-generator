@@ -77,13 +77,13 @@ Given(
   async ({ page }) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'note-partlabel-range-test.jianpu',
-          userFiles: { 'note-partlabel-range-test.jianpu': src },
+          active: 'note-partlabel-range-test.poentaro',
+          userFiles: { 'note-partlabel-range-test.poentaro': src },
           bin: {},
           fileIds: {
-            'note-partlabel-range-test.jianpu':
+            'note-partlabel-range-test.poentaro':
               'note-partlabel-range-test-id-001',
           },
         }),

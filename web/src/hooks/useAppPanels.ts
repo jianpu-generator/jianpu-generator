@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react'
-import { jianpuWasm, type MetadataEdit } from '../jianpuWasm'
+import { type MetadataEdit, poentaroWasm } from '../poentaroWasm'
 import type { PartSettings } from '../types'
 import { useMetadataFields } from './useMetadataFields'
 
 /** Open/closed state for the edit-parts, edit-metadata, storage-settings,
  * bin, sync and history panels, plus the handlers that route their edits back to the
- * `.jianpu` source. */
+ * `.poentaro` source. */
 export function useAppPanels(
   source: string,
   updatePartDeclaration: (
@@ -47,7 +47,11 @@ export function useAppPanels(
   const handleMetadataFieldChange = useCallback(
     (edit: MetadataEdit) => {
       handleSourceChange(
-        jianpuWasm().updateMetadataField(source, presetName ?? undefined, edit),
+        poentaroWasm().updateMetadataField(
+          source,
+          presetName ?? undefined,
+          edit,
+        ),
       )
     },
     [source, presetName, handleSourceChange],

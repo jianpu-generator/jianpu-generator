@@ -6,6 +6,7 @@
 
 use std::collections::{BTreeMap, HashSet};
 
+use super::extension::rename_legacy_extensions;
 use super::path::TreePath;
 use super::store_state::{FileOperationContext, FileStoreError, FileStoreState};
 use super::unique_name::unique_folder_path;
@@ -14,7 +15,8 @@ use super::unique_name::unique_folder_path;
 /// holds files (`MIGRATED_FOLDER_NAME 2`, ... when that is taken).
 pub const MIGRATED_FOLDER_NAME: &str = "From jianpu-generator.pages.dev";
 
-/// `carried` merged into `current`. A `current` with no files, bin entries or
+/// `carried` merged into `current`, after its files saved with the legacy
+/// extension are renamed (see [`rename_legacy_extensions`]). A `current` with no files, bin entries or
 /// folders is replaced by `carried` as is. Otherwise every carried file, bin
 /// entry and explicit folder moves under a new top-level
 /// [`MIGRATED_FOLDER_NAME`] folder, keeping its relative path and its id
@@ -25,6 +27,8 @@ pub fn merge_migrated_file_store(
     carried: &FileStoreState,
     context: &FileOperationContext,
 ) -> Result<FileStoreState, FileStoreError> {
+    let renamed = rename_legacy_extensions(carried, context);
+    let carried = renamed.as_ref().unwrap_or(carried);
     if is_empty(current) {
         return Ok(carried.clone());
     }

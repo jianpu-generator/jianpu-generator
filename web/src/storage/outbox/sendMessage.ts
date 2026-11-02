@@ -1,4 +1,8 @@
-import { jianpuWasm, type SendRequest, type SendResult } from '../../jianpuWasm'
+import {
+  poentaroWasm,
+  type SendRequest,
+  type SendResult,
+} from '../../poentaroWasm'
 import {
   callWorker,
   type createWorkerClient,
@@ -172,9 +176,9 @@ async function classifyRequestError(
       val: {
         adjustments: apiError.names.map((rejected) => ({
           rejected,
-          replacement: jianpuWasm().fileStoreIsPlaceholderPath(rejected)
+          replacement: poentaroWasm().fileStoreIsPlaceholderPath(rejected)
             ? undefined
-            : jianpuWasm().fileStoreNameAfterCollision(rejected),
+            : poentaroWasm().fileStoreNameAfterCollision(rejected),
         })),
       },
     }
@@ -183,13 +187,15 @@ async function classifyRequestError(
     const name = rejectedName(request, deps)
     // A folder's `.keep` placeholder already in the cloud (another device
     // made the same folder) is the folder itself: never rename it to a
-    // visible `.keep 2.jianpu`.
-    if (name !== null && jianpuWasm().fileStoreIsPlaceholderPath(name)) {
+    // visible `.keep 2.poentaro`.
+    if (name !== null && poentaroWasm().fileStoreIsPlaceholderPath(name)) {
       return { tag: 'ok', val: { revision: request.expectedRevision } }
     }
     // The next free numbered sibling in the same folder, computed in Rust.
     const suggestedName =
-      name === null ? undefined : jianpuWasm().fileStoreNameAfterCollision(name)
+      name === null
+        ? undefined
+        : poentaroWasm().fileStoreNameAfterCollision(name)
     return suggestedName === undefined
       ? { tag: 'permanent', val: { status: 409, reason: 'name_taken' } }
       : { tag: 'name-taken', val: { suggestedName } }

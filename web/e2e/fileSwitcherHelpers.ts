@@ -117,7 +117,7 @@ export function fileSwitcherTrigger(page: Page) {
 }
 
 /** The "Demo" disclosure item inside the file-switcher dropdown — expands
- * to the read-only `demo/*.jianpu` file list nested underneath it. */
+ * to the read-only `demo/*.poentaro` file list nested underneath it. */
 export function demoDisclosure(page: Page) {
   return page.getByRole('button', { name: 'Demo', exact: true })
 }
@@ -132,7 +132,7 @@ export async function openFileList(page: Page) {
 }
 
 /** Opens the file-switcher dropdown and expands its `Demo/` row
- * (the read-only `demo/*.jianpu` file list). Idempotent — a no-op if the
+ * (the read-only `demo/*.poentaro` file list). Idempotent — a no-op if the
  * row is already expanded. */
 export async function openDemoFileList(page: Page) {
   await openFileList(page)
@@ -142,7 +142,7 @@ export async function openDemoFileList(page: Page) {
 }
 
 /** Expands the "Demo/` row and selects the fragment named `name` (e.g.
- * `02-durations.jianpu`), closing the file-switcher dropdown. */
+ * `02-durations.poentaro`), closing the file-switcher dropdown. */
 export async function selectDemoFile(page: Page, name: string) {
   await openDemoFileList(page)
   await page.locator('.file-tab-name', { hasText: name }).click()

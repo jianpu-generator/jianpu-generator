@@ -164,12 +164,12 @@ Given(
   async ({ page }, _sectionA: string, _sectionB: string) => {
     await page.addInitScript((src) => {
       localStorage.setItem(
-        'jianpu:files:v1',
+        'poentaro:files:v1',
         JSON.stringify({
-          active: 'section-test.jianpu',
-          userFiles: { 'section-test.jianpu': src },
+          active: 'section-test.poentaro',
+          userFiles: { 'section-test.poentaro': src },
           bin: {},
-          fileIds: { 'section-test.jianpu': crypto.randomUUID() },
+          fileIds: { 'section-test.poentaro': crypto.randomUUID() },
         }),
       )
     }, source)

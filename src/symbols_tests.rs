@@ -17,7 +17,7 @@ Soprano [S] = notes
 time=4/4 key=C4 bpm=120
 [S] 1 2 3 4
 "#;
-    let doc = parse(source, "test.jianpu", &[]).unwrap();
+    let doc = parse(source, "test.poentaro", &[]).unwrap();
     let symbols = collect_symbols(&doc);
     let symbol = symbols
         .iter()
@@ -50,7 +50,7 @@ Verse, Verse
 time=4/4 key=C4 bpm=120 label="Verse"
 1 2 3 4
 "#;
-    let doc = parse(source, "test.jianpu", &[]).unwrap();
+    let doc = parse(source, "test.poentaro", &[]).unwrap();
     let symbols = collect_symbols(&doc);
     let label = symbols
         .iter()
@@ -90,7 +90,7 @@ Verse(-S)
 time=4/4 key=C4 bpm=120 label="Verse"
 1 2 3 4
 "#;
-    let doc = parse(source, "test.jianpu", &[]).unwrap();
+    let doc = parse(source, "test.poentaro", &[]).unwrap();
     let symbols = collect_symbols(&doc);
     let soprano = symbols
         .iter()
@@ -118,7 +118,7 @@ Verse(S)
 time=4/4 key=C4 bpm=120 label="Verse"
 1 2 3 4
 "#;
-    let doc = parse(source, "test.jianpu", &[]).unwrap();
+    let doc = parse(source, "test.poentaro", &[]).unwrap();
     let symbols = collect_symbols(&doc);
     let soprano = symbols
         .iter()
@@ -143,7 +143,7 @@ Soprano [S] = notes
 time=4/4 key=C4 bpm=120
 [S] 1 2 3 4
 "#;
-    let doc = parse(source, "test.jianpu", &[]).unwrap();
+    let doc = parse(source, "test.poentaro", &[]).unwrap();
     let edits = rename_edits(&doc, SymbolKind::Abbreviation, "S", "Sop");
 
     assert_eq!(edits.len(), 2);
@@ -165,7 +165,7 @@ Soprano [S] = notes
 time=4/4 key=C4 bpm=120
 [S] 1 2 3 4
 "#;
-    let doc = parse(source, "test.jianpu", &[]).unwrap();
+    let doc = parse(source, "test.poentaro", &[]).unwrap();
     let edits = rename_edits(&doc, SymbolKind::Abbreviation, "Nope", "X");
     assert!(edits.is_empty());
 }

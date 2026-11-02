@@ -31,13 +31,13 @@ const source = [
 async function loadFixture(page: import('@playwright/test').Page) {
   await page.addInitScript((source) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'bar-number-click-test.jianpu',
-        userFiles: { 'bar-number-click-test.jianpu': source },
+        active: 'bar-number-click-test.poentaro',
+        userFiles: { 'bar-number-click-test.poentaro': source },
         bin: {},
         fileIds: {
-          'bar-number-click-test.jianpu': 'bar-number-click-test-id-001',
+          'bar-number-click-test.poentaro': 'bar-number-click-test-id-001',
         },
       }),
     )

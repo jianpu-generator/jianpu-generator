@@ -120,7 +120,7 @@ fn chord_extension_no_preceding_event_is_recoverable() {
 fn chord_part_produces_one_chord_event_per_measure() {
     use crate::ast::grouped::PartRow;
     let input = "# metadata\ntitle=\"t\"\nauthor=\"a\"\n\n# parts\nchord = chords\nMelody = notes\n\n# score\ntime=4/4 key=C4 bpm=120\n[chord] 1 - - -\n[Melody] 1---\n";
-    let doc = parser::parse(input, "test.jianpu", &[]).unwrap();
+    let doc = parser::parse(input, "test.poentaro", &[]).unwrap();
     let score = group(doc).unwrap();
     let measure = &score.measures[0];
     let chord_row = measure

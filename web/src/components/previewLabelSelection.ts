@@ -1,4 +1,4 @@
-import type { LyricLabelElementId, PartLabelElementId } from '../jianpuWasm'
+import type { LyricLabelElementId, PartLabelElementId } from '../poentaroWasm'
 import type { LyricSpan, NoteSpan } from '../types'
 import {
   getClickableElementIdAtPoint,

@@ -26,9 +26,9 @@
 
 use cucumber::gherkin::Step;
 use cucumber::{given, then, when, World as _};
-use jianpu_generator::compile;
-use jianpu_generator::midi::{expand_navigation, write_midi};
 use midly::{MidiMessage, Smf, TrackEventKind};
+use poentaro::compile;
+use poentaro::midi::{expand_navigation, write_midi};
 
 #[derive(Debug, Default, cucumber::World)]
 struct AudioKeyWorld {
@@ -62,7 +62,7 @@ fn given_score_source(world: &mut AudioKeyWorld, step: &Step) {
 
 #[when(expr = "the score's audio is generated")]
 fn when_audio_generated(world: &mut AudioKeyWorld) {
-    let score = compile(&world.source, "test.jianpu", &[])
+    let score = compile(&world.source, "test.poentaro", &[])
         .unwrap_or_else(|err| panic!("compile returned an irrecoverable error: {}", err.message()));
     // Same order the web app's `generate_wav`/`generate_mp3` wasm bindings
     // use (see `write_wav_from_source_filtered`): expand `# sequence`

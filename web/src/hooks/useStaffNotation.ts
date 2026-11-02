@@ -1,6 +1,6 @@
 import type { RefObject } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { jianpuWasm } from '../jianpuWasm'
+import { poentaroWasm } from '../poentaroWasm'
 import type { ResolvedPartVisibility } from '../types'
 import type {
   Notation,
@@ -9,7 +9,7 @@ import type {
   WorkerRequest,
 } from '../worker/messages'
 import { staffClefFor } from '../worker/staffClef'
-import type { StaffRenderRequestTracker } from './useJianpuWorkerTypes'
+import type { StaffRenderRequestTracker } from './usePoentaroWorkerTypes'
 
 export type { Notation }
 
@@ -42,7 +42,7 @@ function presetNotation(
   presetName: string | undefined,
 ): Notation | undefined {
   if (presetName == null) return undefined
-  return jianpuWasm()
+  return poentaroWasm()
     .listPresets(source)
     .find((preset) => preset.name === presetName)?.notation
 }

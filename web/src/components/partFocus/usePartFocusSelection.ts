@@ -1,7 +1,7 @@
 import type { Monaco } from '@monaco-editor/react'
 import type { editor } from 'monaco-editor'
 import { type RefObject, useCallback, useEffect, useRef } from 'react'
-import { jianpuWasm, type Span } from '../../jianpuWasm'
+import { poentaroWasm, type Span } from '../../poentaroWasm'
 import type { EditorSelection, PartFocusSelectionHandle } from '../../types'
 import {
   byteOffsetToStringIndex,
@@ -73,7 +73,7 @@ function reportStreamSelection(
   const isEmpty = selections.every((selection) => selection.isEmpty())
   const byteAt = (position: { lineNumber: number; column: number }) =>
     stringIndexToByteOffset(text, model.getOffsetAt(position))
-  const ranges = jianpuWasm().partStreamRangesToSource(
+  const ranges = poentaroWasm().partStreamRangesToSource(
     source,
     abbreviation,
     goodDraft.stream,
@@ -145,7 +145,7 @@ export function usePartFocusSelection({
       const model = ed.getModel()
       const goodDraft = goodDraftRef.current
       if (!model || !goodDraft) return
-      const mapped = jianpuWasm().sourceRangesToPartStream(
+      const mapped = poentaroWasm().sourceRangesToPartStream(
         sourceRef.current,
         abbreviation,
         goodDraft.stream,

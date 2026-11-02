@@ -22,12 +22,12 @@ const FOCUS_EDITOR = '[data-testid="part-focus-editor"]'
 async function loadSource(page: Page, source: string) {
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'stream.jianpu',
-        userFiles: { 'stream.jianpu': src },
+        active: 'stream.poentaro',
+        userFiles: { 'stream.poentaro': src },
         bin: {},
-        fileIds: { 'stream.jianpu': crypto.randomUUID() },
+        fileIds: { 'stream.poentaro': crypto.randomUUID() },
       }),
     )
   }, source)

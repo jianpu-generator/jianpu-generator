@@ -1,9 +1,9 @@
 import {
   type Diagnostic,
   type FontBytesByFamily,
-  jianpuWasm,
+  poentaroWasm,
   type StaffClef,
-} from '../jianpuWasm'
+} from '../poentaroWasm'
 import { GM_INSTRUMENTS } from '../utils/gmInstruments'
 import {
   binaryBufferFromResult,
@@ -31,7 +31,7 @@ export async function handleGenerateStaffPdf(
       diagnostics,
     } satisfies WorkerResponse)
   if (!loadedFonts) return fail(singleErrorDiagnostic(FONTS_NOT_LOADED))
-  const mei = jianpuWasm().renderMei(
+  const mei = poentaroWasm().renderMei(
     msg.source,
     msg.visibility,
     GM_INSTRUMENTS,
@@ -42,7 +42,7 @@ export async function handleGenerateStaffPdf(
   if (engraved.status === 'err') {
     return fail(singleErrorDiagnostic(engraved.message))
   }
-  const result = jianpuWasm().generateStaffPdf(
+  const result = poentaroWasm().generateStaffPdf(
     engraved.pages,
     msg.source,
     loadedFonts,
@@ -67,7 +67,7 @@ export async function handleGenerateSplitStaffPdf(
       diagnostics,
     } satisfies WorkerResponse)
   if (!loadedFonts) return fail(singleErrorDiagnostic(FONTS_NOT_LOADED))
-  const meis = jianpuWasm().renderSplitMeis(
+  const meis = poentaroWasm().renderSplitMeis(
     msg.source,
     msg.baseName,
     msg.presetName,
@@ -87,7 +87,7 @@ export async function handleGenerateSplitStaffPdf(
       pages: engraved.pages,
     })
   }
-  const result = jianpuWasm().generateSplitStaffPdfs(parts, loadedFonts)
+  const result = poentaroWasm().generateSplitStaffPdfs(parts, loadedFonts)
   if (result.tag === 'err') return fail(result.val.diagnostics)
   const zip = binaryBufferFromResult(result.val.zip)
   postMessage({ type: 'splitPdf', id: msg.id, zip } satisfies WorkerResponse, {

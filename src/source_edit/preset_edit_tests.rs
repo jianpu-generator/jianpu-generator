@@ -214,7 +214,7 @@ fn adds_a_preset_at_the_end_when_there_is_no_music() {
 #[test]
 fn an_added_preset_parses_back() {
     let result = add_preset_section(SOURCE, new_preset("Soprano"));
-    let document = crate::parser::parse(&result, "song.jianpu", &[]).expect("parses");
+    let document = crate::parser::parse(&result, "song.poentaro", &[]).expect("parses");
     let preset = document.preset("Soprano").expect("Soprano preset");
     assert_eq!(preset.visible_abbreviations(), Some(parts(&["S"])));
     assert_eq!(preset.notation, Some(Notation::Violin));

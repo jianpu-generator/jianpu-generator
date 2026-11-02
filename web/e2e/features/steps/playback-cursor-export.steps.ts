@@ -29,13 +29,13 @@ const source = [
 Given('the playback-cursor export test fixture is loaded', async ({ page }) => {
   await page.addInitScript((src) => {
     localStorage.setItem(
-      'jianpu:files:v1',
+      'poentaro:files:v1',
       JSON.stringify({
-        active: 'playback-cursor-export-test.jianpu',
-        userFiles: { 'playback-cursor-export-test.jianpu': src },
+        active: 'playback-cursor-export-test.poentaro',
+        userFiles: { 'playback-cursor-export-test.poentaro': src },
         bin: {},
         fileIds: {
-          'playback-cursor-export-test.jianpu':
+          'playback-cursor-export-test.poentaro':
             'playback-cursor-export-test-id-001',
         },
       }),

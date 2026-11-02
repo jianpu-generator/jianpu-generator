@@ -1,4 +1,4 @@
-/** The `.jianpu` fixtures of `part-stream-editor.feature`. */
+/** The `.poentaro` fixtures of `part-stream-editor.feature`. */
 
 export const SOURCE = `# parts
 Melody [M] = notes

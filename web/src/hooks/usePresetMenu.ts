@@ -1,6 +1,10 @@
 import { useCallback, useMemo } from 'react'
 import type { PresetMenuProps } from '../components/PresetMenu'
-import { jianpuWasm, type Notation, type PresetSummary } from '../jianpuWasm'
+import {
+  type Notation,
+  type PresetSummary,
+  poentaroWasm,
+} from '../poentaroWasm'
 import type { PartInfo, ResolvedPartVisibility } from '../types'
 import type { StaffNotation } from './useStaffNotation'
 
@@ -32,7 +36,7 @@ export function usePresetMenu({
   handleSourceChange,
 }: PresetMenuInputs) {
   const presets = useMemo<PresetSummary[]>(
-    () => (wasmReady ? jianpuWasm().listPresets(source) : []),
+    () => (wasmReady ? poentaroWasm().listPresets(source) : []),
     [wasmReady, source],
   )
   const presetInForce = visibility.presetName ?? null
@@ -47,7 +51,7 @@ export function usePresetMenu({
       // off until shown again, so showing it also clears that.
       if (enabled) handlePartToggle(abbreviation, true)
       handleSourceChange(
-        jianpuWasm().setPresetPartShown(
+        poentaroWasm().setPresetPartShown(
           source,
           presetInForce,
           parts.map((part) => part.abbreviation),
@@ -73,7 +77,7 @@ export function usePresetMenu({
         return
       }
       handleSourceChange(
-        jianpuWasm().updatePresetField(source, presetInForce, {
+        poentaroWasm().updatePresetField(source, presetInForce, {
           tag: 'notation',
           val: notation,
         }),
@@ -86,13 +90,13 @@ export function usePresetMenu({
     presets,
     presetInForce,
     onChoose: setChosenPreset,
-    nameError: (name) => jianpuWasm().newPresetNameError(source, name),
+    nameError: (name) => poentaroWasm().newPresetNameError(source, name),
     onCreatePreset: readOnly
       ? undefined
       : (name) => {
           const hidden = new Set(visibility.hiddenParts)
           handleSourceChange(
-            jianpuWasm().addPresetSection(source, {
+            poentaroWasm().addPresetSection(source, {
               name,
               visibleParts: parts
                 .map((part) => part.abbreviation)

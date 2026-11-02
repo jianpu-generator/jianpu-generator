@@ -358,7 +358,7 @@ export default function App() {
           parsedMetadata={panels.parsedMetadata}
           metadataPresetName={panels.metadataPresetName}
           handleMetadataFieldChange={panels.handleMetadataFieldChange}
-          // The preview's click/hover resolvers call `jianpuWasm()`
+          // The preview's click/hover resolvers call `poentaroWasm()`
           // synchronously, so its SVG only appears once the main-thread
           // component is instantiated — a click can never land before then.
           documents={previewInteractive ? documents : []}
