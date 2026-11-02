@@ -231,7 +231,7 @@ fn resolve_simple_text_styles(
         simple_text_style(
             metadata.part_legend_style,
             font_size(TextStyleKind::PartLegend),
-            defaults(false, false, FontFamily::SansSerif),
+            defaults(false, false, FontFamily::Serif),
         ),
         simple_text_style(
             metadata.measure_number_style,

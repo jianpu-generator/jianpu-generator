@@ -102,7 +102,7 @@ Defaults by kind:
 | `subtitle` | `row_height * 0.8` | `0` | `0` | `no` | `yes` | `no` | `serif` |
 | `author` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` | `serif` |
 | `sequence` | `12` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
-| `part_legend` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
+| `part_legend` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` | `serif` |
 | `measure_number` | `10` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
 | `section_label` | `12` | `0` | `0` | `yes` | `yes` | `no` | `sans_serif` |
 | `page_number` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
