@@ -43,6 +43,7 @@ pub(super) fn list_presets(source: String) -> Vec<PresetSummary> {
 pub(super) fn update_preset_field(source: String, preset_name: String, edit: PresetEdit) -> String {
     let edit = match edit {
         PresetEdit::VisibleParts(parts) => source_edit::PresetEdit::VisibleParts(parts),
+        PresetEdit::SoloedParts(parts) => source_edit::PresetEdit::SoloedParts(parts),
         PresetEdit::Notation(notation) => {
             source_edit::PresetEdit::Notation(notation_from_wit(notation))
         }
@@ -67,6 +68,23 @@ pub(super) fn set_preset_part_shown(
     )
 }
 
+pub(super) fn set_preset_part_soloed(
+    source: String,
+    preset_name: String,
+    all_parts: Vec<String>,
+    part: PartSoloed,
+) -> String {
+    source_edit::set_preset_part_soloed(
+        &source,
+        &preset_name,
+        &all_parts,
+        &source_edit::PartSoloed {
+            abbreviation: part.abbreviation,
+            soloed: part.soloed,
+        },
+    )
+}
+
 pub(super) fn new_preset_name_error(source: String, name: String) -> Option<String> {
     source_edit::new_preset_name_error(&source, &name)
 }
@@ -77,6 +95,7 @@ pub(super) fn add_preset_section(source: String, preset: NewPreset) -> String {
         source_edit::NewPreset {
             name: preset.name,
             visible_parts: preset.visible_parts,
+            soloed_parts: preset.soloed_parts,
             notation: notation_from_wit(preset.notation),
         },
     )

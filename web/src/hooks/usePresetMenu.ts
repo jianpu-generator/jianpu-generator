@@ -17,13 +17,15 @@ interface PresetMenuInputs {
   staffNotation: StaffNotation
   setChosenPreset: (presetName: string | null) => void
   handlePartToggle: (abbreviation: string, enabled: boolean) => void
+  handleSoloToggle: (abbreviation: string, soloed: boolean) => void
   handleSourceChange: (value: string) => void
 }
 
-/** The preset menu's props, and the part pill handler: under a preset in a
- * file you can edit, a pill rewrites the preset's `visible_parts`; on
- * Default or in a read-only file it only changes this browser's toggles.
- * The notation menu works the same way on the preset's `notation` line. */
+/** The preset menu's props, and the part pill handlers: under a preset in a
+ * file you can edit, a pill rewrites the preset's `visible_parts` and its
+ * solo button the preset's `soloed_parts`; on Default or in a read-only
+ * file they only change this browser's toggles. The notation menu works
+ * the same way on the preset's `notation` line. */
 export function usePresetMenu({
   source,
   readOnly,
@@ -33,6 +35,7 @@ export function usePresetMenu({
   staffNotation,
   setChosenPreset,
   handlePartToggle,
+  handleSoloToggle,
   handleSourceChange,
 }: PresetMenuInputs) {
   const presets = useMemo<PresetSummary[]>(
@@ -69,6 +72,34 @@ export function usePresetMenu({
     ],
   )
 
+  const handleSoloPillToggle = useCallback(
+    (abbreviation: string, soloed: boolean) => {
+      if (presetInForce == null || readOnly) {
+        handleSoloToggle(abbreviation, soloed)
+        return
+      }
+      // A part soloed in this browser before the preset was chosen stays
+      // soloed until unsoloed again, so unsoloing it also clears that.
+      if (!soloed) handleSoloToggle(abbreviation, false)
+      handleSourceChange(
+        poentaroWasm().setPresetPartSoloed(
+          source,
+          presetInForce,
+          parts.map((part) => part.abbreviation),
+          { abbreviation, soloed },
+        ),
+      )
+    },
+    [
+      presetInForce,
+      readOnly,
+      source,
+      parts,
+      handleSoloToggle,
+      handleSourceChange,
+    ],
+  )
+
   const { setNotation } = staffNotation
   const handleNotationChange = useCallback(
     (notation: Notation) => {
@@ -101,6 +132,7 @@ export function usePresetMenu({
               visibleParts: parts
                 .map((part) => part.abbreviation)
                 .filter((abbreviation) => !hidden.has(abbreviation)),
+              soloedParts: visibility.soloedParts,
               notation: staffNotation.notation,
             }),
           )
@@ -110,6 +142,7 @@ export function usePresetMenu({
 
   return {
     handlePartPillToggle,
+    handleSoloPillToggle,
     presetMenuProps,
     staffNotation: { ...staffNotation, setNotation: handleNotationChange },
   }

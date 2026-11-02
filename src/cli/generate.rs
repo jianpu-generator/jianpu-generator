@@ -21,17 +21,15 @@ pub struct GenerateInput {
     pub output: Option<PathBuf>,
     pub tracks: Vec<String>,
     pub split_tracks: bool,
-    /// The `# preset` whose metadata and visible parts to export.
+    /// The `# preset` whose metadata and visible (or soloed) parts to export.
     pub preset: Option<String>,
 }
 
 /// The parts to export: `--tracks` when given, otherwise the `--preset`'s
-/// visible parts. Empty means every part.
+/// soloed parts, or else its visible parts. Empty means every part.
 fn selected_tracks(opts: &GenerateInput) -> Result<Vec<String>, jg::error::IrrecoverableError> {
     let preset_parts = match opts.preset.as_deref() {
-        Some(name) => chosen_preset(&opts.input, name)?
-            .visible_parts
-            .unwrap_or_default(),
+        Some(name) => chosen_preset(&opts.input, name)?.exported_parts(),
         None => Vec::new(),
     };
     Ok(if opts.tracks.is_empty() {

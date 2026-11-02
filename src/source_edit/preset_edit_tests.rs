@@ -97,6 +97,85 @@ fn setting_a_part_in_an_unknown_preset_changes_nothing() {
     assert_eq!(result, SOURCE);
 }
 
+fn part_soloed(abbreviation: &str, soloed: bool) -> PartSoloed {
+    PartSoloed {
+        abbreviation: abbreviation.to_owned(),
+        soloed,
+    }
+}
+
+#[test]
+fn soloing_a_part_adds_a_soloed_parts_line_under_the_header() {
+    let result = set_preset_part_soloed(
+        SOURCE,
+        "Choir",
+        &parts(&["S", "A"]),
+        &part_soloed("A", true),
+    );
+    assert_eq!(
+        result,
+        SOURCE.replace(
+            "# preset \"Choir\"\n",
+            "# preset \"Choir\"\nsoloed_parts = A\n"
+        )
+    );
+}
+
+#[test]
+fn soloing_another_part_keeps_declaration_order() {
+    let source = SOURCE.replace(
+        "notation = numbered",
+        "notation = numbered\nsoloed_parts = A",
+    );
+    let result = set_preset_part_soloed(
+        &source,
+        "Choir",
+        &parts(&["S", "A"]),
+        &part_soloed("S", true),
+    );
+    assert_eq!(
+        result,
+        source.replace("soloed_parts = A", "soloed_parts = S, A")
+    );
+}
+
+#[test]
+fn unsoloing_the_last_part_removes_the_line() {
+    let source = SOURCE.replace(
+        "notation = numbered",
+        "notation = numbered\nsoloed_parts = A",
+    );
+    let result = set_preset_part_soloed(
+        &source,
+        "Choir",
+        &parts(&["S", "A"]),
+        &part_soloed("A", false),
+    );
+    assert_eq!(result, SOURCE);
+}
+
+#[test]
+fn unsoloing_the_last_part_removes_every_repeated_line() {
+    let source = SOURCE.replace(
+        "notation = numbered",
+        "soloed_parts = S\nnotation = numbered\nsoloed_parts = A",
+    );
+    let result = set_preset_part_soloed(
+        &source,
+        "Choir",
+        &parts(&["S", "A"]),
+        &part_soloed("A", false),
+    );
+    assert_eq!(result, SOURCE);
+}
+
+#[test]
+fn soloing_in_an_unknown_preset_changes_nothing() {
+    let result =
+        set_preset_part_soloed(SOURCE, "Nope", &parts(&["S", "A"]), &part_soloed("S", true));
+    assert_eq!(result, SOURCE);
+}
+
 #[test]
 fn rewrites_an_existing_visible_parts_line_in_place() {
     let result = update_preset_field(SOURCE, "Choir", &PresetEdit::VisibleParts(parts(&["A"])));
@@ -176,6 +255,7 @@ fn new_preset(name: &str) -> NewPreset {
     NewPreset {
         name: name.to_owned(),
         visible_parts: parts(&["S"]),
+        soloed_parts: Vec::new(),
         notation: Notation::Violin,
     }
 }
@@ -218,6 +298,18 @@ fn an_added_preset_parses_back() {
     let preset = document.preset("Soprano").expect("Soprano preset");
     assert_eq!(preset.visible_abbreviations(), Some(parts(&["S"])));
     assert_eq!(preset.notation, Some(Notation::Violin));
+}
+
+#[test]
+fn a_new_preset_keeps_the_solos_shown_when_it_was_made() {
+    let preset = NewPreset {
+        soloed_parts: parts(&["A"]),
+        ..new_preset("Soprano")
+    };
+    let result = add_preset_section(SOURCE, preset);
+    assert!(result.contains(
+        "# preset \"Soprano\"\nvisible_parts = S\nsoloed_parts = A\nnotation = violin\n"
+    ));
 }
 
 #[test]

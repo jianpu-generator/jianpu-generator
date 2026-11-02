@@ -1,5 +1,5 @@
 //! Parses `# preset "Name"` sections: every `# metadata` key, plus
-//! `visible_parts` and `notation` (see `syntax.md`, "Presets").
+//! `visible_parts`, `soloed_parts` and `notation` (see `syntax.md`, "Presets").
 
 use itertools::Itertools;
 
@@ -60,6 +60,7 @@ struct ParsedPresetSection {
 fn parse_preset(section: PresetSection, declarations: &[PartDecl]) -> ParsedPresetSection {
     let mut overrides = ParsedMetadata::default();
     let mut visible_parts: Option<Vec<AbbreviationReference>> = None;
+    let mut soloed_parts: Vec<AbbreviationReference> = Vec::new();
     let mut notation: Option<Spanned<Notation>> = None;
     let mut errors: Vec<RecoverableError> = Vec::new();
     for line in metadata_lines(&section.content, section.content_offset) {
@@ -72,7 +73,10 @@ fn parse_preset(section: PresetSection, declarations: &[PartDecl]) -> ParsedPres
         };
         match PresetKey::from_keyword(line.key) {
             Some(PresetKey::VisibleParts) => {
-                visible_parts = Some(parse_visible_parts(&line, declarations, &mut errors));
+                visible_parts = Some(parse_part_list(&line, declarations, &mut errors));
+            }
+            Some(PresetKey::SoloedParts) => {
+                soloed_parts = parse_part_list(&line, declarations, &mut errors);
             }
             Some(PresetKey::Notation) => match Notation::from_source_value(line.value) {
                 Some(value) => notation = Some(Spanned::new(value, line.value_span)),
@@ -102,6 +106,7 @@ fn parse_preset(section: PresetSection, declarations: &[PartDecl]) -> ParsedPres
             header_span: section.header_span,
             overrides,
             visible_parts,
+            soloed_parts,
             notation: notation.map(|notation| notation.value),
         },
         diagnostics: errors
@@ -112,10 +117,10 @@ fn parse_preset(section: PresetSection, declarations: &[PartDecl]) -> ParsedPres
     }
 }
 
-/// Reads `visible_parts = main, S1`. Empty entries are skipped, an
+/// Reads a part list like `visible_parts = main, S1`. Empty entries are skipped, an
 /// abbreviation not declared in `# parts` is reported and dropped, and a
 /// repeated one is kept once.
-fn parse_visible_parts(
+fn parse_part_list(
     line: &MetadataLine,
     declarations: &[PartDecl],
     errors: &mut Vec<RecoverableError>,

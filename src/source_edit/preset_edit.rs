@@ -1,5 +1,5 @@
 //! Edits to `# preset "Name"` sections for the web editor's preset menu:
-//! rewriting one preset's `visible_parts` or `notation` line, adding a new
+//! rewriting one preset's `visible_parts`, `soloed_parts` or `notation` line, adding a new
 //! preset, and following a preset renamed in the editor. Each edit touches
 //! only the lines it needs, so the rest of the file keeps its formatting.
 
@@ -15,6 +15,8 @@ use crate::parser::section_splitter::{split_sections, RawSection, SectionKind};
 pub enum PresetEdit {
     /// The parts shown and heard, in order; an empty list hides every part.
     VisibleParts(Vec<String>),
+    /// The parts soloed, in order; an empty list removes the line.
+    SoloedParts(Vec<String>),
     Notation(Notation),
 }
 
@@ -22,13 +24,14 @@ impl PresetEdit {
     fn key(&self) -> PresetKey {
         match self {
             Self::VisibleParts(_) => PresetKey::VisibleParts,
+            Self::SoloedParts(_) => PresetKey::SoloedParts,
             Self::Notation(_) => PresetKey::Notation,
         }
     }
 
     fn value(&self) -> String {
         match self {
-            Self::VisibleParts(parts) => parts.join(", "),
+            Self::VisibleParts(parts) | Self::SoloedParts(parts) => parts.join(", "),
             Self::Notation(notation) => notation.keyword().to_owned(),
         }
     }
@@ -42,13 +45,21 @@ impl PresetEdit {
             format!("{key} = {value}")
         }
     }
+
+    /// Whether writing this edit removes its line instead: only an empty
+    /// `soloed_parts`, which solos nothing, the same as no line.
+    fn removes_line(&self) -> bool {
+        matches!(self, Self::SoloedParts(parts) if parts.is_empty())
+    }
 }
 
-/// A preset for "New preset…": the parts and notation shown when it was made.
+/// A preset for "New preset…": the parts, solos and notation shown when it
+/// was made.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewPreset {
     pub name: String,
     pub visible_parts: Vec<String>,
+    pub soloed_parts: Vec<String>,
     pub notation: Notation,
 }
 
@@ -152,18 +163,25 @@ fn replace_span(source: &str, span: Span, replacement: &str) -> String {
 }
 
 /// Rewrites the preset's last `edit.key()` line (the one the parser keeps),
-/// or adds the line under its header. Returns `source` unchanged when no
-/// preset is called `name`.
+/// or adds the line under its header. An edit that [removes its
+/// line](PresetEdit::removes_line) deletes every `edit.key()` line instead.
+/// Returns `source` unchanged when no preset is called `name`.
 pub fn update_preset_field(source: &str, name: &str, edit: &PresetEdit) -> String {
     let Some(section) = preset_section(source, name) else {
         return source.to_owned();
     };
-    let existing_line = metadata_lines(&section.content, section.content_offset)
+    let lines = metadata_lines(&section.content, section.content_offset)
         .filter_map(Result::ok)
         .filter(|line| line.key == edit.key().keyword())
-        .last()
-        .map(|line| Span::new(line.key_span.start, line.value_span.end));
-    match existing_line {
+        .map(|line| Span::new(line.key_span.start, line.value_span.end))
+        .collect_vec();
+    if edit.removes_line() {
+        return lines
+            .iter()
+            .rev()
+            .fold(source.to_owned(), |text, span| remove_line(&text, *span));
+    }
+    match lines.last().copied() {
         Some(span) => replace_span(source, span, &edit.line()),
         // A header on the source's last line has no `\n` after it.
         None if section.content_offset > source.len() => {
@@ -177,11 +195,24 @@ pub fn update_preset_field(source: &str, name: &str, edit: &PresetEdit) -> Strin
     }
 }
 
-/// The preset's `visible_parts` as written, `None` when it sets none.
-fn visible_parts_of(section: &RawSection) -> Option<Vec<String>> {
+/// Deletes the whole line `span` sits on, its line break included.
+fn remove_line(source: &str, span: Span) -> String {
+    let start = source
+        .get(..span.start)
+        .and_then(|before| before.rfind('\n'))
+        .map_or(0, |line_break| line_break + 1);
+    let end = source
+        .get(span.end..)
+        .and_then(|after| after.find('\n'))
+        .map_or(source.len(), |line_break| span.end + line_break + 1);
+    replace_span(source, Span::new(start, end), "")
+}
+
+/// The preset's part list under `key` as written, `None` when it sets none.
+fn part_list_of(section: &RawSection, key: PresetKey) -> Option<Vec<String>> {
     metadata_lines(&section.content, section.content_offset)
         .filter_map(Result::ok)
-        .filter(|line| line.key == PresetKey::VisibleParts.keyword())
+        .filter(|line| line.key == key.keyword())
         .last()
         .map(|line| {
             line.value
@@ -212,7 +243,7 @@ pub fn set_preset_part_shown(
     let Some(section) = preset_section(source, name) else {
         return source.to_owned();
     };
-    let visible = visible_parts_of(&section);
+    let visible = part_list_of(&section, PresetKey::VisibleParts);
     let parts = all_parts
         .iter()
         .filter(|abbreviation| {
@@ -227,6 +258,41 @@ pub fn set_preset_part_shown(
         .cloned()
         .collect();
     update_preset_field(source, name, &PresetEdit::VisibleParts(parts))
+}
+
+/// A solo button clicked under a preset: which part, and whether it is now
+/// soloed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PartSoloed {
+    pub abbreviation: String,
+    pub soloed: bool,
+}
+
+/// Solos or unsolos one part in the preset's `soloed_parts`, rewritten in
+/// `all_parts` order; the line goes away once nothing is soloed. Returns
+/// `source` unchanged when no preset is called `name`.
+pub fn set_preset_part_soloed(
+    source: &str,
+    name: &str,
+    all_parts: &[String],
+    part: &PartSoloed,
+) -> String {
+    let Some(section) = preset_section(source, name) else {
+        return source.to_owned();
+    };
+    let soloed = part_list_of(&section, PresetKey::SoloedParts).unwrap_or_default();
+    let parts = all_parts
+        .iter()
+        .filter(|abbreviation| {
+            if **abbreviation == part.abbreviation {
+                part.soloed
+            } else {
+                soloed.contains(abbreviation)
+            }
+        })
+        .cloned()
+        .collect();
+    update_preset_field(source, name, &PresetEdit::SoloedParts(parts))
 }
 
 /// The new section goes after the last `# preset`, else before the first
@@ -249,7 +315,7 @@ fn new_section_offset(source: &str) -> usize {
         .min(source.len())
 }
 
-/// Adds a `# preset` section holding `preset`'s parts and notation.
+/// Adds a `# preset` section holding `preset`'s parts, solos and notation.
 pub fn add_preset_section(source: &str, preset: NewPreset) -> String {
     let offset = new_section_offset(source);
     let before = source.get(..offset).unwrap_or_default();
@@ -261,11 +327,19 @@ pub fn add_preset_section(source: &str, preset: NewPreset) -> String {
         "\n\n"
     };
     let trailing_blank_line = if offset < source.len() { "\n" } else { "" };
+    let soloed_parts = PresetEdit::SoloedParts(preset.soloed_parts);
+    let lines = [
+        Some(PresetEdit::VisibleParts(preset.visible_parts)),
+        (!soloed_parts.removes_line()).then_some(soloed_parts),
+        Some(PresetEdit::Notation(preset.notation)),
+    ]
+    .into_iter()
+    .flatten()
+    .map(|edit| format!("{}\n", edit.line()))
+    .join("");
     let section = format!(
-        "{separator}# preset \"{}\"\n{}\n{}\n{trailing_blank_line}",
+        "{separator}# preset \"{}\"\n{lines}{trailing_blank_line}",
         preset.name,
-        PresetEdit::VisibleParts(preset.visible_parts).line(),
-        PresetEdit::Notation(preset.notation).line(),
     );
     replace_span(source, Span::new(offset, offset), &section)
 }

@@ -72,9 +72,9 @@ pub enum RecoverableErrorKind {
     PresetDuplicateName { name: String },
     /// A `# preset` is named `"Default"`, which the preset menu uses for "no preset" — the section is skipped.
     PresetReservedName { name: String },
-    /// A preset's `visible_parts` names an abbreviation not declared in `# parts` — the entry is ignored.
+    /// A preset's `visible_parts` or `soloed_parts` names an abbreviation not declared in `# parts` — the entry is ignored.
     PresetUnknownPart { abbreviation: String },
-    /// A preset-only field (`visible_parts`, `notation`) appears in `# metadata` — the line is skipped.
+    /// A preset-only field (`visible_parts`, `soloed_parts`, `notation`) appears in `# metadata` — the line is skipped.
     PresetOnlyField { field: String },
     /// A lyrics line is empty — treated as `_` (no lyrics for this measure).
     LyricsLineEmpty,
