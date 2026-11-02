@@ -1,12 +1,13 @@
 use super::*;
 
-// `5,,` is below a C harmonica's lowest hole; `1,` is hole 1 blow.
+// `1,` is below the harmonica's lowest hole (middle C, hole 1 blow); `4#`
+// (F♯) is hole 2 draw with the slide.
 const SOURCE: &str = "# parts
 S = notes
 
 # score
 time=4/4 key=C4 bpm=120
-[S] 5,, 1, 1 1'
+[S] 1, 1 1' 4#
 ";
 
 /// The `<text>` elements whose `data-variant` is `variant`, in document
@@ -44,7 +45,7 @@ fn harmonica_tabs_replace_the_degree_digits() {
         .into_iter()
         .map(text_content)
         .collect();
-    assert_eq!(tabs, ["1", "4", "7"]);
+    assert_eq!(tabs, ["1", "4", "(2)"]);
 }
 
 #[test]
@@ -65,4 +66,16 @@ fn harmonica_tabs_draw_no_octave_dots() {
         .filter(|element| element.contains("data-variant=\"note-head\""))
         .count();
     assert_eq!(octave_dots, 0);
+}
+
+#[test]
+fn a_slid_note_gets_an_arrow_above_it() {
+    let svg = render();
+    let strokes = svg
+        .split("<line")
+        .skip(1)
+        .filter(|element| element.contains("data-variant=\"harmonica-slide\""))
+        .count();
+    // A shaft and the two strokes of its head, for the one F♯.
+    assert_eq!(strokes, 3);
 }

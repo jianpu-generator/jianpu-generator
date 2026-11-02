@@ -39,6 +39,7 @@ pub(super) fn svg_variant_to_wit(variant: crate::svg_types::SvgVariantOut) -> Sv
         SvgVariantOut::Text => SvgVariant::Text,
         SvgVariantOut::NoteHead => SvgVariant::NoteHead,
         SvgVariantOut::UnplayableNoteHead => SvgVariant::UnplayableNoteHead,
+        SvgVariantOut::HarmonicaSlide => SvgVariant::HarmonicaSlide,
         SvgVariantOut::Rest => SvgVariant::Rest,
         SvgVariantOut::OmittedPartRest => SvgVariant::OmittedPartRest,
         SvgVariantOut::MultiMeasureRest => SvgVariant::MultiMeasureRest,

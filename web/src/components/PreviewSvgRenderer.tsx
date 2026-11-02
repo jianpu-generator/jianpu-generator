@@ -92,6 +92,7 @@ function renderSvgElement(doc: SvgDocument, index: number): ReactNode {
           y1={el.y}
           x2={kind.x2}
           y2={kind.y2}
+          data-variant={el.variantTag satisfies DataVariant | undefined}
           stroke="black"
           strokeWidth={kind.strokeWidth}
         />

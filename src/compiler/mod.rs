@@ -23,7 +23,9 @@ pub use chord_degrees::ChordDegrees;
 #[cfg(test)]
 pub(crate) mod test_chord_degrees;
 
+mod element_position;
 mod harmonica_tabs;
+mod least_movement_path;
 mod letter_names;
 pub use letter_names::{label_note_heads, NoteLabels};
 
