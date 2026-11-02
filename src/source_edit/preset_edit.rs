@@ -73,7 +73,7 @@ fn notation_of(section: &RawSection) -> Option<Notation> {
     metadata_lines(&section.content, section.content_offset)
         .filter_map(Result::ok)
         .filter(|line| line.key == PresetKey::Notation.keyword())
-        .filter_map(|line| Notation::from_keyword(line.value))
+        .filter_map(|line| Notation::from_source_value(line.value))
         .last()
 }
 

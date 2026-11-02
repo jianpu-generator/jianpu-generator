@@ -149,7 +149,7 @@ Key files:
 - Chord head: `src/parser/score/timed_parser/chord_head/mod.rs`
 - Duration/octave suffixes: `src/parser/score/timed_parser/duration.rs`
 - Groups/slurs: `src/parser/score/timed_parser/groups.rs`
-- AST types: `src/ast/parsed.rs` (`JianPuPitch`, `Accidental`, `ParsedNote`, `ParsedRest`, `ScoreEvent`, `TriadQuality`, `Extension`, `BassDegree`)
+- AST types: `src/ast/parsed.rs` (`NumberedPitch`, `Accidental`, `ParsedNote`, `ParsedRest`, `ScoreEvent`, `TriadQuality`, `Extension`, `BassDegree`)
 - Fixtures to use for round-trip testing: `reference.poentaro` (exercises every token type), `simple.poentaro`, `彌勒淨土鄉.poentaro` (real-world edge cases), `fixtures/follow_and_key.poentaro`
 
 Corrections vs initial assumptions:

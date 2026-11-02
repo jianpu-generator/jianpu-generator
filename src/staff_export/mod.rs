@@ -1,6 +1,6 @@
 //! Exports of the staff-notation view. Rust stops at MEI (`mei_export`);
 //! Verovio, in the web worker, engraves it into SVG pages, which come back
-//! here to be written as PDFs the same way the jianpu pages are.
+//! here to be written as PDFs the same way the numbered pages are.
 use crate::error::IrrecoverableError;
 use crate::mei_export::ClefChoice;
 use crate::parser::parts_parser::InstrumentInfo;
@@ -13,7 +13,7 @@ use crate::split_track::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SplitMeiEntry {
     pub track_name: String,
-    /// The PDF this part becomes, named like the jianpu split export's.
+    /// The PDF this part becomes, named like the numbered split export's.
     pub filename: String,
     pub mei: String,
 }
@@ -60,7 +60,7 @@ pub struct StaffPdfPart {
 }
 
 /// Verovio's `svgViewBox` pages carry only a `viewBox` in its own scaled
-/// units, so they're given the jianpu pages' physical A4 size (the
+/// units, so they're given the numbered pages' physical A4 size (the
 /// aspect ratio already matches: Verovio lays out on a 2100×2970 page).
 #[cfg(feature = "pdf")]
 fn with_a4_page_size(page: &str) -> String {
@@ -94,7 +94,7 @@ fn without_text_tooltips(page: &str) -> String {
 }
 
 /// Writes Verovio's staff pages as a PDF, embedding `source` (like the
-/// jianpu PDF) so the file can be imported back.
+/// numbered PDF) so the file can be imported back.
 #[cfg(feature = "pdf")]
 pub fn write_staff_pdf(
     pages: &[String],
@@ -108,7 +108,7 @@ pub fn write_staff_pdf(
     crate::pdf::write_pdf(&printable_pages, fonts, source)
 }
 
-/// One PDF per part, zipped like the jianpu split export.
+/// One PDF per part, zipped like the numbered split export.
 #[cfg(feature = "pdf")]
 pub fn zip_staff_pdfs(
     parts: &[StaffPdfPart],

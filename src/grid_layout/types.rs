@@ -1,4 +1,4 @@
-use crate::ast::parsed::{Accidental, JianPuPitch};
+use crate::ast::parsed::{Accidental, NumberedPitch};
 use crate::compiler::types::{ArcKind, BarLineKind};
 use crate::pitch_description::GuitarVoicing;
 
@@ -137,7 +137,7 @@ pub enum GridContent {
     /// `LowOctaveDots` element instead (with `octave` left at 0 here), since
     /// they must hang beneath its underlines rather than the digit.
     NoteHead {
-        pitch: JianPuPitch,
+        pitch: NumberedPitch,
         accidental: Accidental,
         octave: i8,
         dotted: bool,
@@ -165,7 +165,7 @@ pub enum GridContent {
     /// its `NoteHead` (see `flush_left_padding`).
     LowOctaveDots {
         count: u8,
-        pitch: JianPuPitch,
+        pitch: NumberedPitch,
         head_label: Option<crate::compiler::NoteHeadLabel>,
     },
     ChordSymbol {

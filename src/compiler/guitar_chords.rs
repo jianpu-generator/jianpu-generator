@@ -1,7 +1,7 @@
 //! The guitar chord view: every chord symbol that chords-db has a voicing
 //! for gets a chord diagram, chosen per part so the progression (in written
 //! order) needs the least hand movement — see `least_movement_path`.
-//! Everything else about the layout stays as in the jianpu view.
+//! Everything else about the layout stays as in the numbered view.
 
 use std::collections::HashMap;
 

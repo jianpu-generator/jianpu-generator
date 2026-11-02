@@ -10,7 +10,7 @@
 //! anchor-mode standardization exists to make achievable exactly, not just
 //! approximately.
 
-use crate::ast::parsed::{Accidental, JianPuPitch};
+use crate::ast::parsed::{Accidental, NumberedPitch};
 use crate::compositor::types::{AbsoluteContent, FontFamily, GlyphFontFamilies};
 use crate::coordinate_resolver::resolve::{
     resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
@@ -135,7 +135,7 @@ fn ink_left_edge(anchor: f32, bearing: f32) -> f32 {
 #[test]
 fn note_head_and_latin_lyric_syllable_have_the_same_ink_left_edge_in_one_column() {
     let note_anchor = resolve_anchor_x(GridContent::NoteHead {
-        pitch: JianPuPitch::One,
+        pitch: NumberedPitch::One,
         accidental: Accidental::Natural,
         octave: 0,
         dotted: false,
@@ -168,7 +168,7 @@ fn note_head_and_latin_lyric_syllable_have_the_same_ink_left_edge_in_one_column(
 #[test]
 fn note_head_and_cjk_lyric_syllable_have_the_same_ink_left_edge_in_one_column() {
     let note_anchor = resolve_anchor_x(GridContent::NoteHead {
-        pitch: JianPuPitch::One,
+        pitch: NumberedPitch::One,
         accidental: Accidental::Natural,
         octave: 0,
         dotted: false,
@@ -200,7 +200,7 @@ fn note_head_and_cjk_lyric_syllable_have_the_same_ink_left_edge_in_one_column() 
 #[test]
 fn note_head_and_chord_symbol_have_the_same_ink_left_edge_in_one_column() {
     let note_anchor = resolve_anchor_x(GridContent::NoteHead {
-        pitch: JianPuPitch::One,
+        pitch: NumberedPitch::One,
         accidental: Accidental::Natural,
         octave: 0,
         dotted: false,

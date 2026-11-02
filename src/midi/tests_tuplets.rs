@@ -8,7 +8,7 @@ use super::midi_notes::duration_to_ticks;
 use super::one_measure_score;
 use crate::ast::grouped::GroupedNote;
 use crate::ast::grouped::{NoteEvent, Notes, PartRow, PartSlice};
-use crate::ast::parsed::{Accidental, JianPuPitch, PartKind, Soundfont};
+use crate::ast::parsed::{Accidental, NumberedPitch, PartKind, Soundfont};
 use crate::error::Span;
 use crate::midi::measure_start_times_seconds;
 
@@ -19,7 +19,7 @@ fn triplet_eighth_note_event() -> NoteEvent {
     // occupy exactly one real quarter-beat, matching `plain_quarter_note_event`'s
     // single (unscaled) duration of `4`.
     NoteEvent::Note(GroupedNote {
-        pitch: JianPuPitch::One,
+        pitch: NumberedPitch::One,
         accidental: Accidental::Natural,
         octave: 0,
         duration: 4,
@@ -37,7 +37,7 @@ fn triplet_eighth_note_event() -> NoteEvent {
 
 fn plain_quarter_note_event() -> NoteEvent {
     NoteEvent::Note(GroupedNote {
-        pitch: JianPuPitch::One,
+        pitch: NumberedPitch::One,
         accidental: Accidental::Natural,
         octave: 0,
         duration: 4,

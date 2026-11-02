@@ -255,7 +255,7 @@ fn a_folder_matching_by_name_shows_everything_inside_it() {
 
 #[test]
 fn the_extension_is_not_searchable() {
-    assert_eq!(searched("jianpu"), Vec::<String>::new());
+    assert_eq!(searched("poentaro"), Vec::<String>::new());
 }
 
 #[test]

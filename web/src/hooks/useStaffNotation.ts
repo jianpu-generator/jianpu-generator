@@ -13,7 +13,7 @@ import type { StaffRenderRequestTracker } from './usePoentaroWorkerTypes'
 
 export type { Notation }
 
-/** The jianpu/staff preview toggle plus what the staff view shows. */
+/** The numbered/staff preview toggle plus what the staff view shows. */
 export interface StaffNotation {
   notation: Notation
   setNotation: (notation: Notation) => void
@@ -48,7 +48,7 @@ function presetNotation(
 }
 
 /** The preview's notation: the one picked in this session under the preset
- * in force, else that preset's `notation` line, else jianpu. Under a preset
+ * in force, else that preset's `notation` line, else numbered. Under a preset
  * in a file you can edit, the picker rewrites the `notation` line instead
  * (`usePresetMenu`), so only a read-only view picks one. While it's a staff
  * notation, asks the worker to engrave the current source with Verovio.
@@ -77,7 +77,7 @@ export function useStaffNotation({
     () => presetNotation(source, visibility.presetName),
     [source, visibility.presetName],
   )
-  const notation = pickedNotations[pickKey] ?? fromPreset ?? 'jianpu'
+  const notation = pickedNotations[pickKey] ?? fromPreset ?? 'numbered'
   const [score, setScore] = useState<StaffScore>(EMPTY_SCORE)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

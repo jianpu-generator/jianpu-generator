@@ -1,5 +1,5 @@
 use super::{no_header, test_render_config};
-use crate::ast::parsed::{Accidental, JianPuPitch};
+use crate::ast::parsed::{Accidental, NumberedPitch};
 use crate::compiler::types::{
     ColumnElement, CompileResult, ElementContent, MeasureBlock, MeasureRow, RowId,
 };
@@ -18,7 +18,7 @@ fn notes_row_two_notes(first_note_id: usize) -> MeasureRow {
             ColumnElement {
                 column: 0,
                 content: ElementContent::NoteHead {
-                    pitch: JianPuPitch::One,
+                    pitch: NumberedPitch::One,
                     accidental: Accidental::Natural,
                     octave: 0,
                     dotted: false,
@@ -30,7 +30,7 @@ fn notes_row_two_notes(first_note_id: usize) -> MeasureRow {
             ColumnElement {
                 column: 1,
                 content: ElementContent::NoteHead {
-                    pitch: JianPuPitch::Two,
+                    pitch: NumberedPitch::Two,
                     accidental: Accidental::Natural,
                     octave: 0,
                     dotted: false,
@@ -129,7 +129,7 @@ fn playback_cursor_target_snaps_to_bar_line_despite_trailing_subdivision_padding
                 ColumnElement {
                     column: 0,
                     content: ElementContent::NoteHead {
-                        pitch: JianPuPitch::One,
+                        pitch: NumberedPitch::One,
                         accidental: Accidental::Natural,
                         octave: 0,
                         dotted: false,
@@ -195,7 +195,7 @@ fn playback_cursor_target_extends_to_next_note_without_its_own_trailing_column()
                 ColumnElement {
                     column: 0,
                     content: ElementContent::NoteHead {
-                        pitch: JianPuPitch::Six,
+                        pitch: NumberedPitch::Six,
                         accidental: Accidental::Natural,
                         octave: 0,
                         dotted: true,
@@ -207,7 +207,7 @@ fn playback_cursor_target_extends_to_next_note_without_its_own_trailing_column()
                 ColumnElement {
                     column: 3,
                     content: ElementContent::NoteHead {
-                        pitch: JianPuPitch::One,
+                        pitch: NumberedPitch::One,
                         accidental: Accidental::Natural,
                         octave: 0,
                         dotted: false,

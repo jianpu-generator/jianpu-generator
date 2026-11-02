@@ -125,7 +125,7 @@ fn render_with_enabled_tracks_filters_parts() {
 fn err_response_has_structured_diagnostic() {
     // Missing sections are now recoverable; render returns Ok with error diagnostics.
     let resp = render_response(
-        "not valid jianpu",
+        "not valid poentaro",
         &ResolvedPartVisibility::default(),
         &[],
         NoteLabels::Degrees,

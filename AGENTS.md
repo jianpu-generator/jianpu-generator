@@ -182,14 +182,14 @@ Database: `jianpu-live-share-staging` (id `e388837b-aed7-495c-96d3-fca824639cfc`
 - **Run SQL:** `npx wrangler d1 execute DB --remote -c <that file> --command "..."`. It can't bind parameters, so inline literals when replaying a query from `crates/live-share-worker/queries/`.
 - **Never** point `deploy.json`, `cloudflare.config.ts` or the deploy workflow at the staging id, or the next push to `master` would deploy against it.
 
-## Naming: the app is Poentaro, the notation is jianpu
+## Naming: the app is Poentaro, the notation is numbered
 
-The app was renamed from jianpu-generator to Poentaro (see "Rename to Poentaro" in `ARCHITECTURE.md`). Anything that means **the app** is named `poentaro`: crates, modules, identifiers, storage keys, the `.poentaro` file extension, and every new cloud resource. Anything that means **the notation** (the Jianpu view, `Notation::Jianpu`, `JianPuPitch`, jianpu digits) keeps the word jianpu.
+The app was renamed from jianpu-generator to Poentaro (see "Rename to Poentaro" in `ARCHITECTURE.md`). Anything that means **the app** is named `poentaro`: crates, modules, identifiers, storage keys, the `.poentaro` file extension, and every new cloud resource. Anything that means **the notation** is called numbered notation: the numbered view, `Notation::Numbered` (`notation = numbered`), `NumberedPitch`. Don't use the word jianpu for it in code, docs or UI.
 
 Some cloud resources still say `jianpu` because they can't be renamed, only recreated and migrated, which nobody chose to do: the worker `jianpu-live-share-worker-rs` (its workers.dev host is what every deployed client calls), the D1 databases `jianpu-live-share` and `jianpu-live-share-staging`, the B2 bucket `jianpu-live-share-backups`, the Keychain service `jianpu-backup-reader`, and the old origins `jianpu-generator.pages.dev` and the `jianpu-generator` GitHub org. Use them by their real names. Don't "fix" them in config: a renamed value points at a resource that doesn't exist.
 
 - **Never create anything new with `jianpu` in its name** that means the app: no new worker, database, bucket, Pages project, secret, Keychain entry, storage key or crate. Use `poentaro` (e.g. `poentaro-<purpose>`), even next to an old `jianpu-…` resource.
-- Code that reads a legacy name (`.jianpu` files, `jianpu:` keys, `jianpu-outbox:` databases, the `jianpu-source` embed tag) exists only so old data keeps working. Keep it next to the current name, as in `file-extension.json` and `web/src/legacyStorage/`, and never write a legacy name.
+- Code that reads a legacy name (`.jianpu` files, `jianpu:` keys, `jianpu-outbox:` databases, the `jianpu-source` embed tag, `notation = jianpu` in a preset) exists only so old data keeps working. Keep it next to the current name, as in `file-extension.json` and `web/src/legacyStorage/`, and never write a legacy name.
 
 ## Cloudflare stays on the free plan
 

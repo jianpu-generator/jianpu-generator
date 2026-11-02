@@ -124,6 +124,19 @@ Feature: Viewing and importing a shared folder
     And the viewer imports the folder
     Then the cloud account holds the file "ViewSeven 2/song.poentaro"
 
+  Scenario: A cloud viewer can import the folder only once their own files have loaded
+    Given a cloud file named "ViewTen/song.poentaro" titled "Cloud Copy" is seeded for the signed-in account
+    And the cloud app is open
+    When I open the share dialog of the folder "ViewTen"
+    And I open the synced tab of the share dialog
+    And I start sync in the share dialog
+    Then the share dialog shows a synced link
+    When a cloud viewer whose files are still loading opens the synced link of the share dialog
+    Then the viewer cannot import the folder yet
+    When the viewer's files finish loading
+    And the viewer imports the folder
+    Then the cloud account holds the file "ViewTen 2/song.poentaro"
+
   Scenario: A static folder link opens read-only and can be discarded
     Given the file tree is seeded with files "Static/Advent/a.poentaro", "Static/b.poentaro" and "c.poentaro" and an empty folder "Spare" with "c.poentaro" active
     When the file tree app loads

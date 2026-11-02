@@ -68,7 +68,7 @@ fn two_measures_produce_two_blocks() {
 
 #[test]
 fn eighth_notes_produce_underline_elements() {
-    // 2_ means eighth note (duration=2 quarter-beats) in jianpu syntax
+    // 2_ means eighth note (duration=2 quarter-beats) in `.poentaro` syntax
     // Two eighth notes fill one beat; padded with rests to complete 4/4
     let score = score_from(&notes_doc("time=4/4 key=C4 bpm=120\n[S] 2_ 2_ 0 0 0\n"));
     let result = compile(&score);

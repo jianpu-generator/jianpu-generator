@@ -5,12 +5,17 @@ import {
   seedCloudFile,
   seedTokenFor,
   trashCloudFile,
+  workerRouteGlob,
 } from '../../cloudFileHelpers'
 import { openFileList } from '../../fileSwitcherHelpers'
 import { currentSignedInEmail } from './cloud-account.steps'
 import { seedSignedInSession } from './cloud-account-helpers'
 import { Given, Then, When } from './fixtures'
 import { syncedShareButtonState as state } from './synced-share-button-state'
+
+/** Releases the viewer's held-back `/files/list` requests; set while they are
+ * held. */
+let releaseViewerFileList: (() => void) | undefined
 
 /** Ids of the cloud files this scenario seeded, by name, for the owner's
  * API-side changes (rename, delete). */
@@ -31,6 +36,7 @@ async function openViewer(
     phone?: boolean
     localFolder?: string
     cloudAccount?: string
+    holdFileList?: boolean
   } = {},
 ) {
   state.viewerContext = await browser.newContext(
@@ -59,6 +65,15 @@ async function openViewer(
         'poentaro:storage-backend:v1',
         JSON.stringify({ backend: 'cloud' }),
       )
+    })
+  }
+  if (options.holdFileList) {
+    const released = new Promise<void>((resolve) => {
+      releaseViewerFileList = resolve
+    })
+    await page.route(workerRouteGlob('/files/list'), async (route) => {
+      await released
+      await route.continue()
     })
   }
   state.viewerPage = page
@@ -112,6 +127,30 @@ When(
     })
   },
 )
+
+When(
+  'a cloud viewer whose files are still loading opens the synced link of the share dialog',
+  async ({ page, browser }) => {
+    await openViewer(browser, await syncedLinkOf(page), {
+      cloudAccount: currentSignedInEmail(),
+      holdFileList: true,
+    })
+  },
+)
+
+Then('the viewer cannot import the folder yet', async () => {
+  await expect(
+    viewer().getByRole('button', { name: 'Import this folder' }),
+  ).toBeDisabled()
+})
+
+When("the viewer's files finish loading", async () => {
+  releaseViewerFileList?.()
+  releaseViewerFileList = undefined
+  await expect(
+    viewer().getByRole('button', { name: 'Import this folder' }),
+  ).toBeEnabled()
+})
 
 When(
   'a viewer opens the static link of the share dialog',

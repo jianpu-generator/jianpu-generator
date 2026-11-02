@@ -108,13 +108,13 @@
   margin-left: auto;
 }
 
-/* Verovio's SVG has only a viewBox; give it the jianpu page's A4 width so
+/* Verovio's SVG has only a viewBox; give it the numbered page's A4 width so
    `.preview-page svg`'s max-width scales it down to the available width. */
 .preview-page--staff > svg {
   width: 210mm;
 }
 
-/* A selected staff measure (`applyStaffMeasureHighlights`): the jianpu
+/* A selected staff measure (`applyStaffMeasureHighlights`): the numbered
    view's committed-selection blue, or its pending amber while a
    click-and-click gesture waits on its second click. */
 .preview-page--staff .staff-measure-highlight {
@@ -129,7 +129,7 @@
 }
 
 /* Each staff measure's hover target (`applyStaffMeasureHitTargets`): the
-   jianpu view's click-target hover fill and pointer, for the whole measure
+   numbered view's click-target hover fill and pointer, for the whole measure
    while any part of it is hovered. */
 .preview-page--staff .staff-measure-hit-target {
   fill: transparent;

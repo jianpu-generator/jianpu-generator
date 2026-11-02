@@ -1,5 +1,5 @@
 use crate::ast::parsed::{
-    Accidental, JianPuPitch, ParsedChordNote, PartKind, ScoreEvent, TriadQuality,
+    Accidental, NumberedPitch, ParsedChordNote, PartKind, ScoreEvent, TriadQuality,
 };
 
 use super::test_helpers::{
@@ -44,7 +44,7 @@ fn chord_column_events_are_parsed() {
     assert_eq!(
         events[3],
         &ScoreEvent::Chord(ParsedChordNote {
-            degree: JianPuPitch::One,
+            degree: NumberedPitch::One,
             accidental: Accidental::Natural,
             triad: TriadQuality::Major,
             extension: None,

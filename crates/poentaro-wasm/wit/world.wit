@@ -52,7 +52,7 @@ world poentaro-wasm {
 
     // ==================== svg_types.rs ====================
 
-    /// What the jianpu layout's note heads read as
+    /// What the numbered layout's note heads read as
     /// (`poentaro::NoteLabels`): degree digits, the letter names
     /// of the letter-name view, the tabs of the harmonica-tab view, or
     /// degree digits with a guitar chord diagram at each chord symbol (the
@@ -1015,7 +1015,7 @@ world poentaro-wasm {
 
     // How the preview and exports draw the score (`poentaro::ast::parsed::Notation`).
     enum notation {
-        jianpu,
+        numbered,
         violin,
         cello,
         abc,

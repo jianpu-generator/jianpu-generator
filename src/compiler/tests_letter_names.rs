@@ -212,7 +212,7 @@ fn letter_names_spell_chord_roots_and_slash_basses_against_the_key() {
 }
 
 #[test]
-fn degrees_keep_chord_symbols_in_jianpu() {
+fn degrees_keep_chord_symbols_in_numbered() {
     assert_eq!(
         chord_texts(&compile_with(CHORDS_IN_D, NoteLabels::Degrees)),
         vec![

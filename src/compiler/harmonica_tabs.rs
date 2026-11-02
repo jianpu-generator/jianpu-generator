@@ -22,7 +22,7 @@ use super::least_movement_path::{least_movement_path, PathCosts};
 use super::letter_names::block_keys;
 use super::types::{ColumnElement, CompileResult, ElementContent, NoteHeadLabel};
 use crate::ast::grouped::Score;
-use crate::ast::parsed::{Accidental, JianPuPitch, KeyChange, NoteName};
+use crate::ast::parsed::{Accidental, KeyChange, NoteName, NumberedPitch};
 
 const HOLES: u8 = 12;
 
@@ -204,15 +204,15 @@ fn key_semitones(key: &KeyChange) -> i32 {
     12 * i32::from(key.note.octave) + letter + accidental_semitones(&key.note.accidental)
 }
 
-fn degree_semitones(pitch: &JianPuPitch) -> i32 {
+fn degree_semitones(pitch: &NumberedPitch) -> i32 {
     match pitch {
-        JianPuPitch::One => 0,
-        JianPuPitch::Two => 2,
-        JianPuPitch::Three => 4,
-        JianPuPitch::Four => 5,
-        JianPuPitch::Five => 7,
-        JianPuPitch::Six => 9,
-        JianPuPitch::Seven => 11,
+        NumberedPitch::One => 0,
+        NumberedPitch::Two => 2,
+        NumberedPitch::Three => 4,
+        NumberedPitch::Four => 5,
+        NumberedPitch::Five => 7,
+        NumberedPitch::Six => 9,
+        NumberedPitch::Seven => 11,
     }
 }
 

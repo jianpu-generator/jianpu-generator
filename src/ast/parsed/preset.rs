@@ -5,7 +5,7 @@ use super::{AbbreviationReference, ParsedDocument, ParsedMetadata, TextStyle, Te
 use crate::error::Span;
 
 /// The preset menu's name for "no preset": the song's own `# metadata`, every
-/// part, jianpu. A `# preset` can't take this name.
+/// part, numbered notation. A `# preset` can't take this name.
 pub const DEFAULT_PRESET_NAME: &str = "Default";
 
 keyword_enum! {
@@ -19,7 +19,7 @@ keyword_enum! {
 keyword_enum! {
     /// How the preview and exports draw the score.
     pub enum Notation {
-        Jianpu => "jianpu",
+        Numbered => "numbered",
         Violin => "violin",
         Cello => "cello",
         Abc => "abc",
@@ -28,7 +28,18 @@ keyword_enum! {
     }
 }
 
+/// What `notation = ...` called [`Notation::Numbered`] before the rename.
+/// Still read so older files keep their preset's notation; never written.
+const LEGACY_NUMBERED_KEYWORD: &str = "jianpu";
+
 impl Notation {
+    /// The notation a `notation = ...` line names: [`Self::from_keyword`],
+    /// plus the legacy spelling of [`Self::Numbered`].
+    pub fn from_source_value(value: &str) -> Option<Self> {
+        Self::from_keyword(value)
+            .or_else(|| (value == LEGACY_NUMBERED_KEYWORD).then_some(Self::Numbered))
+    }
+
     /// Whether this notation is drawn as staff notation by Verovio, which
     /// ignores the `# metadata` text styles.
     pub fn ignores_text_styles(self) -> bool {

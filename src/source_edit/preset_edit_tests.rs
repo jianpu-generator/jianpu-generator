@@ -9,7 +9,7 @@ Alto [A] = notes
 
 # preset "Choir"
 visible_parts = S, A
-notation = jianpu
+notation = numbered
 
 # preset "Alto"
 subtitle = "Alto part"
@@ -228,12 +228,24 @@ fn lists_presets_in_file_order_with_their_notation() {
         vec![
             PresetSummary {
                 name: "Choir".to_owned(),
-                notation: Some(Notation::Jianpu),
+                notation: Some(Notation::Numbered),
             },
             PresetSummary {
                 name: "Alto".to_owned(),
                 notation: None,
             },
         ]
+    );
+}
+
+#[test]
+fn the_menu_reads_a_legacy_jianpu_preset_as_numbered() {
+    let source = "# preset \"Old\"\nnotation = jianpu\n";
+    assert_eq!(
+        list_presets(source),
+        vec![PresetSummary {
+            name: "Old".to_owned(),
+            notation: Some(Notation::Numbered),
+        }]
     );
 }

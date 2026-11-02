@@ -1,4 +1,4 @@
-use crate::ast::parsed::JianPuPitch;
+use crate::ast::parsed::NumberedPitch;
 use crate::compositor::types::AbsoluteContent;
 use crate::coordinate_resolver::resolve::{
     resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
@@ -85,7 +85,7 @@ fn note_head_halign_center_is_flush_left_plus_fixed_padding() {
         halign: HAlign::Center,
         valign: VAlign::Center,
         content: GridContent::NoteHead {
-            pitch: JianPuPitch::One,
+            pitch: NumberedPitch::One,
             accidental: crate::ast::parsed::Accidental::Natural,
             octave: 0,
             dotted: false,
@@ -148,7 +148,7 @@ fn note_head_anchor_shifts_by_its_own_configured_padding_not_chords_or_lyrics() 
         halign: HAlign::Center,
         valign: VAlign::Center,
         content: GridContent::NoteHead {
-            pitch: JianPuPitch::One,
+            pitch: NumberedPitch::One,
             accidental: crate::ast::parsed::Accidental::Natural,
             octave: 0,
             dotted: false,
@@ -216,7 +216,7 @@ fn column_weight_test_page(column_weight: f32) -> GridPage {
         halign: HAlign::Center,
         valign: VAlign::Center,
         content: GridContent::NoteHead {
-            pitch: JianPuPitch::One,
+            pitch: NumberedPitch::One,
             accidental: crate::ast::parsed::Accidental::Natural,
             octave: 0,
             dotted: false,

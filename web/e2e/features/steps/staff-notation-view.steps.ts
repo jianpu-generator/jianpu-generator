@@ -51,7 +51,7 @@ When(
   },
 )
 
-Then('the preview shows jianpu pages', async ({ page }) => {
+Then('the preview shows numbered pages', async ({ page }) => {
   await expect(page.locator('.preview-page').first()).toBeVisible()
   await expect(staffPage(page)).toHaveCount(0)
 })
@@ -154,13 +154,13 @@ Then('the staff PDF is named {string}', async ({}, name: string) => {
 })
 
 Then(
-  'the {word} PDF differs from the jianpu PDF',
+  'the {word} PDF differs from the numbered PDF',
   async ({}, notation: string) => {
     const exported = exportedFiles.get(notation)?.bytes
-    const jianpu = exportedFiles.get('jianpu')?.bytes
+    const numbered = exportedFiles.get('numbered')?.bytes
     expect(exported?.subarray(0, 4).toString()).toBe('%PDF')
-    expect(jianpu?.subarray(0, 4).toString()).toBe('%PDF')
-    expect(exported?.equals(jianpu as Buffer)).toBe(false)
+    expect(numbered?.subarray(0, 4).toString()).toBe('%PDF')
+    expect(exported?.equals(numbered as Buffer)).toBe(false)
   },
 )
 

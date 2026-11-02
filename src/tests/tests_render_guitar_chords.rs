@@ -40,7 +40,7 @@ fn the_guitar_view_draws_a_diagram_for_every_chord_with_a_voicing() {
 }
 
 #[test]
-fn the_jianpu_view_draws_no_diagrams() {
+fn the_numbered_view_draws_no_diagrams() {
     assert_eq!(
         diagram_frets(&render(NoteLabels::Degrees)),
         Vec::<String>::new()

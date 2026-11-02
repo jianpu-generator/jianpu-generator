@@ -70,13 +70,5 @@ export const onRequestGet: PagesFunction = async (context) => {
         element.setAttribute('content', title)
       },
     })
-    .on('meta[property="og:description"]', {
-      element(element) {
-        element.setAttribute(
-          'content',
-          `${doc.filename} — a jianpu (numbered musical notation) score`,
-        )
-      },
-    })
     .transform(response)
 }

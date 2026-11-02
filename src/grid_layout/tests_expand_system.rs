@@ -2,7 +2,7 @@
 //! the max-file-lines lint.
 
 use super::make_block;
-use crate::ast::parsed::JianPuPitch;
+use crate::ast::parsed::NumberedPitch;
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureBlock, MeasureRow, RowId};
 use crate::coordinate_resolver::LyricFontSizes;
 use crate::grid_layout::layout::{
@@ -102,7 +102,7 @@ fn make_block_with_lyric_part(bar_col: u32) -> MeasureBlock {
                     ColumnElement {
                         column: 0,
                         content: ElementContent::NoteHead {
-                            pitch: JianPuPitch::One,
+                            pitch: NumberedPitch::One,
                             accidental: crate::ast::parsed::Accidental::Natural,
                             octave: 0,
                             dotted: false,

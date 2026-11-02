@@ -1,4 +1,4 @@
-use crate::ast::parsed::{JianPuPitch, Offset};
+use crate::ast::parsed::{NumberedPitch, Offset};
 use crate::compiler::types::{ColumnElement, ElementContent, MeasureRow, RowId};
 use crate::grid_layout::types::GridRow;
 use crate::render_config::RenderConfig;
@@ -70,7 +70,7 @@ fn note_row(id: &str) -> MeasureRow {
         elements: vec![ColumnElement {
             column: 0,
             content: ElementContent::NoteHead {
-                pitch: JianPuPitch::One,
+                pitch: NumberedPitch::One,
                 accidental: crate::ast::parsed::Accidental::Natural,
                 octave: 0,
                 dotted: false,
@@ -141,7 +141,7 @@ pub(crate) fn make_block(row_id: &str, bar_col: u32) -> MeasureBlock {
                 ColumnElement {
                     column: 0,
                     content: ElementContent::NoteHead {
-                        pitch: JianPuPitch::One,
+                        pitch: NumberedPitch::One,
                         accidental: crate::ast::parsed::Accidental::Natural,
                         octave: 0,
                         dotted: false,

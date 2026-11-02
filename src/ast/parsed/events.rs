@@ -1,6 +1,6 @@
 use crate::error::Span;
 
-use super::{Accidental, JianPuPitch, KeyChange};
+use super::{Accidental, KeyChange, NumberedPitch};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TriadQuality {
@@ -20,7 +20,7 @@ pub enum Extension {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BassDegree {
-    pub degree: JianPuPitch,
+    pub degree: NumberedPitch,
     pub accidental: Accidental,
 }
 
@@ -73,7 +73,7 @@ pub struct TupletInfo {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParsedNote {
-    pub pitch: JianPuPitch,
+    pub pitch: NumberedPitch,
     pub accidental: Accidental,
     /// Octave offset from the default octave. 0 = default, positive = up, negative = down.
     pub octave: i8,
@@ -102,7 +102,7 @@ pub struct ParsedNote {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParsedChordNote {
-    pub degree: JianPuPitch,
+    pub degree: NumberedPitch,
     pub accidental: Accidental,
     pub triad: TriadQuality,
     pub extension: Option<Extension>,

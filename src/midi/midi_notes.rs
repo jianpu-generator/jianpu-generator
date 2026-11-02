@@ -1,4 +1,4 @@
-use crate::ast::parsed::{JianPuPitch, KeyChange};
+use crate::ast::parsed::{KeyChange, NumberedPitch};
 pub(crate) use crate::sounding_pitch::{
     accidental_offset, note_name_to_semitone, pitch_to_scale_offset,
     resolve_midi_note_with_accidental,
@@ -6,7 +6,7 @@ pub(crate) use crate::sounding_pitch::{
 
 const TPQ: u16 = 480; // ticks per quarter note
 
-pub(crate) fn resolve_midi_note(pitch: &JianPuPitch, octave: i8, key: &KeyChange) -> u8 {
+pub(crate) fn resolve_midi_note(pitch: &NumberedPitch, octave: i8, key: &KeyChange) -> u8 {
     let root = 12 * (key.note.octave as i32 + 1)
         + note_name_to_semitone(&key.note.name)
         + accidental_offset(&key.note.accidental);

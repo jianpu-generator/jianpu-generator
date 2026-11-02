@@ -242,7 +242,7 @@ source anywhere. Use `pymupdf` (`pip3 install pymupdf`, imported as `fitz`).
 
 1. Parse the already-transcribed portion of the source.
 2. Find the duration-scaling factor between source and `.poentaro` measures
-   (e.g. "1 real 4/4 bar = 2 jianpu measures", every duration doubles).
+   (e.g. "1 real 4/4 bar = 2 numbered measures", every duration doubles).
    Verify on a simple bar (a single held whole note scales to the expected
    measure count).
 3. Confirm by matching scale-degree sequences (ignoring octave) across
@@ -250,14 +250,14 @@ source anywhere. Use `pymupdf` (`pip3 install pymupdf`, imported as `fitz`).
    ornamental note added or dropped) are normal — note them, don't assume
    your parser is wrong.
 4. **Bucket the continuous, un-barred note stream directly into
-   jianpu-measure-sized windows** — i.e. `(real bar length) / scaling
+   numbered-measure-sized windows** — i.e. `(real bar length) / scaling
    factor` units per bucket — rather than bucketing into real-bar-sized
    chunks and then figuring out how each bar's notes split across its N
-   mapped measures. The jianpu measure grid does not respect real barlines,
+   mapped measures. The numbered measure grid does not respect real barlines,
    only cumulative duration; bucketing directly avoids a whole class of
    "these notes don't obviously split evenly" confusion.
 5. When a note's duration straddles a bucket boundary: split at every
-   jianpu-measure (16 quarter-beat) boundary it crosses, then, on each
+   numbered-measure (16 quarter-beat) boundary it crosses, then, on each
    resulting per-measure fragment, apply the half-bar grouping-validation
    rule (no note/rest may start before quarter-beat 8 and cross it, unless
    it starts at 0 — see `syntax.md`). Chain tie marks through every fragment;
@@ -282,7 +282,7 @@ source anywhere. Use `pymupdf` (`pip3 install pymupdf`, imported as `fitz`).
   instead of eyeballing renders note by note:
   1. `scaleposition(note) = letter_index(c=0,d=1,e=2,f=3,g=4,a=5,b=6) + 7 ×
      lilypond_relative_octave` (monotonic in pitch, +7 per real octave).
-  2. From one note in the verified part with a known jianpu mark, solve for
+  2. From one note in the verified part with a known degree, solve for
      the tonic reference's scale position such that
      `floor((scaleposition − reference) / 7) == 0` matches "no mark".
   3. For any other note: band = `floor((scaleposition(note) − reference) /
@@ -296,7 +296,7 @@ source anywhere. Use `pymupdf` (`pip3 install pymupdf`, imported as `fitz`).
 - **Gotcha — bare `7` next to `1` (caught late, after a whole piece was
   transcribed with this mistake repeated ~4 times in one file): this is not
   only a formula-derivation risk, it trips up plain note-by-note literal
-  transcription too.** jianpu degree numbers are diatonic *positions*, not
+  transcription too.** degree numbers are diatonic *positions*, not
   chromatic distance: an unmarked `7` is a 7th **above** an unmarked `1`
   (10-11 semitones), while the leading tone you actually hear immediately
   before/after a tonic in the source is almost always the neighbor a
@@ -334,8 +334,8 @@ source anywhere. Use `pymupdf` (`pip3 install pymupdf`, imported as `fitz`).
   logic (stepwise/functional motion) versus being a one-off addition.
 - **Scaling factor is not always a doubling** — verify it fresh per piece,
   don't assume the previous piece's ratio. `Air on G String` needed 1 real
-  4/4 bar → 2 jianpu measures; `Minuet in G` (3/4) needed a plain 1:1
-  mapping (one real bar = one jianpu measure, no rescaling of durations at
+  4/4 bar → 2 numbered measures; `Minuet in G` (3/4) needed a plain 1:1
+  mapping (one real bar = one numbered measure, no rescaling of durations at
   all). Always confirm on a simple single-note-per-bar measure before
   trusting it for the rest of the piece.
 - Be upfront with the user about which choices are "verified against the
@@ -344,7 +344,7 @@ source anywhere. Use `pymupdf` (`pip3 install pymupdf`, imported as `fitz`).
 
 ## 5. Writing the new measures
 
-- Convert each note's duration via the scaling factor, then to jianpu
+- Convert each note's duration via the scaling factor, then to numbered
   suffixes: plain digit = quarter (4 quarter-beats), `_` = eighth, `=` =
   sixteenth, `.` = dotted (+50%), trailing `-` = +1 beat (4qb) each.
 - **Tie-mark placement gotcha** (undocumented, verified by checking existing

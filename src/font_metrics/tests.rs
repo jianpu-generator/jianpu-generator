@@ -20,7 +20,7 @@ fn cjk_glyph_left_bearing_is_zero_for_a_character_missing_from_the_font() {
 
 #[test]
 fn glyph_left_bearing_for_family_is_positive_for_a_real_monospace_character() {
-    // A jianpu digit is conventionally drawn inset within its advance
+    // A numbered digit is conventionally drawn inset within its advance
     // box even in a monospace font, so a real character in the pinned
     // monospace font should measure a nonzero left-side bearing.
     let bearing = glyph_left_bearing_for_family(FontFamily::Monospace, '1', 12.0);

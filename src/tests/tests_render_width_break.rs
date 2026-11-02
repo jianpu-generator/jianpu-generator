@@ -41,7 +41,7 @@ fn overflow_warning_count(output: &RenderOutput) -> usize {
 }
 
 #[test]
-fn the_jianpu_view_fits_four_measures_in_one_system() {
+fn the_numbered_view_fits_four_measures_in_one_system() {
     let output = render(&source(4), NoteLabels::Degrees);
     assert_eq!(system_count(&output), 1);
     assert_eq!(overflow_warning_count(&output), 0);

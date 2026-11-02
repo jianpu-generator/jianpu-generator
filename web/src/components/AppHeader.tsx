@@ -19,9 +19,8 @@ import { PlayAllButton } from './PlayAllButton'
 import { PlayFromCurrentMeasureButton } from './PlayFromCurrentMeasureButton'
 import { PlayMeasureButton } from './PlayMeasureButton'
 import { ProfileControl } from './ProfileControl'
+import { ShareBanner } from './ShareBanner'
 import { SharedFolderSwitcher } from './SharedFolderSwitcher'
-import { SharedPreviewBanner } from './SharedPreviewBanner'
-import { SyncedShareBanner } from './SyncedShareBanner'
 import { SyncedShareErrorDialog } from './SyncedShareErrorDialog'
 
 interface MeasureRange {
@@ -29,7 +28,7 @@ interface MeasureRange {
   end: number
 }
 
-interface SyncedShareHeaderProps {
+export interface SyncedShareHeaderProps {
   sharedPreview: SharePayload | null
   onImportShared: () => void
   onDismissShared: () => void
@@ -111,7 +110,7 @@ interface AppHeaderProps {
   deletingFileName?: string | null
   duplicatingFile?: boolean
   renamingFileName?: string | null
-  isLoadingCloud?: boolean
+  isLoadingCloud: boolean
   cloudLoadFailure?: CloudLoadFailure | null
   onOpenBin: () => void
   onOpenSyncPanel?: () => void
@@ -227,32 +226,7 @@ export function AppHeader({
   } = syncedShare
   return (
     <header className="app-header">
-      {sharedFolder?.kind === 'static' ? (
-        <SharedPreviewBanner
-          folderName={sharedFolder.folderName}
-          onImport={sharedFolder.onImport}
-          onDiscard={sharedFolder.onDiscard}
-        />
-      ) : sharedPreview ? (
-        <SharedPreviewBanner
-          onImport={syncedShare.onImportShared}
-          onDiscard={syncedShare.onDismissShared}
-        />
-      ) : (
-        syncedShareViewerActive && (
-          <SyncedShareBanner
-            status={syncedShare.viewerStatus}
-            filename={syncedShare.viewerFilename}
-            folderName={sharedFolder?.folderName ?? null}
-            onImport={
-              sharedFolder
-                ? sharedFolder.onImport
-                : syncedShare.onImportSyncedShare
-            }
-            onDiscard={syncedShare.onDiscardSyncedShare}
-          />
-        )
-      )}
+      <ShareBanner syncedShare={syncedShare} importDisabled={isLoadingCloud} />
       {audioAvailable && (
         <MetronomeToggleButton
           enabled={metronomeEnabled}

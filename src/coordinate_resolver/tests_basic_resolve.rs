@@ -1,4 +1,4 @@
-use crate::ast::parsed::{Accidental, JianPuPitch};
+use crate::ast::parsed::{Accidental, NumberedPitch};
 use crate::compositor::types::AbsoluteContent;
 use crate::coordinate_resolver::resolve::{
     resolve, ElementPaddings, LabelFontSizes, LyricFontSizes, ResolveFontSizes,
@@ -173,13 +173,13 @@ fn low_octave_dots_resolve_to_the_same_x_as_their_note_head() {
         valign: VAlign::Center,
         content: GridContent::LowOctaveDots {
             count: 1,
-            pitch: JianPuPitch::Five,
+            pitch: NumberedPitch::Five,
             head_label: None,
         },
     };
     let note_head = GridElement {
         content: GridContent::NoteHead {
-            pitch: JianPuPitch::Five,
+            pitch: NumberedPitch::Five,
             accidental: Accidental::Natural,
             octave: 0,
             dotted: false,

@@ -1,7 +1,7 @@
 use super::duration::{split_duration, split_undotted_duration};
 use super::pitch::{key_signature, spell, AccidentalTracker, Letter};
 use super::{score_to_mei, ClefChoice, StaffMeasure};
-use crate::ast::parsed::{Accidental, JianPuPitch, KeyChange, Note, NoteName};
+use crate::ast::parsed::{Accidental, KeyChange, Note, NoteName, NumberedPitch};
 use std::collections::HashMap;
 
 fn key(name: NoteName, accidental: Accidental) -> KeyChange {
@@ -33,16 +33,16 @@ fn key_signatures_follow_the_tonic() {
 #[test]
 fn degrees_are_spelled_by_letter_in_the_key() {
     let f_major = key(NoteName::F, Accidental::Natural);
-    let four = spell(&JianPuPitch::Four, &Accidental::Natural, 0, &f_major);
+    let four = spell(&NumberedPitch::Four, &Accidental::Natural, 0, &f_major);
     assert_eq!(four.letter, Letter::B);
     assert_eq!(four.alteration, -1);
     assert_eq!(four.octave, 4);
 
-    let low_six = spell(&JianPuPitch::Six, &Accidental::Natural, -1, &f_major);
+    let low_six = spell(&NumberedPitch::Six, &Accidental::Natural, -1, &f_major);
     assert_eq!(low_six.letter, Letter::D);
     assert_eq!(low_six.octave, 4);
 
-    let sharp_five = spell(&JianPuPitch::Five, &Accidental::Sharp, 0, &f_major);
+    let sharp_five = spell(&NumberedPitch::Five, &Accidental::Sharp, 0, &f_major);
     assert_eq!(sharp_five.letter, Letter::C);
     assert_eq!(sharp_five.alteration, 1);
     assert_eq!(sharp_five.octave, 5);
@@ -52,8 +52,8 @@ fn degrees_are_spelled_by_letter_in_the_key() {
 fn accidentals_are_written_only_against_the_key_or_an_earlier_one() {
     let f_major = key(NoteName::F, Accidental::Natural);
     let mut tracker = AccidentalTracker::new(&f_major);
-    let b_flat = spell(&JianPuPitch::Four, &Accidental::Natural, 0, &f_major);
-    let b_natural = spell(&JianPuPitch::Four, &Accidental::Sharp, 0, &f_major);
+    let b_flat = spell(&NumberedPitch::Four, &Accidental::Natural, 0, &f_major);
+    let b_natural = spell(&NumberedPitch::Four, &Accidental::Sharp, 0, &f_major);
     assert_eq!(tracker.attribute(b_flat), " accid.ges=\"f\"");
     assert_eq!(tracker.attribute(b_natural), " accid=\"n\"");
     assert_eq!(tracker.attribute(b_natural), "");

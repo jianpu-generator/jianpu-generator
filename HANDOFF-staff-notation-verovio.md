@@ -2,7 +2,7 @@
 
 ## Goal
 
-A toggle in the web app that switches the preview from jianpu to western
+A toggle in the web app that switches the preview from numbered notation to western
 staff notation. Engraving (note spacing, beaming, collisions, line breaking) is
 delegated to [Verovio](https://www.verovio.org) (C++ → wasm, LGPL-3.0); Rust
 only translates the grouped `Score` into MEI. The frontend stays dumb: it
@@ -16,7 +16,7 @@ hands the MEI string Rust produced to Verovio and displays the SVG.
 | CLI `poentaro generate mei <file>` | Done |
 | Verovio rendering | Wired into the web worker (`web/src/worker/staffMessageHandlers.ts`), lazily `import()`ed on first staff render; Vite emits it as its own ~8 MB chunk (`poentaro.worker` stays ~465 kB) |
 | WASM `render_mei` (TODO 1) | Done — part visibility filtered in Rust (`render_mei_from_source_with_visibility`) |
-| Web toggle (TODO 3) | Done — Jianpu/Staff toggle above the preview, remembered **globally per browser** (`localStorage` `poentaro:preview-notation:v1`, `useStaffNotation.ts`); switch to per-file if wanted |
+| Web toggle (TODO 3) | Done — Numbered/Staff toggle above the preview, remembered **globally per browser** (`localStorage` `poentaro:preview-notation:v1`, `useStaffNotation.ts`); switch to per-file if wanted |
 | e2e (TODO 5) | Partly — `web/e2e/features/staff-notation-view.feature` (toggle, hidden part, remembered after reload); the click-to-cursor scenario waits on TODO 4 |
 | Click / selection / playback (TODO 4) | Not started |
 | Staff PDF export | Done — Export > PDF / PDF (ZIP) follow the preview's notation; Verovio's pages go back to Rust (`src/staff_export/`) for the PDF. Verovio's `<title class="labelAttr">` tooltips must be stripped or usvg pushes centred text (the title) off the page |
@@ -93,7 +93,7 @@ Roughly in priority order. Each item should come with a unit test in
 
 1. **WASM export.** Add a `render-mei`-style function to
    `crates/poentaro-wasm` (WIT in `crates/poentaro-wasm/wit/world.wit`) that takes
-   the source plus the same hidden/soloed track state the jianpu preview uses
+   the source plus the same hidden/soloed track state the numbered preview uses
    and returns the MEI string. Track filtering must happen in Rust
    (`filter_tracks`), not TS — see "Web frontend must stay dumb" in `CLAUDE.md`.
    Update `ARCHITECTURE.md` "WASM exports".
@@ -102,7 +102,7 @@ Roughly in priority order. Each item should come with a unit test in
    `VerovioToolkit` alive, and render MEI → SVG pages there. Check what Vite
    does with the 7 MB `.mjs` (it embeds the wasm as base64; consider the
    separate `verovio-toolkit-wasm.js` + caching headers).
-3. **Toggle UI.** A jianpu / staff switch in the preview toolbar, persisted
+3. **Toggle UI.** A numbered / staff switch in the preview toolbar, persisted
    per file or globally (decide with the user). Show a loading state while
    Verovio downloads.
 4. **Click / selection / playback mapping.** Parse `id="n{start}-{end}"` on
@@ -127,12 +127,12 @@ Roughly in priority order. Each item should come with a unit test in
    as one quarter, not two tied eighths. Follow standard metric notation:
    don't let a note hide the middle of a 4/4 bar or a compound beat.
 9. **Sequence / repeats.** `Score.sequence` is ignored — the score is laid out
-   in written order. At minimum print the sequence line (like the jianpu
+   in written order. At minimum print the sequence line (like the numbered
    header does); better, emit repeat barlines / D.S. markers where the
    sequence is a simple repeat.
 10. **Percussion parts.** Currently written as rests. Emit a one-line
     percussion staff (`lines="1"`, `clef.shape="perc"`) with unpitched notes.
-11. **Grace notes, dynamics, nav markers, tempo.** Check which jianpu
+11. **Grace notes, dynamics, nav markers, tempo.** Check which numbered
     directives exist (`syntax.md`) and map them: `bpm=` → `<tempo>`,
     navigation markers → `<dir>`/`<repeatMark>`, etc.
 12. **Clef heuristic.** `staves::choose_clef` uses the average sounding pitch
