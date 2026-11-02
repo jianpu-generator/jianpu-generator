@@ -19,6 +19,7 @@ keyword_enum! {
         SectionLabel => "section_label",
         PartLabel => "part_label",
         PageNumber => "page_number",
+        RunningTitle => "running_title",
         Lyrics => "lyrics",
         Notes => "notes",
         Chords => "chords",
@@ -115,6 +116,7 @@ impl MetadataTextKey {
             | TextStyleKind::SectionLabel
             | TextStyleKind::PartLabel
             | TextStyleKind::PageNumber
+            | TextStyleKind::RunningTitle
             | TextStyleKind::Lyrics
             | TextStyleKind::Notes
             | TextStyleKind::Chords

@@ -59,6 +59,10 @@ pub struct Metadata {
     pub part_label: TextStyle,
     /// Page-number footer text style. `font_size` default: 60% of `row_height`.
     pub page_number: TextStyle,
+    /// Running-title text style: the small title (no subtitle/author) shown on
+    /// pages after the first. `font_size` default: 60% of `row_height`; italic,
+    /// serif.
+    pub running_title: TextStyle,
     /// Lyric syllable text style. `font_size` default: 60% of `row_height`.
     /// `horizontal_padding_pt` default: 4. `vertical_padding_pt` (formerly
     /// `lyric_click_target_padding_pt`) is extra padding added around a lyric

@@ -105,6 +105,7 @@ impl ParsedMetadata {
             measure_number_style: style(TextStyleKind::MeasureNumber),
             section_label_style: style(TextStyleKind::SectionLabel),
             page_number_style: style(TextStyleKind::PageNumber),
+            running_title_style: style(TextStyleKind::RunningTitle),
             part_label_style: style(TextStyleKind::PartLabel),
             lyrics_style: style(TextStyleKind::Lyrics),
             notes_style: style(TextStyleKind::Notes),

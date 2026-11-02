@@ -883,6 +883,7 @@ world poentaro-wasm {
         section-label,
         part-label,
         page-number,
+        running-title,
         lyrics,
         notes,
         chords,

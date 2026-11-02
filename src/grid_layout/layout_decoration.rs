@@ -1,3 +1,4 @@
+use super::running_title::make_running_title_rows;
 use crate::compiler::types::{Decoration, MeasureBlock};
 use crate::compositor::types::TextSpan;
 use crate::grid_layout::layout::{
@@ -170,11 +171,10 @@ pub(super) fn make_separator_row() -> GridRow {
     }
 }
 
-fn make_sequence_rows(header: &Header, base: f32, include_part_list: bool) -> Vec<GridRow> {
+fn make_sequence_rows(header: &Header, base: f32) -> Vec<GridRow> {
     header
         .sequence
         .as_ref()
-        .filter(|_| include_part_list)
         .map(|entries| {
             vec![
                 GridRow {
@@ -310,28 +310,26 @@ fn make_header_gap_row(header: &Header, base: f32) -> Option<GridRow> {
     })
 }
 
-pub(crate) fn make_header_rows(
-    header: &Header,
-    base: f32,
-    include_part_list: bool,
-) -> Vec<GridRow> {
-    let part_list_rows: Vec<GridRow> = if include_part_list {
-        let entries: Vec<&PartListEntry> = header
-            .part_list
-            .iter()
-            .filter(|entry| entry.abbreviation != entry.display_name)
-            .collect();
-        make_part_list_rows(&entries, header)
-    } else {
-        vec![]
-    };
+/// The rows above the music: the full header (title, subtitle, author, part
+/// list, `# sequence` line) on the first page, only the running title (and
+/// the gap below it) on every later page.
+pub(crate) fn make_header_rows(header: &Header, base: f32, is_first_page: bool) -> Vec<GridRow> {
+    if !is_first_page {
+        return make_running_title_rows(header, base);
+    }
+    let entries: Vec<&PartListEntry> = header
+        .part_list
+        .iter()
+        .filter(|entry| entry.abbreviation != entry.display_name)
+        .collect();
+    let part_list_rows = make_part_list_rows(&entries, header);
 
     make_title_row(header)
         .into_iter()
         .chain(make_subtitle_author_row(header))
         .chain(make_header_gap_row(header, base))
         .chain(part_list_rows)
-        .chain(make_sequence_rows(header, base, include_part_list))
+        .chain(make_sequence_rows(header, base))
         .collect()
 }
 

@@ -347,6 +347,7 @@ mod tests {
                 vertical_padding_pt: 4,
                 ..text_style(18)
             },
+            running_title: text_style(12),
         };
         let cfg = RenderConfig::from_metadata(&meta);
         assert_eq!(cfg.row_height, 30);

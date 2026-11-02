@@ -266,3 +266,26 @@ fn layout_omits_divider_when_hide_system_dividers_is_set() {
         "divider should be omitted when hide_system_dividers is true"
     );
 }
+
+#[test]
+fn pages_after_the_first_get_only_the_running_title() {
+    use crate::grid_layout::layout::make_header_rows;
+    let header = Header {
+        subtitle: Some("Sub".to_string()),
+        running_title_font_size: 14.0,
+        ..hdr()
+    };
+    let first_page = make_header_rows(&header, 30.0, true);
+    let later_page = make_header_rows(&header, 30.0, false);
+    let texts = |rows: &[crate::grid_layout::types::GridRow]| -> Vec<String> {
+        rows.iter()
+            .flat_map(|row| row.elements.iter())
+            .filter_map(|element| match &element.content {
+                GridContent::Text { content, .. } => Some(content.clone()),
+                _ => None,
+            })
+            .collect()
+    };
+    assert_eq!(texts(&first_page), vec!["Song", "Sub", "Me"]);
+    assert_eq!(texts(&later_page), vec!["Song"]);
+}
