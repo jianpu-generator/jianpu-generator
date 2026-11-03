@@ -21,6 +21,7 @@ mod metadata_defaults;
 mod part_grouper;
 mod range_validation;
 mod sequence_resolution;
+mod simple_text_styles;
 mod text_style_helpers;
 mod tie_validation;
 
@@ -29,7 +30,8 @@ pub use metadata_defaults::metadata_defaults;
 use part_grouper::{group_lyrics_track, group_timed_track};
 use range_validation::validate_ranges;
 use sequence_resolution::resolve_sequence;
-use text_style_helpers::{resolve_running_title, simple_text_style};
+use simple_text_styles::resolve_simple_text_styles;
+use text_style_helpers::resolve_running_title;
 use tie_validation::validate_ties;
 
 pub fn group(doc: ParsedDocument) -> Result<Score, IrrecoverableError> {
@@ -173,79 +175,6 @@ struct ResolvedTextStyles {
     notes: TextStyle,
     chords: TextStyle,
     note_dash: TextStyle,
-}
-
-/// Resolves the `TextStyle` fields whose only non-zero default is `font_size`
-/// (see `simple_text_style`). Split out from `resolve_text_styles` to stay
-/// under clippy's line-count limit.
-fn resolve_simple_text_styles(
-    metadata: &ParsedMetadata,
-    row_height: u32,
-) -> (
-    TextStyle,
-    TextStyle,
-    TextStyle,
-    TextStyle,
-    TextStyle,
-    TextStyle,
-    TextStyle,
-    TextStyle,
-    TextStyle,
-) {
-    use crate::compositor::types::FontFamily;
-    let font_size = |kind| default_font_size(metadata, kind, row_height);
-    let defaults = |bold: bool, italic: bool, font_family: FontFamily| TextStyleDefaults {
-        bold,
-        italic,
-        font_family,
-    };
-    (
-        simple_text_style(
-            metadata.title_style,
-            font_size(TextStyleKind::Title),
-            defaults(false, false, FontFamily::Serif),
-        ),
-        simple_text_style(
-            metadata.subtitle_style,
-            font_size(TextStyleKind::Subtitle),
-            defaults(false, true, FontFamily::Serif),
-        ),
-        simple_text_style(
-            metadata.author_style,
-            font_size(TextStyleKind::Author),
-            defaults(false, false, FontFamily::Serif),
-        ),
-        simple_text_style(
-            metadata.sequence_style,
-            font_size(TextStyleKind::Sequence),
-            defaults(false, false, FontFamily::SansSerif),
-        ),
-        simple_text_style(
-            metadata.part_legend_style,
-            font_size(TextStyleKind::PartLegend),
-            defaults(false, false, FontFamily::Serif),
-        ),
-        simple_text_style(
-            metadata.measure_number_style,
-            font_size(TextStyleKind::MeasureNumber),
-            defaults(false, false, FontFamily::SansSerif),
-        ),
-        simple_text_style(
-            metadata.section_label_style,
-            font_size(TextStyleKind::SectionLabel),
-            defaults(true, true, FontFamily::SansSerif),
-        ),
-        simple_text_style(
-            metadata.page_number_style,
-            font_size(TextStyleKind::PageNumber),
-            defaults(false, false, FontFamily::SansSerif),
-        ),
-        simple_text_style(
-            metadata.part_label_style,
-            font_size(TextStyleKind::PartLabel),
-            defaults(false, false, FontFamily::SansSerif),
-        ),
-    )
 }
 
 /// Resolves every text kind's `TextStyle`, applying each documented default

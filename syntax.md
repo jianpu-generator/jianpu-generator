@@ -87,8 +87,8 @@ Every rendered text kind — `title`, `subtitle`, `author`, `sequence`, `part_le
 | Component | Meaning |
 |-----------|---------|
 | `font_size` | Font size in points |
-| `horizontal_padding_pt` | Horizontal padding (points) reserved before the element, widening its column's spacing |
-| `vertical_padding_pt` | Extra vertical padding (points) added above/below the element |
+| `horizontal_padding_pt` | Horizontal padding (points) reserved before the element, widening its column's spacing. `0` is allowed |
+| `vertical_padding_pt` | Extra vertical padding (points) added above/below the element. `0` is allowed and means none |
 | `bold` | Whether the element renders bold (`yes`/`no`) |
 | `italic` | Whether the element renders italic (`yes`/`no`) |
 | `underline` | Whether the element renders underlined (`yes`/`no`) |
@@ -100,11 +100,11 @@ Defaults by kind:
 
 | Kind | `font_size` default | `horizontal_padding_pt` default | `vertical_padding_pt` default | `bold` default | `italic` default | `underline` default | `font_family` default |
 |------|----------------------|----------------------------------|--------------------------------|-----------------|-------------------|----------------------|-------------------------|
-| `title` | `row_height * 1.5` | `0` | `0` | `no` | `no` | `no` | `serif` |
-| `subtitle` | `row_height * 0.8` | `0` | `0` | `no` | `yes` | `no` | `serif` |
-| `author` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` | `serif` |
+| `title` | `row_height * 1.5` | `0` | `4` | `no` | `no` | `no` | `serif` |
+| `subtitle` | `row_height * 0.8` | `0` | `4` | `no` | `yes` | `no` | `serif` |
+| `author` | `row_height * 0.6` | `0` | `4` | `no` | `no` | `no` | `serif` |
 | `sequence` | `12` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
-| `part_legend` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` | `serif` |
+| `part_legend` | `row_height * 0.6` | `0` | `4` | `no` | `no` | `no` | `serif` |
 | `measure_number` | `10` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
 | `section_label` | `12` | `0` | `0` | `yes` | `yes` | `no` | `sans_serif` |
 | `page_number` | `row_height * 0.6` | `0` | `0` | `no` | `no` | `no` | `sans_serif` |
@@ -115,7 +115,7 @@ Defaults by kind:
 | `chords` | `lyrics.font_size` | `4` | `0` | `no` | `no` | `no` | `monospace` |
 | `note_dash` | `notes.font_size` | `4` | `0` | `no` | `no` | `no` | `monospace` |
 
-`notes.horizontal_padding_pt` is also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings. `lyrics.vertical_padding_pt` is extra padding around a lyric syllable's hover/click-target box, added on top of the lyric font's own measured ascender+descender span. `title.vertical_padding_pt` adds space above and below the title row, `subtitle.vertical_padding_pt` and `author.vertical_padding_pt` above and below the row they share (the larger of the two wins), `part_legend.vertical_padding_pt` above and below each row of the part legend, and `sequence.vertical_padding_pt` above and below the `# sequence` summary line; the rows below move down to make room. `part_label`'s reserved column width is the separate flat `part_label_width_pt` field (see the main metadata table above), not part of this object — it's a layout constant, not a text style component. `sequence`'s `bold`/`italic`/`underline`/`font_family` style the `# sequence` summary line's per-label spans (independent of `section_label`, even though a directive line's own inline `label="..."` renders with `section_label`'s style — see [Directive lines](#directive-lines)).
+`notes.horizontal_padding_pt` is also used for the multi-measure-rest bar's end insets and the tie/slur/underline/tuplet-bracket markings. `lyrics.vertical_padding_pt` is extra padding around a lyric syllable's hover/click-target box, added on top of the lyric font's own measured ascender+descender span. `title.vertical_padding_pt` adds space above and below the title row (a header text row is one `font_size` tall plus this padding on each side, so `0` is the tightest; `title`, `subtitle`, `author` and `part_legend` default to `4`), `subtitle.vertical_padding_pt` and `author.vertical_padding_pt` above and below the row they share (the larger of the two wins), `part_legend.vertical_padding_pt` above and below each row of the part legend, and `sequence.vertical_padding_pt` above and below the `# sequence` summary line; the rows below move down to make room. `part_label`'s reserved column width is the separate flat `part_label_width_pt` field (see the main metadata table above), not part of this object — it's a layout constant, not a text style component. `sequence`'s `bold`/`italic`/`underline`/`font_family` style the `# sequence` summary line's per-label spans (independent of `section_label`, even though a directive line's own inline `label="..."` renders with `section_label`'s style — see [Directive lines](#directive-lines)).
 
 Example:
 

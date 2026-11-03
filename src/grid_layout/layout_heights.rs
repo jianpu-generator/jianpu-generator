@@ -107,10 +107,11 @@ pub(crate) fn header_gap_row_height(base: f32) -> f32 {
     base
 }
 
-/// Height of a header row holding one line of text: the font's line height
-/// (see `font_metrics::text_line_height`) plus `vertical_padding_pt` above
-/// and below, so the row grows and shrinks with the text's own `font_size`
-/// and never lets it spill into the rows around it.
-pub(crate) fn text_row_height(family: FontFamily, font_size: f32, vertical_padding_pt: f32) -> f32 {
-    crate::font_metrics::text_line_height(family, font_size) + 2.0 * vertical_padding_pt
+/// Height of a header row holding one line of text: one em (the text's own
+/// `font_size`) plus `vertical_padding_pt` above and below, so `0` padding
+/// means a row exactly one font size tall, whatever the font's own ascender,
+/// descender and line gap. The row grows and shrinks with `font_size` and
+/// never lets the text spill into the rows around it.
+pub(crate) fn text_row_height(font_size: f32, vertical_padding_pt: f32) -> f32 {
+    font_size + 2.0 * vertical_padding_pt
 }

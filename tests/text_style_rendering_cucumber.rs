@@ -7,17 +7,10 @@
 //! `.poentaro` document and run through the full pipeline —
 //! `compile` → `compiler::compile` → `consolidator::consolidate` →
 //! `grid_layout::layout` → `coordinate_resolver::resolve` →
-//! `renderer::new_renderer::render_new`. "Then" steps compare the configured run
-//! against a freshly rendered baseline (the same score with no metadata
-//! override) rather than a hardcoded expected number, since the effects
-//! being tested are relative ("differs from the default", "increases by at
-//! least N") rather than exact pixel values.
-//!
-//! Clippy's `allow-*-in-tests` (clippy.toml) only recognizes `#[test]`-
-//! attributed functions as test code; cucumber's `#[given]`/`#[when]`/
-//! `#[then]` step functions don't qualify even though this whole file only
-//! ever runs under `cargo test`. Mirrors `tests/cucumber.rs`'s
-//! `#![allow(clippy::disallowed_macros)]` for the same reason.
+//! `renderer::new_renderer::render_new`. "Then" steps compare the configured
+//! run against a freshly rendered baseline (default metadata, or an explicit
+//! zero vertical padding) rather than a hardcoded expected number.
+//! Clippy's `allow-*-in-tests` skips cucumber steps, hence the allows.
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,
@@ -42,10 +35,7 @@ struct RenderResult {
     svg_docs: Vec<SvgDocument>,
 }
 
-/// Bundles `config`'s four `*_horizontal_padding_pt` accessors — mirrors
-/// `tests/lyric_hover_box_height_cucumber.rs`'s helper of the same name,
-/// needed because `RenderConfig::element_paddings` is `pub(crate)` and this
-/// file is an external integration test.
+/// Bundles `config`'s four `*_horizontal_padding_pt` accessors (`RenderConfig::element_paddings` is `pub(crate)`).
 fn element_paddings(
     config: &poentaro::render_config::RenderConfig,
 ) -> coordinate_resolver::ElementPaddings {
@@ -55,6 +45,10 @@ fn element_paddings(
         lyrics: config.lyrics_horizontal_padding_pt(),
         note_dash: config.note_dash_horizontal_padding_pt(),
     }
+}
+
+fn zero_vertical_padding(kind: &str) -> String {
+    format!("{kind} = {{ vertical_padding_pt: 0 }}")
 }
 
 fn render_source(metadata_lines: &[String], title: &str, score_body: &str) -> RenderResult {
@@ -334,7 +328,11 @@ fn then_box_height_increases(world: &mut TextStyleRenderingWorld, kind: String, 
         .expect("'it is rendered' must run first")
         .0;
     let padded = box_height_pt(rendered, &kind);
-    let baseline = render_source(&[], &world.title, &world.score_body);
+    let baseline = render_source(
+        &[zero_vertical_padding(&kind)],
+        &world.title,
+        &world.score_body,
+    );
     let unpadded = box_height_pt(&baseline, &kind);
     assert!(
         padded >= unpadded + padding_pt as f32,
@@ -379,13 +377,15 @@ fn then_header_row_grows(world: &mut TextStyleRenderingWorld, kind: String, padd
         )
     };
     let padded = row_height(rendered);
-    let baseline_metadata: Vec<String> = world
+    // Subtitle and author share a row (larger padding wins): clear all three.
+    let zero_padding_metadata: Vec<String> = world
         .metadata_lines
         .iter()
         .filter(|line| !line.contains("vertical_padding_pt"))
         .cloned()
+        .chain(["title", "subtitle", "author"].map(zero_vertical_padding))
         .collect();
-    let baseline = render_source(&baseline_metadata, &world.title, &world.score_body);
+    let baseline = render_source(&zero_padding_metadata, &world.title, &world.score_body);
     let unpadded = row_height(&baseline);
     assert!(
         (padded - unpadded - 2.0 * padding_pt as f32).abs() < 0.001,

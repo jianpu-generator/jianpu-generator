@@ -73,6 +73,17 @@ fn parse_positive_u32(key: &str, value: &str, value_span: Span) -> Result<u32, R
     Ok(parsed)
 }
 
+/// Like `parse_positive_u32`, but accepts `0` (e.g. a padding that is truly none).
+fn parse_non_negative_u32(
+    key: &str,
+    value: &str,
+    value_span: Span,
+) -> Result<u32, RecoverableError> {
+    value
+        .parse::<u32>()
+        .map_err(|_| RecoverableError::metadata_invalid_integer(value_span, key, value))
+}
+
 fn parse_offset(key: &str, value: &str, value_span: Span) -> Result<Offset, RecoverableError> {
     let parsed = match value.split_whitespace().collect_vec().as_slice() {
         [x, y] => x.parse::<i32>().ok().zip(y.parse::<i32>().ok()),

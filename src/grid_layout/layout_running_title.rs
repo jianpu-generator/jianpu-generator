@@ -6,7 +6,6 @@ use crate::grid_layout::types::{GridContent, GridElement, GridRow, HAlign, Heade
 fn make_running_title_row(header: &Header) -> Option<GridRow> {
     header.title.as_ref().map(|title| GridRow {
         height_pt: text_row_height(
-            header.running_title_font_family,
             header.running_title_font_size,
             header.running_title_vertical_padding_pt,
         ),

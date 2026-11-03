@@ -1,5 +1,6 @@
 # metadata
 title = "Page layout"
+title = { vertical_padding_pt: 0 }
 page_margin_pt = 50
 part_label_width_pt = 60
 max_measures_per_system = 1
