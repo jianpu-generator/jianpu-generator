@@ -1,5 +1,7 @@
 # Poentaro — `.poentaro` Syntax Reference
 
+A draft second syntax written in anyfix expressions (`.anyfix` files, CLI-only) is described in `anyfix-syntax.md`.
+
 This document describes the input syntax accepted by **Poentaro** (formerly jianpu-generator) as implemented today. File extension: `.poentaro` (files saved before the rename end in `.jianpu`; they still open and import).
 
 ---

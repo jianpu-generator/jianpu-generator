@@ -43,7 +43,7 @@ fn chosen_preset(
     input: &Path,
     name: &str,
 ) -> Result<jg::ChosenPreset, jg::error::IrrecoverableError> {
-    let source = super::read_source(input)?;
+    let source = super::read_document_source(input)?;
     jg::chosen_preset_from_source(&source, &input.to_string_lossy(), name)?.ok_or_else(|| {
         jg::error::IrrecoverableError::new(jg::error::IrrecoverableErrorKind::UnknownPreset {
             span: jg::error::Span::new(0, 0),
@@ -186,7 +186,7 @@ pub fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
         }
     }
 
-    let content = super::read_source(&opts.input)?;
+    let content = super::read_document_source(&opts.input)?;
     let filename = opts.input.to_string_lossy();
     let pdf_bytes = jg::write_pdf_from_source_with_visibility(
         &content,
@@ -252,7 +252,7 @@ pub fn generate_svg(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
         }
     }
 
-    let content = super::read_source(&opts.input)?;
+    let content = super::read_document_source(&opts.input)?;
     let filename = opts.input.to_string_lossy();
     let render_output = jg::render_svgs_from_source_with_visibility(
         &content,

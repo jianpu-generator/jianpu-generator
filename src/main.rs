@@ -28,6 +28,11 @@ enum Commands {
     MigrateLyrics {
         paths: Vec<PathBuf>,
     },
+    /// Write each file as `<name>.anyfix`, in anyfix expressions (see
+    /// `anyfix-syntax.md`). Every command reads `.anyfix` files too.
+    ConvertAnyfix {
+        paths: Vec<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -139,6 +144,14 @@ fn main() -> ExitCode {
         Commands::Generate { format } => run_generate(format).map(|()| true),
         Commands::Check { input } => run_check(&input),
         Commands::MigrateLyrics { paths } => run_migrate_lyrics(&paths).map(|()| true),
+        Commands::ConvertAnyfix { paths } => paths
+            .iter()
+            .try_for_each(|path| {
+                let output = poentaro::cli::convert_to_anyfix(path)?;
+                println!("{}", output.display());
+                Ok(())
+            })
+            .map(|()| true),
     };
 
     match result {

@@ -1,6 +1,7 @@
 use crate::ast::parsed::ParsedDocument;
 use crate::error::{DocumentSection, IrrecoverableError, RecoverableError, Span};
 
+pub mod anyfix;
 pub mod lyrics;
 pub mod metadata_parser;
 pub mod parts_parser;
