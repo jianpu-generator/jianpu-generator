@@ -145,3 +145,18 @@ fn unknown_instrument_is_reported_and_the_part_kept() {
         .any(|error| error.message().contains("unknown instrument \"viola\"")));
     assert_eq!(doc.declarations.len(), 1);
 }
+
+#[test]
+fn a_harmonica16_reaches_an_octave_below_the_12_hole() {
+    let score = parse_and_group(
+        "H1 [H1] = notes harmonica\nH2 [H2] = notes harmonica16",
+        "[H1] 1, 1 0 0\n[H2] 1, 7,, 0 0",
+    );
+    assert_eq!(
+        range_messages(&score),
+        vec![
+            "H1: note sounds as C3, below the harmonica's lowest note C4",
+            "H2: note sounds as B2, below the harmonica16's lowest note C3",
+        ]
+    );
+}

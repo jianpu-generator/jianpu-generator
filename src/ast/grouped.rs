@@ -142,6 +142,9 @@ pub struct PartSlice {
     pub soundfont: crate::ast::parsed::Soundfont,
     pub volume: u8,
     pub octave_offset: i8,
+    /// The instrument the part's `# parts` line names, if any (see
+    /// `RangeInstrument`).
+    pub range_instrument: Option<crate::ast::parsed::RangeInstrument>,
     pub notes: Notes,
     /// Set exactly for a lyric part (`kind` is `PartKind::Lyrics`), whose own
     /// `notes` are empty.
@@ -340,6 +343,7 @@ pub(crate) struct GroupedPart {
     pub(crate) soundfont: crate::ast::parsed::Soundfont,
     pub(crate) volume: u8,
     pub(crate) octave_offset: i8,
+    pub(crate) range_instrument: Option<crate::ast::parsed::RangeInstrument>,
     pub(crate) measures: Vec<GroupedMeasure>,
 }
 

@@ -170,6 +170,7 @@ pub(super) fn one_measure_score() -> Score {
                 soundfont: Soundfont::CHOIR_AAHS,
                 volume: 100,
                 octave_offset: 0,
+                range_instrument: None,
                 notes: Notes {
                     events: vec![NoteEvent::Note(GroupedNote {
                         pitch: NumberedPitch::One,
@@ -253,6 +254,7 @@ fn one_note_score_with_octave_offset(octave_offset: i8) -> Score {
                 soundfont: Soundfont::CHOIR_AAHS,
                 volume: 100,
                 octave_offset,
+                range_instrument: None,
                 notes: Notes {
                     events: vec![NoteEvent::Note(GroupedNote {
                         pitch: NumberedPitch::One,

@@ -1,12 +1,14 @@
 //! Harmonica tabs for the harmonica-tab view: each note head's pitch as the
-//! hole and breath that plays it on a 12-hole chromatic harmonica in C —
-//! `4` blow, `(4)` draw, and an arrow (`←`) above when the slide button is
-//! pressed in, which raises the note a semitone (`(6)` with `←` is F♯).
+//! hole and breath that plays it on a chromatic harmonica in C — `4` blow,
+//! `(4)` draw, and an arrow (`←`) above when the slide button is pressed in,
+//! which raises the note a semitone (`(6)` with `←` is F♯).
 //!
-//! The harmonica is always in C, whatever the score's key: hole 1 blow is
-//! middle C (`C4`), and every four holes repeat the same layout an octave
-//! up (blow C E G C, draw D F A B). So a song in D plays its F♯ as `(6)`
-//! with the slide.
+//! The harmonica is always in C, whatever the score's key, and every four
+//! holes repeat the same layout an octave up (blow C E G C, draw D F A B).
+//! So a song in D plays its F♯ as `(6)` with the slide. A part naming
+//! `harmonica16` plays a 16-hole one, whose hole 1 blow is `C3`; every other
+//! part plays a 12-hole one, whose hole 1 blow is middle C (`C4`). Holes are
+//! numbered from the low end, so the 16-hole's middle C is hole 5.
 //!
 //! Each four-hole group's last blow is the same C as the next group's first
 //! blow (holes 4 and 5, 8 and 9), and the same goes for C♯ with the slide.
@@ -22,12 +24,32 @@ use super::least_movement_path::{least_movement_path, PathCosts};
 use super::letter_names::block_keys;
 use super::types::{ColumnElement, CompileResult, ElementContent, NoteHeadLabel};
 use crate::ast::grouped::Score;
-use crate::ast::parsed::{Accidental, KeyChange, NoteName, NumberedPitch};
+use crate::ast::parsed::{Accidental, KeyChange, NoteName, NumberedPitch, RangeInstrument};
 
-const HOLES: u8 = 12;
+/// A chromatic harmonica in C: how many holes it has and where hole 1 blow
+/// sits.
+#[derive(Debug, Clone, Copy)]
+struct Harmonica {
+    holes: u8,
+    /// Hole 1 blow, as `key_semitones` counts.
+    lowest_c: i32,
+}
 
-/// Hole 1 blow, middle C, as `key_semitones` counts.
-const MIDDLE_C: i32 = 48;
+impl Harmonica {
+    /// The harmonica a part naming `instrument` plays.
+    fn for_instrument(instrument: Option<RangeInstrument>) -> Self {
+        match instrument {
+            Some(RangeInstrument::Harmonica16) => Self {
+                holes: 16,
+                lowest_c: 36,
+            },
+            _ => Self {
+                holes: 12,
+                lowest_c: 48,
+            },
+        }
+    }
+}
 
 /// What a pitch with no hole on the harmonica reads as.
 const UNPLAYABLE: &str = "?";
@@ -77,11 +99,11 @@ impl Fingering {
     }
 }
 
-/// Every fingering for the pitch `semitones` above hole 1 blow, lowest hole
-/// first. A pitch playable without the slide is never given one with it
-/// (F is `(2)`, not `2` with the slide).
-fn fingerings(semitones: i32) -> Vec<Fingering> {
-    let all = (1..=HOLES)
+/// Every fingering on `harmonica` for `pitch` (as `key_semitones` counts),
+/// lowest hole first. A pitch playable without the slide is never given one
+/// with it (F is `(2)`, not `2` with the slide).
+fn fingerings(harmonica: Harmonica, pitch: i32) -> Vec<Fingering> {
+    let all = (1..=harmonica.holes)
         .cartesian_product([Breath::Blow, Breath::Draw])
         .cartesian_product([false, true])
         .map(|((hole, breath), slide)| Fingering {
@@ -89,7 +111,7 @@ fn fingerings(semitones: i32) -> Vec<Fingering> {
             breath,
             slide,
         })
-        .filter(|fingering| fingering.semitones() == semitones)
+        .filter(|fingering| fingering.semitones() == pitch - harmonica.lowest_c)
         .collect_vec();
     match all.iter().any(|fingering| !fingering.slide) {
         true => all
@@ -114,6 +136,15 @@ struct NoteFingerings {
 /// note is in, so octave dots are dropped.
 pub(super) fn place_harmonica_tabs(result: CompileResult, score: &Score) -> CompileResult {
     let keys = block_keys(&result.blocks, score);
+    let harmonica = |part_index: usize| {
+        Harmonica::for_instrument(
+            score
+                .measures
+                .iter()
+                .find_map(|measure| measure.parts.get(part_index))
+                .and_then(|part| part.slice().range_instrument),
+        )
+    };
     let (playable, unplayable): (Vec<NoteFingerings>, Vec<NoteFingerings>) =
         positioned_elements(&result.blocks)
             .filter_map(|positioned| match &positioned.element.content {
@@ -126,7 +157,8 @@ pub(super) fn place_harmonica_tabs(result: CompileResult, score: &Score) -> Comp
                     position: positioned.position,
                     source_part_index: positioned.source_part_index,
                     fingerings: fingerings(
-                        key_semitones(keys.get(positioned.position.block)?) - MIDDLE_C
+                        harmonica(positioned.source_part_index),
+                        key_semitones(keys.get(positioned.position.block)?)
                             + degree_semitones(pitch)
                             + accidental_semitones(accidental)
                             + 12 * i32::from(*octave),

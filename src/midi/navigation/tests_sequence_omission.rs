@@ -85,6 +85,7 @@ fn measure_with_parts(index: usize, part_names: &[&str]) -> MultiPartMeasure {
                     soundfont: Soundfont::CHOIR_AAHS,
                     volume: 100,
                     octave_offset: 0,
+                    range_instrument: None,
                     notes: Notes { events: vec![] },
                     lyrics: None,
                     has_error: false,

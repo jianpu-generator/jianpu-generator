@@ -155,3 +155,42 @@ fn tabs_drop_octave_dots_since_the_hole_gives_the_octave() {
         .collect();
     assert_eq!(octaves, [0, 0, 0, 0]);
 }
+
+#[test]
+fn a_harmonica16_part_reaches_down_to_c3_on_hole_1() {
+    // The 16-hole adds a low octave, so its middle C is hole 5 and its top
+    // is hole 16 blow with the slide (C♯7), the same as the 12-hole's.
+    assert_eq!(
+        tabs(&compile_tabs(
+            "# parts
+H = notes harmonica16
+
+# score
+time=4/4 key=C4 bpm=120
+[H] 1, 7, 1 1#'''
+
+[H] 2''' 0 0 0
+"
+        )),
+        ["1", "(4)", "4", "16←", "!?"]
+    );
+}
+
+#[test]
+fn each_part_plays_its_own_harmonica() {
+    // B3 has a hole on the 16-hole only.
+    assert_eq!(
+        tabs(&compile_tabs(
+            "# parts
+H1 = notes harmonica
+H2 = notes harmonica16
+
+# score
+time=4/4 key=C4 bpm=120
+[H1] 7, 1 0 0
+[H2] 7, 1 0 0
+"
+        )),
+        ["!?", "1", "(4)", "4"]
+    );
+}

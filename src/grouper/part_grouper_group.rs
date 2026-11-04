@@ -21,6 +21,7 @@ pub(in crate::grouper) fn group_timed_track(
     let per_measure_lyrics_errors = part.per_measure_lyrics_errors.clone();
     let part_volume = part.volume;
     let part_octave_offset = part.octave_offset;
+    let part_range_instrument = part.range_instrument;
     let mut grouper = PartGrouper::new(&part);
     for (slot_index, slot) in part.measure_slots.into_iter().enumerate() {
         match slot {
@@ -63,6 +64,7 @@ pub(in crate::grouper) fn group_timed_track(
         soundfont,
         volume: part_volume,
         octave_offset: part_octave_offset,
+        range_instrument: part_range_instrument,
         measures,
     })
 }
@@ -90,6 +92,7 @@ pub(in crate::grouper) fn group_lyrics_track(
         soundfont: part.soundfont,
         volume: part.volume,
         octave_offset: part.octave_offset,
+        range_instrument: part.range_instrument,
         measures,
     }
 }

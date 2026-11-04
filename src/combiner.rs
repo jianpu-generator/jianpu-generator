@@ -211,6 +211,7 @@ fn build_part_rows(
                     soundfont: part.soundfont,
                     volume: part.volume,
                     octave_offset: part.octave_offset,
+                    range_instrument: part.range_instrument,
                     notes: Notes {
                         events: measure.notes.events.clone(),
                     },
