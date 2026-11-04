@@ -525,6 +525,37 @@ world poentaro-wasm {
     // `render-svg`, so hidden parts get no staff.
     export render-mei: func(source: string, visibility: resolved-part-visibility, raw-instruments: list<instrument-info>, clef: staff-clef) -> render-mei-response;
 
+    /// A box in whichever space its caller measured it in: client pixels
+    /// to hit-test, the SVG's user units to paint.
+    record bounding-box {
+        left: f64,
+        right: f64,
+        top: f64,
+        bottom: f64,
+    }
+
+    /// One of Verovio's measures as the staff view measured it: its
+    /// group's whole box (slurs, ties and lyrics crossing its barlines
+    /// included) and each of its staff lines' boxes.
+    record staff-measure-geometry {
+        measure-index: u32,
+        measure-box: bounding-box,
+        staff-line-boxes: list<bounding-box>,
+    }
+
+    // The staff view's measure under the pointer (`staff_measures` module).
+    export staff-measure-at-point: func(measures: list<staff-measure-geometry>, x: f64, y: f64) -> option<u32>;
+
+    // The area a staff measure's hover target and highlight cover.
+    export staff-measure-area: func(measure: staff-measure-geometry) -> bounding-box;
+
+    // Which of `measure-indices` the editor's selection `ranges` paint.
+    export highlighted-staff-measures: func(measure-indices: list<u32>, ranges: list<measure-range-in>) -> list<u32>;
+
+    // Which of `measure-indices` a click-and-click gesture's hover preview
+    // paints, between its `anchor` and `current` ends in either order.
+    export pending-staff-measures: func(measure-indices: list<u32>, anchor: measure-range-in, current: measure-range-in) -> list<u32>;
+
     /// One sounding part's MEI for the split staff export; `file-name` is
     /// the PDF it becomes.
     record split-mei {

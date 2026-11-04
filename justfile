@@ -4,7 +4,7 @@
 # safe to run in the background and tail the log). Ctrl-C / kill stops both.
 #
 # `cf` and `wrangler` are dev dependencies of crates/live-share-worker; run
-# `pnpm install` there once first. Under `vite` dev the web side talks to the
+# `just worktree-setup` once first. Under `vite` dev the web side talks to the
 # local worker on localhost:8787 (see `web/vite.config.ts`).
 dev:
     #!/usr/bin/env bash
@@ -25,12 +25,25 @@ dev-worker:
     #!/usr/bin/env bash
     set -euo pipefail
     cd crates/live-share-worker
-    pnpm exec cf d1 migrations apply "$(jq -r .d1DatabaseId deploy.json)" --local --dir ../../live-share-worker/migrations
+    scripts/apply-local-migrations.sh
     exec pnpm exec cf dev --port 8787
 
 [private]
 dev-web:
     cd web && pnpm dev
+
+# Readies a fresh checkout or worktree for `just dev` and the e2e tests:
+# installs both packages' dependencies, builds the wasm component and the
+# worker's generated types, builds the worker (so `cf dev` starts in
+# seconds rather than compiling first) and applies the local D1 migrations.
+worktree-setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    (cd web && pnpm install && pnpm run predev)
+    cd crates/live-share-worker
+    pnpm install
+    worker-build --release
+    scripts/apply-local-migrations.sh
 
 # Replaces the local D1 database's rows (what `just dev`'s worker serves)
 # with production's, so local dev runs against real accounts and files.
@@ -48,8 +61,7 @@ copy-prod-db force="":
       echo "Production data already copied at $(cat "$marker"); run \`just copy-prod-db force\` to copy again."
       exit 0
     fi
-    # Not `cf d1 migrations apply` here: it can hang after finishing (see
-    # `dev-worker`), and `just dev` already applies the migrations.
+    # `just dev` (or `just worktree-setup`) already applied the migrations.
     db=$(ls .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite 2>/dev/null | grep -v /metadata.sqlite || true)
     if [[ -z "$db" ]]; then
       echo "No local D1 database yet; start \`just dev\` once so it applies the migrations, then rerun." >&2
