@@ -48,6 +48,34 @@ pub(super) fn group_lyric_selection(
     ))
 }
 
+pub(super) fn select_notes_in_byte_ranges(
+    note_spans: Vec<NoteSpan>,
+    ranges: Vec<ByteRange>,
+) -> NoteSelection {
+    let note_spans: Vec<poentaro::NoteSourceSpan> = note_spans
+        .into_iter()
+        .map(note_source_span_from_wit)
+        .collect();
+    note_selection_to_wit(poentaro::select_notes_in_byte_ranges(
+        &byte_ranges_from_wit(ranges),
+        &note_spans,
+    ))
+}
+
+pub(super) fn select_lyrics_in_byte_ranges(
+    lyric_spans: Vec<LyricSpan>,
+    ranges: Vec<ByteRange>,
+) -> LyricSelection {
+    let lyric_spans: Vec<poentaro::LyricSourceSpan> = lyric_spans
+        .into_iter()
+        .map(lyric_source_span_from_wit)
+        .collect();
+    lyric_selection_to_wit(poentaro::select_lyrics_in_byte_ranges(
+        &byte_ranges_from_wit(ranges),
+        &lyric_spans,
+    ))
+}
+
 // Phase 3, group 2 of PLAN-wit-bindgen-migration.md: same underlying
 // logic as `wasm_boundary::list_note_spans`/`list_lyric_spans`/
 // `list_measure_spans` (`crate::responses::list_note_spans_response`/

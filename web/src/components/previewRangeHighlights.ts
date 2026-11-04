@@ -43,6 +43,14 @@ function applyPersistedHighlights<Cell>(
   spec: RangeHighlightSpec<Cell>,
 ): void {
   const selectedKeys = new Set(cells.map(spec.cellKey))
+  // Clear every group first, not only those holding a click target: a
+  // patched SVG can leave the flag on a sibling group (e.g. a note's
+  // playback-cursor group) that held a click target before.
+  for (const group of Array.from(
+    container.querySelectorAll<HTMLElement>(tagSelector(spec.tagType)),
+  )) {
+    delete group.dataset[spec.datasetFlag]
+  }
   for (const rect of Array.from(
     container.querySelectorAll<SVGRectElement>(spec.rectSelector),
   )) {
@@ -51,11 +59,7 @@ function applyPersistedHighlights<Cell>(
     const tag = tagFromElement(group)
     const cell = tag && spec.parseCell(tag)
     const selected = cell !== undefined && selectedKeys.has(spec.cellKey(cell))
-    if (selected) {
-      group.dataset[spec.datasetFlag] = ''
-    } else {
-      delete group.dataset[spec.datasetFlag]
-    }
+    if (selected) group.dataset[spec.datasetFlag] = ''
   }
 }
 

@@ -52,6 +52,7 @@ pub mod sound_label;
 mod sounding_pitch;
 pub mod source_edit;
 pub mod source_embed;
+pub mod span_selection;
 pub mod split_track;
 pub mod staff_export;
 pub mod symbols;
@@ -81,6 +82,7 @@ pub use note_spans::*;
 pub use part_info::{
     list_part_declarations_from_source, list_parts_from_source, PartInfo, SourcePartDeclaration,
 };
+pub use span_selection::*;
 pub use split_track::*;
 pub use visibility_render::*;
 

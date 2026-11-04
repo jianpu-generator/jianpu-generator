@@ -74,7 +74,7 @@ async function captureEnabledTracks(page: import('@playwright/test').Page) {
 
 /** Waits for measureSpans to be primed (same priming dance the measure-select
  * specs use) so the SVG has settled before hit-testing. */
-async function primeMeasureSpans(page: import('@playwright/test').Page) {
+export async function primeMeasureSpans(page: import('@playwright/test').Page) {
   await focusEditor(page)
   await page.keyboard.press('Control+g')
   await page.keyboard.type('11')
