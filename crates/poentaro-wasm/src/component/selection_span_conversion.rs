@@ -199,3 +199,93 @@ pub(super) fn list_lyric_spans_response_to_wit(
         crate::types::ListLyricSpansResponse::Err => ListLyricSpansResponse::Err,
     }
 }
+
+pub(super) fn note_source_span_from_wit(span: NoteSpan) -> poentaro::NoteSourceSpan {
+    poentaro::NoteSourceSpan {
+        source_part_index: span.source_part_index as usize,
+        part_abbreviation: span.part_abbreviation,
+        note_id: span.note_id as usize,
+        measure_index: span.measure_index as usize,
+        start: span.start.map(|v| v as usize),
+        end: span.end.map(|v| v as usize),
+        timing: poentaro::note_spans::MeasureTiming {
+            offset: span.timing.offset,
+            duration: span.timing.duration,
+        },
+    }
+}
+
+pub(super) fn lyric_source_span_from_wit(span: LyricSpan) -> poentaro::LyricSourceSpan {
+    poentaro::LyricSourceSpan {
+        source_part_index: span.source_part_index as usize,
+        part_abbreviation: span.part_abbreviation,
+        note_id: span.note_id as usize,
+        measure_index: span.measure_index as usize,
+        start: span.start as usize,
+        end: span.end as usize,
+        timing: poentaro::note_spans::MeasureTiming {
+            offset: span.timing.offset,
+            duration: span.timing.duration,
+        },
+    }
+}
+
+pub(super) fn byte_ranges_from_wit(
+    ranges: Vec<ByteRange>,
+) -> Vec<poentaro::source_edit::ByteRange> {
+    ranges
+        .into_iter()
+        .map(|range| poentaro::source_edit::ByteRange {
+            start_byte: range.start_byte,
+            end_byte: range.end_byte,
+        })
+        .collect()
+}
+
+pub(super) fn note_selection_to_wit(selection: poentaro::NoteSelection) -> NoteSelection {
+    NoteSelection {
+        cells: selection
+            .cells
+            .into_iter()
+            .map(|cell| NoteCellOut {
+                source_part_index: cell.source_part_index as u32,
+                note_id: cell.note_id as u32,
+            })
+            .collect(),
+        runs: selection
+            .runs
+            .into_iter()
+            .map(|run| NoteSelectionRun {
+                source_part_index: run.source_part_index as u32,
+                part_abbreviation: run.part_abbreviation,
+                measure_index: run.measure_index as u32,
+                start_byte: run.start_byte as u32,
+                end_byte: run.end_byte as u32,
+            })
+            .collect(),
+    }
+}
+
+pub(super) fn lyric_selection_to_wit(selection: poentaro::LyricSelection) -> LyricSelection {
+    LyricSelection {
+        cells: selection
+            .cells
+            .into_iter()
+            .map(|cell| LyricCellOut {
+                source_part_index: cell.source_part_index as u32,
+                note_id: cell.note_id as u32,
+            })
+            .collect(),
+        runs: selection
+            .runs
+            .into_iter()
+            .map(|run| LyricSelectionRun {
+                source_part_index: run.source_part_index as u32,
+                part_abbreviation: run.part_abbreviation,
+                measure_index: run.measure_index as u32,
+                start_byte: run.start_byte as u32,
+                end_byte: run.end_byte as u32,
+            })
+            .collect(),
+    }
+}

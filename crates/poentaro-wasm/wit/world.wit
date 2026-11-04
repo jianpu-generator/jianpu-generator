@@ -1609,6 +1609,23 @@ world poentaro-wasm {
     // is in `lyric-cells`. Any other id is never selected.
     export fully-selected-labels: func(note-spans: list<note-span>, lyric-spans: list<lyric-span>, labels: list<clickable-element-id>, note-cells: list<note-cell-in>, lyric-cells: list<lyric-cell-in>) -> list<bool>;
 
+    // The notes or lyric syllables whose source text a selection's byte
+    // ranges overlap, against the spans listed for the parts visible now —
+    // so a selection follows a part being hidden or shown. See
+    // `span_selection.rs`.
+    record note-selection {
+        cells: list<note-cell-out>,
+        runs: list<note-selection-run>,
+    }
+
+    record lyric-selection {
+        cells: list<lyric-cell-out>,
+        runs: list<lyric-selection-run>,
+    }
+
+    export select-notes-in-byte-ranges: func(note-spans: list<note-span>, ranges: list<byte-range>) -> note-selection;
+    export select-lyrics-in-byte-ranges: func(lyric-spans: list<lyric-span>, ranges: list<byte-range>) -> lyric-selection;
+
     // ==================== cloud-outbox (crates/cloud-outbox/src/types.rs) ====================
     //
     // Mirrors the Rust types field-for-field. `#[serde(tag = "kind")]` enums
