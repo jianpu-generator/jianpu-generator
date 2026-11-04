@@ -91,7 +91,7 @@ dependencies = [
 [[package]]
 name = "anyfix-expr"
 version = "0.1.0"
-source = "git+https://github.com/wongjiahau/anyfix-expr?rev=4278f6cfca5f4f118852ea9d4fefd90217c40f34#4278f6cfca5f4f118852ea9d4fefd90217c40f34"
+source = "git+https://github.com/wongjiahau/anyfix-expr?rev=49d2ef8149f9cae262ac732048a4c9ad47315ac1#49d2ef8149f9cae262ac732048a4c9ad47315ac1"
 
 [[package]]
 name = "anyhow"
