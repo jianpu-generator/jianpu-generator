@@ -155,6 +155,8 @@ cargo run -- generate svg simple.poentaro
 
 Start the dev servers with `just dev` from the repo root: it runs the web app (Vite, `localhost:5173`) together with the live-share worker (`cf dev`, `localhost:8787`, with the local D1 migrations applied), and logs both to `dev.log`. Don't run `pnpm dev` in `web/` alone — without the worker there is no backend, so cloud files (the local D1 database) won't load.
 
+In a fresh worktree, run `just worktree-setup` once first: it installs the web and worker dependencies, builds the wasm and the worker, and migrates the local D1 database, so `just dev` and `cd web && pnpm test:e2e` (which starts its own servers) work without further setup.
+
 Once the worker is up, **always run `just copy-prod-db`** to copy production's rows into the local D1 database, so local dev runs against real accounts and files. It does nothing if this checkout already has a copy (it leaves `crates/live-share-worker/.wrangler/state/prod-data-copied-at`), so run it every time you start the dev servers. Each worktree has its own local database, so a fresh worktree needs its own copy. `just copy-prod-db force` copies again; `app_log` is never copied. It needs wrangler's stored login (`pnpm exec wrangler whoami`), and a running worker picks up the rows without a restart.
 
 ## Debugging production

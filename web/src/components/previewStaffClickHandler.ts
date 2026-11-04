@@ -11,6 +11,7 @@ import {
   measureClickableElementId,
 } from './previewSelectionResolver'
 import {
+  applyPendingStaffMeasures,
   applyStaffMeasureHighlights,
   staffMeasureRangeAtPoint,
 } from './previewStaffMeasures'
@@ -75,11 +76,10 @@ export function hoverStaffMeasure(
   const range = staffMeasureRangeAtPoint(container, measures, x, y)
   if (!range || range.start === anchorState.current.start) return
   anchorState.current = range
-  const { anchor, current } = anchorState
-  applyStaffMeasureHighlights(container, measures, [
-    {
-      start: Math.min(anchor.start, current.start),
-      end: Math.max(anchor.end, current.end),
-    },
-  ])
+  applyPendingStaffMeasures(
+    container,
+    measures,
+    anchorState.anchor,
+    anchorState.current,
+  )
 }

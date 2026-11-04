@@ -10,6 +10,7 @@ mod note_selection_types;
 mod part_declarations;
 mod responses;
 pub mod selection_range;
+mod staff_measures;
 mod svg_types;
 mod svg_types_convert;
 mod symbols;

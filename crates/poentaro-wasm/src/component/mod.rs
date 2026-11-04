@@ -70,6 +70,7 @@ mod guest_presets;
 mod guest_range_edits;
 mod guest_selection_and_render;
 mod guest_staff_export;
+mod guest_staff_measures;
 
 mod diagnostics_conversion;
 mod highlight_conversion;
@@ -98,6 +99,7 @@ use guest_presets::*;
 use guest_range_edits::*;
 use guest_selection_and_render::*;
 use guest_staff_export::*;
+use guest_staff_measures::*;
 use highlight_conversion::*;
 use metadata_and_selection_conversion::*;
 use metadata_fields_conversion::*;

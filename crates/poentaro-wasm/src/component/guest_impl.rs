@@ -226,6 +226,10 @@ impl Guest for Component {
         new_preset_name_error(source: String, name: String) -> Option<String>;
         add_preset_section(source: String, preset: NewPreset) -> String;
         follow_preset_rename(previous_source: String, source: String, preset_name: String) -> Option<String>;
+        staff_measure_at_point(measures: Vec<StaffMeasureGeometry>, x: f64, y: f64) -> Option<u32>;
+        staff_measure_area(measure: StaffMeasureGeometry) -> BoundingBox;
+        highlighted_staff_measures(measure_indices: Vec<u32>, ranges: Vec<MeasureRangeIn>) -> Vec<u32>;
+        pending_staff_measures(measure_indices: Vec<u32>, anchor: MeasureRangeIn, current: MeasureRangeIn) -> Vec<u32>;
     }
 
     fn set_layout_fonts(fonts: FontBytesByFamily) {
