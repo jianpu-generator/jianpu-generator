@@ -24,6 +24,7 @@ brotli = "8"
 
 [dev-dependencies]
 zip = { version = "2", default-features = false, features = ["deflate"] }
+proptest = "1"
 
 [package.metadata.component]
 package = "poentaro:wasm"

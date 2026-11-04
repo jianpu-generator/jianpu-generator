@@ -241,6 +241,7 @@ pub(crate) fn list_note_spans_response(
                     measure_index: span.measure_index,
                     start: span.start,
                     end: span.end,
+                    timing: span.timing.into(),
                 })
                 .collect();
             ListNoteSpansResponse::Ok { spans }
@@ -262,6 +263,7 @@ pub(crate) fn group_note_selection_response(
             measure_index: s.measure_index,
             start: s.start,
             end: s.end,
+            timing: s.timing.into(),
         })
         .collect();
     let cells: Vec<poentaro::note_spans::NoteCell> = selected_cells
@@ -303,6 +305,7 @@ pub(crate) fn list_lyric_spans_response(
                     measure_index: span.measure_index,
                     start: span.start,
                     end: span.end,
+                    timing: span.timing.into(),
                 })
                 .collect();
             ListLyricSpansResponse::Ok { spans }
@@ -324,6 +327,7 @@ pub(crate) fn group_lyric_selection_response(
             measure_index: s.measure_index,
             start: s.start,
             end: s.end,
+            timing: s.timing.into(),
         })
         .collect();
     let cells: Vec<poentaro::lyric_spans::LyricCell> = selected_cells

@@ -711,6 +711,14 @@ world poentaro-wasm {
         measure-index: u32,
         start: option<u32>,
         end: option<u32>,
+        timing: measure-timing,
+    }
+
+    // When an event sounds within its measure, in quarter-beats. Read only
+    // by Rust, to bound cross-part selection ranges by time.
+    record measure-timing {
+        offset: u32,
+        duration: u32,
     }
 
     record list-note-spans-success {
@@ -733,6 +741,7 @@ world poentaro-wasm {
         measure-index: u32,
         start: u32,
         end: u32,
+        timing: measure-timing,
     }
 
     record list-lyric-spans-success {

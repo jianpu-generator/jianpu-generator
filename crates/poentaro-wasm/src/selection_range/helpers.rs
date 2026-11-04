@@ -1,4 +1,8 @@
-use crate::types::{LyricSpanOut, NoteSpanOut};
+use itertools::Itertools;
+
+use crate::types::{LyricSpanOut, MeasureTimingOut, NoteSpanOut};
+
+use super::types::{LyricCellOut, NoteCellOut, ResolveSelectionRangeResponse};
 
 /// A `Note` endpoint of a range-resolution pair, grouped into a struct
 /// (rather than passed as loose arguments) per this repo's "never use
@@ -42,26 +46,6 @@ pub(crate) fn note_measure_index(
         .map(|span| span.measure_index)
 }
 
-/// A `Note` endpoint's position among its own `(source_part_index,
-/// measure_index)` group, in score order — e.g. the 2nd note written in
-/// measure 3 of part 0 has position `1`. Used as the column axis (within a
-/// measure) by the cross-part `Note ↔ Note` arm, alongside `measure_index`
-/// as the coarser column axis (which measure): together they keep a
-/// same-measure cross-part range from ballooning into the whole measure on
-/// both sides just because the two endpoints happen to share a
-/// `measure_index`.
-pub(crate) fn note_position_in_measure(
-    note_spans: &[NoteSpanOut],
-    part: usize,
-    measure: usize,
-    note_id: usize,
-) -> Option<usize> {
-    note_spans
-        .iter()
-        .filter(|span| span.source_part_index == part && span.measure_index == measure)
-        .position(|span| span.note_id == note_id)
-}
-
 /// The `Lyric`-endpoint analog of `note_measure_index`.
 pub(crate) fn lyric_measure_index(
     lyric_spans: &[LyricSpanOut],
@@ -74,22 +58,139 @@ pub(crate) fn lyric_measure_index(
         .map(|span| span.measure_index)
 }
 
-/// The `Lyric`-endpoint analog of [`note_position_in_measure`] — a
-/// syllable's position among its own `(source_part_index, measure_index)`
-/// group, in score order. Used
-/// alongside `note_position_in_measure` by the cross-part `Note ↔ Lyric` arm
-/// so a same-measure cross-part pair stops at each endpoint's own
-/// within-measure position instead of sweeping the whole measure on both
-/// sides (mirrors the cross-part `Note ↔ Note` arm's fix for the same
-/// issue).
-pub(crate) fn lyric_position_in_measure(
+/// A moment in the score. Offsets are in their own measure's quarter-beats,
+/// which differ from measure to measure, so moments compare by measure first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct ScoreTime {
+    measure_index: usize,
+    offset: u32,
+}
+
+/// The stretch of the score a cross-row range covers, end exclusive.
+#[derive(Debug, Clone, Copy)]
+struct TimeWindow {
+    start: ScoreTime,
+    end: ScoreTime,
+}
+
+impl TimeWindow {
+    /// When a span sounds. A zero-length event (a grace note) still gets a
+    /// sliver, so it can be selected.
+    fn of_span(measure_index: usize, timing: MeasureTimingOut) -> Self {
+        TimeWindow {
+            start: ScoreTime {
+                measure_index,
+                offset: timing.offset,
+            },
+            end: ScoreTime {
+                measure_index,
+                offset: timing.offset + timing.duration.max(1),
+            },
+        }
+    }
+
+    fn union(self, other: Self) -> Self {
+        TimeWindow {
+            start: self.start.min(other.start),
+            end: self.end.max(other.end),
+        }
+    }
+
+    fn overlaps(&self, other: &Self) -> bool {
+        self.start < other.end && other.start < self.end
+    }
+}
+
+/// A `Note` or `Lyric` endpoint of a cross-row range.
+#[derive(Clone, Copy)]
+pub(crate) enum RowEndpoint {
+    Note(NoteEndpoint),
+    Lyric(LyricEndpoint),
+}
+
+impl RowEndpoint {
+    fn part(&self) -> usize {
+        match self {
+            RowEndpoint::Note(endpoint) | RowEndpoint::Lyric(endpoint) => endpoint.part,
+        }
+    }
+
+    /// When the endpoint's cell sounds: every span of it, since a note tied
+    /// across a bar line is one cell with a span in each measure.
+    fn window(
+        &self,
+        note_spans: &[NoteSpanOut],
+        lyric_spans: &[LyricSpanOut],
+    ) -> Option<TimeWindow> {
+        let windows = match self {
+            RowEndpoint::Note(endpoint) => note_spans
+                .iter()
+                .filter(|span| {
+                    span.source_part_index == endpoint.part && span.note_id == endpoint.note_id
+                })
+                .map(|span| TimeWindow::of_span(span.measure_index, span.timing))
+                .collect_vec(),
+            RowEndpoint::Lyric(endpoint) => lyric_spans
+                .iter()
+                .filter(|span| {
+                    span.source_part_index == endpoint.part && span.note_id == endpoint.note_id
+                })
+                .map(|span| TimeWindow::of_span(span.measure_index, span.timing))
+                .collect_vec(),
+        };
+        windows.into_iter().reduce(TimeWindow::union)
+    }
+}
+
+/// A range between two endpoints in different rows: every note and syllable,
+/// in the endpoints' rows and every row between them, that sounds between
+/// the earlier endpoint's start and the later one's end. Bounding by time
+/// rather than by each note's position in its measure keeps the selection
+/// contiguous across parts with different rhythms, and the rows between
+/// include lyric rows, so a range never skips one.
+///
+/// Rows are ordered by `source_part_index`, which is render order (the parser
+/// moves every lyric part under its target, and hidden parts have no spans).
+/// `Err` if either endpoint's span can't be found.
+pub(crate) fn cross_row_range(
+    note_spans: &[NoteSpanOut],
     lyric_spans: &[LyricSpanOut],
-    part: usize,
-    measure: usize,
-    note_id: usize,
-) -> Option<usize> {
-    lyric_spans
+    anchor: RowEndpoint,
+    current: RowEndpoint,
+) -> ResolveSelectionRangeResponse {
+    let (Some(anchor_window), Some(current_window)) = (
+        anchor.window(note_spans, lyric_spans),
+        current.window(note_spans, lyric_spans),
+    ) else {
+        return ResolveSelectionRangeResponse::Err;
+    };
+    let window = anchor_window.union(current_window);
+    let parts = anchor.part().min(current.part())..=anchor.part().max(current.part());
+    let in_range = |part: usize, measure_index: usize, timing: MeasureTimingOut| {
+        parts.contains(&part) && TimeWindow::of_span(measure_index, timing).overlaps(&window)
+    };
+
+    let note_cells = note_spans
         .iter()
-        .filter(|span| span.source_part_index == part && span.measure_index == measure)
-        .position(|span| span.note_id == note_id)
+        .filter(|span| in_range(span.source_part_index, span.measure_index, span.timing))
+        .map(|span| NoteCellOut {
+            source_part_index: span.source_part_index,
+            note_id: span.note_id,
+        })
+        .unique()
+        .collect();
+    let lyric_cells = lyric_spans
+        .iter()
+        .filter(|span| in_range(span.source_part_index, span.measure_index, span.timing))
+        .map(|span| LyricCellOut {
+            source_part_index: span.source_part_index,
+            note_id: span.note_id,
+        })
+        .unique()
+        .collect();
+
+    ResolveSelectionRangeResponse::Ok {
+        note_cells,
+        lyric_cells,
+    }
 }

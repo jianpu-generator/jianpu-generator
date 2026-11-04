@@ -1,13 +1,13 @@
-use crate::types::LyricSpanOut;
+use crate::types::{LyricSpanOut, NoteSpanOut};
 
-use super::helpers::{lyric_measure_index, LyricEndpoint};
+use super::helpers::{cross_row_range, LyricEndpoint, RowEndpoint};
 use super::types::{ClickableElementId, LyricCellOut, ResolveSelectionRangeResponse};
 
 /// `Lyric ↔ Lyric`, every scope: same lyric part ([`same_part`]) and
 /// different lyric parts ([`cross_part`]). Each lyric part is its own part,
 /// so a pair across verses of one target is just a cross-part pair.
 pub(crate) fn resolve(
-    _note_spans: &[crate::types::NoteSpanOut],
+    note_spans: &[NoteSpanOut],
     lyric_spans: &[LyricSpanOut],
     anchor: &ClickableElementId,
     current: &ClickableElementId,
@@ -38,6 +38,7 @@ pub(crate) fn resolve(
                 note_id: current_id,
             },
         ) => Some(cross_part(
+            note_spans,
             lyric_spans,
             LyricEndpoint {
                 part: *anchor_part,
@@ -81,42 +82,17 @@ fn same_part(
     }
 }
 
-/// Different lyric parts — no shared `note_id` axis across parts, so this
-/// ranges by each endpoint's own `measure_index` over the part range between
-/// them (the cross-part `Note ↔ Note` arm's pattern). `Err` if either
-/// endpoint's span can't be found.
+/// Different lyric parts — see [`cross_row_range`].
 fn cross_part(
+    note_spans: &[NoteSpanOut],
     lyric_spans: &[LyricSpanOut],
     anchor: LyricEndpoint,
     current: LyricEndpoint,
 ) -> ResolveSelectionRangeResponse {
-    let anchor_measure = lyric_measure_index(lyric_spans, anchor.part, anchor.note_id);
-    let current_measure = lyric_measure_index(lyric_spans, current.part, current.note_id);
-    let (Some(anchor_measure), Some(current_measure)) = (anchor_measure, current_measure) else {
-        return ResolveSelectionRangeResponse::Err;
-    };
-
-    let part_start = anchor.part.min(current.part);
-    let part_end = anchor.part.max(current.part);
-    let measure_start = anchor_measure.min(current_measure);
-    let measure_end = anchor_measure.max(current_measure);
-
-    let lyric_cells = lyric_spans
-        .iter()
-        .filter(|span| {
-            span.source_part_index >= part_start
-                && span.source_part_index <= part_end
-                && span.measure_index >= measure_start
-                && span.measure_index <= measure_end
-        })
-        .map(|span| LyricCellOut {
-            source_part_index: span.source_part_index,
-            note_id: span.note_id,
-        })
-        .collect();
-
-    ResolveSelectionRangeResponse::Ok {
-        note_cells: Vec::new(),
-        lyric_cells,
-    }
+    cross_row_range(
+        note_spans,
+        lyric_spans,
+        RowEndpoint::Lyric(anchor),
+        RowEndpoint::Lyric(current),
+    )
 }

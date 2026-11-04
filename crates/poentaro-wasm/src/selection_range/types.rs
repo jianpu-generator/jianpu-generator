@@ -53,7 +53,7 @@ pub(crate) enum ClickableElementId {
 /// One resolved `(source_part_index, note_id)` cell — output mirror of
 /// [`crate::note_selection_types::NoteCellIn`], matching TS's `NoteCell`
 /// (`previewSelection.ts`).
-#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteCellOut {
     pub source_part_index: usize,
@@ -63,7 +63,7 @@ pub struct NoteCellOut {
 /// One resolved `(source_part_index, note_id)` cell — output mirror
 /// of [`crate::lyric_selection_types::LyricCellIn`], matching TS's
 /// `LyricCell` (`previewSelection.ts`).
-#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct LyricCellOut {
     pub source_part_index: usize,

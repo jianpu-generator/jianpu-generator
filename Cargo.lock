@@ -1936,6 +1936,7 @@ dependencies = [
  "cloud-outbox",
  "itertools 0.13.0",
  "poentaro",
+ "proptest",
  "serde",
  "wit-bindgen",
  "zip",
