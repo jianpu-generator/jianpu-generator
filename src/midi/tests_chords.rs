@@ -103,6 +103,7 @@ fn chord_major_expands_to_three_notes() {
                 soundfont: Soundfont::CHOIR_AAHS,
                 volume: 100,
                 octave_offset: 0,
+                range_instrument: None,
                 notes: Notes {
                     events: vec![NoteEvent::Chord(chord)],
                 },
@@ -220,6 +221,7 @@ fn slurred_same_pitch_notes_produce_two_note_ons() {
                 soundfont: Soundfont::CHOIR_AAHS,
                 volume: 100,
                 octave_offset: 0,
+                range_instrument: None,
                 notes: Notes {
                     events: vec![make_note(true), make_note(false)],
                 },

@@ -126,6 +126,7 @@ pub struct ParsedTimedTrack {
     pub soundfont: Soundfont,
     pub volume: u8,
     pub octave_offset: i8,
+    pub range_instrument: Option<RangeInstrument>,
     pub measure_slots: Vec<ParsedMeasureSlot>,
     pub lyrics: Option<ParsedLyrics>,
     /// Per-measure beat-overflow error (None = no overflow for that measure).
