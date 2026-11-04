@@ -97,7 +97,7 @@ rusty_mp3 = { version = "0.7", optional = true }
 zip = { version = "2", default-features = false, features = ["deflate"], optional = true }
 ttf-parser = { version = "0.25.1", default-features = false, features = ["std"] }
 base64 = "0.22"
-anyfix-expr = { git = "https://github.com/wongjiahau/anyfix-expr", rev = "49d2ef8149f9cae262ac732048a4c9ad47315ac1" }
+anyfix-expr = { git = "https://github.com/wongjiahau/anyfix-expr", rev = "72373cf2c3ecb243e373a70fb2307b61ce75491c" }
 
 [build-dependencies]
 serde = { version = "1", features = ["derive"] }
