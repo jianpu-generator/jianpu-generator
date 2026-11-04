@@ -711,6 +711,14 @@ world poentaro-wasm {
         measure-index: u32,
         start: option<u32>,
         end: option<u32>,
+        timing: measure-timing,
+    }
+
+    // When an event sounds within its measure, in quarter-beats. Read only
+    // by Rust, to bound cross-part selection ranges by time.
+    record measure-timing {
+        offset: u32,
+        duration: u32,
     }
 
     record list-note-spans-success {
@@ -733,6 +741,7 @@ world poentaro-wasm {
         measure-index: u32,
         start: u32,
         end: u32,
+        timing: measure-timing,
     }
 
     record list-lyric-spans-success {
@@ -1383,6 +1392,16 @@ world poentaro-wasm {
     // `sequence-entry-start-index`/`sequence-entry-end-index`.
     export list-note-timings-for-range: func(source: string, start-index: u32, end-index: u32, extend-to-last-occurrence: bool, respect-sequence: bool, sequence-entry-start-index: option<u32>, sequence-entry-end-index: option<u32>, visible-tracks: option<list<string>>, enabled-tracks: option<list<string>>) -> note-timings-response;
 
+    record trim-window {
+        start-s: f64,
+        end-s: f64,
+        next-note-start-s: option<f64>,
+    }
+
+    // The stretch of a measure-range clip that exactly covers the selected
+    // notes, given that clip's note timings. `none` plays the clip in full.
+    export note-selection-trim-window: func(cells: list<note-cell-in>, note-timings: list<note-timing>) -> option<trim-window>;
+
     record generate-pdf-success {
         pdf: list<u8>,
     }
@@ -1549,6 +1568,15 @@ world poentaro-wasm {
 
     // Phase 3, group 7 of PLAN-wit-bindgen-migration.md.
     export resolve-selection-range: func(note-spans: list<note-span>, lyric-spans: list<lyric-span>, anchor: clickable-element-id, current: clickable-element-id) -> resolve-selection-range-response;
+
+    // Every part of every system from the anchor's through the current
+    // endpoint's. `systems` are the rendered systems' inclusive measure ranges.
+    export resolve-system-selection-range: func(note-spans: list<note-span>, lyric-spans: list<lyric-span>, systems: list<measure-range-in>, anchor: clickable-element-id, current: clickable-element-id) -> resolve-selection-range-response;
+
+    // Whether each label reads as selected: a part label once every note it
+    // covers is in `note-cells`, a lyric label once every syllable it covers
+    // is in `lyric-cells`. Any other id is never selected.
+    export fully-selected-labels: func(note-spans: list<note-span>, lyric-spans: list<lyric-span>, labels: list<clickable-element-id>, note-cells: list<note-cell-in>, lyric-cells: list<lyric-cell-in>) -> list<bool>;
 
     // ==================== cloud-outbox (crates/cloud-outbox/src/types.rs) ====================
     //

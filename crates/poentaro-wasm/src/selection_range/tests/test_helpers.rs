@@ -2,12 +2,27 @@ use crate::selection_range::resolve_selection_range_response;
 use crate::selection_range::types::{
     ClickableElementId, LyricCellOut, NoteCellOut, ResolveSelectionRangeResponse,
 };
-use crate::types::{LyricSpanOut, NoteSpanOut};
+use crate::types::{LyricSpanOut, MeasureTimingOut, NoteSpanOut};
 
+/// A 4/4 measure's length in quarter-beats.
+const MEASURE_LENGTH: u32 = 16;
+
+/// A note filling its whole measure.
 pub(super) fn note_span(
     source_part_index: usize,
     note_id: usize,
     measure_index: usize,
+) -> NoteSpanOut {
+    timed_note_span(source_part_index, note_id, measure_index, 0, MEASURE_LENGTH)
+}
+
+/// A note sounding `duration` quarter-beats from `offset` into its measure.
+pub(super) fn timed_note_span(
+    source_part_index: usize,
+    note_id: usize,
+    measure_index: usize,
+    offset: u32,
+    duration: u32,
 ) -> NoteSpanOut {
     NoteSpanOut {
         source_part_index,
@@ -16,9 +31,11 @@ pub(super) fn note_span(
         measure_index,
         start: Some(note_id * 10),
         end: Some(note_id * 10 + 1),
+        timing: MeasureTimingOut { offset, duration },
     }
 }
 
+/// A syllable sung for its whole measure.
 pub(super) fn lyric_span(
     source_part_index: usize,
     note_id: usize,
@@ -31,6 +48,10 @@ pub(super) fn lyric_span(
         measure_index,
         start: note_id * 10,
         end: note_id * 10 + 1,
+        timing: MeasureTimingOut {
+            offset: 0,
+            duration: MEASURE_LENGTH,
+        },
     }
 }
 

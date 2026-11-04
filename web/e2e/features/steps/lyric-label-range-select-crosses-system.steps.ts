@@ -15,13 +15,12 @@ import { Given, Then, When } from './fixtures'
  * should select every syllable that verse sings in between, exactly like
  * `Note ↔ Note` already does across a system boundary (see
  * `resolve_selection_range_response` in `selection_range.rs`), with no
- * Cmd/Ctrl modifier required. Today `LyricLabel ↔ LyricLabel` is only
- * ID-resolved for a same-system pair (guarded on matching
- * `measure_index_start`/`measure_index_end`); a cross-system pair falls
- * through to the pixel-marquee fallback (`lyricLabelsInMarquee`), which
- * restricts to the *anchor's own system* — so today's plain click-and-click
- * only selects the first system's syllables, dropping the second system's
- * entirely.
+ * Cmd/Ctrl modifier required. `LyricLabel ↔ LyricLabel` used to be
+ * ID-resolved only for a same-system pair (guarded on matching
+ * `measure_index_start`/`measure_index_end`); a cross-system pair fell
+ * through to a pixel-marquee fallback (since removed), which restricted to
+ * the *anchor's own system* — so a plain click-and-click only selected the
+ * first system's syllables, dropping the second system's entirely.
  *
  * `break` forces measure 1 onto its own system regardless of
  * `max_measures_per_system`, so this fixture needs no filler content to

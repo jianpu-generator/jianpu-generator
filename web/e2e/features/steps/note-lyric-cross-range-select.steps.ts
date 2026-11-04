@@ -19,9 +19,8 @@ import { Given, Then, When } from './fixtures'
  * that commits to exactly one mode on the anchoring click — a click that
  * lands on a note anchors `'note'` mode, and a click that lands on a lyric
  * syllable anchors `'lyric'` mode. For the rest of the gesture,
- * `previewClickHandler.ts`'s resolution calls only that one mode's
- * highlighter — `applyNoteRangeHighlights` for `'note'` mode,
- * `applyLyricRangeHighlights` for `'lyric'` mode — never both.
+ * `previewClickHandler.ts`'s resolution used to call only that one mode's
+ * highlighter — never both.
  *
  * That's a real behavioral gap: a range-select that starts on a NOTE and
  * whose second click lands below it, so it visually covers the lyric
@@ -31,8 +30,7 @@ import { Given, Then, When } from './fixtures'
  *
  * Contrast with `'measure'` mode (a gesture starting on empty space or a
  * bare bar line), which unions both: its resolution calls
- * `noteCellsInMeasureRange` and `lyricCellsInMeasureRange` together and
- * applies both highlight sets (see `previewClickHandler.ts`).
+ * both cell types together and applies both highlight sets (see `previewClickHandler.ts`).
  *
  * Self-contained source (not a demo file) with a generous "max measures per
  * system" and four single-beat notes with one syllable each, so all four

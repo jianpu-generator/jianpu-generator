@@ -1,4 +1,5 @@
 mod helpers;
+mod label_fill;
 mod lyric_label;
 mod lyric_lyric;
 mod measure;
@@ -6,6 +7,7 @@ mod mixed;
 mod note_lyric;
 mod note_note;
 mod part_label;
+mod system;
 mod types;
 
 use crate::types::{LyricSpanOut, NoteSpanOut};
@@ -16,6 +18,8 @@ use crate::types::{LyricSpanOut, NoteSpanOut};
 // wouldn't propagate through `crate::selection_range::` far enough for
 // `component.rs` to reach them, since `mod types;` below is itself
 // module-private.
+pub(crate) use label_fill::fully_selected_labels;
+pub(crate) use system::resolve_system_selection_range_response;
 pub(crate) use types::{
     ClickableElementId, LyricCellOut, NoteCellOut, ResolveSelectionRangeResponse,
 };
@@ -28,32 +32,15 @@ pub(crate) use types::{
 /// `group_note_selection`'s doc comment describes for why callers must call
 /// this on the main thread with cached spans, not re-parse `source`.
 ///
-/// `Measure ↔ Measure`, `Note ↔ Note` (same part and cross-part), `Note ↔
-/// Lyric` (cross-row, either ordering), `Lyric ↔ Lyric` (every scope —
-/// same-part-and-verse, same-part cross-verse, and cross-part),
-/// `PartLabel ↔ PartLabel` (any system), and `LyricLabel ↔ LyricLabel` (same
-/// verse, any system) are implemented so far — `Measure ↔ Measure` was Phase
-/// 1's simplest, lowest-risk row, chosen to validate the wasm plumbing
-/// end-to-end before 'note'/'lyric'/label modes followed; cross-part `Note ↔
-/// Note` and `Note ↔ Lyric` are Phase 2's first two rows, added once Phase 1
-/// proved the plumbing out (see `PLAN-clickable-element-id-selection.md`).
-/// `PartLabel ↔ PartLabel` and `LyricLabel ↔ LyricLabel` both deliberately
-/// drop any same-system restriction — range resolution has no concept of
-/// "system" to begin with (see each topic module's own doc comments), so a
-/// cross-system pair of either kind resolves exactly like a same-system one,
-/// no Cmd/Ctrl modifier required (the Cmd/Ctrl-gated `'part-label-system'`
-/// mode still exists as a separate, coarser "every part in every system
-/// swept" tool — see `previewSelectionResolver.ts`). `Lyric ↔ Lyric`'s
-/// cross-verse and cross-part arms (see `lyric_lyric`'s own doc comments)
-/// closed out that row's last gap. A `LyricLabel ↔ LyricLabel` pair across
-/// different verses is still deliberately left unresolved — falls through to
-/// `Err` like every other not-yet-ported combination, so the caller falls
-/// back to the existing pixel-marquee path.
+/// Every pair of clickable elements resolves. A cross-part pair of notes or
+/// syllables covers every row between the two endpoints' rows for the
+/// stretch of time from the earlier endpoint's onset to the later one's end
+/// (see `helpers::cross_row_range`), so it never leaves a hole. Label and
+/// measure pairs cover whole measures. `Err` means an endpoint's note or
+/// syllable isn't in the spans.
 ///
 /// Lyric parts are ordinary parts (own `source_part_index`, own rendered
-/// rows), so every arm is a pure rectangle over rendered rows by part index
-/// and measure — there are no lyric-specific special cases (no "sings along
-/// to" lookups).
+/// rows), so no arm special-cases lyrics (no "sings along to" lookups).
 ///
 /// Every label-mixed pair (`Note ↔ PartLabel`, `Lyric ↔ LyricLabel`,
 /// `Note ↔ LyricLabel`, `Lyric ↔ PartLabel`, `PartLabel ↔ LyricLabel`) is

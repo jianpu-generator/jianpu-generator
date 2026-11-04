@@ -73,13 +73,13 @@ export interface ResolvedSelection {
 }
 
 /**
- * The per-mode marquee/range resolution shared by every point
+ * The per-mode range resolution shared by every point
  * `previewClickHandler.ts` needs it: the first click's immediate
  * self-commit, a second click's final commit, and reverting a cancelled
  * second click back to what the first click already committed. `point` is
  * the screen point (or, for 'measure' mode, resolved into a measure range
- * internally) the gesture should resolve against as its "current" side of
- * the anchor→current marquee — pass `undefined` to resolve against the
+ * internally) the gesture should resolve against as its "current" end —
+ * pass `undefined` to resolve against the
  * anchor itself (i.e. zero movement), which is exactly what the first
  * click's own self-commit and a cancelled second click's revert both need.
  *

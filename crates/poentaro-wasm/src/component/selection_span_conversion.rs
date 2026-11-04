@@ -8,6 +8,10 @@ pub(super) fn note_span_from_wit(span: NoteSpan) -> crate::types::NoteSpanOut {
         measure_index: span.measure_index as usize,
         start: span.start.map(|v| v as usize),
         end: span.end.map(|v| v as usize),
+        timing: crate::types::MeasureTimingOut {
+            offset: span.timing.offset,
+            duration: span.timing.duration,
+        },
     }
 }
 
@@ -50,6 +54,10 @@ pub(super) fn lyric_span_from_wit(span: LyricSpan) -> crate::types::LyricSpanOut
         measure_index: span.measure_index as usize,
         start: span.start as usize,
         end: span.end as usize,
+        timing: crate::types::MeasureTimingOut {
+            offset: span.timing.offset,
+            duration: span.timing.duration,
+        },
     }
 }
 
@@ -144,6 +152,10 @@ pub(super) fn note_span_to_wit(span: &crate::types::NoteSpanOut) -> NoteSpan {
         measure_index: span.measure_index as u32,
         start: span.start.map(|v| v as u32),
         end: span.end.map(|v| v as u32),
+        timing: MeasureTiming {
+            offset: span.timing.offset,
+            duration: span.timing.duration,
+        },
     }
 }
 
@@ -168,6 +180,10 @@ pub(super) fn lyric_span_to_wit(span: &crate::types::LyricSpanOut) -> LyricSpan 
         measure_index: span.measure_index as u32,
         start: span.start as u32,
         end: span.end as u32,
+        timing: MeasureTiming {
+            offset: span.timing.offset,
+            duration: span.timing.duration,
+        },
     }
 }
 

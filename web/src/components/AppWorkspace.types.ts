@@ -132,9 +132,8 @@ export interface AppWorkspaceProps {
    * `measureRangeNoteByteRanges`). */
   selectedNoteByteRanges: EditorSelection[]
   /** Per-note/rest `(source_part_index, note_id) → measure_index` mapping,
-   * used to resolve a measure click into every note cell it contains
-   * (see `Preview.tsx`'s `noteCellsInMeasureRange`) without relying on
-   * pixel geometry. */
+   * passed to wasm, which resolves every selection gesture into the note
+   * cells it covers without relying on pixel geometry. */
   noteSpans: NoteSpan[]
   /** Fired on the second click after a lyric-syllable range-select (see
    * `useLyricSelection`). Independent of `handleNoteRangeSelect` — a lyric
@@ -146,9 +145,8 @@ export interface AppWorkspaceProps {
   handleLyricEditorSelectionChange: (ranges: EditorSelection[]) => void
   selectedLyricCells: LyricCell[]
   /** Per-lyric-syllable `(source_part_index, note_id, verse) → measure_index`
-   * mapping, used to resolve a measure click into every lyric cell it
-   * contains alongside `noteSpans` (see `Preview.tsx`'s
-   * `lyricCellsInMeasureRange`). */
+   * mapping, passed to wasm alongside `noteSpans` to resolve every
+   * selection gesture's lyric cells. */
   lyricSpans: LyricSpan[]
   /** Fired for a measure/bar-line click or range-select with both the note cells and
    * lyric cells it resolved — see `Preview.tsx`'s `onMeasureRangeSelect`. */

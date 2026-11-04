@@ -134,8 +134,7 @@ When(
 
     // Click-and-click from measure 0 to measure 2 in the read-only viewer —
     // a shortcut for selecting every note/rest cell across those measures,
-    // same as it is in the editable app (see `previewSelection.ts`'s
-    // `noteCellsInMeasureRange`).
+    // same as it is in the editable app (see `resolveMeasureSelection`).
     await clickAndClickSelect(
       state.viewerPage,
       boxFrom.x + boxFrom.width / 2,

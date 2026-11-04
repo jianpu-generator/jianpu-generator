@@ -131,6 +131,7 @@ fn span(
         measure_index,
         start: Some(start),
         end: Some(end),
+        timing: MeasureTiming::default(),
     }
 }
 
@@ -150,6 +151,7 @@ fn unmappable_span(
         measure_index,
         start: None,
         end: None,
+        timing: MeasureTiming::default(),
     }
 }
 

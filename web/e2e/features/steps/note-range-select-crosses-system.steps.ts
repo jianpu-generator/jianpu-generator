@@ -5,8 +5,8 @@ import { Given, Then, When } from './fixtures'
 
 /**
  * Regression fixture for the click-and-click note-range gesture not
- * spanning a system boundary (see `previewRangeHighlights.ts`'s
- * `cellsInMarquee`): the gesture resolves to a plain axis-aligned rectangle
+ * spanning a system boundary: the gesture used to resolve to a plain
+ * axis-aligned pixel rectangle
  * between the anchor and the second click's screen point, rather than "every
  * note in reading order between the two clicks" — so an anchor/target pair
  * that both sit near the same x-column (the left edge of their own system)

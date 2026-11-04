@@ -202,6 +202,37 @@ pub struct NoteSpanOut {
     /// Exclusive end byte of this event's token in the original source.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub end: Option<usize>,
+    /// When this event sounds within its measure — see
+    /// `note_spans::MeasureTiming`. Read only by Rust (selection ranges).
+    pub timing: MeasureTimingOut,
+}
+
+/// See `note_spans::MeasureTiming`.
+#[derive(Debug, Clone, Copy, Serialize, serde::Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct MeasureTimingOut {
+    /// Quarter-beats from the start of the measure to the onset.
+    pub offset: u32,
+    /// Length in quarter-beats.
+    pub duration: u32,
+}
+
+impl From<poentaro::note_spans::MeasureTiming> for MeasureTimingOut {
+    fn from(timing: poentaro::note_spans::MeasureTiming) -> Self {
+        MeasureTimingOut {
+            offset: timing.offset,
+            duration: timing.duration,
+        }
+    }
+}
+
+impl From<MeasureTimingOut> for poentaro::note_spans::MeasureTiming {
+    fn from(timing: MeasureTimingOut) -> Self {
+        poentaro::note_spans::MeasureTiming {
+            offset: timing.offset,
+            duration: timing.duration,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -228,6 +259,8 @@ pub struct LyricSpanOut {
     pub start: usize,
     /// Exclusive end byte of this syllable's own token in the original source.
     pub end: usize,
+    /// See `NoteSpanOut::timing`.
+    pub timing: MeasureTimingOut,
 }
 
 #[derive(Debug, Clone, Serialize)]

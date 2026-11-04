@@ -5,7 +5,7 @@ use serde::Serialize;
 /// directly (a real, compile-time-typed conversion; no runtime decode/error
 /// path, unlike the old `serde_wasm_bindgen::from_value` boundary this
 /// replaced).
-#[derive(Debug, Clone, Copy, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct NoteCellIn {
     pub source_part_index: usize,

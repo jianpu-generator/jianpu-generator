@@ -120,6 +120,7 @@ fn span(
         measure_index,
         start,
         end,
+        timing: MeasureTiming::default(),
     }
 }
 

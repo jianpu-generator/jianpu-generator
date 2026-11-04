@@ -88,6 +88,15 @@ pub(super) fn note_timing_to_wit(timing: &crate::types::NoteTimingOut) -> NoteTi
     }
 }
 
+pub(super) fn note_timing_from_wit(timing: NoteTiming) -> crate::types::NoteTimingOut {
+    crate::types::NoteTimingOut {
+        source_part_index: timing.source_part_index as usize,
+        note_id: timing.note_id as usize,
+        start_s: timing.start_s,
+        end_s: timing.end_s,
+    }
+}
+
 pub(super) fn note_timings_response_to_wit(
     response: crate::types::NoteTimingsResponse,
 ) -> NoteTimingsResponse {
