@@ -29,7 +29,6 @@ pub struct Lowered {
 pub fn lower(source: &str, instruments: &[InstrumentInfo]) -> Lowered {
     let parsed = anyfix_expr::parse(source);
     let mut lowerer = Lowerer {
-        source,
         instruments,
         errors: parsed
             .errors
@@ -53,7 +52,6 @@ pub fn lower(source: &str, instruments: &[InstrumentInfo]) -> Lowered {
 }
 
 pub(super) struct Lowerer<'a> {
-    pub(super) source: &'a str,
     pub(super) instruments: &'a [InstrumentInfo],
     pub(super) errors: Vec<LoweringError>,
 }
@@ -146,6 +144,13 @@ impl Lowerer<'_> {
     /// A value as the current syntax spells it outside quotes: `80%`, `+1`,
     /// `3/4`, `sans_serif`, `Bb4`.
     pub(super) fn flat_text(&mut self, node: &Node) -> Option<String> {
+        self.joined_text(node, "_")
+    }
+
+    /// Like [`Self::flat_text`], with `separator` between two name words.
+    /// Built from the tree, not the source text, so formatting the document
+    /// (which spaces out `A1&T` as `A1 & T`) reads the same.
+    fn joined_text(&mut self, node: &Node, separator: &str) -> Option<String> {
         match &node.kind {
             NodeKind::Number(text) => Some(text.clone()),
             NodeKind::String(literal) => Some(literal.value.clone()),
@@ -158,14 +163,14 @@ impl Lowerer<'_> {
                         NamePart::Word { text: word, .. } => {
                             let is_name = super::words::is_name_word(word);
                             if is_name && previous_was_name_word {
-                                text.push('_');
+                                text.push_str(separator);
                             }
                             text.push_str(word);
                             previous_was_name_word = is_name;
                         }
                         NamePart::Slot => {
                             let argument = arguments.next()?;
-                            text.push_str(&self.flat_text(argument)?);
+                            text.push_str(&self.joined_text(argument, separator)?);
                             previous_was_name_word = false;
                         }
                     }
@@ -197,22 +202,19 @@ impl Lowerer<'_> {
         }
     }
 
-    /// An abbreviation: a string's value, or the element's source text.
-    pub(super) fn abbreviation(&self, node: &Node) -> String {
-        match &node.kind {
-            NodeKind::String(literal) => literal.value.clone(),
-            _ => self.source[node.span.start..node.span.end]
-                .trim()
-                .to_string(),
-        }
+    /// An abbreviation: a string's value, or the element's words and symbols
+    /// joined without spaces (`A1 & T` is `A1&T`), except that two name words
+    /// keep one.
+    pub(super) fn abbreviation(&mut self, node: &Node) -> Option<String> {
+        self.joined_text(node, " ")
     }
 
     /// The one abbreviation inside `[ ]`.
     pub(super) fn bracketed_abbreviation(&mut self, node: &Node) -> Option<String> {
         match &node.kind {
-            NodeKind::Brackets(elements) if elements.len() == 1 => {
-                elements.first().map(|element| self.abbreviation(element))
-            }
+            NodeKind::Brackets(elements) if elements.len() == 1 => elements
+                .first()
+                .and_then(|element| self.abbreviation(element)),
             _ => {
                 self.error(
                     node.span,
@@ -226,12 +228,10 @@ impl Lowerer<'_> {
     /// Every abbreviation in a `[a, b]` list.
     pub(super) fn abbreviation_list(&mut self, node: &Node) -> Option<Vec<String>> {
         let elements = self.elements(node, "[")?;
-        Some(
-            elements
-                .iter()
-                .map(|element| self.abbreviation(element))
-                .collect(),
-        )
+        elements
+            .iter()
+            .map(|element| self.abbreviation(element))
+            .collect()
     }
 
     // ── metadata ────────────────────────────────────────────────────────

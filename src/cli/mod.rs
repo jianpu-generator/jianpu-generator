@@ -80,6 +80,22 @@ pub fn convert_to_anyfix(input: &Path) -> Result<std::path::PathBuf, Irrecoverab
     Ok(output)
 }
 
+/// Formats a document in place: an `.anyfix` one with
+/// [`crate::format_anyfix::format_anyfix`], any other with
+/// [`crate::format_source::format_score`].
+pub fn format_file(input: &Path) -> Result<(), IrrecoverableError> {
+    let source = read_source(input)?;
+    let formatted = if crate::parser::anyfix::is_anyfix_filename(&input.to_string_lossy()) {
+        crate::format_anyfix::format_anyfix(&source)
+    } else {
+        crate::format_source::format_score(&source)
+    };
+    if formatted == source {
+        return Ok(());
+    }
+    write_file(input, formatted.as_bytes())
+}
+
 /// Parse and group a `.poentaro` file, with `# metadata` overlaid by the
 /// `# preset` named `preset_name`.
 pub(crate) fn parse_and_group(

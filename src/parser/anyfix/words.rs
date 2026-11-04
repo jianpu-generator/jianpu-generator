@@ -44,9 +44,11 @@ fn breaks_bare_abbreviation(c: char) -> bool {
 }
 
 /// An abbreviation as written inside `[ ]` or a list: bare when the lowering
-/// can read it back from the source text, quoted otherwise.
+/// reads it back the same from the tree (no whitespace, no special
+/// character), quoted otherwise.
 pub(super) fn abbreviation(text: &str) -> String {
-    if text.is_empty() || text.contains(breaks_bare_abbreviation) {
+    // A bare `_` is a placeholder, not a word.
+    if text.is_empty() || text == "_" || text.contains(breaks_bare_abbreviation) {
         quoted(text)
     } else {
         text.to_string()

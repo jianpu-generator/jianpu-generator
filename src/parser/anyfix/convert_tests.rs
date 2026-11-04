@@ -29,50 +29,41 @@ fn converts_every_section() {
     );
     assert_eq!(
         convert(source),
-        r#"metadata {
-  title : "Song",
-  title style : { font size : 32, bold : yes },
-  directive row offset : (0, -4),
-}
+        r#"metadata { title "Song", title style { font size 32, bold: yes }, directive row offset (0, - 4) },
 
 parts [
-  "Alto 1 & Tenor" [A1&T] : notes { instrument : alto, sound : 52, volume : 80%, octave : -1 },
-  "Echo" [E] : follow [A1&T],
-]
+    "Alto 1 & Tenor" [A1 & T]: notes { instrument: alto, sound 52, volume: 80 %, octave: - 1 },
+    "Echo" [E]: follow [A1 & T],
+],
 
-sequence [ Verse, "A" WITHOUT [E], Verse ONLY [A1&T] ],
+sequence [Verse, "A" WITHOUT [E], Verse ONLY [A1 & T]],
 
-preset "Solo" {
-  visible parts : [A1&T],
-}
+preset "Solo" { visible parts [A1 & T] },
 
 score [
-  { bpm : 92, key : "F#3", label : "Verse" },
-  """
-  [A1&T] 1 2 3 4 // first bar
+    { bpm 92, key "F#3", label "Verse" },
+    """
+        [A1&T] 1 2 3 4 // first bar
 
-  [A1&T] 5 6 7 1
-  """,
-  { label : "A", break },
-  """
-  [E] 1 1 1 1
-  """,
+        [A1&T] 5 6 7 1
+        """,
+    { label "A", break },
+    """
+        [E] 1 1 1 1
+        """,
 ],
 "#
-        .replace("}\n\nparts", "},\n\nparts")
-        .replace("]\n\nsequence", "],\n\nsequence")
-        .replace("}\n\nscore", "},\n\nscore")
     );
 }
 
 #[test]
 fn quotes_abbreviations_that_anyfix_would_split() {
     let source = "# parts\nA, B [A,B] = notes\n\n# score\n[A,B] 1\n";
-    assert!(convert(source).contains(r#""A, B" ["A,B"] : notes"#));
+    assert!(convert(source).contains(r#""A, B" ["A,B"]: notes"#));
 }
 
 #[test]
 fn a_line_of_quotes_lengthens_the_raw_string() {
     let source = "# parts\nM = notes\n\n# score\n[M] 1\n\"\"\"\n";
-    assert!(convert(source).contains("\"\"\"\"\n  [M] 1\n  \"\"\"\n  \"\"\"\""));
+    assert!(convert(source).contains("\"\"\"\"\n        [M] 1\n        \"\"\"\n        \"\"\"\""));
 }

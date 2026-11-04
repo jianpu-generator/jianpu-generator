@@ -33,6 +33,11 @@ enum Commands {
     ConvertAnyfix {
         paths: Vec<PathBuf>,
     },
+    /// Format each file in place. An `.anyfix` file is laid out by
+    /// anyfix-expr's formatter first, then its score strings are formatted.
+    Format {
+        paths: Vec<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -144,6 +149,10 @@ fn main() -> ExitCode {
         Commands::Generate { format } => run_generate(format).map(|()| true),
         Commands::Check { input } => run_check(&input),
         Commands::MigrateLyrics { paths } => run_migrate_lyrics(&paths).map(|()| true),
+        Commands::Format { paths } => paths
+            .iter()
+            .try_for_each(|path| poentaro::cli::format_file(path))
+            .map(|()| true),
         Commands::ConvertAnyfix { paths } => paths
             .iter()
             .try_for_each(|path| {

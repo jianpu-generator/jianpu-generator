@@ -20,9 +20,15 @@ const DIRECTIVE_ROW_OFFSET_KEY: &str = crate::ast::parsed::DIRECTIVE_ROW_OFFSET_
 /// The preset fields that hold a list of part abbreviations.
 const PART_LIST_KEYS: [&str; 2] = ["visible_parts", "soloed_parts"];
 
-/// Converts a document in the current syntax to anyfix expressions. Sections
-/// keep their order. Comments outside `# score` are dropped.
+/// Converts a document in the current syntax to anyfix expressions, in
+/// anyfix-expr's canonical layout. Sections keep their order. Comments
+/// outside `# score` are dropped.
 pub fn convert(source: &str) -> String {
+    let converted = convert_sections(source);
+    anyfix_expr::format(&converted).unwrap_or(converted)
+}
+
+fn convert_sections(source: &str) -> String {
     let (sections, _) = split_sections(source);
     sections
         .iter()

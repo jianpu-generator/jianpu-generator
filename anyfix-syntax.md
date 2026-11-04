@@ -84,7 +84,7 @@ option     : "instrument" ":" word          # violin, soprano, …
            | "sound" ":" number             # GM program, or GM drum key on percussion
            | "volume" ":" number "%"
            | "octave" ":" sign number,
-abbreviation : string | ? the source text of the element, as written ?,
+abbreviation : string | ? words, numbers and symbols, joined without spaces ?,
 
 # ── sequence ────────────────────────────────────────────────────────────
 sequence   : "sequence" "[" { entry "," } "]",
@@ -165,16 +165,25 @@ How anyfix-expr groups each form, and so what the consumer matches on:
   `"A" WITHOUT [S]`.
 - **`#` starts a comment.** A sharp key is written as a string:
   `key : "F#3"`.
-- **Abbreviations are read as written.** An abbreviation is the source text
-  between `[` and `]` (or between commas in a list), so `A1&T` works
-  unquoted. Quote it if it contains `,`, `#`, `"`, a bracket, `.` or `:`.
+- **Abbreviations are read from the tree.** The words, numbers and symbols
+  of an abbreviation are joined without spaces, so `A1&T` works unquoted
+  and still reads `A1&T` after the formatter spaces it out as `A1 & T`.
+  Quote one that contains whitespace, `,`, `#`, `"`, a bracket, `.` or `:`.
 - **Raw string closers.** A score line that starts with `"""` needs the
   string opened with `""""`. The converter does this automatically.
 
 ## Status of the prototype
 
-- `poentaro convert anyfix <file.poentaro>` writes `<file>.anyfix` next to
-  the input.
+- `poentaro convert-anyfix <file.poentaro>` writes `<file>.anyfix` next to
+  the input, in anyfix-expr's canonical layout.
+- `poentaro format <file.anyfix>` lays the document out with anyfix-expr's
+  formatter, then formats each score string the way the current syntax's
+  `# score` is formatted (redundant lines dropped, parts sorted, whitespace
+  collapsed). A score string with a `//` comment is left alone.
+- **Canonical form.** The formatter drops every `:` it doesn't need and
+  spaces out symbols, so `title : "Song"` becomes `title "Song"` and
+  `volume : 80%` becomes `volume: 80 %`. Both spellings are the same tree,
+  so both read the same. The examples above keep the `:` for readability.
 - Every CLI command accepts an `.anyfix` file. It is lowered to the current
   syntax, section by section, and then read by the existing parser
   (`src/parser/anyfix/`).

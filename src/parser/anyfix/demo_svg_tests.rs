@@ -1,10 +1,11 @@
-//! Every valid `.poentaro` document in the repo, converted to `.anyfix` and lowered
-//! back, renders the same SVG pages, under every preset, with the same
+//! Every valid `.poentaro` document in the repo, converted to `.anyfix`,
+//! formatted and lowered back, renders the same SVG pages, under every preset, with the same
 //! diagnostics.
 
 use std::path::{Path, PathBuf};
 
 use super::{convert, lower};
+use crate::format_anyfix::format_anyfix;
 use crate::{collect_measure_diagnostics, compile_with_preset, parser, render_svgs};
 
 fn documents() -> Vec<PathBuf> {
@@ -59,33 +60,51 @@ fn every_document_renders_the_same_through_anyfix() {
             continue;
         }
         let anyfix = convert(&source);
-        let lowered = lower(&anyfix, &[]);
-        assert!(
-            lowered.errors.is_empty(),
-            "{}: lowering failed: {:?}\n{anyfix}",
-            path.display(),
-            lowered.errors
+        let formatted = format_anyfix(&anyfix);
+        assert_eq!(
+            format_anyfix(&formatted),
+            formatted,
+            "{}: formatting is not idempotent",
+            path.display()
         );
+        let lowered = lower(&anyfix, &[]);
+        let lowered_formatted = lower(&formatted, &[]);
+        for errors in [&lowered.errors, &lowered_formatted.errors] {
+            assert!(
+                errors.is_empty(),
+                "{}: lowering failed: {errors:?}\n{formatted}",
+                path.display()
+            );
+        }
+        // Formatting an `.anyfix` document does what `format_score` does to
+        // the current syntax, which may itself change the rendering (it drops
+        // lines it reads as redundant).
+        let formatted_source = crate::format_source::format_score(&source);
         let presets = document
             .presets
             .into_iter()
             .map(|preset| Some(preset.name))
             .chain([None]);
         for preset in presets {
-            let expected = render(&source, preset.as_deref());
-            let actual = render(&lowered.source, preset.as_deref());
-            assert_eq!(
-                expected.diagnostics,
-                actual.diagnostics,
-                "{} (preset {preset:?}): diagnostics differ",
-                path.display()
-            );
-            assert!(
-                expected.svgs == actual.svgs,
-                "{} (preset {preset:?}): SVG differs\n--- lowered ---\n{}",
-                path.display(),
-                lowered.source
-            );
+            let comparisons = [
+                ("converted", &source, &lowered.source),
+                ("formatted", &formatted_source, &lowered_formatted.source),
+            ];
+            for (what, expected, actual) in comparisons {
+                let expected = render(expected, preset.as_deref());
+                let actual = render(actual, preset.as_deref());
+                assert_eq!(
+                    expected.diagnostics,
+                    actual.diagnostics,
+                    "{} ({what}, preset {preset:?}): diagnostics differ",
+                    path.display()
+                );
+                assert!(
+                    expected.svgs == actual.svgs,
+                    "{} ({what}, preset {preset:?}): SVG differs",
+                    path.display()
+                );
+            }
         }
     }
 }
