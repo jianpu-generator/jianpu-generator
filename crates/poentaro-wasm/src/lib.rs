@@ -4,6 +4,8 @@ mod component;
 mod diagnostics;
 mod folder_share_payload;
 mod lyric_selection_types;
+#[cfg(feature = "wav")]
+mod note_selection_trim;
 mod note_selection_types;
 mod part_declarations;
 mod responses;

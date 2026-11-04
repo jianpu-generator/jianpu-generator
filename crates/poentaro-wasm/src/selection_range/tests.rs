@@ -5,6 +5,7 @@
 
 mod test_helpers;
 
+mod label_fill_tests;
 mod lyric_label_tests;
 mod lyric_lyric_tests;
 mod measure_tests;
@@ -13,3 +14,4 @@ mod note_lyric_tests;
 mod note_note_tests;
 mod part_label_tests;
 mod selection_contiguity_property_tests;
+mod system_tests;

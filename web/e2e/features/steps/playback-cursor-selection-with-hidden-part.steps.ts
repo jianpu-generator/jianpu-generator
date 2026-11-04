@@ -122,17 +122,17 @@ When(
     if (!firstBox || !secondBox) {
       throw new Error("Could not get bounding boxes for Bass's notes.")
     }
-    // Start from the note's own center, not its left edge: the left edge of
-    // a measure's first note sits right on the bar-line divider's own click
-    // target (`BarLineClickTarget`), which now always wins a click on its
-    // own, whole-measure-select terms regardless of modifier keys (see
+    // Click each note's own center, not an edge: a measure's outer notes
+    // sit right on the bar-line divider's own click target
+    // (`BarLineClickTarget`), which always wins a click on its own,
+    // whole-measure-select terms regardless of modifier keys (see
     // `previewClickHandler.ts`'s bar-line-handle check) — landing there would
-    // grab the bar line instead of this note.
+    // grab the bar line instead of the note.
     await clickAndClickSelect(
       page,
       firstBox.x + firstBox.width / 2,
       firstBox.y + firstBox.height / 2,
-      secondBox.x + secondBox.width - 2,
+      secondBox.x + secondBox.width / 2,
       secondBox.y + secondBox.height / 2,
     )
   },

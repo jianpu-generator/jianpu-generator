@@ -18,7 +18,7 @@ import { Given, Then, When } from './fixtures'
  * Cmd/Ctrl modifier required. Before this fix `PartLabel ↔ PartLabel` was
  * only ID-resolved for a same-system pair (guarded on matching
  * `measure_index_start`/`measure_index_end`); a cross-system pair fell
- * through to the pixel-marquee fallback (`partLabelsInMarquee`), which
+ * through to a pixel-marquee fallback (since removed), which
  * restricts to the *anchor's own system* — so a plain click-and-click only
  * selected the first system's notes, dropping the second system's entirely.
  *

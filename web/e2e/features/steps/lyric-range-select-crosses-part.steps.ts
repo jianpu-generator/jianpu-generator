@@ -9,9 +9,9 @@ import { Given, Then, When } from './fixtures'
 /**
  * Regression fixture for the click-and-click *lyric* (syllable row) range
  * gesture crossing a part boundary — the cross-part counterpart to
- * `lyric-range-select-crosses-verse.feature`'s same-part case. Today
- * `Lyric ↔ Lyric` is only ID-resolved for a same-part pair; a different-part
- * pair falls through to `Err` and the caller falls back to 'lyric' mode's
+ * `lyric-range-select-crosses-verse.feature`'s same-part case. Before this fix
+ * `Lyric ↔ Lyric` was only ID-resolved for a same-part pair; a different-part
+ * pair fell through to `Err` and the caller fell back to 'lyric' mode's
  * pixel-marquee path — see `resolve_selection_range_response` in
  * `selection_range.rs` and `PLAN-clickable-element-id-selection.md`'s
  * "cross-part (any verse pairing)" writeup.

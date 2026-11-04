@@ -11,7 +11,7 @@ import { Given, Then, When } from './fixtures'
  * abbreviation drawn at the label region's left edge on each verse's own
  * row, e.g. "M:v1" for Melody's first verse — is a shortcut for selecting
  * every syllable that verse sings across the whole system the label sits
- * in (see `Preview.tsx`'s `getLyricLabelAtPoint`/`lyricCellsForLyricLabels`).
+ * in (resolved in wasm by `resolve_selection_range_response`).
  * The lyric-side mirror of `part-label-click-selects-notes.spec.ts`.
  *
  * Self-contained source (not a demo file) with a generous "max measures per

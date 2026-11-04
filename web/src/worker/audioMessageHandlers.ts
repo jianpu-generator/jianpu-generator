@@ -1,5 +1,4 @@
 import { type NoteTiming, poentaroWasm } from '../poentaroWasm'
-import { computeNoteSelectionTrimWindow } from '../utils/noteSelectionTrim'
 import {
   binaryBufferFromResult,
   singleErrorDiagnostic,
@@ -137,11 +136,11 @@ export function handleGenerateMeasureRangeAudio(
   // timings fetched above. `undefined` for a plain measure-range play
   // (every other caller), which always plays the range in full.
   const trim = msg.trimToSelectedNoteCells
-    ? computeNoteSelectionTrimWindow(
+    ? poentaroWasm().noteSelectionTrimWindow(
         msg.trimToSelectedNoteCells,
         fullRangeNoteTimings,
       )
-    : null
+    : undefined
   const wavResult = poentaroWasm().generateWavForMeasureRange(
     msg.source,
     msg.startMeasureIndex,
@@ -152,9 +151,9 @@ export function handleGenerateMeasureRangeAudio(
     msg.sequenceEntryEndIndex,
     msg.enabledTracks,
     msg.metronome,
-    trim?.start,
-    trim?.end,
-    trim?.nextNoteStart,
+    trim?.startS,
+    trim?.endS,
+    trim?.nextNoteStartS,
     loadedSoundfont,
   )
   if (wavResult.tag === 'ok') {
@@ -165,7 +164,7 @@ export function handleGenerateMeasureRangeAudio(
         id: msg.id,
         wav: wavBuffer,
         noteTimings: trim
-          ? shiftNoteTimings(fullRangeNoteTimings, trim.start)
+          ? shiftNoteTimings(fullRangeNoteTimings, trim.startS)
           : fullRangeNoteTimings,
       } satisfies WorkerResponse,
       { transfer: [wavBuffer] },

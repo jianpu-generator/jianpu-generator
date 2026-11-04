@@ -281,3 +281,20 @@ pub(super) fn generate_percussion_preview_wav(key: u8, soundfont: Vec<u8>) -> Ge
         key, soundfont,
     ))
 }
+
+pub(super) fn note_selection_trim_window(
+    cells: Vec<NoteCellIn>,
+    note_timings: Vec<NoteTiming>,
+) -> Option<TrimWindow> {
+    let cells: Vec<crate::note_selection_types::NoteCellIn> =
+        cells.into_iter().map(note_cell_in_from_wit).collect();
+    let note_timings: Vec<crate::types::NoteTimingOut> =
+        note_timings.into_iter().map(note_timing_from_wit).collect();
+    crate::note_selection_trim::note_selection_trim_window(&cells, &note_timings).map(|window| {
+        TrimWindow {
+            start_s: window.start_s,
+            end_s: window.end_s,
+            next_note_start_s: window.next_note_start_s,
+        }
+    })
+}

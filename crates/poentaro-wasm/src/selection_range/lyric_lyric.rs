@@ -82,17 +82,27 @@ fn same_part(
     }
 }
 
-/// Different lyric parts — see [`cross_row_range`].
+/// Different lyric parts — the lyric cells of [`cross_row_range`]. A range
+/// between two syllables selects only syllables, so the notes rows it passes
+/// over stay unselected.
 fn cross_part(
     note_spans: &[NoteSpanOut],
     lyric_spans: &[LyricSpanOut],
     anchor: LyricEndpoint,
     current: LyricEndpoint,
 ) -> ResolveSelectionRangeResponse {
-    cross_row_range(
+    match cross_row_range(
         note_spans,
         lyric_spans,
         RowEndpoint::Lyric(anchor),
         RowEndpoint::Lyric(current),
-    )
+    ) {
+        ResolveSelectionRangeResponse::Ok { lyric_cells, .. } => {
+            ResolveSelectionRangeResponse::Ok {
+                note_cells: Vec::new(),
+                lyric_cells,
+            }
+        }
+        ResolveSelectionRangeResponse::Err => ResolveSelectionRangeResponse::Err,
+    }
 }

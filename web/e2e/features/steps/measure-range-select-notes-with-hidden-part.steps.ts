@@ -23,7 +23,7 @@ import { Given, Then, When } from './fixtures'
  * so every part declared after a hidden one is compacted down by one index
  * in the SVG's `data-part-index` attributes.
  *
- * `usePreviewClickSelection.ts`'s 'measure' mode (`noteCellsInMeasureRange`)
+ * `usePreviewClickSelection.ts`'s 'measure' mode (`resolveMeasureSelection`)
  * resolves a range-select's selected cells straight from `noteSpans` and then marks
  * the matching `data-part-index`/`data-note-id` DOM groups
  * (`applyPersistedNoteHighlights`) — so once those two "part index"

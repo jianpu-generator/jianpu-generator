@@ -50,11 +50,11 @@ interface PreviewProps {
   onRequestAudioDownload?: (url: string, filename: string) => void
   onSectionLabelClick?: (label: string) => void
   /** Fired on the commit click of a note-level click-and-click select (see
-   * `getNoteAtPoint`), with every note/rest cell the gesture's marquee
-   * overlapped — but only when `onMeasureRangeSelect` isn't supplied (see
-   * `onLyricRangeSelect` below for why: a note selection's marquee can also
-   * cover lyric syllables underneath it, which then routes through
-   * `onMeasureRangeSelect` instead). */
+   * `getNoteAtPoint`), with every note/rest cell the gesture resolved to —
+   * but only when `onMeasureRangeSelect` isn't supplied (see
+   * `onLyricRangeSelect` below for why: a note selection can also cover
+   * lyric syllables, which then routes through `onMeasureRangeSelect`
+   * instead). */
   onNoteRangeSelect?: (selectedCells: NoteCell[]) => void
   /** The note/rest cells from the most recent note range-select (see
    * `onNoteRangeSelect`), echoed back so the highlight can be re-applied
@@ -64,16 +64,16 @@ interface PreviewProps {
    * highlight. */
   selectedNoteCells?: NoteCell[]
   /** Per-note/rest `(source_part_index, note_id) → measure_index` mapping,
-   * used by `noteCellsInMeasureRange` to resolve a measure click into
-   * every note cell it contains by index rather than pixel geometry. */
+   * passed to wasm, which resolves every selection gesture by index rather
+   * than pixel geometry. */
   noteSpans?: NoteSpan[]
   /** Fired on the commit click of a lyric-syllable click-and-click select
-   * (see `getLyricAtPoint`), with every syllable cell the gesture's marquee
-   * overlapped — but only when `onMeasureRangeSelect` isn't supplied. A
-   * lyric selection's marquee can also visually cover notes above it (and
-   * vice versa for a note selection), so whenever `onMeasureRangeSelect` is
-   * wired up it's used instead — with both the note cells and the lyric
-   * cells the marquee overlapped, empty array or not — since a mounted
+   * (see `getLyricAtPoint`), with every syllable cell the gesture resolved
+   * to — but only when `onMeasureRangeSelect` isn't supplied. A lyric
+   * selection can also cover notes (and vice versa for a note selection),
+   * so whenever `onMeasureRangeSelect` is wired up it's used instead — with
+   * both the note cells and the lyric cells the gesture resolved to, empty
+   * array or not — since a mounted
    * editor's Monaco selection can only take one combined push per gesture
    * rather than one from each of this and `onNoteRangeSelect` independently
    * (see `usePreviewClickSelection`'s commit handling and
@@ -84,12 +84,12 @@ interface PreviewProps {
    * declaratively, mirroring `selectedNoteCells`. */
   selectedLyricCells?: LyricCell[]
   /** Per-lyric-syllable `(source_part_index, note_id, verse) → measure_index`
-   * mapping, used by `lyricCellsInMeasureRange` so a measure click also
-   * selects the verse lyrics under it, alongside `noteSpans` for notes. */
+   * mapping, passed to wasm alongside `noteSpans` so a selection also
+   * covers the lyrics under it. */
   lyricSpans?: LyricSpan[]
   /** Fired instead of `onNoteRangeSelect`/`onLyricRangeSelect` for a
    * measure/bar-line click, and also for a note- or lyric-level click
-   * whose marquee visually covers the other cell type too (see
+   * whose range covers the other cell type too (see
    * `usePreviewClickSelection`), with every note cell and every lyric cell
    * the gesture resolved to. Any of the three gestures can select both cell
    * types at once, so this is a single combined callback rather than one

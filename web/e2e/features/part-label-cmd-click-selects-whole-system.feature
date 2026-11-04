@@ -4,7 +4,7 @@ Feature: Cmd/Ctrl-clicking a part label selects the whole system
   # "this one part's system" (a plain click / click-and-click, see
   # `part-label-range-select-system-boundary.feature`) to "every part in
   # every system the gesture touches" — see `PreviewAnchorState`'s
-  # 'part-label-system' doc comment and `partLabelsInMarqueeAcrossSystems`.
+  # 'part-label-system' doc comment and `resolve_system_selection_range_response`.
   #
   # `max_measures_per_system = 1` forces each measure onto its own system, so
   # Melody's and Harmony's labels repeat twice, stacked vertically:

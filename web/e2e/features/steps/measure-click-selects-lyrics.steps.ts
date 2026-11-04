@@ -11,8 +11,8 @@ import { Given, Then, When } from './fixtures'
  * Cmd/Ctrl-clicking (or click-and-clicking across) a measure in the SVG
  * preview selects every note/rest cell in that measure (see
  * `measure-click-selects-notes.spec.ts`) — and, alongside them, every lyric
- * syllable in that same measure, via `previewSelection.ts`'s
- * `lyricCellsInMeasureRange`. A plain click / click-and-click resolves to
+ * syllable in that same measure (resolved in wasm by
+ * `resolve_selection_range_response`). A plain click / click-and-click resolves to
  * note/chord/syllable granularity instead and never pulls in lyric cells
  * from a note hit (see `Preview.tsx`'s `onMouseDown`).
  *

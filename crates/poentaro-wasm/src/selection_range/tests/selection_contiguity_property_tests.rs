@@ -242,6 +242,12 @@ proptest! {
         );
         prop_assert!(selected.contains(&anchor), "anchor not selected{context}");
         prop_assert!(selected.contains(&current), "current not selected{context}");
+        // A range between two syllables selects only syllables.
+        let timed = if anchor.kind == CellKind::Lyric && current.kind == CellKind::Lyric {
+            timed.into_iter().filter(|span| span.cell.kind == CellKind::Lyric).collect_vec()
+        } else {
+            timed
+        };
         let horizontal = horizontal_holes(&timed, &selected);
         prop_assert!(horizontal.is_empty(), "horizontal holes: {horizontal:?}{context}");
         let window = endpoint_window(&timed, &[anchor, current]);
