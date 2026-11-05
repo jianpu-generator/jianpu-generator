@@ -1,8 +1,6 @@
-# metadata
-title = "Untitled"
-author = ""
+metadata { title "Untitled", author "" },
 
-# parts
-Melody = notes
+parts ["Melody": notes],
 
-# score
+score """
+    """,

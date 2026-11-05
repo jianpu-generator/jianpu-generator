@@ -1,59 +1,60 @@
-# metadata
-title = "Running title"
-subtitle = "Pages after the first"
-author = "Poentaro"
-running_title = { font_size: 14, bold: yes }
-max_measures_per_system = 1
+metadata {
+    title "Running title",
+    subtitle "Pages after the first",
+    author "Poentaro",
+    running title style { font size 14, bold: yes },
+    max measures per system 1,
+},
 
-# parts
-Melody [M] = notes
+parts ["Melody" [M]: notes],
 
-# score
-label="Page 2 onwards shows only the small title"
-[M] 1 2 3 4
+score """
+    label="Page 2 onwards shows only the small title"
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
 
-[M] 1 2 3 4
+    [M] 1 2 3 4
+    """,
