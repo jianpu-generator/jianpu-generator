@@ -184,7 +184,8 @@ An optional instrument name may follow the kind token (or `follow[X]` bracket), 
 | `cello` | Cello | C2–E5 | `42: Cello` |
 | `liuqin` | 柳琴 | G3–G6 | `106: Shamisen` |
 | `guzheng` | 古箏 | D2–D6 | `107: Koto` |
-| `harmonica` | Harmonica | C4–C♯7 | `22: Harmonica` |
+| `harmonica` | 12-hole chromatic harmonica | C4–C♯7 | `22: Harmonica` |
+| `harmonica16` | 16-hole chromatic harmonica | C3–C♯7 | `22: Harmonica` |
 | `bass` | Bass voice | F2–D4 | `52: Choir Aahs` |
 | `tenor` | Tenor voice | C3–G4 | `52: Choir Aahs` |
 | `alto` | Alto voice | G3–D5 | `52: Choir Aahs` |
@@ -432,7 +433,7 @@ max_measures_per_system = 3
 - The name is quoted and required. Names must be unique, and `Default` (in any case) is reserved.
 - `visible_parts` — a comma-separated list of part abbreviations (as declared in `# parts`) to show. Parts not listed are hidden and silent, the same as hiding them in the preview. Unset, every part is shown; empty (`visible_parts =`), none is. An abbreviation that matches no declared part is an error and is dropped; a part whose abbreviation contains a comma can't be listed.
 - `soloed_parts` — the same kind of list, naming the parts to solo, the same as soloing them in the preview: once any part is soloed, only soloed parts are shown and heard, whatever `visible_parts` says. Unset or empty, nothing is soloed.
-- `notation` — `numbered`, `violin`, `cello`, `abc`, `guitar` or `harmonica`. Unset means numbered. Files written before this was renamed say `jianpu`, which still reads as `numbered`. Violin and cello are drawn as a staff, which ignores text styles, so setting a text style in such a preset is a warning.
+- `notation` — `numbered`, `violin`, `cello`, `abc`, `guitar` or `harmonica`. Unset means numbered. The harmonica view tabs each part for a 12-hole chromatic harmonica in C, or a 16-hole one (hole 1 blow is C3, so middle C is hole 5) when the part names `harmonica16`. Files written before this was renamed say `jianpu`, which still reads as `numbered`. Violin and cello are drawn as a staff, which ignores text styles, so setting a text style in such a preset is a warning.
 - Every `# metadata` field may also appear. The preset changes only the fields it sets; the rest come from `# metadata`. Header text (`title`, `subtitle`, `author`) can be changed but not removed.
 - `visible_parts`, `soloed_parts` and `notation` belong only in a preset; in `# metadata` they're an error.
 - From the CLI, `--preset "Name"` exports under a preset (the file is named after it); it exports the preset's `soloed_parts` when it has any, else its `visible_parts`, and `--tracks` replaces both. The CLI draws numbered notation only, so `notation` doesn't apply there.

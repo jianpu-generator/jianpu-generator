@@ -170,20 +170,21 @@ pub(crate) fn is_resting(part_row: &PartRow) -> bool {
     !events.is_empty() && events.iter().all(|e| matches!(e, NoteEvent::Rest(_)))
 }
 
-/// Whether the part a lyric part sings along to is compiled in this measure
-/// (see `visible_part_indices`), i.e. whether it allocates note ids here.
+/// Whether a lyric part's note ids advance past this measure: when the part
+/// it sings along to is compiled here (see `visible_part_indices`), so the
+/// ids match that part's. A target hidden by the track filter is gone from
+/// `measure.parts` altogether, with no note ids to match; the ids still
+/// advance then, or every measure's syllables would repeat the same ids.
 pub(crate) fn lyric_target_visible(
     measure: &MultiPartMeasure,
     visible: &[usize],
     target_name: &str,
 ) -> bool {
-    measure
+    let target_index = measure
         .parts
         .iter()
-        .enumerate()
-        .any(|(part_idx, part_row)| {
-            part_row.name().map(String::as_str) == Some(target_name) && visible.contains(&part_idx)
-        })
+        .position(|part_row| part_row.name().map(String::as_str) == Some(target_name));
+    target_index.is_none_or(|part_idx| visible.contains(&part_idx))
 }
 
 /// Moves every lyric part's cursor past this measure, including a lyric part

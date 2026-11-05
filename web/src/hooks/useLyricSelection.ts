@@ -3,7 +3,10 @@ import type { LyricCell } from '../components/previewSelection'
 import { type LyricSelectionRun, poentaroWasm } from '../poentaroWasm'
 import type { EditorHandle, LyricSpan } from '../types'
 import { ensureWasmInit } from '../wasmInit'
-import { useByteRangeSelectionCore } from './useByteRangeSelectionCore'
+import {
+  type ByteRange,
+  useByteRangeSelectionCore,
+} from './useByteRangeSelectionCore'
 
 /** One contiguous range-selected byte range within a single verse line of a
  * single part's single measure, as grouped by the wasm export
@@ -28,11 +31,17 @@ export async function groupSelectedLyricsIntoContiguousRuns(
   return response.tag === 'ok' ? response.val.runs : []
 }
 
-function cellFromLyricSpan(span: LyricSpan): LyricCell {
-  return {
-    sourcePartIndex: span.sourcePartIndex,
-    noteId: span.noteId,
-  }
+/** The lyric syllables whose source text `ranges` overlap, and their runs
+ * (see `useByteRangeSelectionCore`). */
+async function selectLyricsInByteRanges(
+  ranges: ByteRange[],
+  lyricSpans: LyricSpan[],
+): Promise<{ cells: LyricCell[]; runs: LyricSelectionRun[] }> {
+  await ensureWasmInit()
+  return poentaroWasm().selectLyricsInByteRanges(
+    lyricSpans,
+    ranges.map((range) => ({ startByte: range.start, endByte: range.end })),
+  )
 }
 
 /** Exported alongside `groupSelectedLyricsIntoContiguousRuns` for
@@ -66,7 +75,7 @@ export function useLyricSelection(
     lyricSpans,
     editorRef,
     groupSelectedLyricsIntoContiguousRuns,
-    cellFromLyricSpan,
+    selectLyricsInByteRanges,
     lyricRunByteRange,
   )
 

@@ -216,6 +216,8 @@ impl Guest for Component {
     }
 
     forward_to_free_functions! {
+        select_notes_in_byte_ranges(note_spans: Vec<NoteSpan>, ranges: Vec<ByteRange>) -> NoteSelection;
+        select_lyrics_in_byte_ranges(lyric_spans: Vec<LyricSpan>, ranges: Vec<ByteRange>) -> LyricSelection;
         note_selection_trim_window(cells: Vec<NoteCellIn>, note_timings: Vec<NoteTiming>) -> Option<TrimWindow>;
         resolve_system_selection_range(note_spans: Vec<NoteSpan>, lyric_spans: Vec<LyricSpan>, systems: Vec<MeasureRangeIn>, anchor: ClickableElementId, current: ClickableElementId) -> ResolveSelectionRangeResponse;
         fully_selected_labels(note_spans: Vec<NoteSpan>, lyric_spans: Vec<LyricSpan>, labels: Vec<ClickableElementId>, note_cells: Vec<NoteCellIn>, lyric_cells: Vec<LyricCellIn>) -> Vec<bool>;
