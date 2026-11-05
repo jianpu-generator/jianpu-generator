@@ -1,5 +1,5 @@
 //! How anyfix-expr splits text into words, as far as the converter and the
-//! lowering need to know, so a value written one way reads back the same.
+//! reader need to know, so a value written one way reads back the same.
 
 /// Whether `text` is one anyfix name word: a letter or `_`, then letters,
 /// digits or `_`.
@@ -32,7 +32,7 @@ pub(super) fn snake_case_as_words(text: &str) -> Option<String> {
 }
 
 /// `text` as an anyfix quoted string.
-pub(super) fn quoted(text: &str) -> String {
+pub(crate) fn quoted(text: &str) -> String {
     let escaped = text.replace('\\', "\\\\").replace('"', "\\\"");
     format!("\"{escaped}\"")
 }
@@ -43,10 +43,10 @@ fn breaks_bare_abbreviation(c: char) -> bool {
     c.is_whitespace() || ",:.()[]{}#\"".contains(c)
 }
 
-/// An abbreviation as written inside `[ ]` or a list: bare when the lowering
-/// reads it back the same from the tree (no whitespace, no special
+/// An abbreviation as written inside `[ ]` or a list: bare when it reads back
+/// the same from the tree (no whitespace, no special
 /// character), quoted otherwise.
-pub(super) fn abbreviation(text: &str) -> String {
+pub(crate) fn abbreviation(text: &str) -> String {
     // A bare `_` is a placeholder, not a word.
     if text.is_empty() || text == "_" || text.contains(breaks_bare_abbreviation) {
         quoted(text)
@@ -57,7 +57,7 @@ pub(super) fn abbreviation(text: &str) -> String {
 
 /// A section label as a sequence entry: a bare word when it is a plain
 /// non-keyword name word, quoted otherwise.
-pub(super) fn label(text: &str) -> String {
+pub(crate) fn label(text: &str) -> String {
     if is_name_word(text) && !is_keyword(text) {
         text.to_string()
     } else {

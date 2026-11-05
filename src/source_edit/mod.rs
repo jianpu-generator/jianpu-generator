@@ -1,3 +1,5 @@
+mod anyfix_edit;
+mod anyfix_part_edit;
 mod metadata_edit;
 mod octave_shift;
 mod preset_edit;
@@ -89,6 +91,9 @@ pub fn update_part_declaration(
     settings: &PartSettings,
     instruments: &[InstrumentInfo],
 ) -> Option<String> {
+    if crate::document::is_anyfix(source) {
+        return anyfix_part_edit::update_part_declaration(source, abbreviation, settings);
+    }
     let lines: Vec<&str> = source.split('\n').collect();
 
     let parts_index = lines

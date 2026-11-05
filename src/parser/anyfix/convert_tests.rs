@@ -64,3 +64,17 @@ fn a_line_of_quotes_lengthens_the_raw_string() {
     let source = "# parts\nM = notes\n\n# score\n[M] 1\n\"\"\"\n";
     assert!(convert(source).contains("\"\"\"\"\n    [M] 1\n    \"\"\"\n    \"\"\"\""));
 }
+
+#[test]
+fn a_rejected_line_stays_an_error() {
+    let converted = convert("# parts\nSoprano [S] = notes+lyrics\n\n# score\n");
+    assert!(converted.contains("could not convert"), "{converted}");
+    assert!(!crate::document::anyfix_errors(&converted, &[]).is_empty());
+}
+
+#[test]
+fn a_section_with_no_place_in_the_syntax_stays_an_error() {
+    let converted = convert("# groups\nSATB = S, A\n\n# parts\nS [S] = notes\n\n# score\n");
+    assert!(converted.contains("SATB = S, A"), "{converted}");
+    assert!(!crate::document::anyfix_errors(&converted, &[]).is_empty());
+}

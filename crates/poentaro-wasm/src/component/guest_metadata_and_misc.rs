@@ -4,12 +4,6 @@
 #![allow(clippy::needless_pass_by_value)]
 
 use super::*;
-use crate::opened_document::edit_lowered;
-use poentaro::document::Document;
-
-fn lowered(source: &str) -> Document {
-    Document::open(source, &[])
-}
 
 // Phase 3, group 7 of PLAN-wit-bindgen-migration.md: closes the real
 // porting gap group 6's "fully complete" claim missed — these 17
@@ -26,7 +20,7 @@ fn lowered(source: &str) -> Document {
 
 pub(super) fn parse_metadata_fields(source: String, preset_name: Option<String>) -> MetadataFields {
     metadata_fields_to_wit(poentaro::source_edit::parse_metadata_fields(
-        lowered(&source).lowered(),
+        &source,
         preset_name.as_deref(),
     ))
 }
@@ -37,9 +31,7 @@ pub(super) fn update_metadata_field(
     edit: MetadataEdit,
 ) -> String {
     let edit = metadata_edit_from_wit(edit);
-    edit_lowered(&source, &[], |lowered| {
-        poentaro::source_edit::update_metadata_field(lowered, preset_name.as_deref(), edit)
-    })
+    poentaro::source_edit::update_metadata_field(&source, preset_name.as_deref(), edit)
 }
 
 pub(super) fn highlight_tokens(source: String) -> Vec<HighlightToken> {
@@ -68,13 +60,11 @@ pub(super) fn set_layout_fonts(fonts: FontBytesByFamily) {
 }
 
 pub(super) fn shift_part_octave(source: String, abbreviation: String, delta: i32) -> String {
-    edit_lowered(&source, &[], |lowered| {
-        poentaro::source_edit::shift_part_octave(lowered, &abbreviation, delta as i8)
-    })
+    poentaro::source_edit::shift_part_octave(&source, &abbreviation, delta as i8)
 }
 
 pub(super) fn list_streamable_parts(source: String) -> Vec<StreamablePart> {
-    poentaro::part_stream::list_streamable_parts(lowered(&source).lowered())
+    poentaro::part_stream::list_streamable_parts(&source)
         .into_iter()
         .map(|part| StreamablePart {
             abbreviation: part.abbreviation,
@@ -90,7 +80,7 @@ pub(super) fn extract_part_stream(
     abbreviation: String,
 ) -> ExtractPartStreamResponse {
     use poentaro::part_stream;
-    match part_stream::extract_part_stream(lowered(&source).lowered(), &abbreviation) {
+    match part_stream::extract_part_stream(&source, &abbreviation) {
         Ok(stream) => ExtractPartStreamResponse::Ok(PartStream {
             text: stream.text,
             measure_starts: offsets_to_wit(&stream.measure_starts),
@@ -130,12 +120,8 @@ pub(super) fn format_part_stream(
             offset: offset as usize,
         })
         .collect();
-    let formatted = poentaro::part_stream::format_part_stream(
-        lowered(&source).lowered(),
-        &abbreviation,
-        &edited_stream,
-        &cursors,
-    );
+    let formatted =
+        poentaro::part_stream::format_part_stream(&source, &abbreviation, &edited_stream, &cursors);
     FormattedPartStream {
         edits: formatted
             .edits
@@ -162,7 +148,7 @@ pub(super) fn part_focus_measures(
     toggles: PartToggleState,
 ) -> PartFocusMeasuresResponse {
     match poentaro::part_stream::part_focus_measures(
-        lowered(&source).lowered(),
+        &source,
         &abbreviation,
         &part_toggle_state_from_wit(toggles),
     ) {
@@ -186,13 +172,9 @@ pub(super) fn apply_part_stream(
     edited_stream: String,
 ) -> PartStreamApplyResult {
     use poentaro::part_stream::StreamDiagnosticSeverity;
-    let document = lowered(&source);
-    let result =
-        poentaro::part_stream::apply_part_stream(document.lowered(), &abbreviation, &edited_stream);
+    let result = poentaro::part_stream::apply_part_stream(&source, &abbreviation, &edited_stream);
     PartStreamApplyResult {
-        source: result
-            .source
-            .map(|edited| document.with_lowered(&edited, &[]).text().to_string()),
+        source: result.source,
         diagnostics: result
             .diagnostics
             .into_iter()
@@ -231,7 +213,7 @@ fn offsets_to_wit(offsets: &[usize]) -> Vec<u32> {
 }
 
 pub(super) fn format_score(source: String) -> String {
-    lowered(&source).formatted()
+    poentaro::document::formatted(&source)
 }
 
 // Same underlying `crate::part_declarations::list_part_declarations_response`/

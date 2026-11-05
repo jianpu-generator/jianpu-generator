@@ -21,11 +21,9 @@ pub(crate) fn generate_wav_response(
     metronome: bool,
     soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
-    let document = match open_checked(source, &[]) {
-        Ok(document) => document,
-        Err(diagnostics) => return GenerateWavResponse::Err { diagnostics },
-    };
-    let source = document.lowered();
+    if let Err(diagnostics) = open_checked(source, &[]) {
+        return GenerateWavResponse::Err { diagnostics };
+    }
 
     match write_wav_from_source_filtered(
         source,
@@ -55,11 +53,9 @@ pub(crate) fn generate_wav_for_measure_range_response(
     trim: Option<wav::TrimWindow>,
     soundfont: Vec<u8>,
 ) -> GenerateWavResponse {
-    let document = match open_checked(source, &[]) {
-        Ok(document) => document,
-        Err(diagnostics) => return GenerateWavResponse::Err { diagnostics },
-    };
-    let source = document.lowered();
+    if let Err(diagnostics) = open_checked(source, &[]) {
+        return GenerateWavResponse::Err { diagnostics };
+    }
 
     match write_wav_for_measure_range_from_source(
         source,
@@ -90,11 +86,9 @@ pub(crate) fn list_note_timings_response(
     visible_tracks: Option<&[String]>,
     enabled_tracks: Option<&[String]>,
 ) -> NoteTimingsResponse {
-    let document = match open_checked(source, &[]) {
-        Ok(document) => document,
-        Err(diagnostics) => return NoteTimingsResponse::Err { diagnostics },
-    };
-    let source = document.lowered();
+    if let Err(diagnostics) = open_checked(source, &[]) {
+        return NoteTimingsResponse::Err { diagnostics };
+    }
 
     match note_timings_from_source(
         source,
@@ -131,11 +125,9 @@ pub(crate) fn list_note_timings_for_range_response(
     visible_tracks: Option<&[String]>,
     enabled_tracks: Option<&[String]>,
 ) -> NoteTimingsResponse {
-    let document = match open_checked(source, &[]) {
-        Ok(document) => document,
-        Err(diagnostics) => return NoteTimingsResponse::Err { diagnostics },
-    };
-    let source = document.lowered();
+    if let Err(diagnostics) = open_checked(source, &[]) {
+        return NoteTimingsResponse::Err { diagnostics };
+    }
 
     match note_timings_for_range_from_source(
         source,
@@ -200,11 +192,9 @@ pub(crate) fn generate_split_wavs_response(
     preset_name: Option<&str>,
     soundfont: Vec<u8>,
 ) -> GenerateSplitWavsResponse {
-    let document = match open_checked(source, &[]) {
-        Ok(document) => document,
-        Err(diagnostics) => return GenerateSplitWavsResponse::Err { diagnostics },
-    };
-    let source = document.lowered();
+    if let Err(diagnostics) = open_checked(source, &[]) {
+        return GenerateSplitWavsResponse::Err { diagnostics };
+    }
 
     match write_split_wavs_from_source(
         source,

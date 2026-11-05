@@ -40,11 +40,9 @@ pub(crate) fn generate_split_pdfs_response(
     fonts: &FontBytesByFamily,
     note_labels: NoteLabels,
 ) -> GenerateSplitPdfsResponse {
-    let document = match open_checked(source, &[]) {
-        Ok(document) => document,
-        Err(diagnostics) => return GenerateSplitPdfsResponse::Err { diagnostics },
-    };
-    let source = document.lowered();
+    if let Err(diagnostics) = open_checked(source, &[]) {
+        return GenerateSplitPdfsResponse::Err { diagnostics };
+    }
 
     match write_split_pdfs_from_source(
         source,

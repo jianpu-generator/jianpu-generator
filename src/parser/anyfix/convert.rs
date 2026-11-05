@@ -4,10 +4,13 @@
 use itertools::Itertools;
 
 use super::words::{abbreviation, is_name_word, label, quoted, snake_case_as_words};
+use crate::ast::parsed::RangeInstrument;
 use crate::parser::parts_parser::{
     collect_source_raw_declarations, SourcePartMode, SourceRawPartDecl,
 };
-use crate::parser::section_splitter::{split_sections, RawSection, SectionKind};
+use crate::parser::section_splitter::{
+    section_header_kind, split_sections, strip_comments, RawSection, SectionKind,
+};
 use crate::parser::sequence_parser::{parse_sequence, PartFilterKind};
 
 /// The metadata field the current syntax writes as a pair, `x y`.
@@ -26,9 +29,9 @@ pub fn convert(source: &str) -> String {
 
 fn convert_sections(source: &str) -> String {
     let (sections, _) = split_sections(source);
-    sections
-        .iter()
-        .map(|section| match section.kind {
+    let known = sections.iter().map(|section| ConvertedSection {
+        start: section.header_span.start,
+        text: match section.kind {
             SectionKind::Metadata => {
                 format!(
                     "metadata {},\n",
@@ -39,8 +42,59 @@ fn convert_sections(source: &str) -> String {
             SectionKind::Sequence => sequence(section),
             SectionKind::Preset => preset(section),
             SectionKind::Score => score(section, source),
-        })
+        },
+    });
+    known
+        .chain(skipped_sections(source, &sections))
+        .sorted_by_key(|section| section.start)
+        .map(|section| section.text)
         .join("\n")
+}
+
+struct ConvertedSection {
+    start: usize,
+    text: String,
+}
+
+/// `could not convert "…"`: text with no place in the new syntax, kept so that
+/// reading the document reports it rather than losing it.
+fn unconverted(text: &str) -> String {
+    format!("could not convert {}", quoted(text.trim()))
+}
+
+/// The sections `split_sections` skips: a header it doesn't know, and the lines
+/// under it. The current parser reports them, so they are kept to report too.
+fn skipped_sections(source: &str, sections: &[RawSection]) -> Vec<ConvertedSection> {
+    let stripped = strip_comments(source);
+    let mut skipped: Vec<ConvertedSection> = Vec::new();
+    let mut lines: Vec<String> = Vec::new();
+    let mut start = None;
+    let mut offset = 0;
+    let mut finish = |start: &mut Option<usize>, lines: &mut Vec<String>| {
+        if let Some(start) = start.take() {
+            let body = raw_string(lines).unwrap_or_default();
+            skipped.push(ConvertedSection {
+                start,
+                text: format!("could not convert {body},\n"),
+            });
+        }
+        lines.clear();
+    };
+    for line in stripped.split_inclusive('\n') {
+        if section_header_kind(line).is_some() {
+            finish(&mut start, &mut lines);
+            let is_known = sections
+                .iter()
+                .any(|section| section.header_span.start == offset);
+            start = (!is_known).then_some(offset);
+        }
+        if start.is_some() {
+            lines.push(line.trim_end().to_string());
+        }
+        offset += line.len();
+    }
+    finish(&mut start, &mut lines);
+    skipped
 }
 
 /// Fields as a multi-line `{ … }` record.
@@ -48,13 +102,7 @@ fn record(fields: &[String]) -> String {
     if fields.is_empty() {
         return "{}".to_string();
     }
-    let lines = fields
-        .iter()
-        .map(|field| match field.starts_with('#') {
-            true => format!("  {field}\n"),
-            false => format!("  {field},\n"),
-        })
-        .join("");
+    let lines = fields.iter().map(|field| format!("  {field},\n")).join("");
     format!("{{\n{lines}}}")
 }
 
@@ -65,16 +113,13 @@ fn list(elements: &[String]) -> String {
     }
     let lines = elements
         .iter()
-        .map(|element| match element.starts_with('#') {
-            true => format!("  {element}\n"),
-            false => format!("  {element},\n"),
-        })
+        .map(|element| format!("  {element},\n"))
         .join("");
     format!("[\n{lines}]")
 }
 
-/// A snake_case key as words, or quoted when it can't be (the lowering then
-/// reports it as an unknown field, as the current parser would).
+/// A snake_case key as words, or quoted when it can't be (reading it then
+/// reports it, as the current parser would).
 fn key_words(key: &str) -> String {
     snake_case_as_words(key).unwrap_or_else(|| quoted(key))
 }
@@ -88,13 +133,14 @@ fn key_value_fields(content: &str) -> Vec<String> {
         .filter(|line| !line.trim().is_empty())
         .map(|line| match line.split_once('=') {
             Some((key, value)) => key_value_field(key.trim(), value.trim()),
-            // The current parser reports this line; keep it visible.
-            None => format!("# could not convert: {}", line.trim()),
+            // The current parser reports this line, so reading it must too.
+            None => unconverted(line),
         })
         .collect()
 }
 
-fn key_value_field(key: &str, value: &str) -> String {
+/// A `key = value` line of the section syntax as a field.
+pub(crate) fn key_value_field(key: &str, value: &str) -> String {
     if PART_LIST_KEYS.contains(&key) {
         let parts = value
             .split(',')
@@ -177,13 +223,13 @@ fn parts(section: &RawSection, source: &str) -> String {
         .iter()
         .map(|declaration| declaration.line_number)
         .collect_vec();
-    // A line the current parser rejects is kept visible rather than dropped.
+    // A line the current parser rejects stays an error rather than being lost.
     let rejected = section
         .content
         .lines()
         .zip(first_line..)
         .filter(|(line, number)| !line.trim().is_empty() && !declared_lines.contains(number))
-        .map(|(line, _)| format!("# could not convert: {}", line.trim()));
+        .map(|(line, _)| unconverted(line));
     let elements = declarations.iter().map(part).chain(rejected).collect_vec();
     format!("parts {},\n", list(&elements))
 }
@@ -211,27 +257,41 @@ fn part(declaration: &SourceRawPartDecl) -> String {
         SourcePartMode::Follow => format!("follow [{}]", target()),
         SourcePartMode::Lyrics => format!("lyrics [{}]", target()),
     };
+    let kind = part_kind_text(&PartKindText {
+        head,
+        range_instrument: declaration.range_instrument,
+        sound: declaration.soundfont.map(|sound| sound.0),
+        volume: declaration.volume,
+        octave_offset: declaration.octave_offset,
+    });
+    format!("{left} : {kind}")
+}
+
+/// A part's kind and options, as they are written.
+pub(crate) struct PartKindText {
+    pub head: String,
+    pub range_instrument: Option<RangeInstrument>,
+    pub sound: Option<u8>,
+    pub volume: Option<u8>,
+    pub octave_offset: Option<i8>,
+}
+
+pub(crate) fn part_kind_text(kind: &PartKindText) -> String {
     let options = [
-        declaration
-            .range_instrument
+        kind.range_instrument
             .map(|instrument| format!("instrument : {}", instrument.keyword())),
-        declaration
-            .soundfont
-            .map(|sound| format!("sound : {}", sound.0)),
-        declaration
-            .volume
-            .map(|volume| format!("volume : {volume}%")),
-        declaration
-            .octave_offset
+        kind.sound.map(|sound| format!("sound : {sound}")),
+        kind.volume.map(|volume| format!("volume : {volume}%")),
+        kind.octave_offset
             .map(|octave| format!("octave : {octave:+}")),
     ]
     .into_iter()
     .flatten()
     .join(", ");
     if options.is_empty() {
-        format!("{left} : {head}")
+        kind.head.clone()
     } else {
-        format!("{left} : {head} {{ {options} }}")
+        format!("{} {{ {options} }}", kind.head)
     }
 }
 

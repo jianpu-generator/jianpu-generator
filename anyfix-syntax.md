@@ -122,7 +122,7 @@ How anyfix-expr groups each form, and so what the consumer matches on:
   a quoted string is the soundfont, `N%` the volume, `+N` the octave
   offset, a bare word the instrument. `sound : 41` is a number, so the
   `"N: Name"` label (a cross-boundary invariant) disappears from the
-  source. The lowering asks `sound_label` for it.
+  source. Reading it asks `sound_label` for the name.
 - **`WITHOUT` and `ONLY` can't be mixed.** The old `Chorus(S -A2)` is a
   runtime error. Here the two filters are different call shapes, so the
   mix can't be written. A label can be any string.
@@ -167,18 +167,15 @@ How anyfix-expr groups each form, and so what the consumer matches on:
   `volume : 80%` becomes `volume: 80 %`. Both spellings are the same tree,
   so both read the same. The examples above keep the `:` for readability.
 - The web app and every CLI command read this syntax by content, whatever
-  the file is called. A document is lowered to the section syntax, section by
-  section, and then read by the existing parser (`document::Document`,
-  `src/parser/anyfix/`). Section syntax files still load.
+  the file is called. The parser decodes `anyfix_expr`'s tree directly into the
+  document (`src/parser/anyfix/read/`), and the score string goes to the score
+  parser as it is, so every span is a span in the file. Edits rewrite the node
+  they change (`src/source_edit/anyfix_edit.rs`). Section syntax files still load.
 - `demo/*.poentaro` and `new_file_template.poentaro` are written in this
   syntax. `src/parser/anyfix/demo_svg_tests.rs` converts every
   `fixtures/section-syntax-demos/*.poentaro` file and checks that the SVG pages
   are byte-for-byte equal.
-- **Source map.** `parser::anyfix::SourceMap` maps positions between the
-  document and its lowered form. Every score line maps byte for byte, so
-  errors, selections and highlights land on the character.
 - **Not converted:** `//` comments in `# metadata`, `# parts` and
   `# sequence` are dropped. Score comments are kept. A `# parts` line the
-  current parser rejects is kept as a `# could not convert:` comment.
-- **Labels in `# sequence`.** A label containing `,`, `(` or `)` can't be
-  lowered yet, because the current `# sequence` syntax can't hold it.
+  current parser rejects, and a section with no place in this syntax, is kept
+  as `could not convert "…"`, which reports an error until it's fixed.

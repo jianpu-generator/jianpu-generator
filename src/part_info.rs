@@ -66,22 +66,25 @@ pub fn list_part_declarations_from_source(
     _filename: &str,
     instruments: &[InstrumentInfo],
 ) -> Result<Vec<SourcePartDeclaration>, IrrecoverableError> {
-    let (sections, _) = split_sections(source);
-    let Some(parts_section) = sections
-        .iter()
-        .find(|section| section.kind == SectionKind::Parts)
-    else {
-        return Ok(Vec::new());
-    };
-
     let mut errors = Vec::new();
-    let raw_declarations = parts_parser::collect_source_raw_declarations(
-        &parts_section.content,
-        parts_section.content_offset,
-        source,
-        &mut errors,
-        instruments,
-    );
+    let raw_declarations = if crate::document::is_anyfix(source) {
+        crate::parser::anyfix::source_part_declarations(source, &mut errors, instruments)
+    } else {
+        let (sections, _) = split_sections(source);
+        let Some(parts_section) = sections
+            .iter()
+            .find(|section| section.kind == SectionKind::Parts)
+        else {
+            return Ok(Vec::new());
+        };
+        parts_parser::collect_source_raw_declarations(
+            &parts_section.content,
+            parts_section.content_offset,
+            source,
+            &mut errors,
+            instruments,
+        )
+    };
 
     // Lyric parts have no sound, volume or octave to edit.
     Ok(raw_declarations

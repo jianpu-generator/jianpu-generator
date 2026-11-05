@@ -8,11 +8,9 @@ pub(crate) fn generate_midi_response(
     source: &str,
     enabled_tracks: Option<&[String]>,
 ) -> GenerateMidiResponse {
-    let document = match open_checked(source, &[]) {
-        Ok(document) => document,
-        Err(diagnostics) => return GenerateMidiResponse::Err { diagnostics },
-    };
-    let source = document.lowered();
+    if let Err(diagnostics) = open_checked(source, &[]) {
+        return GenerateMidiResponse::Err { diagnostics };
+    }
 
     match write_midi_from_source_filtered(source, "input.poentaro", enabled_tracks, &[]) {
         Ok(midi) => GenerateMidiResponse::Ok { midi },
@@ -27,11 +25,9 @@ pub(crate) fn generate_split_midis_response(
     base_name: &str,
     preset_name: Option<&str>,
 ) -> GenerateSplitMidisResponse {
-    let document = match open_checked(source, &[]) {
-        Ok(document) => document,
-        Err(diagnostics) => return GenerateSplitMidisResponse::Err { diagnostics },
-    };
-    let source = document.lowered();
+    if let Err(diagnostics) = open_checked(source, &[]) {
+        return GenerateSplitMidisResponse::Err { diagnostics };
+    }
 
     match write_split_midis_from_source(
         source,

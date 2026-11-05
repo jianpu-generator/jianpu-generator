@@ -6,10 +6,10 @@ use anyfix_expr::{Call, NamePart, Node, NodeKind};
 use itertools::Itertools;
 
 use super::{HighlightKind, HighlightToken, SectionHeader};
-use crate::document::Document;
 use crate::error::Span;
+use crate::parser::read_document;
 use crate::parser::score::interleaved_parser::directive_keyword_spans;
-use crate::parser::section_splitter::{split_sections, SectionKind};
+use crate::parser::section_splitter::SectionKind;
 
 const PART_KINDS: [&str; 5] = ["notes", "chords", "percussion", "follow", "lyrics"];
 
@@ -106,15 +106,12 @@ fn part_tokens(node: &Node) -> Vec<HighlightToken> {
 }
 
 fn directive_tokens(source: &str) -> Vec<HighlightToken> {
-    let document = Document::open(source, &[]);
-    let (sections, _) = split_sections(document.lowered());
-    sections
-        .iter()
-        .filter(|section| section.kind == SectionKind::Score)
-        .flat_map(|section| directive_keyword_spans(&section.content, section.content_offset))
+    let score = read_document(source, &[]).score;
+    directive_keyword_spans(&score.text, score.offset)
+        .into_iter()
         .map(|span| HighlightToken {
             kind: HighlightKind::DirectiveKey,
-            span: document.span_to_text(span),
+            span,
         })
         .collect()
 }

@@ -1,4 +1,4 @@
-use crate::ast::parsed::ParsedDocument;
+use crate::ast::parsed::{ParsedDocument, ParsedMetadata, PartDecl};
 use crate::error::{DocumentSection, IrrecoverableError, RecoverableError, Span};
 
 pub mod anyfix;
@@ -133,51 +133,108 @@ pub(crate) fn load_document_sections(
     )
 }
 
-pub fn parse(
+/// A document's score, as the text the score parser reads, and where that text
+/// starts in the document. Spans in it are spans in the document.
+pub(crate) struct ScoreText {
+    pub text: String,
+    pub offset: usize,
+}
+
+/// Everything in a document but the score's content, read whichever syntax it
+/// is written in.
+pub(crate) struct ReadDocument {
+    pub metadata: ParsedMetadata,
+    pub metadata_parse_errors: Vec<RecoverableError>,
+    pub declarations: Vec<PartDecl>,
+    pub parts_parse_errors: Vec<RecoverableError>,
+    pub section_structure_errors: Vec<RecoverableError>,
+    pub score: ScoreText,
+    pub presets: preset_parser::ParsedPresets,
+    pub sequence: Option<sequence_parser::SequenceSection>,
+    pub sequence_parse_errors: Vec<RecoverableError>,
+}
+
+/// Reads `input`, in either syntax. `instruments` names the sound a part picks.
+pub(crate) fn read_document(
     input: &str,
-    filename: &str,
     instruments: &[parts_parser::InstrumentInfo],
-) -> Result<ParsedDocument, IrrecoverableError> {
-    let path = std::path::Path::new(filename);
+) -> ReadDocument {
+    if crate::document::is_anyfix(input) {
+        anyfix::read(input, instruments)
+    } else {
+        read_section_document(input, instruments)
+    }
+}
+
+fn read_section_document(
+    input: &str,
+    instruments: &[parts_parser::InstrumentInfo],
+) -> ReadDocument {
     let (sections, section_structure_errors) = load_document_sections(input);
     let (meta_content, meta_offset) = sections.metadata;
     let (parts_content, parts_offset) = sections.parts;
-    let (score_content, score_offset) = sections.score;
-
+    let (score_text, score_offset) = sections.score;
     let (metadata, metadata_parse_errors) =
         metadata_parser::parse_metadata(&meta_content, meta_offset);
     let (declarations, parts_parse_errors) =
         parts_parser::parse_parts(&parts_content, parts_offset, instruments);
-
-    let (tracks, directive_events_per_measure, per_measure_parse_errors, abbreviation_references) =
-        if declarations.is_empty() {
-            (Vec::new(), Vec::new(), Vec::new(), Vec::new())
-        } else {
-            score::interleaved_parser::parse(&score_content, score_offset, &declarations)
-                .map_err(|error| error.with_path(path))?
-        };
-    let parsed_presets = preset_parser::parse_presets(sections.presets, &declarations);
+    let presets = preset_parser::parse_presets(sections.presets, &declarations);
     let (sequence, sequence_parse_errors) = match sections.sequence {
         Some((sequence_content, sequence_offset)) => {
             sequence_parser::parse_sequence(&sequence_content, sequence_offset)
         }
         None => (None, Vec::new()),
     };
+    ReadDocument {
+        metadata,
+        metadata_parse_errors,
+        declarations,
+        parts_parse_errors,
+        section_structure_errors,
+        score: ScoreText {
+            text: score_text,
+            offset: score_offset,
+        },
+        presets,
+        sequence,
+        sequence_parse_errors,
+    }
+}
+
+pub fn parse(
+    input: &str,
+    filename: &str,
+    instruments: &[parts_parser::InstrumentInfo],
+) -> Result<ParsedDocument, IrrecoverableError> {
+    let path = std::path::Path::new(filename);
+    let read = read_document(input, instruments);
+
+    let (tracks, directive_events_per_measure, per_measure_parse_errors, abbreviation_references) =
+        if read.declarations.is_empty() {
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new())
+        } else {
+            score::interleaved_parser::parse(
+                &read.score.text,
+                read.score.offset,
+                &read.declarations,
+            )
+            .map_err(|error| error.with_path(path))?
+        };
 
     Ok(ParsedDocument {
-        metadata,
-        declarations,
+        metadata: read.metadata,
+        declarations: read.declarations,
         tracks,
         directive_events_per_measure,
         abbreviation_references,
         per_measure_parse_errors,
-        metadata_parse_errors,
-        parts_parse_errors,
-        section_structure_errors,
-        sequence,
-        sequence_parse_errors,
-        presets: parsed_presets.presets,
-        preset_diagnostics: parsed_presets.diagnostics,
+        metadata_parse_errors: read.metadata_parse_errors,
+        parts_parse_errors: read.parts_parse_errors,
+        section_structure_errors: read.section_structure_errors,
+        sequence: read.sequence,
+        sequence_parse_errors: read.sequence_parse_errors,
+        presets: read.presets.presets,
+        preset_diagnostics: read.presets.diagnostics,
     })
 }
 

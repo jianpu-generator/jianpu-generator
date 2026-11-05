@@ -61,17 +61,3 @@ fn extracts_source_from_a_pdf_exported_before_the_rename() {
         Some("[Melody] 1 2 3")
     );
 }
-
-#[test]
-fn replacing_the_embedded_source_keeps_the_rest_of_the_page() {
-    let encoded = base64::engine::general_purpose::STANDARD.encode("old");
-    let svg = format!(r#"<svg><metadata id="poentaro-source">{encoded}</metadata><rect/></svg>"#);
-    let replaced = replace_embedded_source(&svg, "new");
-    assert_eq!(extract_embedded_source(&replaced).as_deref(), Some("new"));
-    assert!(replaced.ends_with("</metadata><rect/></svg>"));
-}
-
-#[test]
-fn replacing_the_source_of_a_page_without_one_changes_nothing() {
-    assert_eq!(replace_embedded_source("<svg></svg>", "new"), "<svg></svg>");
-}

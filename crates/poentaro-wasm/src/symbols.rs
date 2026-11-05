@@ -1,14 +1,14 @@
-use itertools::Itertools;
-
 use crate::diagnostics::diagnostic_from_error;
-use crate::opened_document::{diagnostics_to_text, open_checked, span_out_to_text};
+use crate::opened_document::open_checked;
 use crate::types::{
     ListSymbolsResponse, OccurrenceRoleOut, RenameSymbolResponse, SpanOut, SymbolKindOut,
     SymbolOccurrenceOut, SymbolOut, TextEditOut,
 };
-use poentaro::document::{text_difference, Document};
+use poentaro::error::Span;
 use poentaro::parser::parts_parser::InstrumentInfo;
-use poentaro::symbols::{collect_symbols, rename_edits, OccurrenceRole, Symbol, SymbolKind};
+use poentaro::symbols::{
+    collect_symbols, rename_edits_in_text, OccurrenceRole, Symbol, SymbolKind,
+};
 
 fn symbol_kind_to_out(kind: SymbolKind) -> SymbolKindOut {
     match kind {
@@ -31,7 +31,14 @@ fn occurrence_role_to_out(role: OccurrenceRole) -> OccurrenceRoleOut {
     }
 }
 
-fn symbol_to_out(document: &Document, symbol: Symbol) -> SymbolOut {
+fn span_to_out(span: Span) -> SpanOut {
+    SpanOut {
+        start: span.start,
+        end: span.end,
+    }
+}
+
+fn symbol_to_out(symbol: Symbol) -> SymbolOut {
     SymbolOut {
         name: symbol.name,
         kind: symbol_kind_to_out(symbol.kind),
@@ -39,20 +46,8 @@ fn symbol_to_out(document: &Document, symbol: Symbol) -> SymbolOut {
             .occurrences
             .into_iter()
             .map(|occurrence| SymbolOccurrenceOut {
-                span: span_out_to_text(
-                    document,
-                    &SpanOut {
-                        start: occurrence.span.start,
-                        end: occurrence.span.end,
-                    },
-                ),
-                hit_span: span_out_to_text(
-                    document,
-                    &SpanOut {
-                        start: occurrence.hit_span.start,
-                        end: occurrence.hit_span.end,
-                    },
-                ),
+                span: span_to_out(occurrence.span),
+                hit_span: span_to_out(occurrence.hit_span),
                 role: occurrence_role_to_out(occurrence.role),
             })
             .collect(),
@@ -63,26 +58,22 @@ pub(crate) fn list_symbols_response(
     source: &str,
     instruments: &[InstrumentInfo],
 ) -> ListSymbolsResponse {
-    let document = match open_checked(source, instruments) {
-        Ok(document) => document,
-        Err(diagnostics) => return ListSymbolsResponse::Err { diagnostics },
-    };
-    match poentaro::parser::parse(document.lowered(), "input.poentaro", instruments) {
+    if let Err(diagnostics) = open_checked(source, instruments) {
+        return ListSymbolsResponse::Err { diagnostics };
+    }
+    match poentaro::parser::parse(source, "input.poentaro", instruments) {
         Ok(parsed) => ListSymbolsResponse::Ok {
             symbols: collect_symbols(&parsed)
                 .into_iter()
-                .map(|symbol| symbol_to_out(&document, symbol))
+                .map(symbol_to_out)
                 .collect(),
         },
         Err(error) => ListSymbolsResponse::Err {
-            diagnostics: diagnostics_to_text(&document, vec![diagnostic_from_error(&error)]),
+            diagnostics: vec![diagnostic_from_error(&error)],
         },
     }
 }
 
-/// The rename as one edit of the user's text: it can touch metadata the
-/// lowered form spells differently, so its edits are applied there and the
-/// difference is what goes back.
 pub(crate) fn rename_symbol_response(
     source: &str,
     kind: SymbolKindOut,
@@ -90,49 +81,29 @@ pub(crate) fn rename_symbol_response(
     new_name: &str,
     instruments: &[InstrumentInfo],
 ) -> RenameSymbolResponse {
-    let document = match open_checked(source, instruments) {
-        Ok(document) => document,
-        Err(diagnostics) => return RenameSymbolResponse::Err { diagnostics },
-    };
-    let parsed = match poentaro::parser::parse(document.lowered(), "input.poentaro", instruments) {
+    if let Err(diagnostics) = open_checked(source, instruments) {
+        return RenameSymbolResponse::Err { diagnostics };
+    }
+    let parsed = match poentaro::parser::parse(source, "input.poentaro", instruments) {
         Ok(parsed) => parsed,
         Err(error) => {
             return RenameSymbolResponse::Err {
-                diagnostics: diagnostics_to_text(&document, vec![diagnostic_from_error(&error)]),
+                diagnostics: vec![diagnostic_from_error(&error)],
             }
         }
     };
-    let edits = rename_edits(&parsed, symbol_kind_from_out(kind), old_name, new_name);
-    if !document.is_anyfix() {
-        return RenameSymbolResponse::Ok {
-            edits: edits
-                .into_iter()
-                .map(|edit| TextEditOut {
-                    span: SpanOut {
-                        start: edit.span.start,
-                        end: edit.span.end,
-                    },
-                    replacement: edit.replacement,
-                })
-                .collect(),
-        };
-    }
-    let lowered = edits
-        .iter()
-        .sorted_by_key(|edit| std::cmp::Reverse(edit.span.start))
-        .fold(document.lowered().to_string(), |mut text, edit| {
-            text.replace_range(edit.span.start..edit.span.end, &edit.replacement);
-            text
-        });
-    let renamed = document.with_lowered(&lowered, instruments);
+    let edits = rename_edits_in_text(
+        source,
+        &parsed,
+        symbol_kind_from_out(kind),
+        old_name,
+        new_name,
+    );
     RenameSymbolResponse::Ok {
-        edits: text_difference(document.text(), renamed.text())
+        edits: edits
             .into_iter()
             .map(|edit| TextEditOut {
-                span: SpanOut {
-                    start: edit.span.start,
-                    end: edit.span.end,
-                },
+                span: span_to_out(edit.span),
                 replacement: edit.replacement,
             })
             .collect(),

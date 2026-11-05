@@ -1,10 +1,12 @@
-//! Every valid `.poentaro` document in the repo, converted to `.anyfix`,
-//! formatted and lowered back, renders the same SVG pages, under every preset, with the same
-//! diagnostics.
+//! Every valid `.poentaro` document in the repo, converted to anyfix expressions
+//! and formatted, renders the same SVG pages, under every preset, with the same
+//! diagnostics. The source each page embeds is the document's own text, so it is
+//! left out of the comparison.
 
 use std::path::{Path, PathBuf};
 
-use super::{convert, lower};
+use super::convert;
+use crate::document::anyfix_errors;
 use crate::format_anyfix::format_anyfix;
 use crate::{collect_measure_diagnostics, compile_with_preset, parser, render_svgs};
 
@@ -36,12 +38,28 @@ struct Rendered {
 fn render(source: &str, preset: Option<&str>) -> Rendered {
     let score = compile_with_preset(source, "test.poentaro", &[], preset).unwrap();
     Rendered {
-        svgs: render_svgs(&score).unwrap(),
+        svgs: render_svgs(&score)
+            .unwrap()
+            .iter()
+            .map(|svg| without_embedded_source(svg))
+            .collect(),
         diagnostics: collect_measure_diagnostics(&score)
             .iter()
             .map(|diagnostic| diagnostic.message())
             .collect(),
     }
+}
+
+fn without_embedded_source(svg: &str) -> String {
+    const OPEN_TAG: &str = "<metadata id=\"poentaro-source\">";
+    const CLOSE_TAG: &str = "</metadata>";
+    let Some(start) = svg.find(OPEN_TAG) else {
+        return svg.to_owned();
+    };
+    let end = svg[start..]
+        .find(CLOSE_TAG)
+        .map_or(svg.len(), |end| start + end);
+    format!("{}{}", &svg[..start], &svg[end..])
 }
 
 #[test]
@@ -57,8 +75,8 @@ fn every_document_renders_the_same_through_anyfix() {
             continue;
         }
         let document = parser::parse(&source, "test.poentaro", &[]).unwrap();
-        // A rejected `# metadata` or `# parts` line has no one right
-        // conversion: the converter keeps it as a comment, dropping its error.
+        // A rejected `# metadata` or `# parts` line has no one right conversion:
+        // it is kept as `could not convert`, which is its own error.
         if !document.parts_parse_errors.is_empty() || !document.metadata_parse_errors.is_empty() {
             continue;
         }
@@ -70,12 +88,11 @@ fn every_document_renders_the_same_through_anyfix() {
             "{}: formatting is not idempotent",
             path.display()
         );
-        let lowered = lower(&anyfix, &[]);
-        let lowered_formatted = lower(&formatted, &[]);
-        for errors in [&lowered.errors, &lowered_formatted.errors] {
+        for document in [&anyfix, &formatted] {
+            let errors = anyfix_errors(document, &[]);
             assert!(
                 errors.is_empty(),
-                "{}: lowering failed: {errors:?}\n{formatted}",
+                "{}: reading failed: {errors:?}\n{document}",
                 path.display()
             );
         }
@@ -90,8 +107,8 @@ fn every_document_renders_the_same_through_anyfix() {
             .chain([None]);
         for preset in presets {
             let comparisons = [
-                ("converted", &source, &lowered.source),
-                ("formatted", &formatted_source, &lowered_formatted.source),
+                ("converted", &source, &anyfix),
+                ("formatted", &formatted_source, &formatted),
             ];
             for (what, expected, actual) in comparisons {
                 let expected = render(expected, preset.as_deref());
@@ -126,14 +143,13 @@ fn directive_lines_without_measures_render_the_same_through_anyfix() {
         let source = format!("{parts}{score}");
         let anyfix = convert(&source);
         for document in [anyfix.clone(), format_anyfix(&anyfix)] {
-            let lowered = lower(&document, &[]);
+            let errors = anyfix_errors(&document, &[]);
             assert!(
-                lowered.errors.is_empty(),
-                "{score:?}: lowering failed: {:?}\n{document}",
-                lowered.errors
+                errors.is_empty(),
+                "{score:?}: reading failed: {errors:?}\n{document}"
             );
             let expected = render(&source, None);
-            let actual = render(&lowered.source, None);
+            let actual = render(&document, None);
             assert_eq!(expected.diagnostics, actual.diagnostics, "{score:?}");
             assert!(expected.svgs == actual.svgs, "{score:?}: SVG differs");
         }

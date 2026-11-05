@@ -194,13 +194,9 @@ pub(super) fn resolve_part_visibility(
 ) -> ResolvedPartVisibility {
     let parts: Vec<poentaro::PartInfo> = parts.into_iter().map(part_info_from_wit).collect();
     let preset = preset_name.and_then(|name| {
-        poentaro::chosen_preset_from_source(
-            poentaro::document::Document::open(&source, &[]).lowered(),
-            "input.poentaro",
-            &name,
-        )
-        .ok()
-        .flatten()
+        poentaro::chosen_preset_from_source(&source, "input.poentaro", &name)
+            .ok()
+            .flatten()
     });
     resolved_part_visibility_to_wit(poentaro::resolve_part_visibility(
         &parts,
@@ -261,12 +257,11 @@ pub(super) fn render_mei(
         .into_iter()
         .map(instrument_info_from_wit)
         .collect();
-    let document = match crate::opened_document::open_checked(&source, &instruments) {
-        Ok(document) => document,
-        Err(diagnostics) => return RenderMeiResponse::Err(diagnostics_error_to_wit(&diagnostics)),
-    };
+    if let Err(diagnostics) = crate::opened_document::open_checked(&source, &instruments) {
+        return RenderMeiResponse::Err(diagnostics_error_to_wit(&diagnostics));
+    }
     match poentaro::render_mei_from_source_with_visibility(
-        document.lowered(),
+        &source,
         "input.poentaro",
         &resolved_part_visibility_from_wit(visibility),
         &instruments,

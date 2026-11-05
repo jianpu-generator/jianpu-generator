@@ -8,7 +8,7 @@
 //!    indented like everything else.
 //!
 //! Best-effort, like `format_score`: a document anyfix-expr can't parse comes
-//! back unchanged, and one that doesn't lower only gets step 1. A score string
+//! back unchanged, and one with anyfix errors only gets step 1. A score string
 //! holding a `//` comment is left as it is, since the measure cleanups would
 //! drop the comment.
 
@@ -31,7 +31,7 @@ pub fn format_anyfix(source: &str) -> String {
 }
 
 /// `source` with the score string's measures formatted, or `None` when the
-/// document doesn't lower or nothing changes.
+/// document has anyfix errors or nothing changes.
 fn format_score_strings(source: &str) -> Option<String> {
     let declarations = declarations(source)?;
     let nodes = anyfix_expr::parse(source).syntax.nodes();
@@ -62,15 +62,12 @@ fn format_score_strings(source: &str) -> Option<String> {
     )
 }
 
-/// The document's part declarations, read from its lowered form.
+/// The document's part declarations, when it reads cleanly.
 fn declarations(source: &str) -> Option<Vec<PartDecl>> {
-    let lowered = parser::anyfix::lower(source, &[]);
-    if !lowered.errors.is_empty() {
+    if !crate::document::anyfix_errors(source, &[]).is_empty() {
         return None;
     }
-    let (sections, _) = parser::load_document_sections(&lowered.source);
-    let (parts_content, parts_offset) = sections.parts;
-    let (declarations, _) = parser::parts_parser::parse_parts(&parts_content, parts_offset, &[]);
+    let declarations = parser::read_document(source, &[]).declarations;
     (!declarations.is_empty()).then_some(declarations)
 }
 

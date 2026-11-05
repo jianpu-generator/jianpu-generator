@@ -5,6 +5,7 @@
 
 use crate::ast::parsed::ParsedDocument;
 use crate::error::Span;
+use crate::parser::anyfix;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SymbolKind {
@@ -186,6 +187,46 @@ pub fn rename_edits(
                 .collect()
         })
         .unwrap_or_default()
+}
+
+/// [`rename_edits`] for `text`, the document's own text: outside its score an
+/// anyfix document spells a name by where it sits, quoted or bare.
+pub fn rename_edits_in_text(
+    text: &str,
+    document: &ParsedDocument,
+    kind: SymbolKind,
+    old_name: &str,
+    new_name: &str,
+) -> Vec<TextEdit> {
+    let edits = rename_edits(document, kind, old_name, new_name);
+    if !crate::document::is_anyfix(text) {
+        return edits;
+    }
+    let score = crate::parser::read_document(text, &[]).score;
+    let score_span = score.offset..score.offset + score.text.len();
+    edits
+        .into_iter()
+        .map(|edit| {
+            if score_span.contains(&edit.span.start) {
+                return edit;
+            }
+            let is_in_quotes = text
+                .get(..edit.span.start)
+                .is_some_and(|before| before.ends_with('"'));
+            let replacement = match (is_in_quotes, kind) {
+                (true, _) => {
+                    let quoted = anyfix::quoted(new_name);
+                    quoted.trim_matches('"').to_string()
+                }
+                (false, SymbolKind::Abbreviation) => anyfix::abbreviation(new_name),
+                (false, SymbolKind::SectionLabel) => anyfix::label(new_name),
+            };
+            TextEdit {
+                span: edit.span,
+                replacement,
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]

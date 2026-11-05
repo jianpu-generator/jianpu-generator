@@ -46,8 +46,8 @@ pub fn list_measure_spans_from_source(
     source: &str,
     filename: &str,
 ) -> Result<MeasureSpansResult, IrrecoverableError> {
-    let (sections, _section_errors) = parser::load_document_sections(source);
-    let (score_content, score_offset) = sections.score;
+    let score_text = parser::read_document(source, &[]).score;
+    let (score_content, score_offset) = (score_text.text, score_text.offset);
     let base_line = source[..score_offset.min(source.len())]
         .bytes()
         .filter(|&b| b == b'\n')

@@ -14,11 +14,9 @@ pub(crate) fn generate_mp3_response(
     enabled_tracks: Option<&[String]>,
     soundfont: Vec<u8>,
 ) -> GenerateMp3Response {
-    let document = match open_checked(source, &[]) {
-        Ok(document) => document,
-        Err(diagnostics) => return GenerateMp3Response::Err { diagnostics },
-    };
-    let source = document.lowered();
+    if let Err(diagnostics) = open_checked(source, &[]) {
+        return GenerateMp3Response::Err { diagnostics };
+    }
 
     match write_mp3_from_source_filtered(source, "input.poentaro", enabled_tracks, &soundfont, &[])
     {
@@ -41,11 +39,9 @@ pub(crate) fn generate_mp3_for_measure_range_response(
     trim: Option<wav::TrimWindow>,
     soundfont: Vec<u8>,
 ) -> GenerateMp3Response {
-    let document = match open_checked(source, &[]) {
-        Ok(document) => document,
-        Err(diagnostics) => return GenerateMp3Response::Err { diagnostics },
-    };
-    let source = document.lowered();
+    if let Err(diagnostics) = open_checked(source, &[]) {
+        return GenerateMp3Response::Err { diagnostics };
+    }
 
     match write_mp3_for_measure_range_from_source(
         source,
@@ -78,11 +74,9 @@ pub(crate) fn generate_split_mp3s_response(
     preset_name: Option<&str>,
     soundfont: Vec<u8>,
 ) -> GenerateSplitMp3sResponse {
-    let document = match open_checked(source, &[]) {
-        Ok(document) => document,
-        Err(diagnostics) => return GenerateSplitMp3sResponse::Err { diagnostics },
-    };
-    let source = document.lowered();
+    if let Err(diagnostics) = open_checked(source, &[]) {
+        return GenerateSplitMp3sResponse::Err { diagnostics };
+    }
 
     match write_split_mp3s_from_source(
         source,

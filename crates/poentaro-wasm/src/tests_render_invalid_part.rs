@@ -3,7 +3,7 @@ use crate::types::RenderResponse;
 use poentaro::{NoteLabels, ResolvedPartVisibility};
 
 #[test]
-fn a_document_with_a_lowering_error_still_renders_and_reports_only_that_error() {
+fn a_document_with_an_invalid_part_still_renders_and_reports_only_that_error() {
     let source = "parts [\"Melody\" [M]: nots],\n\nscore \"\"\"\n    [M] 1\n    \"\"\",\n";
     let response = render_response(
         source,

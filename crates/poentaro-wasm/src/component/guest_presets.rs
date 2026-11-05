@@ -5,9 +5,7 @@
 #![allow(clippy::needless_pass_by_value)]
 
 use super::*;
-use crate::opened_document::edit_lowered;
 use poentaro::ast::parsed::Notation as CoreNotation;
-use poentaro::document::Document;
 use poentaro::source_edit;
 
 fn notation_to_wit(notation: CoreNotation) -> Notation {
@@ -33,7 +31,7 @@ fn notation_from_wit(notation: Notation) -> CoreNotation {
 }
 
 pub(super) fn list_presets(source: String) -> Vec<PresetSummary> {
-    source_edit::list_presets(Document::open(&source, &[]).lowered())
+    source_edit::list_presets(&source)
         .into_iter()
         .map(|preset| PresetSummary {
             name: preset.name,
@@ -50,9 +48,7 @@ pub(super) fn update_preset_field(source: String, preset_name: String, edit: Pre
             source_edit::PresetEdit::Notation(notation_from_wit(notation))
         }
     };
-    edit_lowered(&source, &[], |lowered| {
-        source_edit::update_preset_field(lowered, &preset_name, &edit)
-    })
+    source_edit::update_preset_field(&source, &preset_name, &edit)
 }
 
 pub(super) fn set_preset_part_shown(
@@ -65,9 +61,7 @@ pub(super) fn set_preset_part_shown(
         abbreviation: part.abbreviation,
         shown: part.shown,
     };
-    edit_lowered(&source, &[], |lowered| {
-        source_edit::set_preset_part_shown(lowered, &preset_name, &all_parts, &part)
-    })
+    source_edit::set_preset_part_shown(&source, &preset_name, &all_parts, &part)
 }
 
 pub(super) fn set_preset_part_soloed(
@@ -80,13 +74,11 @@ pub(super) fn set_preset_part_soloed(
         abbreviation: part.abbreviation,
         soloed: part.soloed,
     };
-    edit_lowered(&source, &[], |lowered| {
-        source_edit::set_preset_part_soloed(lowered, &preset_name, &all_parts, &part)
-    })
+    source_edit::set_preset_part_soloed(&source, &preset_name, &all_parts, &part)
 }
 
 pub(super) fn new_preset_name_error(source: String, name: String) -> Option<String> {
-    source_edit::new_preset_name_error(Document::open(&source, &[]).lowered(), &name)
+    source_edit::new_preset_name_error(&source, &name)
 }
 
 pub(super) fn add_preset_section(source: String, preset: NewPreset) -> String {
@@ -96,9 +88,7 @@ pub(super) fn add_preset_section(source: String, preset: NewPreset) -> String {
         soloed_parts: preset.soloed_parts,
         notation: notation_from_wit(preset.notation),
     };
-    edit_lowered(&source, &[], |lowered| {
-        source_edit::add_preset_section(lowered, preset)
-    })
+    source_edit::add_preset_section(&source, preset)
 }
 
 pub(super) fn follow_preset_rename(
@@ -106,9 +96,5 @@ pub(super) fn follow_preset_rename(
     source: String,
     preset_name: String,
 ) -> Option<String> {
-    source_edit::follow_preset_rename(
-        Document::open(&previous_source, &[]).lowered(),
-        Document::open(&source, &[]).lowered(),
-        &preset_name,
-    )
+    source_edit::follow_preset_rename(&previous_source, &source, &preset_name)
 }

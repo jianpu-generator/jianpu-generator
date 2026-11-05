@@ -36,16 +36,15 @@ pub fn read_source(input: &Path) -> Result<String, IrrecoverableError> {
     })
 }
 
-/// Reads a document to compile. An `.anyfix` document is lowered to the
-/// current syntax first; lowering problems are an error listing each one.
+/// Reads a document to compile. A document with anyfix errors is an error
+/// listing each one, since part of what it says can't be read.
 pub fn read_document_source(input: &Path) -> Result<String, IrrecoverableError> {
     let source = read_source(input)?;
-    let document = crate::document::Document::open(&source, &[]);
-    if document.errors().is_empty() {
-        return Ok(document.lowered().to_string());
+    let errors = crate::document::anyfix_errors(&source, &[]);
+    if errors.is_empty() {
+        return Ok(source);
     }
-    let report = document
-        .errors()
+    let report = errors
         .iter()
         .map(|error| {
             let position = anyfix_expr::line_column(&source, error.span.start);
@@ -54,7 +53,7 @@ pub fn read_document_source(input: &Path) -> Result<String, IrrecoverableError> 
                 input.display(),
                 position.line,
                 position.column,
-                error.message
+                error.message()
             )
         })
         .collect::<Vec<_>>()
@@ -82,7 +81,7 @@ pub fn convert_to_anyfix(input: &Path) -> Result<std::path::PathBuf, Irrecoverab
 /// [`crate::format_source::format_score`].
 pub fn format_file(input: &Path) -> Result<(), IrrecoverableError> {
     let source = read_source(input)?;
-    let formatted = crate::document::Document::open(&source, &[]).formatted();
+    let formatted = crate::document::formatted(&source);
     if formatted == source {
         return Ok(());
     }
