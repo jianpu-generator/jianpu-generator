@@ -109,14 +109,21 @@ fn directives_lead_the_next_measure() {
 }
 
 #[test]
-fn directives_need_measures_after_them() {
+fn directives_with_no_measures_after_them_are_a_measure_of_their_own() {
+    assert_eq!(lowered(r#"score [ { key : C4 } ]"#), "# score\nkey=C4\n");
     assert_eq!(
-        error_messages(
-            r#"score [ """
+        lowered(
+            r#"score [ { key : C4 }, { bpm : 90 }, """
           [M] 1
-          """, { bpm : 90 } ]"#
+          """, { bpm : 80 } ]"#
         ),
-        ["these directives have no measures after them"]
+        "# score\n\
+         key=C4\n\
+         \n\
+         bpm=90\n\
+         [M] 1\n\
+         \n\
+         bpm=80\n"
     );
 }
 

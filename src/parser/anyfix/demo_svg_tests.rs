@@ -108,3 +108,31 @@ fn every_document_renders_the_same_through_anyfix() {
         }
     }
 }
+
+/// A new song's score is often only a directive line. These forms are not in
+/// any repo document, but they are in production.
+#[test]
+fn directive_lines_without_measures_render_the_same_through_anyfix() {
+    let parts = "# parts\nMelody [M] = notes\n\n# score\n";
+    for score in [
+        "key=C4",
+        "key=Bb4\n\n",
+        "key=C4\n\nbpm=90\n[M] 1 2 3 4\n",
+        "key=C4\n[M] 1 2 3 4\n\nbpm=90\n",
+    ] {
+        let source = format!("{parts}{score}");
+        let anyfix = convert(&source);
+        for document in [anyfix.clone(), format_anyfix(&anyfix)] {
+            let lowered = lower(&document, &[]);
+            assert!(
+                lowered.errors.is_empty(),
+                "{score:?}: lowering failed: {:?}\n{document}",
+                lowered.errors
+            );
+            let expected = render(&source, None);
+            let actual = render(&lowered.source, None);
+            assert_eq!(expected.diagnostics, actual.diagnostics, "{score:?}");
+            assert!(expected.svgs == actual.svgs, "{score:?}: SVG differs");
+        }
+    }
+}

@@ -100,7 +100,9 @@ preset_field : ( "visible" "parts" | "soloed" "parts" ) ":" "[" { abbreviation "
 # ── score ───────────────────────────────────────────────────────────────
 score      : "score" "[" { element "," } "]",
 element    : directives | measures,
-directives : "{" { directive "," } "}",     # applies to the next measure
+directives : "{" { directive "," } "}",     # applies to the next measure, or
+                                            # is a measure of its own if no
+                                            # string follows it
 directive  : "bpm" ":" number
            | "key" ":" ( word | string | sign number )   # C4, Bb3, "F#3", +2
            | "time" ":" number "/" number

@@ -1,6 +1,6 @@
 //! Lowering `sequence [ … ]`, `preset "Name" { … }` and `score [ … ]`.
 
-use anyfix_expr::{Node, NodeKind, Span};
+use anyfix_expr::{Node, NodeKind};
 use itertools::Itertools;
 
 use super::{as_bare_words, as_call, as_field, Lowerer};
@@ -86,18 +86,18 @@ impl Lowerer<'_> {
     // ── score ───────────────────────────────────────────────────────────
 
     /// Score elements as measure groups: a `{ directives }` element becomes
-    /// the directive line of the first measure in the string after it.
+    /// the directive line of the first measure in the string after it. With
+    /// no string right after it, it is a measure of its own, as a directive
+    /// line alone is in the current syntax.
     pub(super) fn score(&mut self, node: &Node) -> Option<String> {
         let elements = self.elements(node, "[")?;
         let mut chunks = Vec::new();
-        let mut pending: Option<(String, Span)> = None;
+        let mut pending: Option<String> = None;
         for element in elements {
             match &element.kind {
                 NodeKind::Braces(directives) => {
-                    if let Some((_, span)) = pending {
-                        self.error(span, "two `{ directives }` in a row; merge them into one");
-                    }
-                    pending = Some((self.directive_line(directives), element.span));
+                    let directive_line = self.directive_line(directives);
+                    chunks.extend(pending.replace(directive_line));
                 }
                 NodeKind::String(literal) => {
                     let measures = literal
@@ -106,7 +106,7 @@ impl Lowerer<'_> {
                         .skip_while(|line| line.trim().is_empty())
                         .join("\n");
                     chunks.push(match pending.take() {
-                        Some((directives, _)) => format!("{directives}\n{measures}"),
+                        Some(directives) => format!("{directives}\n{measures}"),
                         None => measures,
                     });
                 }
@@ -116,9 +116,7 @@ impl Lowerer<'_> {
                 ),
             }
         }
-        if let Some((_, span)) = pending {
-            self.error(span, "these directives have no measures after them");
-        }
+        chunks.extend(pending);
         Some(
             chunks
                 .iter()
