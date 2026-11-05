@@ -23,8 +23,9 @@ pub(super) fn render_split_meis(
         .into_iter()
         .map(instrument_info_from_wit)
         .collect();
+    let document = poentaro::document::Document::open(&source, &instruments);
     match poentaro::staff_export::render_split_meis_from_source(
-        &source,
+        document.lowered(),
         "input.poentaro",
         &base_name,
         poentaro::SplitSelection {

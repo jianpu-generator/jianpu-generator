@@ -22,6 +22,7 @@ pub mod compositor;
 pub mod consolidator;
 pub mod coordinate_resolver;
 pub mod desugar;
+pub mod document;
 mod document_render;
 pub mod error;
 pub mod error_reporter;

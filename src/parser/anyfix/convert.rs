@@ -7,10 +7,6 @@ use super::words::{abbreviation, is_name_word, label, quoted, snake_case_as_word
 use crate::parser::parts_parser::{
     collect_source_raw_declarations, SourcePartMode, SourceRawPartDecl,
 };
-use crate::parser::score::directive_keyword::{
-    classify_directive_token, tokenize_directive_tokens, DirectiveKey, DirectiveToken,
-};
-use crate::parser::score::measure_group::is_directive_line;
 use crate::parser::section_splitter::{split_sections, RawSection, SectionKind};
 use crate::parser::sequence_parser::{parse_sequence, PartFilterKind};
 
@@ -272,84 +268,14 @@ fn sequence(section: &RawSection) -> String {
 
 // ── score ────────────────────────────────────────────────────────────────
 
-/// One element of an `.anyfix` score.
-enum ScoreElement {
-    /// A measure's directive line, as `{ … }`.
-    Directives(String),
-    /// Measures in the current syntax, comments and blank lines kept.
-    Measures(Vec<String>),
-}
-
-/// The score as a list of `{ directives }` and raw strings of measures. A
-/// measure whose first line is a directive line starts a new string, with the
-/// directive line before it as `{ … }`.
+/// The score as one raw string: the `# score` body as it is, directive lines,
+/// comments and blank lines kept.
 fn score(section: &RawSection, source: &str) -> String {
     let end = (section.content_offset + section.content.len()).min(source.len());
     let original = source.get(section.content_offset..end).unwrap_or_default();
-    // `section.content` has comments blanked out, line for line.
-    let lines = original.lines().zip(section.content.lines()).collect_vec();
-
-    let mut elements: Vec<ScoreElement> = Vec::new();
-    let mut previous_blank = true;
-    for (original_line, stripped_line) in lines {
-        let blank = stripped_line.trim().is_empty();
-        let starts_measure = previous_blank && !blank;
-        if starts_measure && is_directive_line(stripped_line) {
-            elements.push(ScoreElement::Directives(directives(stripped_line)));
-            elements.push(ScoreElement::Measures(Vec::new()));
-        } else {
-            match elements.last_mut() {
-                Some(ScoreElement::Measures(measure_lines)) => {
-                    measure_lines.push(original_line.to_string())
-                }
-                _ => elements.push(ScoreElement::Measures(vec![original_line.to_string()])),
-            }
-        }
-        previous_blank = blank;
-    }
-
-    let elements = elements
-        .iter()
-        .filter_map(|element| match element {
-            ScoreElement::Directives(directives) => Some(directives.clone()),
-            ScoreElement::Measures(lines) => raw_string(lines),
-        })
-        .collect_vec();
-    format!("score {},\n", list(&elements))
-}
-
-/// A directive line (`bpm=92 label="Verse" break`) as `{ bpm : 92, … }`.
-fn directives(line: &str) -> String {
-    let tokens = tokenize_directive_tokens(line).unwrap_or_default();
-    let fields = tokens
-        .iter()
-        .map(|(token, _)| match classify_directive_token(token) {
-            Some(DirectiveToken::Break) => "break".to_string(),
-            Some(DirectiveToken::Assignment { key, value }) => {
-                format!(
-                    "{} : {}",
-                    key_words(key.keyword()),
-                    directive_value(key, value)
-                )
-            }
-            // The current parser reports a stray token; keep it visible.
-            None => quoted(token),
-        })
-        .join(", ");
-    format!("{{ {fields} }}")
-}
-
-fn directive_value(key: DirectiveKey, value: &str) -> String {
-    match key {
-        // `#` starts an anyfix comment, so a sharp key is quoted.
-        DirectiveKey::Key if value.contains('#') => quoted(value),
-        DirectiveKey::Label => scalar(value),
-        DirectiveKey::Bpm
-        | DirectiveKey::Key
-        | DirectiveKey::Time
-        | DirectiveKey::MergeDuplicateMeasuresAcrossParts
-        | DirectiveKey::HideRestingParts => value.to_string(),
-    }
+    let lines = original.lines().map(str::to_string).collect_vec();
+    let body = raw_string(&lines).unwrap_or_else(|| "\"\"\"\n  \"\"\"".to_string());
+    format!("score {body},\n")
 }
 
 /// Lines as an indented raw string, or `None` when they are all blank. The

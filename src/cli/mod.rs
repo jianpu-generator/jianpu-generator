@@ -40,15 +40,12 @@ pub fn read_source(input: &Path) -> Result<String, IrrecoverableError> {
 /// current syntax first; lowering problems are an error listing each one.
 pub fn read_document_source(input: &Path) -> Result<String, IrrecoverableError> {
     let source = read_source(input)?;
-    if !crate::parser::anyfix::is_anyfix_filename(&input.to_string_lossy()) {
-        return Ok(source);
+    let document = crate::document::Document::open(&source, &[]);
+    if document.errors().is_empty() {
+        return Ok(document.lowered().to_string());
     }
-    let lowered = crate::parser::anyfix::lower(&source, &[]);
-    if lowered.errors.is_empty() {
-        return Ok(lowered.source);
-    }
-    let report = lowered
-        .errors
+    let report = document
+        .errors()
         .iter()
         .map(|error| {
             let position = anyfix_expr::line_column(&source, error.span.start);
@@ -85,11 +82,7 @@ pub fn convert_to_anyfix(input: &Path) -> Result<std::path::PathBuf, Irrecoverab
 /// [`crate::format_source::format_score`].
 pub fn format_file(input: &Path) -> Result<(), IrrecoverableError> {
     let source = read_source(input)?;
-    let formatted = if crate::parser::anyfix::is_anyfix_filename(&input.to_string_lossy()) {
-        crate::format_anyfix::format_anyfix(&source)
-    } else {
-        crate::format_source::format_score(&source)
-    };
+    let formatted = crate::document::Document::open(&source, &[]).formatted();
     if formatted == source {
         return Ok(());
     }

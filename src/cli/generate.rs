@@ -186,10 +186,12 @@ pub fn generate_pdf(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
         }
     }
 
-    let content = super::read_document_source(&opts.input)?;
+    // Reports lowering problems. The PDF embeds the document's own text.
+    super::read_document_source(&opts.input)?;
+    let text = super::read_source(&opts.input)?;
     let filename = opts.input.to_string_lossy();
     let pdf_bytes = jg::write_pdf_from_source_with_visibility(
-        &content,
+        &text,
         &filename,
         &visibility(opts, &tracks),
         &crate::fonts::FontBytesByFamily::embedded(),
@@ -253,6 +255,7 @@ pub fn generate_svg(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
     }
 
     let content = super::read_document_source(&opts.input)?;
+    let text = super::read_source(&opts.input)?;
     let filename = opts.input.to_string_lossy();
     let render_output = jg::render_svgs_from_source_with_visibility(
         &content,
@@ -263,7 +266,8 @@ pub fn generate_svg(opts: &GenerateInput) -> Result<(), jg::error::Irrecoverable
     )?;
     let output_path =
         output_stem(&opts.input, &output_label(opts), opts.output.as_deref()).with_extension("svg");
-    write_svgs_to_path(&render_output.svgs, &output_path)
+    let svgs = jg::source_embed::replace_embedded_sources(&render_output.svgs, &text);
+    write_svgs_to_path(&svgs, &output_path)
 }
 
 #[cfg(feature = "midi")]

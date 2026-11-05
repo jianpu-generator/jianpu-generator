@@ -7,6 +7,8 @@ mod score;
 use anyfix_expr::{Call, NamePart, Node, NodeKind, Span};
 use itertools::Itertools;
 
+use super::source_map::{MappedText, SourceMap};
+use crate::error::Span as SourceSpan;
 use crate::parser::parts_parser::InstrumentInfo;
 
 /// A problem found while lowering, located in the `.anyfix` source.
@@ -22,6 +24,8 @@ pub struct LoweringError {
 pub struct Lowered {
     pub source: String,
     pub errors: Vec<LoweringError>,
+    /// Maps offsets between `source` and the `.anyfix` text it was lowered from.
+    pub source_map: SourceMap,
 }
 
 /// Lowers an `.anyfix` document to the current `.poentaro` syntax.
@@ -29,6 +33,7 @@ pub struct Lowered {
 pub fn lower(source: &str, instruments: &[InstrumentInfo]) -> Lowered {
     let parsed = anyfix_expr::parse(source);
     let mut lowerer = Lowerer {
+        anyfix_source: source,
         instruments,
         errors: parsed
             .errors
@@ -39,21 +44,50 @@ pub fn lower(source: &str, instruments: &[InstrumentInfo]) -> Lowered {
             })
             .collect(),
     };
+    let mut output = MappedText::default();
     let sections = parsed
         .syntax
         .nodes()
         .iter()
         .filter_map(|node| lowerer.section(node))
         .collect_vec();
+    for (index, section) in sections.into_iter().enumerate() {
+        if index > 0 {
+            output.text.push('\n');
+        }
+        output.append(section);
+    }
     Lowered {
-        source: sections.join("\n"),
+        source: output.text,
         errors: lowerer.errors,
+        source_map: SourceMap {
+            segments: output.segments,
+        },
     }
 }
 
 pub(super) struct Lowerer<'a> {
+    pub(super) anyfix_source: &'a str,
     pub(super) instruments: &'a [InstrumentInfo],
     pub(super) errors: Vec<LoweringError>,
+}
+
+/// A lowered line and the `.anyfix` node it was rewritten from.
+pub(super) struct OriginLine {
+    pub(super) text: String,
+    pub(super) origin: SourceSpan,
+}
+
+pub(super) fn source_span(span: Span) -> SourceSpan {
+    SourceSpan::new(span.start, span.end)
+}
+
+/// A call's first name word (`metadata` in `metadata { … }`).
+fn keyword_span(call: &Call) -> Option<SourceSpan> {
+    call.name.iter().find_map(|part| match part {
+        NamePart::Word { span, .. } => Some(source_span(*span)),
+        NamePart::Slot => None,
+    })
 }
 
 /// The call `node` is, with its name text (`parts _`).
@@ -103,28 +137,58 @@ impl Lowerer<'_> {
     }
 
     /// One top-level section, as its `# header` and body.
-    fn section(&mut self, node: &Node) -> Option<String> {
+    fn section(&mut self, node: &Node) -> Option<MappedText> {
         let (call, name) = as_call(node)?;
-        let body = match (name.as_str(), call.arguments.as_slice()) {
+        let mut output = MappedText::default();
+        let keyword = keyword_span(call).unwrap_or_else(|| source_span(node.span));
+        match (name.as_str(), call.arguments.as_slice()) {
             ("metadata _", [fields]) => {
-                format!("# metadata\n{}", self.metadata_fields(fields)?)
+                let lines = self.metadata_fields(fields)?;
+                self.push_line(&mut output, "# metadata", keyword);
+                self.push_lines(&mut output, lines);
             }
-            ("parts _", [parts]) => format!("# parts\n{}", self.parts(parts)?),
-            ("sequence _", [entries]) => format!("# sequence\n{}\n", self.sequence(entries)?),
-            ("preset _ _", [name, fields]) => self.preset(name, fields)?,
-            ("score _", [elements]) => format!("# score\n{}", self.score(elements)?),
+            ("parts _", [parts]) => {
+                let lines = self.parts(parts)?;
+                self.push_line(&mut output, "# parts", keyword);
+                self.push_lines(&mut output, lines);
+            }
+            ("sequence _", [entries]) => {
+                let line = self.sequence(entries)?;
+                self.push_line(&mut output, "# sequence", keyword);
+                self.push_line(&mut output, &line, source_span(entries.span));
+            }
+            ("preset _ _", [preset_name, fields]) => {
+                let (header, lines) = self.preset(preset_name, fields)?;
+                let origin = SourceSpan::new(keyword.start, preset_name.span.end);
+                self.push_line(&mut output, &header, origin);
+                self.push_lines(&mut output, lines);
+            }
+            ("score _", [body]) => {
+                self.push_line(&mut output, "# score", keyword);
+                self.push_score(&mut output, body)?;
+            }
             _ => {
                 self.error(
                     node.span,
                     format!(
                         "found `{name}` at the top level; expected `metadata {{…}}`, \
-                         `parts […]`, `sequence […]`, `preset \"Name\" {{…}}` or `score […]`"
+                         `parts […]`, `sequence […]`, `preset \"Name\" {{…}}` or `score \"\"\"…\"\"\"`"
                     ),
                 );
                 return None;
             }
-        };
-        Some(body)
+        }
+        Some(output)
+    }
+
+    pub(super) fn push_line(&self, output: &mut MappedText, line: &str, origin: SourceSpan) {
+        output.push_rewritten_line(line, origin, self.anyfix_source);
+    }
+
+    fn push_lines(&self, output: &mut MappedText, lines: Vec<OriginLine>) {
+        for line in lines {
+            self.push_line(output, &line.text, line.origin);
+        }
     }
 
     pub(super) fn elements<'n>(&mut self, node: &'n Node, expected: &str) -> Option<&'n [Node]> {
@@ -236,13 +300,17 @@ impl Lowerer<'_> {
 
     // ── metadata ────────────────────────────────────────────────────────
 
-    fn metadata_fields(&mut self, node: &Node) -> Option<String> {
+    fn metadata_fields(&mut self, node: &Node) -> Option<Vec<OriginLine>> {
         let fields = self.elements(node, "{")?;
         Some(
             fields
                 .iter()
-                .filter_map(|field| self.metadata_field(field))
-                .map(|line| format!("{line}\n"))
+                .filter_map(|field| {
+                    Some(OriginLine {
+                        text: self.metadata_field(field)?,
+                        origin: source_span(field.span),
+                    })
+                })
                 .collect(),
         )
     }

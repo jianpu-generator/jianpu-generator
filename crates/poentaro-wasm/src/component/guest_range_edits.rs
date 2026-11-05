@@ -6,27 +6,58 @@
 #![allow(clippy::needless_pass_by_value)]
 
 use super::*;
+use poentaro::document::Document;
+use poentaro::error::Span;
 
 pub(super) fn shift_range_octave(
     source: String,
     ranges: Vec<ByteRange>,
     delta: i32,
 ) -> RangeEditResponse {
-    let ranges = to_source_edit_ranges(ranges);
-    let result = poentaro::source_edit::shift_range_octave(&source, &ranges, delta as i8);
-    to_range_edit_response(result)
+    edit_ranges(&source, ranges, |lowered, ranges| {
+        poentaro::source_edit::shift_range_octave(lowered, ranges, delta as i8)
+    })
 }
 
 pub(super) fn toggle_range_slur(source: String, ranges: Vec<ByteRange>) -> RangeEditResponse {
-    let ranges = to_source_edit_ranges(ranges);
-    let result = poentaro::source_edit::toggle_range_slur(&source, &ranges);
-    to_range_edit_response(result)
+    edit_ranges(&source, ranges, poentaro::source_edit::toggle_range_slur)
 }
 
 pub(super) fn toggle_range_tie(source: String, ranges: Vec<ByteRange>) -> RangeEditResponse {
-    let ranges = to_source_edit_ranges(ranges);
-    let result = poentaro::source_edit::toggle_range_tie(&source, &ranges);
-    to_range_edit_response(result)
+    edit_ranges(&source, ranges, poentaro::source_edit::toggle_range_tie)
+}
+
+/// Runs a range edit on the lowered form, with ranges and result in the text's
+/// positions.
+fn edit_ranges(
+    source: &str,
+    ranges: Vec<ByteRange>,
+    edit: impl FnOnce(
+        &str,
+        &[poentaro::source_edit::ByteRange],
+    ) -> poentaro::source_edit::RangeEditResult,
+) -> RangeEditResponse {
+    let document = Document::open(source, &[]);
+    let lowered_ranges = to_lowered_ranges(&document, ranges);
+    let result = edit(document.lowered(), &lowered_ranges);
+    let edited = document.with_lowered(&result.source, &[]);
+    RangeEditResponse {
+        source: edited.text().to_string(),
+        ranges: result
+            .ranges
+            .into_iter()
+            .map(|range| {
+                let span = edited.span_to_text(Span::new(
+                    range.start_byte as usize,
+                    range.end_byte as usize,
+                ));
+                ByteRange {
+                    start_byte: span.start as _,
+                    end_byte: span.end as _,
+                }
+            })
+            .collect(),
+    }
 }
 
 pub(super) fn describe_selection(
@@ -34,8 +65,9 @@ pub(super) fn describe_selection(
     ranges: Vec<ByteRange>,
 ) -> Option<PitchDescription> {
     use poentaro::pitch_description as description;
-    let ranges = to_source_edit_ranges(ranges);
-    description::describe_selection(&source, &ranges).map(|described| match described {
+    let document = Document::open(&source, &[]);
+    let ranges = to_lowered_ranges(&document, ranges);
+    description::describe_selection(document.lowered(), &ranges).map(|described| match described {
         description::PitchDescription::Note(note) => PitchDescription::Note(NoteDescription {
             letter_name: note.letter_name,
         }),
@@ -49,26 +81,21 @@ pub(super) fn describe_selection(
     })
 }
 
-fn to_source_edit_ranges(ranges: Vec<ByteRange>) -> Vec<poentaro::source_edit::ByteRange> {
+fn to_lowered_ranges(
+    document: &Document,
+    ranges: Vec<ByteRange>,
+) -> Vec<poentaro::source_edit::ByteRange> {
     ranges
         .into_iter()
-        .map(|range| poentaro::source_edit::ByteRange {
-            start_byte: range.start_byte,
-            end_byte: range.end_byte,
+        .map(|range| {
+            let span = document.span_to_lowered(Span::new(
+                range.start_byte as usize,
+                range.end_byte as usize,
+            ));
+            poentaro::source_edit::ByteRange {
+                start_byte: span.start as _,
+                end_byte: span.end as _,
+            }
         })
         .collect()
-}
-
-fn to_range_edit_response(result: poentaro::source_edit::RangeEditResult) -> RangeEditResponse {
-    RangeEditResponse {
-        source: result.source,
-        ranges: result
-            .ranges
-            .into_iter()
-            .map(|range| ByteRange {
-                start_byte: range.start_byte,
-                end_byte: range.end_byte,
-            })
-            .collect(),
-    }
 }

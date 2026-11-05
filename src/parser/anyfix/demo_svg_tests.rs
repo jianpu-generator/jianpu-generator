@@ -10,7 +10,7 @@ use crate::{collect_measure_diagnostics, compile_with_preset, parser, render_svg
 
 fn documents() -> Vec<PathBuf> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let mut paths: Vec<PathBuf> = ["demo", "scores", "fixtures", "."]
+    let mut paths: Vec<PathBuf> = ["fixtures/section-syntax-demos", "scores", "fixtures", "."]
         .iter()
         .flat_map(|directory| {
             std::fs::read_dir(root.join(directory))
@@ -53,6 +53,9 @@ fn every_document_renders_the_same_through_anyfix() {
     );
     for path in documents {
         let source = std::fs::read_to_string(&path).unwrap();
+        if crate::document::is_anyfix(&source) {
+            continue;
+        }
         let document = parser::parse(&source, "test.poentaro", &[]).unwrap();
         // A rejected `# metadata` or `# parts` line has no one right
         // conversion: the converter keeps it as a comment, dropping its error.

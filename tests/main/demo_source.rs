@@ -21,7 +21,9 @@ fn demo_file_paths() -> Vec<std::path::PathBuf> {
 fn render_demo_file(path: &std::path::Path) -> poentaro::RenderOutput {
     let source =
         std::fs::read_to_string(path).unwrap_or_else(|e| panic!("failed to read {path:?}: {e}"));
-    poentaro::render_svgs_from_source(&source, "demo.poentaro", &[])
+    let document = poentaro::document::Document::open(&source, &[]);
+    assert_eq!(document.errors(), [], "{path:?}");
+    poentaro::render_svgs_from_source(document.lowered(), "demo.poentaro", &[])
         .unwrap_or_else(|e| panic!("{path:?} failed to parse/render: {e}"))
 }
 

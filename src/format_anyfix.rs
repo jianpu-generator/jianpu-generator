@@ -1,7 +1,7 @@
 //! [`format_anyfix`]: formats an `.anyfix` document (see `anyfix-syntax.md`).
 //!
 //! 1. anyfix-expr's canonical formatter lays out the whole document.
-//! 2. Each raw string of measures in `score [ … ]` then goes through the same
+//! 2. The score's raw string then goes through the same
 //!    cleanups as the current syntax's `# score` ([`format_measures`]):
 //!    redundant-line removal, part-order sorting, whitespace normalization.
 //! 3. The canonical formatter runs again, so the rewritten strings are
@@ -30,15 +30,14 @@ pub fn format_anyfix(source: &str) -> String {
     anyfix_expr::format(&with_measures).unwrap_or(formatted)
 }
 
-/// `source` with every score string's measures formatted, or `None` when the
+/// `source` with the score string's measures formatted, or `None` when the
 /// document doesn't lower or nothing changes.
 fn format_score_strings(source: &str) -> Option<String> {
     let declarations = declarations(source)?;
     let nodes = anyfix_expr::parse(source).syntax.nodes();
     let replacements = nodes
         .iter()
-        .filter_map(score_elements)
-        .flatten()
+        .filter_map(score_body)
         .filter_map(|element| match &element.kind {
             NodeKind::String(literal) if !literal.value.contains("//") => {
                 let measures = format_measures(&literal.value, 0, &declarations)?;
@@ -75,16 +74,13 @@ fn declarations(source: &str) -> Option<Vec<PartDecl>> {
     (!declarations.is_empty()).then_some(declarations)
 }
 
-/// The elements of a top-level `score [ … ]`.
-fn score_elements(node: &Node) -> Option<&[Node]> {
+/// The string of a top-level `score """ … """`.
+fn score_body(node: &Node) -> Option<&Node> {
     let NodeKind::Call(call) = &node.kind else {
         return None;
     };
     match (call.name_text().as_str(), call.arguments.as_slice()) {
-        ("score _", [elements]) => match &elements.kind {
-            NodeKind::Brackets(elements) => Some(elements),
-            _ => None,
-        },
+        ("score _", [body]) => Some(body),
         _ => None,
     }
 }

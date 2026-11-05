@@ -20,6 +20,26 @@ pub fn extract_embedded_source(svg: &str) -> Option<String> {
     String::from_utf8(decoded).ok()
 }
 
+/// Swaps the source embedded in `svg` for `source`, for a page rendered from a
+/// document's lowered form. An SVG with no embedded source is returned as is.
+pub fn replace_embedded_source(svg: &str, source: &str) -> String {
+    let Some(start) = svg.find(OPEN_TAG).map(|index| index + OPEN_TAG.len()) else {
+        return svg.to_string();
+    };
+    let Some(end) = svg[start..].find(CLOSE_TAG).map(|index| start + index) else {
+        return svg.to_string();
+    };
+    let encoded = base64::engine::general_purpose::STANDARD.encode(source);
+    format!("{}{encoded}{}", &svg[..start], &svg[end..])
+}
+
+/// [`replace_embedded_source`] for every page of a document.
+pub fn replace_embedded_sources(svgs: &[String], source: &str) -> Vec<String> {
+    svgs.iter()
+        .map(|svg| replace_embedded_source(svg, source))
+        .collect()
+}
+
 const PDF_INFO_KEY: &str = "/PoentaroSource (";
 /// What PDFs exported before the rename to Poentaro carry instead.
 const LEGACY_PDF_INFO_KEY: &str = "/JianpuSource (";

@@ -1,9 +1,49 @@
-//! Lowering `sequence [ … ]`, `preset "Name" { … }` and `score [ … ]`.
+//! Lowering `sequence [ … ]`, `preset "Name" { … }` and `score """ … """`.
 
-use anyfix_expr::{Node, NodeKind};
+use anyfix_expr::{Node, NodeKind, StringLiteral};
 use itertools::Itertools;
 
-use super::{as_bare_words, as_call, as_field, Lowerer};
+use super::super::source_map::MappedText;
+use super::{as_bare_words, as_call, as_field, source_span, Lowerer, OriginLine};
+
+/// The value ranges of a score string's lines, without the blank ones at
+/// either end.
+fn score_line_ranges(literal: &StringLiteral) -> Vec<std::ops::Range<usize>> {
+    let mut start = 0;
+    let lines = literal
+        .value
+        .split_inclusive('\n')
+        .map(|line| {
+            let line_start = start;
+            start += line.len();
+            let content = line.strip_suffix('\n').unwrap_or(line);
+            let content = content.strip_suffix('\r').unwrap_or(content);
+            line_start..line_start + content.len()
+        })
+        .collect_vec();
+    let is_blank = |range: &std::ops::Range<usize>| {
+        literal
+            .value
+            .get(range.clone())
+            .is_none_or(|line| line.trim().is_empty())
+    };
+    let first = lines.iter().position(|range| !is_blank(range));
+    let last = lines.iter().rposition(|range| !is_blank(range));
+    match (first, last) {
+        (Some(first), Some(last)) => {
+            let mut kept = lines.get(first..=last).unwrap_or_default().to_vec();
+            if let Some(final_line) = kept.last_mut() {
+                let trimmed = literal
+                    .value
+                    .get(final_line.clone())
+                    .map_or(0, |line| line.trim_end().len());
+                final_line.end = final_line.start + trimmed;
+            }
+            kept
+        }
+        _ => Vec::new(),
+    }
+}
 
 impl Lowerer<'_> {
     // ── sequence ────────────────────────────────────────────────────────
@@ -64,90 +104,51 @@ impl Lowerer<'_> {
 
     // ── presets ─────────────────────────────────────────────────────────
 
-    pub(super) fn preset(&mut self, name: &Node, fields: &Node) -> Option<String> {
+    /// The preset's `# preset "Name"` header line and its field lines.
+    pub(super) fn preset(
+        &mut self,
+        name: &Node,
+        fields: &Node,
+    ) -> Option<(String, Vec<OriginLine>)> {
         let name = self.quoted_text(name, "a preset name")?;
         let fields = self.elements(fields, "{")?;
-        let lines: String = fields
+        let lines = fields
             .iter()
-            .filter_map(|field| match as_field(field) {
-                Some((words, value))
-                    if matches!(words.as_slice(), ["visible" | "soloed", "parts"]) =>
-                {
-                    let parts = self.abbreviation_list(value)?;
-                    Some(format!("{} = {}", words.join("_"), parts.join(", ")))
-                }
-                _ => self.metadata_field(field),
+            .filter_map(|field| {
+                let text = match as_field(field) {
+                    Some((words, value))
+                        if matches!(words.as_slice(), ["visible" | "soloed", "parts"]) =>
+                    {
+                        let parts = self.abbreviation_list(value)?;
+                        format!("{} = {}", words.join("_"), parts.join(", "))
+                    }
+                    _ => self.metadata_field(field)?,
+                };
+                Some(OriginLine {
+                    text,
+                    origin: source_span(field.span),
+                })
             })
-            .map(|line| format!("{line}\n"))
             .collect();
-        Some(format!("# preset {name}\n{lines}"))
+        Some((format!("# preset {name}"), lines))
     }
 
     // ── score ───────────────────────────────────────────────────────────
 
-    /// Score elements as measure groups: a `{ directives }` element becomes
-    /// the directive line of the first measure in the string after it. With
-    /// no string right after it, it is a measure of its own, as a directive
-    /// line alone is in the current syntax.
-    pub(super) fn score(&mut self, node: &Node) -> Option<String> {
-        let elements = self.elements(node, "[")?;
-        let mut chunks = Vec::new();
-        let mut pending: Option<String> = None;
-        for element in elements {
-            match &element.kind {
-                NodeKind::Braces(directives) => {
-                    let directive_line = self.directive_line(directives);
-                    chunks.extend(pending.replace(directive_line));
-                }
-                NodeKind::String(literal) => {
-                    let measures = literal
-                        .value
-                        .lines()
-                        .skip_while(|line| line.trim().is_empty())
-                        .join("\n");
-                    chunks.push(match pending.take() {
-                        Some(directives) => format!("{directives}\n{measures}"),
-                        None => measures,
-                    });
-                }
-                _ => self.error(
-                    element.span,
-                    "expected `{ directives }` or a string of measures",
-                ),
-            }
+    /// The score string, written as the `# score` body it is. Its lines are the
+    /// string's own bytes, so they map exactly.
+    pub(super) fn push_score(&mut self, output: &mut MappedText, body: &Node) -> Option<()> {
+        let NodeKind::String(literal) = &body.kind else {
+            self.error(
+                body.span,
+                "the score is one string of measures, like `score \"\"\" … \"\"\"`",
+            );
+            return None;
+        };
+        for line in score_line_ranges(literal) {
+            output.push_string_value(literal, line);
+            output.text.push('\n');
         }
-        chunks.extend(pending);
-        Some(
-            chunks
-                .iter()
-                .map(|chunk| format!("{}\n", chunk.trim_end()))
-                .join("\n"),
-        )
-    }
-
-    /// `{ bpm : 92, label : "Verse", break }` as `bpm=92 label="Verse" break`.
-    fn directive_line(&mut self, directives: &[Node]) -> String {
-        directives
-            .iter()
-            .filter_map(|directive| {
-                if as_bare_words(directive).as_deref() == Some(&["break"]) {
-                    return Some("break".to_string());
-                }
-                let Some((words, value)) = as_field(directive) else {
-                    self.error(
-                        directive.span,
-                        "expected a directive, like `bpm : 92` or `break`",
-                    );
-                    return None;
-                };
-                let key = words.join("_");
-                let value = if key == "label" {
-                    self.quoted_text(value, "a label")?
-                } else {
-                    self.flat_text(value)?
-                };
-                Some(format!("{key}={value}"))
-            })
-            .join(" ")
+        Some(())
     }
 }

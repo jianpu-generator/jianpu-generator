@@ -4,6 +4,12 @@
 #![allow(clippy::needless_pass_by_value)]
 
 use super::*;
+use crate::opened_document::edit_lowered;
+use poentaro::document::Document;
+
+fn lowered(source: &str) -> Document {
+    Document::open(source, &[])
+}
 
 // Phase 3, group 7 of PLAN-wit-bindgen-migration.md: closes the real
 // porting gap group 6's "fully complete" claim missed — these 17
@@ -20,7 +26,7 @@ use super::*;
 
 pub(super) fn parse_metadata_fields(source: String, preset_name: Option<String>) -> MetadataFields {
     metadata_fields_to_wit(poentaro::source_edit::parse_metadata_fields(
-        &source,
+        lowered(&source).lowered(),
         preset_name.as_deref(),
     ))
 }
@@ -30,11 +36,10 @@ pub(super) fn update_metadata_field(
     preset_name: Option<String>,
     edit: MetadataEdit,
 ) -> String {
-    poentaro::source_edit::update_metadata_field(
-        &source,
-        preset_name.as_deref(),
-        metadata_edit_from_wit(edit),
-    )
+    let edit = metadata_edit_from_wit(edit);
+    edit_lowered(&source, &[], |lowered| {
+        poentaro::source_edit::update_metadata_field(lowered, preset_name.as_deref(), edit)
+    })
 }
 
 pub(super) fn highlight_tokens(source: String) -> Vec<HighlightToken> {
@@ -63,11 +68,13 @@ pub(super) fn set_layout_fonts(fonts: FontBytesByFamily) {
 }
 
 pub(super) fn shift_part_octave(source: String, abbreviation: String, delta: i32) -> String {
-    poentaro::source_edit::shift_part_octave(&source, &abbreviation, delta as i8)
+    edit_lowered(&source, &[], |lowered| {
+        poentaro::source_edit::shift_part_octave(lowered, &abbreviation, delta as i8)
+    })
 }
 
 pub(super) fn list_streamable_parts(source: String) -> Vec<StreamablePart> {
-    poentaro::part_stream::list_streamable_parts(&source)
+    poentaro::part_stream::list_streamable_parts(lowered(&source).lowered())
         .into_iter()
         .map(|part| StreamablePart {
             abbreviation: part.abbreviation,
@@ -83,7 +90,7 @@ pub(super) fn extract_part_stream(
     abbreviation: String,
 ) -> ExtractPartStreamResponse {
     use poentaro::part_stream;
-    match part_stream::extract_part_stream(&source, &abbreviation) {
+    match part_stream::extract_part_stream(lowered(&source).lowered(), &abbreviation) {
         Ok(stream) => ExtractPartStreamResponse::Ok(PartStream {
             text: stream.text,
             measure_starts: offsets_to_wit(&stream.measure_starts),
@@ -123,8 +130,12 @@ pub(super) fn format_part_stream(
             offset: offset as usize,
         })
         .collect();
-    let formatted =
-        poentaro::part_stream::format_part_stream(&source, &abbreviation, &edited_stream, &cursors);
+    let formatted = poentaro::part_stream::format_part_stream(
+        lowered(&source).lowered(),
+        &abbreviation,
+        &edited_stream,
+        &cursors,
+    );
     FormattedPartStream {
         edits: formatted
             .edits
@@ -151,7 +162,7 @@ pub(super) fn part_focus_measures(
     toggles: PartToggleState,
 ) -> PartFocusMeasuresResponse {
     match poentaro::part_stream::part_focus_measures(
-        &source,
+        lowered(&source).lowered(),
         &abbreviation,
         &part_toggle_state_from_wit(toggles),
     ) {
@@ -175,9 +186,13 @@ pub(super) fn apply_part_stream(
     edited_stream: String,
 ) -> PartStreamApplyResult {
     use poentaro::part_stream::StreamDiagnosticSeverity;
-    let result = poentaro::part_stream::apply_part_stream(&source, &abbreviation, &edited_stream);
+    let document = lowered(&source);
+    let result =
+        poentaro::part_stream::apply_part_stream(document.lowered(), &abbreviation, &edited_stream);
     PartStreamApplyResult {
-        source: result.source,
+        source: result
+            .source
+            .map(|edited| document.with_lowered(&edited, &[]).text().to_string()),
         diagnostics: result
             .diagnostics
             .into_iter()
@@ -216,7 +231,7 @@ fn offsets_to_wit(offsets: &[usize]) -> Vec<u32> {
 }
 
 pub(super) fn format_score(source: String) -> String {
-    poentaro::format_source::format_score(&source)
+    lowered(&source).formatted()
 }
 
 // Same underlying `crate::part_declarations::list_part_declarations_response`/
@@ -307,89 +322,4 @@ pub(super) fn compress_share_payload(payload: String) -> Vec<u8> {
 
 pub(super) fn decompress_share_payload(bytes: Vec<u8>) -> Option<String> {
     crate::decompress_share_payload_bytes(&bytes)
-}
-
-// Same underlying `crate::selection_range::resolve_selection_range_response`
-// the old `selection_range::resolve_selection_range` `#[wasm_bindgen]
-// fn` calls — that function was already unconditional (not gated on
-// `wasm-bindgen-boundary`), unlike this group's other findings, so no
-// prerequisite-ungating fix was needed here, only widening
-// `ClickableElementId`/`NoteCellOut`/`LyricCellOut`/
-// `ResolveSelectionRangeResponse`'s reachability from `component.rs` (see
-// `selection_range/mod.rs`'s own comment on its `pub(crate) use`).
-
-pub(super) fn resolve_selection_range(
-    note_spans: Vec<NoteSpan>,
-    lyric_spans: Vec<LyricSpan>,
-    anchor: ClickableElementId,
-    current: ClickableElementId,
-) -> ResolveSelectionRangeResponse {
-    let note_spans: Vec<crate::types::NoteSpanOut> =
-        note_spans.into_iter().map(note_span_from_wit).collect();
-    let lyric_spans: Vec<crate::types::LyricSpanOut> =
-        lyric_spans.into_iter().map(lyric_span_from_wit).collect();
-    let anchor = clickable_element_id_from_wit(anchor);
-    let current = clickable_element_id_from_wit(current);
-    resolve_selection_range_response_to_wit(
-        crate::selection_range::resolve_selection_range_response(
-            &note_spans,
-            &lyric_spans,
-            &anchor,
-            &current,
-        ),
-    )
-}
-
-pub(super) fn resolve_system_selection_range(
-    note_spans: Vec<NoteSpan>,
-    lyric_spans: Vec<LyricSpan>,
-    systems: Vec<MeasureRangeIn>,
-    anchor: ClickableElementId,
-    current: ClickableElementId,
-) -> ResolveSelectionRangeResponse {
-    let note_spans: Vec<crate::types::NoteSpanOut> =
-        note_spans.into_iter().map(note_span_from_wit).collect();
-    let lyric_spans: Vec<crate::types::LyricSpanOut> =
-        lyric_spans.into_iter().map(lyric_span_from_wit).collect();
-    let systems: Vec<poentaro::grid_layout::MeasureRange> =
-        systems.into_iter().map(measure_range_in_from_wit).collect();
-    resolve_selection_range_response_to_wit(
-        crate::selection_range::resolve_system_selection_range_response(
-            &note_spans,
-            &lyric_spans,
-            &systems,
-            &clickable_element_id_from_wit(anchor),
-            &clickable_element_id_from_wit(current),
-        ),
-    )
-}
-
-pub(super) fn fully_selected_labels(
-    note_spans: Vec<NoteSpan>,
-    lyric_spans: Vec<LyricSpan>,
-    labels: Vec<ClickableElementId>,
-    note_cells: Vec<NoteCellIn>,
-    lyric_cells: Vec<LyricCellIn>,
-) -> Vec<bool> {
-    let note_spans: Vec<crate::types::NoteSpanOut> =
-        note_spans.into_iter().map(note_span_from_wit).collect();
-    let lyric_spans: Vec<crate::types::LyricSpanOut> =
-        lyric_spans.into_iter().map(lyric_span_from_wit).collect();
-    let labels: Vec<crate::selection_range::ClickableElementId> = labels
-        .into_iter()
-        .map(clickable_element_id_from_wit)
-        .collect();
-    let note_cells: Vec<crate::note_selection_types::NoteCellIn> =
-        note_cells.into_iter().map(note_cell_in_from_wit).collect();
-    let lyric_cells: Vec<crate::lyric_selection_types::LyricCellIn> = lyric_cells
-        .into_iter()
-        .map(lyric_cell_in_from_wit)
-        .collect();
-    crate::selection_range::fully_selected_labels(
-        &note_spans,
-        &lyric_spans,
-        &labels,
-        &note_cells,
-        &lyric_cells,
-    )
 }

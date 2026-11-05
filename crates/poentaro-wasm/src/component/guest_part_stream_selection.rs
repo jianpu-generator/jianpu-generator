@@ -5,6 +5,7 @@
 #![allow(clippy::needless_pass_by_value)]
 
 use super::*;
+use poentaro::document::Document;
 
 pub(super) fn part_stream_ranges_to_source(
     source: String,
@@ -12,15 +13,16 @@ pub(super) fn part_stream_ranges_to_source(
     edited_stream: String,
     ranges: Vec<Span>,
 ) -> Vec<Span> {
+    let document = Document::open(&source, &[]);
     let ranges = ranges.into_iter().map(span_from_wit).collect::<Vec<_>>();
     poentaro::part_stream::part_stream_ranges_to_source(
-        &source,
+        document.lowered(),
         &abbreviation,
         &edited_stream,
         &ranges,
     )
     .into_iter()
-    .map(span_to_wit)
+    .map(|span| span_to_wit(document.span_to_text(span)))
     .collect()
 }
 
@@ -30,9 +32,13 @@ pub(super) fn source_ranges_to_part_stream(
     edited_stream: String,
     ranges: Vec<Span>,
 ) -> Vec<Span> {
-    let ranges = ranges.into_iter().map(span_from_wit).collect::<Vec<_>>();
+    let document = Document::open(&source, &[]);
+    let ranges = ranges
+        .into_iter()
+        .map(|span| document.span_to_lowered(span_from_wit(span)))
+        .collect::<Vec<_>>();
     poentaro::part_stream::source_ranges_to_part_stream(
-        &source,
+        document.lowered(),
         &abbreviation,
         &edited_stream,
         &ranges,

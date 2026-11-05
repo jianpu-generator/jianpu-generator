@@ -5,6 +5,7 @@ use poentaro::{
 };
 
 use super::diagnostic_from_error;
+use crate::opened_document::open_checked;
 use crate::types::{GeneratePdfResponse, GenerateSplitPdfsResponse};
 
 pub(crate) fn generate_pdf_response(
@@ -13,6 +14,10 @@ pub(crate) fn generate_pdf_response(
     fonts: &FontBytesByFamily,
     note_labels: NoteLabels,
 ) -> GeneratePdfResponse {
+    if let Err(diagnostics) = open_checked(source, &[]) {
+        return GeneratePdfResponse::Err { diagnostics };
+    }
+
     match write_pdf_from_source_with_visibility(
         source,
         "input.poentaro",
@@ -35,6 +40,12 @@ pub(crate) fn generate_split_pdfs_response(
     fonts: &FontBytesByFamily,
     note_labels: NoteLabels,
 ) -> GenerateSplitPdfsResponse {
+    let document = match open_checked(source, &[]) {
+        Ok(document) => document,
+        Err(diagnostics) => return GenerateSplitPdfsResponse::Err { diagnostics },
+    };
+    let source = document.lowered();
+
     match write_split_pdfs_from_source(
         source,
         "input.poentaro",

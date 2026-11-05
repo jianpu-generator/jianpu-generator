@@ -7,6 +7,7 @@ mod lyric_selection_types;
 #[cfg(feature = "wav")]
 mod note_selection_trim;
 mod note_selection_types;
+mod opened_document;
 mod part_declarations;
 mod responses;
 pub mod selection_range;

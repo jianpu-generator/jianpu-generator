@@ -1,17 +1,18 @@
-# Poentaro in anyfix expressions (draft)
+# Poentaro in anyfix expressions
 
-A draft of a second surface syntax for Poentaro documents. It is written in
-[anyfix expressions](https://github.com/wongjiahau/anyfix-expr) and saved
-with the `.anyfix` extension. The current syntax (`syntax.md`) is still the
-only one the web app reads. This one is CLI-only for now.
+A surface syntax for Poentaro documents, written in
+[anyfix expressions](https://github.com/wongjiahau/anyfix-expr). The web app
+and the CLI read it, and tell it from the section syntax (`syntax.md`) by
+content.
 
-**What it changes.** Metadata, parts, sequence, presets and score directives
+**What it changes.** Metadata, parts, sequence and presets
 become anyfix data. They are named fields, real lists and nested records,
 in place of the hand-tokenized `key = value`, positional and
 `(-abbrev)` forms.
 
-**What it keeps.** Notes, lyrics and chords stay as text in raw strings,
-read by the existing score parser. Their syntax collides with anyfix's
+**What it keeps.** The score is one raw string holding the `# score` body
+exactly as `syntax.md` describes it: directive lines, notes, lyrics, chords,
+blank lines and `//` comments, read by the existing score parser. Their syntax collides with anyfix's
 tokens: `,` is the only separator, `.` and `:` are operators, and `#`
 always starts a comment.
 
@@ -37,19 +38,16 @@ sequence [ Verse, Chorus WITHOUT [E], "Last chorus" ONLY [P] ],
 
 preset "Piano only" { visible parts : [P], notation : numbered },
 
-score [
-  { bpm : 100, key : D4, time : 3/4, label : "Verse" },
-  """
+score """
+  bpm=100 key=D4 time=3/4 label="Verse"
   [P] 1 2 3
   [Pv1] do re mi
 
-  [P] 4# 5 6,      # the comma and the hash are note syntax here
-  """,
-  { key : +2, label : "Chorus", break },
-  """
+  [P] 4# 5 6,      // the comma and the hash are note syntax here
+
+  key=+2 label="Chorus" break
   [P] 1 2 3
   """,
-],
 ```
 
 ## Grammar
@@ -98,20 +96,7 @@ preset_field : ( "visible" "parts" | "soloed" "parts" ) ":" "[" { abbreviation "
              | field,                       # any metadata field
 
 # ── score ───────────────────────────────────────────────────────────────
-score      : "score" "[" { element "," } "]",
-element    : directives | measures,
-directives : "{" { directive "," } "}",     # applies to the next measure, or
-                                            # is a measure of its own if no
-                                            # string follows it
-directive  : "bpm" ":" number
-           | "key" ":" ( word | string | sign number )   # C4, Bb3, "F#3", +2
-           | "time" ":" number "/" number
-           | "label" ":" string
-           | "merge" "duplicate" "measures" "across" "parts" ":" ( "yes" | "no" )
-           | "hide" "resting" "parts" ":" ( "yes" | "no" )
-           | "break",
-measures   : string,                        # legacy score text: `[Abbr] …` lines,
-                                            # measures split by blank lines
+score      : "score" string,                 # the `# score` body of syntax.md
 
 sign       : "+" | "-",
 ```
@@ -128,7 +113,6 @@ How anyfix-expr groups each form, and so what the consumer matches on:
 | `"Melody" : notes` | `_ _` of `"Melody"`, `notes` |
 | `follow [P]` | `follow _` of `Brackets[P]` |
 | `octave : +1` | `octave _` of `+ _` of `1` |
-| `time : 3/4` | `time _` of `_ / _` of `3`, `4` |
 | `Chorus WITHOUT [A, T]` | `_ WITHOUT _` of `Chorus`, `Brackets[A, T]` |
 | `preset "Solo" { … }` | `preset _ _` of `"Solo"`, `Braces[…]` |
 
@@ -139,10 +123,6 @@ How anyfix-expr groups each form, and so what the consumer matches on:
   offset, a bare word the instrument. `sound : 41` is a number, so the
   `"N: Name"` label (a cross-boundary invariant) disappears from the
   source. The lowering asks `sound_label` for it.
-- **No line sniffing for directives.** The old parser decides a measure's
-  first line is a directive line when any token looks like `bpm=` or
-  `key=`. Here directives are a `{ … }` element of their own. `time : 3/4`,
-  `key : +2` and `key : C4` arrive already split by anyfix-expr.
 - **`WITHOUT` and `ONLY` can't be mixed.** The old `Chorus(S -A2)` is a
   runtime error. Here the two filters are different call shapes, so the
   mix can't be written. A label can be any string.
@@ -165,8 +145,8 @@ How anyfix-expr groups each form, and so what the consumer matches on:
   therefore written in brackets: `follow [P]`, `lyrics [M]`,
   `WITHOUT [A]`. A label that is all caps is written as a string:
   `"A" WITHOUT [S]`.
-- **`#` starts a comment.** A sharp key is written as a string:
-  `key : "F#3"`.
+- **`#` starts a comment.** Outside the score string, a sharp key is written
+  as a string: `key : "F#3"`. Inside it, `key=F#3` is score text as usual.
 - **Abbreviations are read from the tree.** The words, numbers and symbols
   of an abbreviation are joined without spaces, so `A1&T` works unquoted
   and still reads `A1&T` after the formatter spaces it out as `A1 & T`.
@@ -174,31 +154,29 @@ How anyfix-expr groups each form, and so what the consumer matches on:
 - **Raw string closers.** A score line that starts with `"""` needs the
   string opened with `""""`. The converter does this automatically.
 
-## Status of the prototype
+## Tooling
 
 - `poentaro convert-anyfix <file.poentaro>` writes `<file>.anyfix` next to
   the input, in anyfix-expr's canonical layout.
-- `poentaro format <file.anyfix>` lays the document out with anyfix-expr's
-  formatter, then formats each score string the way the current syntax's
+- `poentaro format <file>` lays the document out with anyfix-expr's
+  formatter, then formats the score string the way the current syntax's
   `# score` is formatted (redundant lines dropped, parts sorted, whitespace
   collapsed). A score string with a `//` comment is left alone.
 - **Canonical form.** The formatter drops every `:` it doesn't need and
   spaces out symbols, so `title : "Song"` becomes `title "Song"` and
   `volume : 80%` becomes `volume: 80 %`. Both spellings are the same tree,
   so both read the same. The examples above keep the `:` for readability.
-- Every CLI command accepts an `.anyfix` file. It is lowered to the current
-  syntax, section by section, and then read by the existing parser
-  (`src/parser/anyfix/`).
-- `src/parser/anyfix/demo_svg_tests.rs` converts every `demo/*.poentaro`
-  file and checks that the SVG pages are byte-for-byte equal.
-- **No source map yet.** Errors from the existing parser point into the
-  lowered text, not into the `.anyfix` file. Errors from the lowering
-  itself do point into the `.anyfix` file. Mapping the rest back needs
-  `StringLiteral::source_offset` threaded through the score parser.
-- **The embedded source is the lowered text.** An SVG or PDF made from an
-  `.anyfix` file embeds the lowered current-syntax document, not the
-  `.anyfix` source. Apart from that `<metadata>` element, the pages are
-  byte-for-byte equal.
+- The web app and every CLI command read this syntax by content, whatever
+  the file is called. A document is lowered to the section syntax, section by
+  section, and then read by the existing parser (`document::Document`,
+  `src/parser/anyfix/`). Section syntax files still load.
+- `demo/*.poentaro` and `new_file_template.poentaro` are written in this
+  syntax. `src/parser/anyfix/demo_svg_tests.rs` converts every
+  `fixtures/section-syntax-demos/*.poentaro` file and checks that the SVG pages
+  are byte-for-byte equal.
+- **Source map.** `parser::anyfix::SourceMap` maps positions between the
+  document and its lowered form. Every score line maps byte for byte, so
+  errors, selections and highlights land on the character.
 - **Not converted:** `//` comments in `# metadata`, `# parts` and
   `# sequence` are dropped. Score comments are kept. A `# parts` line the
   current parser rejects is kept as a `# could not convert:` comment.

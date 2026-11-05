@@ -81,27 +81,24 @@ fn a_preset_lists_parts() {
 }
 
 #[test]
-fn directives_lead_the_next_measure() {
+fn the_score_string_is_the_score_body() {
     assert_eq!(
         lowered(
-            r#"score [
-                { bpm : 92, key : "F#3", time : 3/4, label : "Verse 1", break },
-                """
-                [M] 1 2 3
+            r#"score """
+                bpm=92 key=F#3 time=3/4 label="Verse 1" break
+                [M] 1 2 3 // first bar
 
-                [M] 4# 5 6,   # sharp and low octave
-                """,
-                { key : +2 },
-                """
+                [M] 4# 5 6,
+
+                key=+2
                 [M] 1 2 3
-                """,
-            ]"#
+                """"#
         ),
         "# score\n\
          bpm=92 key=F#3 time=3/4 label=\"Verse 1\" break\n\
-         [M] 1 2 3\n\
+         [M] 1 2 3 // first bar\n\
          \n\
-         [M] 4# 5 6,   # sharp and low octave\n\
+         [M] 4# 5 6,\n\
          \n\
          key=+2\n\
          [M] 1 2 3\n"
@@ -109,21 +106,15 @@ fn directives_lead_the_next_measure() {
 }
 
 #[test]
-fn directives_with_no_measures_after_them_are_a_measure_of_their_own() {
-    assert_eq!(lowered(r#"score [ { key : C4 } ]"#), "# score\nkey=C4\n");
+fn an_empty_score_string_is_an_empty_score() {
+    assert_eq!(lowered(r#"score """#), "# score\n");
+}
+
+#[test]
+fn a_score_that_is_not_a_string_is_reported() {
     assert_eq!(
-        lowered(
-            r#"score [ { key : C4 }, { bpm : 90 }, """
-          [M] 1
-          """, { bpm : 80 } ]"#
-        ),
-        "# score\n\
-         key=C4\n\
-         \n\
-         bpm=90\n\
-         [M] 1\n\
-         \n\
-         bpm=80\n"
+        error_messages("score [ 1 ]"),
+        ["the score is one string of measures, like `score \"\"\" … \"\"\"`"]
     );
 }
 
@@ -131,7 +122,7 @@ fn directives_with_no_measures_after_them_are_a_measure_of_their_own() {
 fn an_unknown_section_is_reported() {
     assert_eq!(
         error_messages("lyrics []"),
-        ["found `lyrics _` at the top level; expected `metadata {…}`, `parts […]`, `sequence […]`, `preset \"Name\" {…}` or `score […]`"]
+        ["found `lyrics _` at the top level; expected `metadata {…}`, `parts […]`, `sequence […]`, `preset \"Name\" {…}` or `score \"\"\"…\"\"\"`"]
     );
 }
 

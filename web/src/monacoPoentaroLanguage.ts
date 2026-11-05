@@ -4,9 +4,10 @@ export const POENTARO_LANGUAGE_ID = 'poentaro'
 
 let registered = false
 
-/** Basic Monarch tokenizer for `.poentaro` files — see syntax.md for the
- * grammar. It only colors punctuation-level structure; keywords come from
- * the Rust lexers via `registerPoentaroSemanticTokensProvider`. */
+/** Basic Monarch tokenizer for `.poentaro` files — see anyfix-syntax.md for
+ * the document and syntax.md for the score string's grammar. It only colors
+ * punctuation-level structure; keywords come from the Rust lexers via
+ * `registerPoentaroSemanticTokensProvider`. */
 export function registerPoentaroLanguage(monacoApi: Monaco) {
   if (registered) return
   registered = true
@@ -14,14 +15,16 @@ export function registerPoentaroLanguage(monacoApi: Monaco) {
   monacoApi.languages.register({ id: POENTARO_LANGUAGE_ID })
 
   monacoApi.languages.setLanguageConfiguration(POENTARO_LANGUAGE_ID, {
-    comments: { lineComment: '//' },
+    comments: { lineComment: '#' },
     brackets: [
       ['(', ')'],
       ['[', ']'],
+      ['{', '}'],
     ],
     autoClosingPairs: [
       { open: '(', close: ')' },
       { open: '[', close: ']' },
+      { open: '{', close: '}' },
       { open: '"', close: '"' },
     ],
   })
@@ -30,10 +33,29 @@ export function registerPoentaroLanguage(monacoApi: Monaco) {
     defaultToken: '',
     tokenizer: {
       root: [
-        // Quoted strings first: a `//` inside a string is not a comment.
+        // The score string, closed by the same run of quotes.
+        [/("{3,})\s*$/, { token: 'delimiter', next: '@score.$1' }],
+        // Quoted strings first: a `#` inside a string is not a comment.
+        [/"([^"\\]|\\.)*"/, 'string'],
+        [/#.*$/, 'comment'],
+        [/\/\/.*$/, 'comment'],
+        // [Abbrev] part reference.
+        [/\[[^\]\n]*\]/, 'tag'],
+        [/[()[\]{}]/, '@brackets'],
+        [/[_=.\-~',]/, 'operator'],
+      ],
+      score: [
+        [
+          /^\s*("{3,})/,
+          {
+            cases: {
+              '$1==$S2': { token: 'delimiter', next: '@pop' },
+              '@default': 'string',
+            },
+          },
+        ],
         [/"([^"\\]|\\.)*"/, 'string'],
         [/\/\/.*$/, 'comment'],
-        // [Abbrev] key prefix on parts/score lines.
         [/\[[^\]\n]*\]/, 'tag'],
         [/#/, 'operator'],
         [/[()]/, '@brackets'],

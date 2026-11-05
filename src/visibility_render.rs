@@ -50,12 +50,13 @@ pub fn write_pdf_from_source_with_visibility(
     instruments: &[InstrumentInfo],
     note_labels: NoteLabels,
 ) -> Result<Vec<u8>, IrrecoverableError> {
+    let document = crate::document::Document::open(source, instruments);
     let render_output = render_svgs_from_source_with_visibility(
-        source,
+        document.lowered(),
         filename,
         visibility,
         instruments,
         note_labels,
     )?;
-    crate::pdf::write_pdf(&render_output.svgs, fonts, Some(source))
+    crate::pdf::write_pdf(&render_output.svgs, fonts, Some(document.text()))
 }

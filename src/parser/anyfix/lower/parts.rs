@@ -3,19 +3,23 @@
 use anyfix_expr::{Node, NodeKind};
 use itertools::Itertools;
 
-use super::{as_call, as_field, Lowerer};
+use super::{as_call, as_field, source_span, Lowerer, OriginLine};
 use crate::sound_label::sound_label;
 
 impl Lowerer<'_> {
     // ── parts ───────────────────────────────────────────────────────────
 
-    pub(super) fn parts(&mut self, node: &Node) -> Option<String> {
+    pub(super) fn parts(&mut self, node: &Node) -> Option<Vec<OriginLine>> {
         let parts = self.elements(node, "[")?;
         Some(
             parts
                 .iter()
-                .filter_map(|part| self.part(part))
-                .map(|line| format!("{line}\n"))
+                .filter_map(|part| {
+                    Some(OriginLine {
+                        text: self.part(part)?,
+                        origin: source_span(part.span),
+                    })
+                })
                 .collect(),
         )
     }

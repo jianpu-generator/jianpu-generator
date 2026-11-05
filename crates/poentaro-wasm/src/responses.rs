@@ -9,6 +9,7 @@ use poentaro::{
 use crate::diagnostics::{
     diagnostic_from_diagnostic, diagnostic_from_error, group_diagnostics_into_view_zones,
 };
+use crate::opened_document::{diagnostics_to_text, lowering_diagnostics, score_line_shift};
 use crate::svg_types_convert::svg_document_to_out;
 use crate::types::{
     GroupLyricSelectionResponse, GroupNoteSelectionResponse, ListLyricSpansResponse,
@@ -16,6 +17,7 @@ use crate::types::{
     LyricSpanOut, MeasureAtOffsetResponse, MeasureSpanOut, NoteCellIn, NoteSelectionRunOut,
     NoteSpanOut, RenderResponse, SectionRangeOut, SequenceEntryOut,
 };
+use poentaro::document::Document;
 
 #[cfg(feature = "wav")]
 #[path = "responses_wav.rs"]
@@ -41,41 +43,69 @@ mod responses_midi;
 #[cfg(feature = "midi")]
 pub(crate) use responses_midi::*;
 
-pub(crate) fn render_response(
-    source: &str,
-    visibility: &ResolvedPartVisibility,
-    instruments: &[InstrumentInfo],
-    note_labels: NoteLabels,
+/// A document with lowering errors still renders what was lowered, so typing
+/// a mistake doesn't blank the preview. Only those errors are reported: others
+/// come from text the user didn't write.
+fn render_output_response(
+    document: &Document,
+    result: Result<poentaro::RenderDocumentOutput, poentaro::error::IrrecoverableError>,
 ) -> RenderResponse {
-    match render_documents_from_source_with_visibility(
-        source,
-        "input.poentaro",
-        visibility,
-        instruments,
-        note_labels,
-    ) {
+    let lowering = lowering_diagnostics(document);
+    match result {
         Ok(output) => {
-            let diagnostics: Vec<_> = output
-                .diagnostics
-                .into_iter()
-                .map(diagnostic_from_diagnostic)
-                .collect();
-            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
+            let diagnostics = if lowering.is_empty() {
+                diagnostics_to_text(
+                    document,
+                    output
+                        .diagnostics
+                        .into_iter()
+                        .map(diagnostic_from_diagnostic)
+                        .collect(),
+                )
+            } else {
+                lowering
+            };
+            let diagnostic_view_zones =
+                group_diagnostics_into_view_zones(document.text(), &diagnostics);
             RenderResponse::Ok {
                 documents: output.documents.iter().map(svg_document_to_out).collect(),
                 diagnostics,
                 diagnostic_view_zones,
             }
         }
-        Err(e) => {
-            let diagnostics = vec![diagnostic_from_error(&e)];
-            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
-            RenderResponse::Err {
-                diagnostics,
-                diagnostic_view_zones,
-            }
-        }
+        Err(_) if !lowering.is_empty() => render_failure(document.text(), lowering),
+        Err(error) => render_failure(
+            document.text(),
+            diagnostics_to_text(document, vec![diagnostic_from_error(&error)]),
+        ),
     }
+}
+
+fn render_failure(text: &str, diagnostics: Vec<crate::types::DiagnosticOut>) -> RenderResponse {
+    let diagnostic_view_zones = group_diagnostics_into_view_zones(text, &diagnostics);
+    RenderResponse::Err {
+        diagnostics,
+        diagnostic_view_zones,
+    }
+}
+
+pub(crate) fn render_response(
+    source: &str,
+    visibility: &ResolvedPartVisibility,
+    instruments: &[InstrumentInfo],
+    note_labels: NoteLabels,
+) -> RenderResponse {
+    let document = Document::open(source, instruments);
+    render_output_response(
+        &document,
+        render_documents_from_source_with_visibility(
+            document.lowered(),
+            "input.poentaro",
+            visibility,
+            instruments,
+            note_labels,
+        ),
+    )
 }
 
 pub(crate) fn render_with_highlight_range_response(
@@ -85,47 +115,32 @@ pub(crate) fn render_with_highlight_range_response(
     instruments: &[InstrumentInfo],
     note_labels: NoteLabels,
 ) -> RenderResponse {
-    match render_documents_with_highlight_range_and_visibility(
-        source,
-        "input.poentaro",
-        measure_ranges,
-        visibility,
-        instruments,
-        note_labels,
-    ) {
-        Ok(output) => {
-            let diagnostics: Vec<_> = output
-                .diagnostics
-                .into_iter()
-                .map(diagnostic_from_diagnostic)
-                .collect();
-            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
-            RenderResponse::Ok {
-                documents: output.documents.iter().map(svg_document_to_out).collect(),
-                diagnostics,
-                diagnostic_view_zones,
-            }
-        }
-        Err(e) => {
-            let diagnostics = vec![diagnostic_from_error(&e)];
-            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
-            RenderResponse::Err {
-                diagnostics,
-                diagnostic_view_zones,
-            }
-        }
-    }
+    let document = Document::open(source, instruments);
+    render_output_response(
+        &document,
+        render_documents_with_highlight_range_and_visibility(
+            document.lowered(),
+            "input.poentaro",
+            measure_ranges,
+            visibility,
+            instruments,
+            note_labels,
+        ),
+    )
 }
 
 pub(crate) fn get_measure_at_offset_response(
     source: &str,
     byte_offset: usize,
 ) -> MeasureAtOffsetResponse {
-    match compile(source, "input.poentaro", &[]) {
-        Ok(score) => match find_measure_at_byte_offset(&score, byte_offset) {
-            Some(measure_index) => MeasureAtOffsetResponse::Ok { measure_index },
-            None => MeasureAtOffsetResponse::NotInMeasure,
-        },
+    let document = Document::open(source, &[]);
+    match compile(document.lowered(), "input.poentaro", &[]) {
+        Ok(score) => {
+            match find_measure_at_byte_offset(&score, document.offset_to_lowered(byte_offset)) {
+                Some(measure_index) => MeasureAtOffsetResponse::Ok { measure_index },
+                None => MeasureAtOffsetResponse::NotInMeasure,
+            }
+        }
         Err(_) => MeasureAtOffsetResponse::NotInMeasure,
     }
 }
@@ -174,18 +189,22 @@ fn compute_section_ranges(spans: &[MeasureSpanOut]) -> Vec<SectionRangeOut> {
 }
 
 pub(crate) fn list_measure_spans_response(source: &str) -> ListMeasureSpansResponse {
-    match list_measure_spans_from_source(source, "input.poentaro") {
+    let document = Document::open(source, &[]);
+    match list_measure_spans_from_source(document.lowered(), "input.poentaro") {
         Ok(result) => {
             let spans: Vec<MeasureSpanOut> = result
                 .spans
                 .into_iter()
-                .map(|span| MeasureSpanOut {
-                    start: span.start,
-                    end: span.end,
-                    view_zone_start: span.view_zone_start,
-                    section_label: span.section_label,
-                    start_line: span.start_line,
-                    end_line: span.end_line,
+                .map(|span| {
+                    let line_shift = score_line_shift(&document, span.start);
+                    MeasureSpanOut {
+                        start: document.offset_to_text(span.start),
+                        end: document.offset_to_text(span.end),
+                        view_zone_start: document.offset_to_text(span.view_zone_start),
+                        section_label: span.section_label,
+                        start_line: span.start_line.saturating_add_signed(line_shift),
+                        end_line: span.end_line.saturating_add_signed(line_shift),
+                    }
                 })
                 .collect();
             let section_ranges = compute_section_ranges(&spans);
@@ -229,7 +248,8 @@ pub(crate) fn list_note_spans_response(
     source: &str,
     enabled_tracks: Option<&[String]>,
 ) -> ListNoteSpansResponse {
-    match list_note_spans_from_source(source, "input.poentaro", enabled_tracks) {
+    let document = Document::open(source, &[]);
+    match list_note_spans_from_source(document.lowered(), "input.poentaro", enabled_tracks) {
         Ok(result) => {
             let spans: Vec<NoteSpanOut> = result
                 .spans
@@ -239,8 +259,8 @@ pub(crate) fn list_note_spans_response(
                     part_abbreviation: span.part_abbreviation,
                     note_id: span.note_id,
                     measure_index: span.measure_index,
-                    start: span.start,
-                    end: span.end,
+                    start: span.start.map(|start| document.offset_to_text(start)),
+                    end: span.end.map(|end| document.offset_to_text(end)),
                     timing: span.timing.into(),
                 })
                 .collect();
@@ -293,7 +313,8 @@ pub(crate) fn list_lyric_spans_response(
     source: &str,
     enabled_tracks: Option<&[String]>,
 ) -> ListLyricSpansResponse {
-    match list_lyric_spans_from_source(source, "input.poentaro", enabled_tracks) {
+    let document = Document::open(source, &[]);
+    match list_lyric_spans_from_source(document.lowered(), "input.poentaro", enabled_tracks) {
         Ok(result) => {
             let spans: Vec<LyricSpanOut> = result
                 .spans
@@ -303,8 +324,8 @@ pub(crate) fn list_lyric_spans_response(
                     part_abbreviation: span.part_abbreviation,
                     note_id: span.note_id,
                     measure_index: span.measure_index,
-                    start: span.start,
-                    end: span.end,
+                    start: document.offset_to_text(span.start),
+                    end: document.offset_to_text(span.end),
                     timing: span.timing.into(),
                 })
                 .collect();

@@ -40,18 +40,15 @@ sequence [Verse, "A" WITHOUT [E], Verse ONLY [A1 & T]],
 
 preset "Solo" { visible parts [A1 & T] },
 
-score [
-    { bpm 92, key "F#3", label "Verse" },
-    """
-        [A1&T] 1 2 3 4 // first bar
+score """
+    bpm=92 key=F#3 label="Verse"
+    [A1&T] 1 2 3 4 // first bar
 
-        [A1&T] 5 6 7 1
-        """,
-    { label "A", break },
-    """
-        [E] 1 1 1 1
-        """,
-],
+    [A1&T] 5 6 7 1
+
+    label="A" break
+    [E] 1 1 1 1
+    """,
 "#
     );
 }
@@ -65,5 +62,5 @@ fn quotes_abbreviations_that_anyfix_would_split() {
 #[test]
 fn a_line_of_quotes_lengthens_the_raw_string() {
     let source = "# parts\nM = notes\n\n# score\n[M] 1\n\"\"\"\n";
-    assert!(convert(source).contains("\"\"\"\"\n        [M] 1\n        \"\"\"\n        \"\"\"\""));
+    assert!(convert(source).contains("\"\"\"\"\n    [M] 1\n    \"\"\"\n    \"\"\"\""));
 }

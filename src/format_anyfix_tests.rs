@@ -8,40 +8,38 @@ fn lays_out_the_document_then_formats_score_strings() {
     let source = [
         r#"metadata { title : "Song" },"#,
         PARTS,
-        r#"score [ { label : "Verse" }, """
+        r#"score """
+  label="Verse"
   [A]   5 6   7 1
   [Sv1] _
   [S] 1  2 3 4
-  """ ]"#,
+  ""","#,
     ]
     .join("\n");
     assert_eq!(
         format_anyfix(&source),
         r#"metadata { title "Song" },
 parts ["Soprano" [S]: notes, "Alto" [A]: notes, "Words" [Sv1]: lyrics [S]],
-score [
-    { label "Verse" },
-    """
-        [S] 1 2 3 4
-        [A] 5 6 7 1
-        """,
-],
+score """
+    label="Verse"
+    [S] 1 2 3 4
+    [A] 5 6 7 1
+    """,
 "#
     );
 }
 
 #[test]
 fn formatting_twice_changes_nothing() {
-    let source = format!("{PARTS}\nscore [ \"\"\"\n  [A] 5 6 7 1\n  [S] 1 2 3 4\n  \"\"\" ]");
+    let source = format!("{PARTS}\nscore \"\"\"\n  [A] 5 6 7 1\n  [S] 1 2 3 4\n  \"\"\"");
     let once = format_anyfix(&source);
     assert_eq!(format_anyfix(&once), once);
 }
 
 #[test]
 fn a_score_string_with_a_comment_keeps_its_measures() {
-    let source = format!(
-        "{PARTS}\nscore [ \"\"\"\n  [A] 5   6 7 1 // alto first\n  [S] 1 2 3 4\n  \"\"\" ]"
-    );
+    let source =
+        format!("{PARTS}\nscore \"\"\"\n  [A] 5   6 7 1 // alto first\n  [S] 1 2 3 4\n  \"\"\"");
     assert!(format_anyfix(&source).contains("[A] 5   6 7 1 // alto first\n"));
 }
 
