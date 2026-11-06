@@ -159,6 +159,15 @@ In a fresh worktree, run `just worktree-setup` once first: it installs the web a
 
 Once the worker is up, **always run `just copy-prod-db`** to copy production's rows into the local D1 database, so local dev runs against real accounts and files. It does nothing if this checkout already has a copy (it leaves `crates/live-share-worker/.wrangler/state/prod-data-copied-at`), so run it every time you start the dev servers. Each worktree has its own local database, so a fresh worktree needs its own copy. `just copy-prod-db force` copies again; `app_log` is never copied. It needs wrangler's stored login (`pnpm exec wrangler whoami`), and a running worker picks up the rows without a restart.
 
+### Set up the test fixture for the user
+
+When you start a local server so the user can try a feature or bug fix, **set up everything they need to test it before giving them the URL**. They should not have to create data or sign in.
+
+- **Data:** put the state that reaches the change into the local database, e.g. a file that reproduces the bug, or the production copy migrated to a new format. Never write to production.
+- **Sign-in:** if the change needs an account, sign the user in automatically. Insert a `sessions` row into the local D1 database with the SHA-256 hex of a new token, then serve the web app with a scratch Vite config that wraps `web/vite.config.ts` and uses `transformIndexHtml` to set `poentaro:account-auth:v2` (`{ token, email }`) in `localStorage`.
+- **Keep it out of the repo:** fixture scripts and configs go in the scratchpad, not the commit.
+- **Check it:** open the URL in a fresh browser and confirm the change can be reached. Then tell the user the URL and where to look.
+
 ## Debugging production
 
 When asked why something happened in production (e.g. a user got signed out, or can't sign in), **query the `app_log` D1 table before guessing**. It holds 30 days of what the Synced Share worker did (see "App log (observability)" in `ARCHITECTURE.md`). Saved queries live in `crates/live-share-worker/queries/observability/` (`recent.sql`, `auth_rejections.sql`, `auth_by_version.sql`, `sign_ins_per_email.sql`, `request_failures.sql`, `by_trace_id.sql`). Run one against the production database from `crates/live-share-worker`:
