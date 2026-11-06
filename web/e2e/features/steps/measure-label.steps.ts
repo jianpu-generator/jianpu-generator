@@ -5,12 +5,11 @@ import { Given, Then, When } from './fixtures'
  * The default demo file (demo/01-pitches.poentaro, opened on first load) has
  * the following Monaco line numbers (1-based):
  *
- *   1  # metadata
- *   2  title = "Pitches"
+ *   1  metadata { title "Pitches", max measures per system 1 },
  *   ...
- *   8  # score
- *   9  label="Scale degrees & rest"
- *  10  [M] 1 2 3 0    ← first note line → measure 1
+ *   5  score """
+ *   6      label="Scale degrees & rest"
+ *   7      [M] 1 2 3 0    ← first note line → measure 1
  */
 
 Given(

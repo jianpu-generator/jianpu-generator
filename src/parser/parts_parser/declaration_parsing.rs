@@ -232,7 +232,7 @@ fn parse_rhs_suffix_tokens(
 
 /// `range_instrument`, or `None` with a diagnostic when `kind` is a part
 /// that can't name one (only `notes` and `follow[X]` parts can).
-fn checked_range_instrument(
+pub(crate) fn checked_range_instrument(
     range_instrument: Option<Spanned<RangeInstrument>>,
     kind: &RawKind,
     errors: &mut Vec<RecoverableError>,
@@ -251,7 +251,7 @@ fn checked_range_instrument(
 
 /// `written` clamped into [`PART_SETTING_LIMITS`]`.volume`, reporting a
 /// diagnostic at `span` when it had to move.
-fn checked_volume(written: u16, span: Span, errors: &mut Vec<RecoverableError>) -> u8 {
+pub(crate) fn checked_volume(written: u16, span: Span, errors: &mut Vec<RecoverableError>) -> u8 {
     let clamped = PART_SETTING_LIMITS.volume.clamp(i32::from(written));
     if clamped.was_out_of_range {
         errors.push(RecoverableError::parts_volume_out_of_range(span, written));
@@ -261,7 +261,11 @@ fn checked_volume(written: u16, span: Span, errors: &mut Vec<RecoverableError>) 
 
 /// `written` clamped into [`PART_SETTING_LIMITS`]`.octave_offset`, reporting
 /// a diagnostic at `span` when it had to move.
-fn checked_octave_offset(written: i16, span: Span, errors: &mut Vec<RecoverableError>) -> i8 {
+pub(crate) fn checked_octave_offset(
+    written: i16,
+    span: Span,
+    errors: &mut Vec<RecoverableError>,
+) -> i8 {
     let clamped = PART_SETTING_LIMITS.octave_offset.clamp(i32::from(written));
     if clamped.was_out_of_range {
         errors.push(RecoverableError::parts_octave_offset_out_of_range(

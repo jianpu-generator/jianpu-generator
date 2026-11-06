@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::ast::parsed::{
     FontFamilyChoice, MetadataFlagKey, MetadataNumberKey, MetadataTextKey, Offset, ParsedMetadata,
-    PresetKey, TextStyleKind, YesNo, DIRECTIVE_ROW_OFFSET_KEY,
+    PresetKey, TextStyle, TextStyleComponent, TextStyleKind, YesNo, DIRECTIVE_ROW_OFFSET_KEY,
 };
 use crate::error::{RecoverableError, Span};
 
@@ -26,6 +26,9 @@ fn span_of_value_in_line(byte_offset: usize, line: &str, key_raw: &str, value_ra
 /// trimmed and has its surrounding `"` quotes stripped.
 pub struct MetadataLine<'a> {
     pub key: &'a str,
+    /// The key as the document spells it, for messages: `notes font size` in
+    /// anyfix, the same as `key` in the section syntax.
+    pub written_key: &'a str,
     pub value: &'a str,
     pub key_span: Span,
     pub value_span: Span,
@@ -56,6 +59,7 @@ pub fn metadata_lines(
             let key = key_raw.trim();
             Ok(MetadataLine {
                 key,
+                written_key: key,
                 value: value_raw.trim().trim_matches('"'),
                 key_span: span_of_key_in_line(byte_offset, line, key_raw, key),
                 value_span: span_of_value_in_line(byte_offset, line, key_raw, value_raw),
@@ -127,7 +131,7 @@ fn recorded<T>(
     result.map_err(|error| errors.push(error)).ok()
 }
 
-use text_style_parser::parse_text_style_object;
+use text_style_parser::{parse_component_value, parse_text_style_object};
 
 #[path = "text_style_parser.rs"]
 mod text_style_parser;
@@ -182,12 +186,13 @@ pub(crate) fn apply_field(
     errors: &mut Vec<RecoverableError>,
 ) {
     let MetadataLine {
-        key,
+        key: keyword,
+        written_key: key,
         value,
         key_span,
         value_span,
     } = *line;
-    match MetadataKey::from_keyword(key) {
+    match MetadataKey::from_keyword(keyword) {
         Some(MetadataKey::Number(number_key)) => {
             if let Some(number) = recorded(parse_positive_u32(key, value, value_span), errors) {
                 *metadata.number_mut(number_key) = Some(number);
@@ -218,10 +223,32 @@ pub(crate) fn apply_field(
                 errors,
             ),
         },
-        None if PresetKey::from_keyword(key).is_some() => {
+        None if PresetKey::from_keyword(keyword).is_some() => {
             errors.push(RecoverableError::preset_only_field(key_span, key))
         }
         None => errors.push(RecoverableError::metadata_unknown_field(key_span, key)),
+    }
+}
+
+/// Applies one field of a `<kind> style { … }` record. `field.written_key`
+/// names the style's field in messages.
+pub(crate) fn apply_text_style_field(
+    style: &mut TextStyle,
+    field: &MetadataLine,
+    errors: &mut Vec<RecoverableError>,
+) {
+    let Some(component) = TextStyleComponent::from_keyword(field.key) else {
+        errors.push(RecoverableError::metadata_unknown_field(
+            field.key_span,
+            field.written_key,
+        ));
+        return;
+    };
+    if let Some(value) = recorded(
+        parse_component_value(component, field.written_key, field.value, field.value_span),
+        errors,
+    ) {
+        style.set_component(value);
     }
 }
 

@@ -24,7 +24,7 @@ export const metadataFieldHelp: Record<
 
   author: `Rendered in the header, below the title/subtitle.`,
 
-  sequence: `Style of the \`# sequence\` summary line rendered near the top of the score.`,
+  sequence: `Style of the \`sequence\` summary line rendered near the top of the score.`,
 
   'part-legend': `Style of the part-name legend entries shown in the header.`,
 
@@ -100,5 +100,5 @@ Can be overridden from a specific measure onward with a
 
 Moves that row's text without affecting the layout or spacing of anything else on the page.
 
-Not applied to the \`# sequence\` summary header line.`,
+Not applied to the \`sequence\` summary header line.`,
 }

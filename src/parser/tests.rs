@@ -66,7 +66,7 @@ fn parses_full_document() {
 
 #[test]
 fn unknown_section_recoverable() {
-    let input = "# unknown\nfoo\n";
+    let input = "# unknown\nfoo\n\n# score\n";
     let doc = parse(input, "test.poentaro", &[]).expect("unknown section must not abort parsing");
     assert!(doc
         .section_structure_errors

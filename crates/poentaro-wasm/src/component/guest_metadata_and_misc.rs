@@ -30,11 +30,8 @@ pub(super) fn update_metadata_field(
     preset_name: Option<String>,
     edit: MetadataEdit,
 ) -> String {
-    poentaro::source_edit::update_metadata_field(
-        &source,
-        preset_name.as_deref(),
-        metadata_edit_from_wit(edit),
-    )
+    let edit = metadata_edit_from_wit(edit);
+    poentaro::source_edit::update_metadata_field(&source, preset_name.as_deref(), edit)
 }
 
 pub(super) fn highlight_tokens(source: String) -> Vec<HighlightToken> {
@@ -216,7 +213,7 @@ fn offsets_to_wit(offsets: &[usize]) -> Vec<u32> {
 }
 
 pub(super) fn format_score(source: String) -> String {
-    poentaro::format_source::format_score(&source)
+    poentaro::document::formatted(&source)
 }
 
 // Same underlying `crate::part_declarations::list_part_declarations_response`/
@@ -307,89 +304,4 @@ pub(super) fn compress_share_payload(payload: String) -> Vec<u8> {
 
 pub(super) fn decompress_share_payload(bytes: Vec<u8>) -> Option<String> {
     crate::decompress_share_payload_bytes(&bytes)
-}
-
-// Same underlying `crate::selection_range::resolve_selection_range_response`
-// the old `selection_range::resolve_selection_range` `#[wasm_bindgen]
-// fn` calls — that function was already unconditional (not gated on
-// `wasm-bindgen-boundary`), unlike this group's other findings, so no
-// prerequisite-ungating fix was needed here, only widening
-// `ClickableElementId`/`NoteCellOut`/`LyricCellOut`/
-// `ResolveSelectionRangeResponse`'s reachability from `component.rs` (see
-// `selection_range/mod.rs`'s own comment on its `pub(crate) use`).
-
-pub(super) fn resolve_selection_range(
-    note_spans: Vec<NoteSpan>,
-    lyric_spans: Vec<LyricSpan>,
-    anchor: ClickableElementId,
-    current: ClickableElementId,
-) -> ResolveSelectionRangeResponse {
-    let note_spans: Vec<crate::types::NoteSpanOut> =
-        note_spans.into_iter().map(note_span_from_wit).collect();
-    let lyric_spans: Vec<crate::types::LyricSpanOut> =
-        lyric_spans.into_iter().map(lyric_span_from_wit).collect();
-    let anchor = clickable_element_id_from_wit(anchor);
-    let current = clickable_element_id_from_wit(current);
-    resolve_selection_range_response_to_wit(
-        crate::selection_range::resolve_selection_range_response(
-            &note_spans,
-            &lyric_spans,
-            &anchor,
-            &current,
-        ),
-    )
-}
-
-pub(super) fn resolve_system_selection_range(
-    note_spans: Vec<NoteSpan>,
-    lyric_spans: Vec<LyricSpan>,
-    systems: Vec<MeasureRangeIn>,
-    anchor: ClickableElementId,
-    current: ClickableElementId,
-) -> ResolveSelectionRangeResponse {
-    let note_spans: Vec<crate::types::NoteSpanOut> =
-        note_spans.into_iter().map(note_span_from_wit).collect();
-    let lyric_spans: Vec<crate::types::LyricSpanOut> =
-        lyric_spans.into_iter().map(lyric_span_from_wit).collect();
-    let systems: Vec<poentaro::grid_layout::MeasureRange> =
-        systems.into_iter().map(measure_range_in_from_wit).collect();
-    resolve_selection_range_response_to_wit(
-        crate::selection_range::resolve_system_selection_range_response(
-            &note_spans,
-            &lyric_spans,
-            &systems,
-            &clickable_element_id_from_wit(anchor),
-            &clickable_element_id_from_wit(current),
-        ),
-    )
-}
-
-pub(super) fn fully_selected_labels(
-    note_spans: Vec<NoteSpan>,
-    lyric_spans: Vec<LyricSpan>,
-    labels: Vec<ClickableElementId>,
-    note_cells: Vec<NoteCellIn>,
-    lyric_cells: Vec<LyricCellIn>,
-) -> Vec<bool> {
-    let note_spans: Vec<crate::types::NoteSpanOut> =
-        note_spans.into_iter().map(note_span_from_wit).collect();
-    let lyric_spans: Vec<crate::types::LyricSpanOut> =
-        lyric_spans.into_iter().map(lyric_span_from_wit).collect();
-    let labels: Vec<crate::selection_range::ClickableElementId> = labels
-        .into_iter()
-        .map(clickable_element_id_from_wit)
-        .collect();
-    let note_cells: Vec<crate::note_selection_types::NoteCellIn> =
-        note_cells.into_iter().map(note_cell_in_from_wit).collect();
-    let lyric_cells: Vec<crate::lyric_selection_types::LyricCellIn> = lyric_cells
-        .into_iter()
-        .map(lyric_cell_in_from_wit)
-        .collect();
-    crate::selection_range::fully_selected_labels(
-        &note_spans,
-        &lyric_spans,
-        &labels,
-        &note_cells,
-        &lyric_cells,
-    )
 }

@@ -53,39 +53,9 @@ pub fn format_score(source: &str) -> String {
         return source.to_string();
     }
 
-    let raw_groups = parser::score::measure_group::collect_groups(&score_content);
-    let filtered_groups: Vec<Vec<RawSourceLine>> = raw_groups
-        .iter()
-        .map(|group| format_group(group, &declarations))
-        .collect();
-
-    // Validate that the filtered/reordered groups still desugar cleanly
-    // (best-effort safety net — `desugar_groups` is not used for rendering
-    // here: it always materializes exactly one line per declared part per
-    // group regardless of whether that part had an explicit line, which
-    // would put every dropped fixed-schema (Notes/Chords/Percussion) rest
-    // line right back. The actual output is built directly from
-    // `filtered_groups` below, so intentionally-dropped lines stay dropped
-    // and real `.poentaro` parsing's own implicit-fill covers them, exactly as
-    // it already does for any measure group that omits a part's line.
-    if desugar::desugar_groups(filtered_groups.clone(), &declarations, score_offset).is_err() {
+    let Some(new_score_content) = format_measures(&score_content, score_offset, &declarations)
+    else {
         return source.to_string();
-    }
-
-    let group_texts: Vec<String> = filtered_groups
-        .iter()
-        .map(|group| {
-            group
-                .iter()
-                .map(|(content, _offset)| content.as_str())
-                .collect::<Vec<_>>()
-                .join("\n")
-        })
-        .collect();
-    let new_score_content = if group_texts.is_empty() {
-        String::new()
-    } else {
-        format!("{}\n", group_texts.join("\n\n"))
     };
 
     let mut result = String::with_capacity(
@@ -103,6 +73,50 @@ pub fn format_score(source: &str) -> String {
             .unwrap_or(""),
     );
     result
+}
+
+/// Formats measures in the current score syntax (measure groups split by
+/// blank lines) with the three cleanups in the module docs. `None` when the
+/// result would no longer desugar.
+pub(crate) fn format_measures(
+    score_content: &str,
+    score_offset: usize,
+    declarations: &[PartDecl],
+) -> Option<String> {
+    let raw_groups = parser::score::measure_group::collect_groups(score_content);
+    let filtered_groups: Vec<Vec<RawSourceLine>> = raw_groups
+        .iter()
+        .map(|group| format_group(group, declarations))
+        .collect();
+
+    // Validate that the filtered/reordered groups still desugar cleanly
+    // (best-effort safety net — `desugar_groups` is not used for rendering
+    // here: it always materializes exactly one line per declared part per
+    // group regardless of whether that part had an explicit line, which
+    // would put every dropped fixed-schema (Notes/Chords/Percussion) rest
+    // line right back. The actual output is built directly from
+    // `filtered_groups` below, so intentionally-dropped lines stay dropped
+    // and real `.poentaro` parsing's own implicit-fill covers them, exactly as
+    // it already does for any measure group that omits a part's line.
+    if desugar::desugar_groups(filtered_groups.clone(), declarations, score_offset).is_err() {
+        return None;
+    }
+
+    let group_texts: Vec<String> = filtered_groups
+        .iter()
+        .map(|group| {
+            group
+                .iter()
+                .map(|(content, _offset)| content.as_str())
+                .collect::<Vec<_>>()
+                .join("\n")
+        })
+        .collect();
+    Some(if group_texts.is_empty() {
+        String::new()
+    } else {
+        format!("{}\n", group_texts.join("\n\n"))
+    })
 }
 
 /// The declaration a `[Key]` addresses.

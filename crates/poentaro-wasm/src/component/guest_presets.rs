@@ -57,15 +57,11 @@ pub(super) fn set_preset_part_shown(
     all_parts: Vec<String>,
     part: PartShown,
 ) -> String {
-    source_edit::set_preset_part_shown(
-        &source,
-        &preset_name,
-        &all_parts,
-        &source_edit::PartShown {
-            abbreviation: part.abbreviation,
-            shown: part.shown,
-        },
-    )
+    let part = source_edit::PartShown {
+        abbreviation: part.abbreviation,
+        shown: part.shown,
+    };
+    source_edit::set_preset_part_shown(&source, &preset_name, &all_parts, &part)
 }
 
 pub(super) fn set_preset_part_soloed(
@@ -74,15 +70,11 @@ pub(super) fn set_preset_part_soloed(
     all_parts: Vec<String>,
     part: PartSoloed,
 ) -> String {
-    source_edit::set_preset_part_soloed(
-        &source,
-        &preset_name,
-        &all_parts,
-        &source_edit::PartSoloed {
-            abbreviation: part.abbreviation,
-            soloed: part.soloed,
-        },
-    )
+    let part = source_edit::PartSoloed {
+        abbreviation: part.abbreviation,
+        soloed: part.soloed,
+    };
+    source_edit::set_preset_part_soloed(&source, &preset_name, &all_parts, &part)
 }
 
 pub(super) fn new_preset_name_error(source: String, name: String) -> Option<String> {
@@ -90,15 +82,13 @@ pub(super) fn new_preset_name_error(source: String, name: String) -> Option<Stri
 }
 
 pub(super) fn add_preset_section(source: String, preset: NewPreset) -> String {
-    source_edit::add_preset_section(
-        &source,
-        source_edit::NewPreset {
-            name: preset.name,
-            visible_parts: preset.visible_parts,
-            soloed_parts: preset.soloed_parts,
-            notation: notation_from_wit(preset.notation),
-        },
-    )
+    let preset = source_edit::NewPreset {
+        name: preset.name,
+        visible_parts: preset.visible_parts,
+        soloed_parts: preset.soloed_parts,
+        notation: notation_from_wit(preset.notation),
+    };
+    source_edit::add_preset_section(&source, preset)
 }
 
 pub(super) fn follow_preset_rename(

@@ -257,6 +257,9 @@ pub(super) fn render_mei(
         .into_iter()
         .map(instrument_info_from_wit)
         .collect();
+    if let Err(diagnostics) = crate::opened_document::open_checked(&source, &instruments) {
+        return RenderMeiResponse::Err(diagnostics_error_to_wit(&diagnostics));
+    }
     match poentaro::render_mei_from_source_with_visibility(
         &source,
         "input.poentaro",

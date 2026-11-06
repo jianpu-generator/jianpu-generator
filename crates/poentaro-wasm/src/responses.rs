@@ -41,19 +41,11 @@ mod responses_midi;
 #[cfg(feature = "midi")]
 pub(crate) use responses_midi::*;
 
-pub(crate) fn render_response(
+fn render_output_response(
     source: &str,
-    visibility: &ResolvedPartVisibility,
-    instruments: &[InstrumentInfo],
-    note_labels: NoteLabels,
+    result: Result<poentaro::RenderDocumentOutput, poentaro::error::IrrecoverableError>,
 ) -> RenderResponse {
-    match render_documents_from_source_with_visibility(
-        source,
-        "input.poentaro",
-        visibility,
-        instruments,
-        note_labels,
-    ) {
+    match result {
         Ok(output) => {
             let diagnostics: Vec<_> = output
                 .diagnostics
@@ -67,15 +59,34 @@ pub(crate) fn render_response(
                 diagnostic_view_zones,
             }
         }
-        Err(e) => {
-            let diagnostics = vec![diagnostic_from_error(&e)];
-            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
-            RenderResponse::Err {
-                diagnostics,
-                diagnostic_view_zones,
-            }
-        }
+        Err(error) => render_failure(source, vec![diagnostic_from_error(&error)]),
     }
+}
+
+fn render_failure(text: &str, diagnostics: Vec<crate::types::DiagnosticOut>) -> RenderResponse {
+    let diagnostic_view_zones = group_diagnostics_into_view_zones(text, &diagnostics);
+    RenderResponse::Err {
+        diagnostics,
+        diagnostic_view_zones,
+    }
+}
+
+pub(crate) fn render_response(
+    source: &str,
+    visibility: &ResolvedPartVisibility,
+    instruments: &[InstrumentInfo],
+    note_labels: NoteLabels,
+) -> RenderResponse {
+    render_output_response(
+        source,
+        render_documents_from_source_with_visibility(
+            source,
+            "input.poentaro",
+            visibility,
+            instruments,
+            note_labels,
+        ),
+    )
 }
 
 pub(crate) fn render_with_highlight_range_response(
@@ -85,36 +96,17 @@ pub(crate) fn render_with_highlight_range_response(
     instruments: &[InstrumentInfo],
     note_labels: NoteLabels,
 ) -> RenderResponse {
-    match render_documents_with_highlight_range_and_visibility(
+    render_output_response(
         source,
-        "input.poentaro",
-        measure_ranges,
-        visibility,
-        instruments,
-        note_labels,
-    ) {
-        Ok(output) => {
-            let diagnostics: Vec<_> = output
-                .diagnostics
-                .into_iter()
-                .map(diagnostic_from_diagnostic)
-                .collect();
-            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
-            RenderResponse::Ok {
-                documents: output.documents.iter().map(svg_document_to_out).collect(),
-                diagnostics,
-                diagnostic_view_zones,
-            }
-        }
-        Err(e) => {
-            let diagnostics = vec![diagnostic_from_error(&e)];
-            let diagnostic_view_zones = group_diagnostics_into_view_zones(source, &diagnostics);
-            RenderResponse::Err {
-                diagnostics,
-                diagnostic_view_zones,
-            }
-        }
-    }
+        render_documents_with_highlight_range_and_visibility(
+            source,
+            "input.poentaro",
+            measure_ranges,
+            visibility,
+            instruments,
+            note_labels,
+        ),
+    )
 }
 
 pub(crate) fn get_measure_at_offset_response(

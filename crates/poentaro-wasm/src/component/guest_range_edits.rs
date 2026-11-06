@@ -12,21 +12,40 @@ pub(super) fn shift_range_octave(
     ranges: Vec<ByteRange>,
     delta: i32,
 ) -> RangeEditResponse {
-    let ranges = to_source_edit_ranges(ranges);
-    let result = poentaro::source_edit::shift_range_octave(&source, &ranges, delta as i8);
-    to_range_edit_response(result)
+    edit_ranges(&source, ranges, |source, ranges| {
+        poentaro::source_edit::shift_range_octave(source, ranges, delta as i8)
+    })
 }
 
 pub(super) fn toggle_range_slur(source: String, ranges: Vec<ByteRange>) -> RangeEditResponse {
-    let ranges = to_source_edit_ranges(ranges);
-    let result = poentaro::source_edit::toggle_range_slur(&source, &ranges);
-    to_range_edit_response(result)
+    edit_ranges(&source, ranges, poentaro::source_edit::toggle_range_slur)
 }
 
 pub(super) fn toggle_range_tie(source: String, ranges: Vec<ByteRange>) -> RangeEditResponse {
-    let ranges = to_source_edit_ranges(ranges);
-    let result = poentaro::source_edit::toggle_range_tie(&source, &ranges);
-    to_range_edit_response(result)
+    edit_ranges(&source, ranges, poentaro::source_edit::toggle_range_tie)
+}
+
+/// Runs a range edit with the guest's ranges and result.
+fn edit_ranges(
+    source: &str,
+    ranges: Vec<ByteRange>,
+    edit: impl FnOnce(
+        &str,
+        &[poentaro::source_edit::ByteRange],
+    ) -> poentaro::source_edit::RangeEditResult,
+) -> RangeEditResponse {
+    let result = edit(source, &core_ranges(ranges));
+    RangeEditResponse {
+        source: result.source,
+        ranges: result
+            .ranges
+            .into_iter()
+            .map(|range| ByteRange {
+                start_byte: range.start_byte as _,
+                end_byte: range.end_byte as _,
+            })
+            .collect(),
+    }
 }
 
 pub(super) fn describe_selection(
@@ -34,41 +53,30 @@ pub(super) fn describe_selection(
     ranges: Vec<ByteRange>,
 ) -> Option<PitchDescription> {
     use poentaro::pitch_description as description;
-    let ranges = to_source_edit_ranges(ranges);
-    description::describe_selection(&source, &ranges).map(|described| match described {
-        description::PitchDescription::Note(note) => PitchDescription::Note(NoteDescription {
-            letter_name: note.letter_name,
-        }),
-        description::PitchDescription::Chord(chord) => PitchDescription::Chord(ChordDescription {
-            chord_name: chord.chord_name,
-            tone_names: chord.tone_names,
-            bass_note: chord.bass_note,
-            guitar_diagram_svgs: chord.guitar_diagram_svgs,
-            piano_diagram_svg: chord.piano_diagram_svg,
-        }),
-    })
+    description::describe_selection(&source, &core_ranges(ranges)).map(
+        |described| match described {
+            description::PitchDescription::Note(note) => PitchDescription::Note(NoteDescription {
+                letter_name: note.letter_name,
+            }),
+            description::PitchDescription::Chord(chord) => {
+                PitchDescription::Chord(ChordDescription {
+                    chord_name: chord.chord_name,
+                    tone_names: chord.tone_names,
+                    bass_note: chord.bass_note,
+                    guitar_diagram_svgs: chord.guitar_diagram_svgs,
+                    piano_diagram_svg: chord.piano_diagram_svg,
+                })
+            }
+        },
+    )
 }
 
-fn to_source_edit_ranges(ranges: Vec<ByteRange>) -> Vec<poentaro::source_edit::ByteRange> {
+fn core_ranges(ranges: Vec<ByteRange>) -> Vec<poentaro::source_edit::ByteRange> {
     ranges
         .into_iter()
         .map(|range| poentaro::source_edit::ByteRange {
-            start_byte: range.start_byte,
-            end_byte: range.end_byte,
+            start_byte: range.start_byte as _,
+            end_byte: range.end_byte as _,
         })
         .collect()
-}
-
-fn to_range_edit_response(result: poentaro::source_edit::RangeEditResult) -> RangeEditResponse {
-    RangeEditResponse {
-        source: result.source,
-        ranges: result
-            .ranges
-            .into_iter()
-            .map(|range| ByteRange {
-                start_byte: range.start_byte,
-                end_byte: range.end_byte,
-            })
-            .collect(),
-    }
 }

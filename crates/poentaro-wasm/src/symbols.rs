@@ -1,10 +1,14 @@
 use crate::diagnostics::diagnostic_from_error;
+use crate::opened_document::open_checked;
 use crate::types::{
     ListSymbolsResponse, OccurrenceRoleOut, RenameSymbolResponse, SpanOut, SymbolKindOut,
     SymbolOccurrenceOut, SymbolOut, TextEditOut,
 };
+use poentaro::error::Span;
 use poentaro::parser::parts_parser::InstrumentInfo;
-use poentaro::symbols::{collect_symbols, rename_edits, OccurrenceRole, Symbol, SymbolKind};
+use poentaro::symbols::{
+    collect_symbols, rename_edits_in_text, OccurrenceRole, Symbol, SymbolKind,
+};
 
 fn symbol_kind_to_out(kind: SymbolKind) -> SymbolKindOut {
     match kind {
@@ -27,6 +31,13 @@ fn occurrence_role_to_out(role: OccurrenceRole) -> OccurrenceRoleOut {
     }
 }
 
+fn span_to_out(span: Span) -> SpanOut {
+    SpanOut {
+        start: span.start,
+        end: span.end,
+    }
+}
+
 fn symbol_to_out(symbol: Symbol) -> SymbolOut {
     SymbolOut {
         name: symbol.name,
@@ -35,14 +46,8 @@ fn symbol_to_out(symbol: Symbol) -> SymbolOut {
             .occurrences
             .into_iter()
             .map(|occurrence| SymbolOccurrenceOut {
-                span: SpanOut {
-                    start: occurrence.span.start,
-                    end: occurrence.span.end,
-                },
-                hit_span: SpanOut {
-                    start: occurrence.hit_span.start,
-                    end: occurrence.hit_span.end,
-                },
+                span: span_to_out(occurrence.span),
+                hit_span: span_to_out(occurrence.hit_span),
                 role: occurrence_role_to_out(occurrence.role),
             })
             .collect(),
@@ -53,9 +58,12 @@ pub(crate) fn list_symbols_response(
     source: &str,
     instruments: &[InstrumentInfo],
 ) -> ListSymbolsResponse {
+    if let Err(diagnostics) = open_checked(source, instruments) {
+        return ListSymbolsResponse::Err { diagnostics };
+    }
     match poentaro::parser::parse(source, "input.poentaro", instruments) {
-        Ok(document) => ListSymbolsResponse::Ok {
-            symbols: collect_symbols(&document)
+        Ok(parsed) => ListSymbolsResponse::Ok {
+            symbols: collect_symbols(&parsed)
                 .into_iter()
                 .map(symbol_to_out)
                 .collect(),
@@ -73,21 +81,31 @@ pub(crate) fn rename_symbol_response(
     new_name: &str,
     instruments: &[InstrumentInfo],
 ) -> RenameSymbolResponse {
-    match poentaro::parser::parse(source, "input.poentaro", instruments) {
-        Ok(document) => RenameSymbolResponse::Ok {
-            edits: rename_edits(&document, symbol_kind_from_out(kind), old_name, new_name)
-                .into_iter()
-                .map(|edit| TextEditOut {
-                    span: SpanOut {
-                        start: edit.span.start,
-                        end: edit.span.end,
-                    },
-                    replacement: edit.replacement,
-                })
-                .collect(),
-        },
-        Err(error) => RenameSymbolResponse::Err {
-            diagnostics: vec![diagnostic_from_error(&error)],
-        },
+    if let Err(diagnostics) = open_checked(source, instruments) {
+        return RenameSymbolResponse::Err { diagnostics };
+    }
+    let parsed = match poentaro::parser::parse(source, "input.poentaro", instruments) {
+        Ok(parsed) => parsed,
+        Err(error) => {
+            return RenameSymbolResponse::Err {
+                diagnostics: vec![diagnostic_from_error(&error)],
+            }
+        }
+    };
+    let edits = rename_edits_in_text(
+        source,
+        &parsed,
+        symbol_kind_from_out(kind),
+        old_name,
+        new_name,
+    );
+    RenameSymbolResponse::Ok {
+        edits: edits
+            .into_iter()
+            .map(|edit| TextEditOut {
+                span: span_to_out(edit.span),
+                replacement: edit.replacement,
+            })
+            .collect(),
     }
 }

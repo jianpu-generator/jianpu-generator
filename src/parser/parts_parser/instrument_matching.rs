@@ -53,7 +53,7 @@ fn instrument_fuzzy_score(query: &str, instrument: &InstrumentInfo) -> u32 {
     .unwrap_or(0)
 }
 
-pub(super) fn validate_soundfont(
+pub(crate) fn validate_soundfont(
     inner: &str,
     span: Span,
     errors: &mut Vec<RecoverableError>,

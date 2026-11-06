@@ -36,13 +36,65 @@ pub fn read_source(input: &Path) -> Result<String, IrrecoverableError> {
     })
 }
 
+/// Reads a document to compile. A document with anyfix errors is an error
+/// listing each one, since part of what it says can't be read.
+pub fn read_document_source(input: &Path) -> Result<String, IrrecoverableError> {
+    let source = read_source(input)?;
+    let errors = crate::document::anyfix_errors(&source, &[]);
+    if errors.is_empty() {
+        return Ok(source);
+    }
+    let report = errors
+        .iter()
+        .map(|error| {
+            let position = anyfix_expr::line_column(&source, error.span.start);
+            format!(
+                "{}:{}:{}: {}",
+                input.display(),
+                position.line,
+                position.column,
+                error.message()
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    Err(IrrecoverableError::new(
+        IrrecoverableErrorKind::AnyfixSourceInvalid {
+            span: Span::new(0, 0),
+            report,
+        },
+    ))
+}
+
+/// Writes `<input stem>.anyfix` next to `input`: the same document in anyfix
+/// expressions. Returns the written path.
+pub fn convert_to_anyfix(input: &Path) -> Result<std::path::PathBuf, IrrecoverableError> {
+    let source = read_source(input)?;
+    let output =
+        input.with_extension(crate::parser::anyfix::ANYFIX_EXTENSION.trim_start_matches('.'));
+    write_file(&output, crate::parser::anyfix::convert(&source).as_bytes())?;
+    Ok(output)
+}
+
+/// Formats a document in place: an `.anyfix` one with
+/// [`crate::format_anyfix::format_anyfix`], any other with
+/// [`crate::format_source::format_score`].
+pub fn format_file(input: &Path) -> Result<(), IrrecoverableError> {
+    let source = read_source(input)?;
+    let formatted = crate::document::formatted(&source);
+    if formatted == source {
+        return Ok(());
+    }
+    write_file(input, formatted.as_bytes())
+}
+
 /// Parse and group a `.poentaro` file, with `# metadata` overlaid by the
 /// `# preset` named `preset_name`.
 pub(crate) fn parse_and_group(
     input: &Path,
     preset_name: Option<&str>,
 ) -> Result<crate::ast::grouped::Score, IrrecoverableError> {
-    let content = read_source(input)?;
+    let content = read_document_source(input)?;
     let filename = input.to_string_lossy().to_string();
     crate::compile_with_preset(&content, &filename, &[], preset_name)
         .map_err(|e| e.with_path(input))

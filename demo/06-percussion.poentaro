@@ -1,12 +1,9 @@
-# metadata
-title = "Percussion"
-max_measures_per_system = 1
+metadata { title "Percussion", max measures per system 1 },
 
-# parts
-Snare [Sn] = percussion "38: Acoustic Snare"
-Kick [Kk] = percussion "36: Bass Drum 1"
+parts ["Snare" [Sn]: percussion { sound 38 }, "Kick" [Kk]: percussion { sound 36 }],
 
-# score
-label="Hit (x) & rest (0)"
-[Sn] 0 x 0 x
-[Kk] x 0 x 0
+score """
+    label="Hit (x) & rest (0)"
+    [Sn] 0 x 0 x
+    [Kk] x 0 x 0
+    """,

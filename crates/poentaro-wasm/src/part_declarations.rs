@@ -1,4 +1,5 @@
 use crate::diagnostics::diagnostic_from_error;
+use crate::opened_document::open_checked;
 use crate::types::{ListPartDeclarationsResponse, ListPartsResponse, PartOut};
 use poentaro::parser::parts_parser::InstrumentInfo;
 use poentaro::{list_part_declarations_from_source, list_parts_from_source, source_edit};
@@ -7,6 +8,9 @@ pub(crate) fn list_part_declarations_response(
     source: &str,
     instruments: &[InstrumentInfo],
 ) -> ListPartDeclarationsResponse {
+    if let Err(diagnostics) = open_checked(source, instruments) {
+        return ListPartDeclarationsResponse::Err { diagnostics };
+    }
     match list_part_declarations_from_source(source, "input.poentaro", instruments) {
         Ok(declarations) => ListPartDeclarationsResponse::Ok { declarations },
         Err(error) => ListPartDeclarationsResponse::Err {
@@ -19,6 +23,9 @@ pub(crate) fn list_parts_response(
     source: &str,
     instruments: &[InstrumentInfo],
 ) -> ListPartsResponse {
+    if let Err(diagnostics) = open_checked(source, instruments) {
+        return ListPartsResponse::Err { diagnostics };
+    }
     let declarations_result =
         list_part_declarations_from_source(source, "input.poentaro", instruments);
     let declarations = declarations_result.unwrap_or_default();

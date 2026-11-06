@@ -1,5 +1,7 @@
 # Poentaro — `.poentaro` Syntax Reference
 
+New documents are written in anyfix expressions, described in `anyfix-syntax.md`. Its `score` string holds the `# score` body described here, unchanged.
+
 This document describes the input syntax accepted by **Poentaro** (formerly jianpu-generator) as implemented today. File extension: `.poentaro` (files saved before the rename end in `.jianpu`; they still open and import).
 
 ---

@@ -66,6 +66,12 @@ pub enum IrrecoverableErrorKind {
         span: Span,
         detail: String,
     },
+    /// An `.anyfix` document that can't be read.
+    /// `report` lists every problem, one `path:line:column: message` per line.
+    AnyfixSourceInvalid {
+        span: Span,
+        report: String,
+    },
     /// The CLI's `--preset` names no `# preset` section in the file.
     UnknownPreset {
         span: Span,

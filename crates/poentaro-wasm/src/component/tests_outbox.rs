@@ -106,9 +106,9 @@ fn decode_rejects_an_unsupported_version() {
 #[test]
 fn merge_three_way_merges_edits_on_different_lines() {
     let outcome = Component::merge_three_way(
-        "a\nb\nc\n".to_string(),
-        "A\nb\nc\n".to_string(),
-        "a\nb\nC\n".to_string(),
+        "score \"\"\"\n[M] 1\n\n[M] 2\n\n[M] 3\n\"\"\"\n".to_string(),
+        "score \"\"\"\n[M] 5\n\n[M] 2\n\n[M] 3\n\"\"\"\n".to_string(),
+        "score \"\"\"\n[M] 1\n\n[M] 2\n\n[M] 6\n\"\"\"\n".to_string(),
     );
     assert!(matches!(outcome, MergeOutcome::Clean(_)));
 }

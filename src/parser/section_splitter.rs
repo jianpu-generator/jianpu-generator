@@ -80,7 +80,7 @@ fn section_header_name(kind_str: &str, kind_start: usize) -> SectionHeaderName<'
 /// structure so downstream byte offsets (used in error spans) stay valid.
 /// A `//` inside a double-quoted string (e.g. `title = "http://example.com"`)
 /// does not start a comment.
-fn strip_comments(input: &str) -> String {
+pub(crate) fn strip_comments(input: &str) -> String {
     let mut out = Vec::with_capacity(input.len());
     let mut in_string = false;
     let mut in_comment = false;

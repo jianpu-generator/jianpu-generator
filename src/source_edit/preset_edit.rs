@@ -1,11 +1,14 @@
 //! Edits to `# preset "Name"` sections for the web editor's preset menu:
 //! rewriting one preset's `visible_parts`, `soloed_parts` or `notation` line, adding a new
 //! preset, and following a preset renamed in the editor. Each edit touches
-//! only the lines it needs, so the rest of the file keeps its formatting.
+//! only the lines it needs, so the rest of the file keeps its formatting. A
+//! document in anyfix expressions goes through [`super::anyfix_edit`].
 
 use itertools::Itertools;
 
+use super::anyfix_edit;
 use crate::ast::parsed::{Notation, PresetKey, DEFAULT_PRESET_NAME};
+use crate::document::is_anyfix;
 use crate::error::Span;
 use crate::parser::metadata_parser::metadata_lines;
 use crate::parser::section_splitter::{split_sections, RawSection, SectionKind};
@@ -21,7 +24,7 @@ pub enum PresetEdit {
 }
 
 impl PresetEdit {
-    fn key(&self) -> PresetKey {
+    pub(super) fn key(&self) -> PresetKey {
         match self {
             Self::VisibleParts(_) => PresetKey::VisibleParts,
             Self::SoloedParts(_) => PresetKey::SoloedParts,
@@ -29,7 +32,7 @@ impl PresetEdit {
         }
     }
 
-    fn value(&self) -> String {
+    pub(super) fn value(&self) -> String {
         match self {
             Self::VisibleParts(parts) | Self::SoloedParts(parts) => parts.join(", "),
             Self::Notation(notation) => notation.keyword().to_owned(),
@@ -48,7 +51,7 @@ impl PresetEdit {
 
     /// Whether writing this edit removes its line instead: only an empty
     /// `soloed_parts`, which solos nothing, the same as no line.
-    fn removes_line(&self) -> bool {
+    pub(super) fn removes_line(&self) -> bool {
         matches!(self, Self::SoloedParts(parts) if parts.is_empty())
     }
 }
@@ -92,6 +95,9 @@ fn notation_of(section: &RawSection) -> Option<Notation> {
 /// so a half-typed score doesn't empty the menu. Like the parser, it skips
 /// `"Default"` and every repeat of an earlier name.
 pub fn list_presets(source: &str) -> Vec<PresetSummary> {
+    if is_anyfix(source) {
+        return anyfix_edit::list_presets(source);
+    }
     split_sections(source)
         .0
         .iter()
@@ -167,6 +173,9 @@ fn replace_span(source: &str, span: Span, replacement: &str) -> String {
 /// line](PresetEdit::removes_line) deletes every `edit.key()` line instead.
 /// Returns `source` unchanged when no preset is called `name`.
 pub fn update_preset_field(source: &str, name: &str, edit: &PresetEdit) -> String {
+    if is_anyfix(source) {
+        return anyfix_edit::update_preset_field(source, name, edit);
+    }
     let Some(section) = preset_section(source, name) else {
         return source.to_owned();
     };
@@ -224,6 +233,16 @@ fn part_list_of(section: &RawSection, key: PresetKey) -> Option<Vec<String>> {
         })
 }
 
+/// The named preset's part list under `key`: `None` when no preset has that
+/// name, `Some(None)` when it sets none.
+fn preset_part_list(source: &str, name: &str, key: PresetKey) -> Option<Option<Vec<String>>> {
+    if is_anyfix(source) {
+        return anyfix_edit::has_preset(source, name)
+            .then(|| anyfix_edit::part_list_of(source, name, key));
+    }
+    preset_section(source, name).map(|section| part_list_of(&section, key))
+}
+
 /// A part pill clicked under a preset: which part, and whether it now shows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PartShown {
@@ -240,10 +259,9 @@ pub fn set_preset_part_shown(
     all_parts: &[String],
     part: &PartShown,
 ) -> String {
-    let Some(section) = preset_section(source, name) else {
+    let Some(visible) = preset_part_list(source, name, PresetKey::VisibleParts) else {
         return source.to_owned();
     };
-    let visible = part_list_of(&section, PresetKey::VisibleParts);
     let parts = all_parts
         .iter()
         .filter(|abbreviation| {
@@ -277,10 +295,10 @@ pub fn set_preset_part_soloed(
     all_parts: &[String],
     part: &PartSoloed,
 ) -> String {
-    let Some(section) = preset_section(source, name) else {
+    let Some(soloed) = preset_part_list(source, name, PresetKey::SoloedParts) else {
         return source.to_owned();
     };
-    let soloed = part_list_of(&section, PresetKey::SoloedParts).unwrap_or_default();
+    let soloed = soloed.unwrap_or_default();
     let parts = all_parts
         .iter()
         .filter(|abbreviation| {
@@ -317,6 +335,9 @@ fn new_section_offset(source: &str) -> usize {
 
 /// Adds a `# preset` section holding `preset`'s parts, solos and notation.
 pub fn add_preset_section(source: &str, preset: NewPreset) -> String {
+    if is_anyfix(source) {
+        return anyfix_edit::add_preset_section(source, preset);
+    }
     let offset = new_section_offset(source);
     let before = source.get(..offset).unwrap_or_default();
     let separator = if before.is_empty() || before.ends_with("\n\n") {

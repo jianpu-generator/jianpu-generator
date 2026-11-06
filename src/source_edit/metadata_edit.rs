@@ -1,7 +1,8 @@
 //! Reading and editing the `# metadata` section, or a `# preset`'s overrides
 //! of it, as a whole, for the web editor's Edit Metadata form. Parsing goes
 //! through the real `metadata_parser`, and each edit re-emits the section in
-//! canonical order.
+//! canonical order. A document in anyfix expressions goes through
+//! [`super::anyfix_edit`], which writes the same fields in its own syntax.
 
 use std::iter::once;
 
@@ -14,7 +15,9 @@ use crate::ast::parsed::{
 use crate::parser::metadata_parser::{metadata_lines, parse_metadata};
 use crate::parser::section_splitter::{split_sections, RawSection, SectionKind};
 
+use super::anyfix_edit;
 use super::preset_edit::preset_section;
+use crate::document::is_anyfix;
 
 /// The edited section's current field values, as the Edit Metadata form
 /// shows them.
@@ -60,7 +63,7 @@ fn non_blank(value: Option<String>) -> Option<String> {
 }
 
 impl MetadataEdit {
-    fn apply(self, fields: &mut MetadataFields) {
+    pub(super) fn apply(self, fields: &mut MetadataFields) {
         match self {
             Self::Text { key, value } => *fields.metadata.text_mut(key) = non_blank(value),
             Self::Number { key, value } => *fields.metadata.number_mut(key) = value,
@@ -112,6 +115,9 @@ fn fields_of_section(source: &str, section: &RawSection) -> MetadataFields {
 /// The field values of the preset called `preset_name`, or of `# metadata`
 /// when `None`; all-unset when the source has no such section.
 pub fn parse_metadata_fields(source: &str, preset_name: Option<&str>) -> MetadataFields {
+    if is_anyfix(source) {
+        return anyfix_edit::parse_metadata_fields(source, preset_name);
+    }
     edited_section(source, preset_name)
         .map(|section| fields_of_section(source, &section))
         .unwrap_or_default()
@@ -134,7 +140,20 @@ fn preset_only_lines(section: &RawSection) -> Vec<String> {
         .collect()
 }
 
-fn style_line(metadata: &ParsedMetadata, kind: TextStyleKind) -> Option<String> {
+/// One field of a canonical section: `value` as the section syntax writes it.
+pub(super) struct CanonicalField {
+    pub key: String,
+    pub value: String,
+}
+
+fn field(key: &str, value: String) -> CanonicalField {
+    CanonicalField {
+        key: key.to_owned(),
+        value,
+    }
+}
+
+fn style_field(metadata: &ParsedMetadata, kind: TextStyleKind) -> Option<CanonicalField> {
     let style = metadata.style(kind);
     let components = TextStyleComponent::ALL
         .iter()
@@ -146,52 +165,61 @@ fn style_line(metadata: &ParsedMetadata, kind: TextStyleKind) -> Option<String> 
         })
         .collect_vec();
     (!components.is_empty())
-        .then(|| format!("{} = {{ {} }}", kind.keyword(), components.join(", ")))
+        .then(|| field(kind.keyword(), format!("{{ {} }}", components.join(", "))))
 }
 
-/// Canonical order: `leading_lines`, each text kind's content then its
-/// style, the numeric keys, the remaining styles, the flags, then
-/// `directive_row_offset`, followed by one blank line.
-fn canonical_section(leading_lines: Vec<String>, fields: &MetadataFields) -> String {
+/// Canonical order: each text kind's content then its style, the numeric keys,
+/// the remaining styles, the flags, then `directive_row_offset`.
+pub(super) fn canonical_fields(fields: &MetadataFields) -> Vec<CanonicalField> {
     let metadata = &fields.metadata;
-    let text_lines = TextStyleKind::ALL
+    let text_fields = TextStyleKind::ALL
         .iter()
         .filter_map(|&kind| MetadataTextKey::from_style_kind(kind))
         .flat_map(|key| {
             [
                 metadata
                     .text(key)
-                    .map(|text| format!("{} = \"{text}\"", key.keyword())),
-                style_line(metadata, key.style_kind()),
+                    .map(|text| field(key.keyword(), format!("\"{text}\""))),
+                style_field(metadata, key.style_kind()),
             ]
         });
-    let number_lines = MetadataNumberKey::ALL.iter().map(|&key| {
+    let number_fields = MetadataNumberKey::ALL.iter().map(|&key| {
         metadata
             .number(key)
-            .map(|number| format!("{} = {number}", key.keyword()))
+            .map(|number| field(key.keyword(), number.to_string()))
     });
-    let other_style_lines = TextStyleKind::ALL
+    let other_style_fields = TextStyleKind::ALL
         .iter()
         .filter(|&&kind| MetadataTextKey::from_style_kind(kind).is_none())
-        .map(|&kind| style_line(metadata, kind));
-    let flag_lines = MetadataFlagKey::ALL.iter().map(|&key| {
+        .map(|&kind| style_field(metadata, kind));
+    let flag_fields = MetadataFlagKey::ALL.iter().map(|&key| {
         metadata
             .flag(key)
-            .map(|flag| format!("{} = {}", key.keyword(), YesNo::from_bool(flag).keyword()))
+            .map(|flag| field(key.keyword(), YesNo::from_bool(flag).keyword().to_owned()))
     });
-    let offset_line = fields
+    let offset_field = fields
         .directive_row_offset
         .as_ref()
-        .map(|offset| format!("{DIRECTIVE_ROW_OFFSET_KEY} = {offset}"));
+        .map(|offset| field(DIRECTIVE_ROW_OFFSET_KEY, offset.clone()));
+    text_fields
+        .chain(number_fields)
+        .chain(other_style_fields)
+        .chain(flag_fields)
+        .chain(once(offset_field))
+        .flatten()
+        .collect()
+}
+
+/// The section's lines in canonical order after `leading_lines`, followed by
+/// one blank line.
+fn canonical_section(leading_lines: Vec<String>, fields: &MetadataFields) -> String {
     leading_lines
         .into_iter()
-        .map(Some)
-        .chain(text_lines)
-        .chain(number_lines)
-        .chain(other_style_lines)
-        .chain(flag_lines)
-        .chain(once(offset_line))
-        .flatten()
+        .chain(
+            canonical_fields(fields)
+                .iter()
+                .map(|field| format!("{} = {}", field.key, field.value)),
+        )
         .map(|line| line + "\n")
         .chain(once("\n".to_owned()))
         .collect()
@@ -206,6 +234,9 @@ pub fn update_metadata_field(
     preset_name: Option<&str>,
     edit: MetadataEdit,
 ) -> String {
+    if is_anyfix(source) {
+        return anyfix_edit::update_metadata_field(source, preset_name, edit);
+    }
     let Some(section) = edited_section(source, preset_name) else {
         return source.to_owned();
     };

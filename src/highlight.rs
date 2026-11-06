@@ -4,6 +4,7 @@
 
 use itertools::Itertools;
 
+use crate::document::is_anyfix;
 use crate::error::Span;
 use crate::parser::metadata_parser::{metadata_key_spans, preset_key_spans};
 use crate::parser::parts_parser::part_kind_spans;
@@ -69,6 +70,9 @@ fn section_tokens(section: &RawSection) -> Vec<HighlightToken> {
 /// Every keyword in `source`, ordered by position. Each token lies on a
 /// single line.
 pub fn highlight_tokens(source: &str) -> Vec<HighlightToken> {
+    if is_anyfix(source) {
+        return anyfix_highlight::highlight_tokens(source);
+    }
     let (sections, _) = split_sections(source);
     sections
         .iter()
@@ -89,6 +93,9 @@ pub struct SectionHeader {
 /// headers `split_sections` recognizes, so a header-like line the parser
 /// ignores (e.g. an indented `  # parts`) is never reported.
 pub fn section_headers(source: &str) -> Vec<SectionHeader> {
+    if is_anyfix(source) {
+        return anyfix_highlight::section_headers(source);
+    }
     let (sections, _) = split_sections(source);
     sections
         .into_iter()
@@ -98,6 +105,8 @@ pub fn section_headers(source: &str) -> Vec<SectionHeader> {
         })
         .collect()
 }
+
+mod anyfix_highlight;
 
 #[cfg(test)]
 #[path = "highlight_tests.rs"]

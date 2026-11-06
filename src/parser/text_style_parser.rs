@@ -5,7 +5,7 @@ use super::{parse_bool, parse_font_family, parse_non_negative_u32, parse_positiv
 
 /// Parses one `component: value` pair of a `<kind> = { ... }` object literal.
 /// `qualified_field` (`<kind>.<component>`) names the field in errors.
-fn parse_component_value(
+pub(super) fn parse_component_value(
     component: TextStyleComponent,
     qualified_field: &str,
     field_value: &str,

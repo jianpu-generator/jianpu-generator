@@ -14,6 +14,10 @@ pub use setting_limits::{
 };
 
 use declaration_parsing::parse_declaration_line;
+pub(crate) use declaration_parsing::{
+    checked_octave_offset, checked_range_instrument, checked_volume,
+};
+pub(crate) use instrument_matching::validate_soundfont;
 use lyrics_declaration::{resolve_lyrics_declaration, LyricsDeclarationHeader};
 
 #[cfg(test)]
@@ -72,23 +76,23 @@ pub struct SourceRawPartDecl {
     pub octave_offset: Option<i8>,
 }
 
-struct RawDecl {
-    display_name: String,
-    abbreviation: String,
-    abbreviation_span: Span,
-    span: Span,
-    kind: RawKind,
+pub(crate) struct RawDecl {
+    pub(crate) display_name: String,
+    pub(crate) abbreviation: String,
+    pub(crate) abbreviation_span: Span,
+    pub(crate) span: Span,
+    pub(crate) kind: RawKind,
     /// `None` when omitted on the declaration line (follow parts inherit from target).
-    range_instrument: Option<RangeInstrument>,
+    pub(crate) range_instrument: Option<RangeInstrument>,
     /// `None` when omitted on the declaration line (follow parts inherit from target).
-    soundfont: Option<Soundfont>,
+    pub(crate) soundfont: Option<Soundfont>,
     /// `None` when omitted on the declaration line (follow parts inherit from target).
-    volume: Option<u8>,
+    pub(crate) volume: Option<u8>,
     /// `None` when omitted on the declaration line (follow parts inherit from target).
-    octave_offset: Option<i8>,
+    pub(crate) octave_offset: Option<i8>,
 }
 
-enum RawKind {
+pub(crate) enum RawKind {
     Concrete(PartKind),
     Follow { target: String, target_span: Span },
     Lyrics { target: String, target_span: Span },
@@ -124,8 +128,15 @@ pub fn collect_source_raw_declarations(
     errors: &mut Vec<RecoverableError>,
     instruments: &[InstrumentInfo],
 ) -> Vec<SourceRawPartDecl> {
-    collect_raw_declarations(content, base_offset, errors, instruments)
-        .into_iter()
+    source_declarations(
+        collect_raw_declarations(content, base_offset, errors, instruments),
+        full_source,
+    )
+}
+
+/// `raw` as source-level part declarations of `full_source`.
+pub(crate) fn source_declarations(raw: Vec<RawDecl>, full_source: &str) -> Vec<SourceRawPartDecl> {
+    raw.into_iter()
         .map(|raw_decl| {
             let (mode, follow_target) = raw_kind_to_source_mode(&raw_decl.kind);
             SourceRawPartDecl {
@@ -237,7 +248,10 @@ fn collect_raw_declarations(
     raw_declarations
 }
 
-fn resolve_declarations(raw: Vec<RawDecl>, errors: &mut Vec<RecoverableError>) -> Vec<PartDecl> {
+pub(crate) fn resolve_declarations(
+    raw: Vec<RawDecl>,
+    errors: &mut Vec<RecoverableError>,
+) -> Vec<PartDecl> {
     let mut declarations = Vec::new();
     for (index, raw_decl) in raw.into_iter().enumerate() {
         let RawDecl {
