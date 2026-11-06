@@ -138,9 +138,9 @@ When('I press the paste keyboard shortcut', async ({ page }) => {
 Then(
   "system 1's Harmony part now contains just the notes {string}",
   async ({ page }, notes: string) => {
-    // Line 11 (0-indexed) is measure 1's Harmony line in the fixture above.
+    // Line 7 (0-indexed) is measure 1's Harmony line in the fixture above.
     await expect
-      .poll(async () => (await getModelLines(page))[11], { timeout: 3_000 })
+      .poll(async () => (await getModelLines(page))[7], { timeout: 3_000 })
       .toBe(`[H] ${notes}`)
   },
 )

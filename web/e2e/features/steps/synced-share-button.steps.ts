@@ -310,8 +310,8 @@ When(
   "the owner edits the synced score's title to {string}",
   async ({ page }, title: string) => {
     const edited = SYNCED_SOURCE.replace(
-      'title = "Synced Score"',
-      `title = "${title}"`,
+      'title "Synced Score"',
+      `title "${title}"`,
     )
     await page.evaluate((value) => {
       const editor = (

@@ -113,7 +113,7 @@ async function findDragCoords(
       const model = ed?.getModel()
       if (!ed || !model) throw new Error('editor not mounted')
       const text = model.getValue()
-      const dataLinesStart = text.indexOf('[')
+      const dataLinesStart = text.indexOf('[', text.indexOf('score """'))
       const startIndex = text.indexOf(startNeedle, dataLinesStart)
       const endIndex = text.indexOf(endNeedle, startIndex) + endNeedle.length
       const startPos = model.getPositionAt(startIndex)
@@ -282,7 +282,7 @@ async function selectPreciselyBetween(
       const monacoApi = window.monaco
       if (!ed || !model || !monacoApi) throw new Error('editor not mounted')
       const text = model.getValue()
-      const dataLinesStart = text.indexOf('[')
+      const dataLinesStart = text.indexOf('[', text.indexOf('score """'))
       const startIndex = text.indexOf(startNeedle, dataLinesStart)
       const endIndex = text.indexOf(endNeedle, startIndex) + endNeedle.length
       const startPos = model.getPositionAt(startIndex)
@@ -341,7 +341,7 @@ When(
         const monacoApi = window.monaco
         if (!ed || !model || !monacoApi) throw new Error('editor not mounted')
         const text = model.getValue()
-        const dataLinesStart = text.indexOf('[')
+        const dataLinesStart = text.indexOf('[', text.indexOf('score """'))
         const firstIndex = text.indexOf(firstNeedle, dataLinesStart)
         const secondIndex = text.indexOf(
           secondNeedle,

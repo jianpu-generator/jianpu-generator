@@ -58,6 +58,14 @@ Given(
     })
 
     await focusEditor()
+    // Focusing clicks below this short text, which leaves the caret on the
+    // closing `"""`, outside every measure.
+    await page.evaluate(() => {
+      window.monaco?.editor.getEditors()[0]?.setPosition({
+        lineNumber: 6,
+        column: 1,
+      })
+    })
   },
 )
 

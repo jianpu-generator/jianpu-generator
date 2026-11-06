@@ -108,8 +108,8 @@ Then(
     await expect
       .poll(() => getEditorSelections(page), { timeout: 3_000 })
       .toEqual([
-        { startLineNumber: 17, endLineNumber: 18 }, // "C" only
-        { startLineNumber: 11, endLineNumber: 12 }, // "A" only
+        { startLineNumber: 14, endLineNumber: 15 }, // "C" only
+        { startLineNumber: 8, endLineNumber: 9 }, // "A" only
       ])
   },
 )

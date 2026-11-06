@@ -291,7 +291,6 @@ Given(
     await page.keyboard.press('Control+g')
     await page.keyboard.type('7')
     await page.keyboard.press('Enter')
-    await page.keyboard.press('Home')
     await page.keyboard.press('Shift+End')
     await page.waitForTimeout(300)
   },

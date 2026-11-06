@@ -88,7 +88,7 @@ When(
         ).monaco?.editor
           .getEditors()[0]
           ?.getModel()
-          ?.getLineCount() === 18,
+          ?.getLineCount() === 16,
       undefined,
       { timeout: 30_000 },
     )
@@ -115,8 +115,8 @@ Then(
     await expect
       .poll(() => getEditorSelections(page), { timeout: 3_000 })
       .toEqual([
-        { startLineNumber: 17, endLineNumber: 18 }, // "C" only
-        { startLineNumber: 11, endLineNumber: 12 }, // "A" only (the repeat resolves to the same written lines)
+        { startLineNumber: 14, endLineNumber: 15 }, // "C" only
+        { startLineNumber: 8, endLineNumber: 9 }, // "A" only (the repeat resolves to the same written lines)
       ])
   },
 )

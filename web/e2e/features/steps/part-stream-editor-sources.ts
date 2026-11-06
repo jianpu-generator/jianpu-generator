@@ -51,9 +51,10 @@ score """
     """,
 `
 
-const APPENDED_CHORD_LYRICS_SOURCE = `${CHORD_BOUND_LYRICS_SOURCE}
-[C] g h
-`
+const APPENDED_CHORD_LYRICS_SOURCE = CHORD_BOUND_LYRICS_SOURCE.replace(
+  '    """,',
+  '\n    [C] g h\n    """,',
+)
 
 export const OVER_BRACKETED_CHORD_LYRICS_SOURCE = `parts ["Harmony" [H]: chords, "Chant" [C]: lyrics [H]],
 

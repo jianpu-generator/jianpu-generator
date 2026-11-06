@@ -10,7 +10,7 @@ import { Given, Then, When } from './fixtures'
  * observable.
  *
  * Each measure is its own `[M] 1 2 3 4` line (1-based Monaco line number
- * `11 + i * 2`, since measures are separated by a blank line).
+ * `6 + i * 2`, since measures are separated by a blank line).
  */
 function buildLongSource(count: number): string {
   const lines = [
@@ -88,7 +88,7 @@ When("I jump the caret to the last measure's line", async ({ page }) => {
   const lastMeasureIndex = measureCount - 1
   // Jump the caret to the last measure's line, which should be scrolled far
   // out of view given 60 measures.
-  const lastMeasureLine = 8 + lastMeasureIndex * 2
+  const lastMeasureLine = 6 + lastMeasureIndex * 2
   await page.keyboard.press('Control+g')
   await page.keyboard.type(String(lastMeasureLine))
   await page.keyboard.press('Enter')
