@@ -19,22 +19,21 @@ import { Given, Then, When } from './fixtures'
  *   16: 4 3 2 1                                  ← measure 3
  */
 const source = [
-  '# metadata',
-  'title = "test"',
+  'metadata { title "test" },',
   '',
-  '# parts',
-  'M = notes',
+  'parts ["M": notes],',
   '',
-  '# score',
-  'time=4/4 key=C4 bpm=120 label="A"',
-  '1 2 3 4',
+  'score """',
+  '    time=4/4 key=C4 bpm=120 label="A"',
+  '    1 2 3 4',
   '',
-  "5 6 7 1'",
+  "    5 6 7 1'",
   '',
-  'label="B"',
-  "1' 7 6 5",
+  '    label="B"',
+  "    1' 7 6 5",
   '',
-  '4 3 2 1',
+  '    4 3 2 1',
+  '    """,',
 ].join('\n')
 
 // Read the live Monaco selection off the `monaco` global that

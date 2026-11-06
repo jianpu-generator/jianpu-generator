@@ -20,15 +20,13 @@ import { Given, Then, When } from './fixtures'
  * click-targets render side by side in one row within the viewport.
  */
 const rangeTestSource = [
-  '# metadata',
-  'title = "note range-select test"',
-  'max_measures_per_system = 48',
+  'metadata { title "note range-select test", max measures per system 48 },',
   '',
-  '# parts',
-  'Melody [M] = notes',
+  'parts ["Melody" [M]: notes],',
   '',
-  '# score',
-  '[M] 1 2 3 4', // measure 0
+  'score """',
+  '[M] 1 2 3 4',
+  '""",',
 ].join('\n')
 
 Given(

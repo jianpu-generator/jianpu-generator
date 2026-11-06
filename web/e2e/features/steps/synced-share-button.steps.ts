@@ -81,22 +81,21 @@ Given(
     // have nothing to flag either way, silently passing regardless of the
     // bug this scenario guards against).
     const sectionSource = [
-      '# metadata',
-      'title = "Synced Section Score"',
+      'metadata { title "Synced Section Score" },',
       '',
-      '# parts',
-      'Melody [M] = notes',
+      'parts ["Melody" [M]: notes],',
       '',
-      '# score',
-      'time=4/4 key=C4 bpm=120 label="A"',
-      '[M] 1 2 3 4',
+      'score """',
+      '    time=4/4 key=C4 bpm=120 label="A"',
+      '    [M] 1 2 3 4',
       '',
-      "[M] 5 6 7 1'",
+      "    [M] 5 6 7 1'",
       '',
-      'label="B"',
-      "[M] 1' 7 6 5",
+      '    label="B"',
+      "    [M] 1' 7 6 5",
       '',
-      '[M] 4 3 2 1',
+      '    [M] 4 3 2 1',
+      '    """,',
     ].join('\n')
     await seedSyncedCloudFile(page, 'synced-section-test', sectionSource)
   },

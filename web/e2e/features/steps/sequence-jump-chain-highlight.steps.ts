@@ -4,38 +4,23 @@ import { waitForAssetLoadingBannerGone } from '../../assetLoadingHelpers'
 import { stableBoundingBox } from '../../rangeSelectHelpers'
 import { Given, Then, When } from './fixtures'
 
-// Lines (1-based):
-//    7: # sequence
-//    8: A, B, C, A
-//   11: time=4/4 key=C4 bpm=120 label="A"  ← view-zone directive
-//   12: 1 2 3 4                             ← measure 0 ("A")
-//   14: label="B"                           ← view-zone directive
-//   15: 5 6 7 1'                            ← measure 1 ("B")
-//   17: label="C"                           ← view-zone directive
-//   18: 1' 7 6 5                            ← measure 2 ("C")
-//
-// The sequence's second "A" is a repeat — it reuses measure 0's written
-// lines rather than duplicating them, so the document has only 3 written
-// measures for 4 sequence entries.
 const SOURCE = [
-  '# metadata',
-  'title = "test"',
+  'metadata { title "test" },',
   '',
-  '# parts',
-  'M = notes',
+  'parts ["M": notes],',
   '',
-  '# sequence',
-  'A, B, C, A',
+  'sequence ["A", "B", "C", "A"],',
   '',
-  '# score',
-  'time=4/4 key=C4 bpm=120 label="A"',
-  '1 2 3 4',
+  'score """',
+  '    time=4/4 key=C4 bpm=120 label="A"',
+  '    1 2 3 4',
   '',
-  'label="B"',
-  "5 6 7 1'",
+  '    label="B"',
+  "    5 6 7 1'",
   '',
-  'label="C"',
-  "1' 7 6 5",
+  '    label="C"',
+  "    1' 7 6 5",
+  '    """,',
 ].join('\n')
 
 async function getEditorSelections(page: import('@playwright/test').Page) {

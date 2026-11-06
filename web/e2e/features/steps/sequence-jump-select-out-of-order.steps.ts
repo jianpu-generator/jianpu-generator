@@ -2,34 +2,23 @@ import { expect } from '@playwright/test'
 import { waitForAssetLoadingBannerGone } from '../../assetLoadingHelpers'
 import { Given, Then, When } from './fixtures'
 
-// Lines (1-based):
-//    7: # sequence
-//    8: C, A
-//   11: time=4/4 key=C4 bpm=120 label="A"  ← view-zone directive
-//   12: 1 2 3 4                             ← measure 0 ("A")
-//   14: label="B"                           ← view-zone directive
-//   15: 5 6 7 1'                            ← measure 1 ("B")
-//   17: label="C"                           ← view-zone directive
-//   18: 1' 7 6 5                            ← measure 2 ("C")
 const SOURCE = [
-  '# metadata',
-  'title = "test"',
+  'metadata { title "test" },',
   '',
-  '# parts',
-  'M = notes',
+  'parts ["M": notes],',
   '',
-  '# sequence',
-  'C, A',
+  'sequence ["C", "A"],',
   '',
-  '# score',
-  'time=4/4 key=C4 bpm=120 label="A"',
-  '1 2 3 4',
+  'score """',
+  '    time=4/4 key=C4 bpm=120 label="A"',
+  '    1 2 3 4',
   '',
-  'label="B"',
-  "5 6 7 1'",
+  '    label="B"',
+  "    5 6 7 1'",
   '',
-  'label="C"',
-  "1' 7 6 5",
+  '    label="C"',
+  "    1' 7 6 5",
+  '    """,',
 ].join('\n')
 
 async function getEditorSelections(page: import('@playwright/test').Page) {
