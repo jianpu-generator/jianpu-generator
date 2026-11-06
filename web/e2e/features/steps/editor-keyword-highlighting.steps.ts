@@ -4,7 +4,10 @@ import type { HighlightKind } from '../../../src/poentaroWasm'
 import { Given, Then } from './fixtures'
 
 const SOURCE = [
-  'metadata { row height 30, colour: red },',
+  'metadata {',
+  '    row height 30,',
+  '    colour: red,',
+  '},',
   '',
   'parts ["Melody" [M]: notes, "Echo" [E]: follow [M]],',
   '',
